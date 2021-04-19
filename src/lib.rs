@@ -8,9 +8,10 @@
 use handlebars::Output;
 use serde::Serialize;
 
-use std::{error::Error as StdError, fmt, io, num::ParseIntError};
+use std::{error::Error as StdError, fmt, io, num::ParseIntError, str::FromStr};
 
 mod html;
+mod shell;
 mod template;
 mod term;
 
@@ -176,4 +177,20 @@ impl UserInput {
     pub fn command(val: impl Into<String>) -> Self {
         Self::Command(val.into())
     }
+}
+
+impl FromStr for UserInput {
+    type Err = UserInputParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::Command(s.to_owned()))
+    }
+}
+
+/// FIXME
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum UserInputParseError {
+    /// FIXME
+    UnrecognizedPrefix,
 }

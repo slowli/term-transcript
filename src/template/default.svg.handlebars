@@ -37,8 +37,8 @@
   <foreignObject x="0" y="0" width="{{width}}" height="{{height}}">
     <div xmlns="http://www.w3.org/1999/xhtml" class="container">
       {{#each interactions}}
-      <div class="user-input"><pre><span class="bold">$</span> {{ input.command }}</pre></div>
-      <pre>{{#content @index}}{{/content}}</pre>
+      <div class="user-input"><span class="bold">$</span> {{ input.command }}</pre></div>
+      <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
       {{/each}}
     </div>
   </foreignObject>
