@@ -1,16 +1,11 @@
-use std::io::{self, Read};
+use std::io;
 
-use term_svg::{SvgTemplate, SvgTemplateOptions, Transcript, UserInput};
+use term_svg::{ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput};
 
 fn main() -> anyhow::Result<()> {
-    let mut term_output = vec![];
-    io::stdin().read_to_end(&mut term_output)?;
-
     let cmd = "for i in {0..10}; do echo 'term-svg is awesome!'; done | lolcat -F 0.7 -f";
-    let mut transcript = Transcript::new();
-    transcript
-        .add_interaction(UserInput::command(cmd), term_output.clone())
-        .add_interaction(UserInput::command(cmd), term_output);
+    let transcript =
+        Transcript::from_inputs(&mut ShellOptions::default(), vec![UserInput::command(cmd)])?;
 
     let mut template = SvgTemplate::new(SvgTemplateOptions::default());
     template.render(&transcript, io::stdout())?;

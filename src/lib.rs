@@ -15,7 +15,10 @@ mod shell;
 mod template;
 mod term;
 
-pub use self::template::{SvgTemplate, SvgTemplateOptions};
+pub use self::{
+    shell::ShellOptions,
+    template::{SvgTemplate, SvgTemplateOptions},
+};
 
 use self::{html::HtmlWriter, term::TermOutputParser};
 
@@ -165,17 +168,40 @@ impl Interaction<Captured> {
 
 /// User input during interaction with a terminal.
 #[derive(Debug, Clone, Serialize)]
+pub struct UserInput {
+    text: String,
+    kind: UserInputKind,
+}
+
+/// Kind of user input.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
-pub enum UserInput {
-    /// Executing the specified command.
-    Command(String),
+pub enum UserInputKind {
+    /// Standalone shell command.
+    Command,
+    /// Input into an interactive session
+    Repl,
 }
 
 impl UserInput {
     /// Creates a command.
-    pub fn command(val: impl Into<String>) -> Self {
-        Self::Command(val.into())
+    pub fn command(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            kind: UserInputKind::Command,
+        }
+    }
+
+    /// Gets the kind of this input.
+    pub fn kind(&self) -> UserInputKind {
+        self.kind
+    }
+}
+
+impl AsRef<str> for UserInput {
+    fn as_ref(&self) -> &str {
+        &self.text
     }
 }
 
@@ -183,7 +209,7 @@ impl FromStr for UserInput {
     type Err = UserInputParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::Command(s.to_owned()))
+        Ok(Self::command(s))
     }
 }
 

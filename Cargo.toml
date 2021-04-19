@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 bytecount = "0.6.2"
 handlebars = "3.5.4"
+os_pipe = "0.9.2"
 serde = { version = "1.0", features = ["derive"] }
 quick-xml = "0.22.0"
 termcolor = "1.1.2"

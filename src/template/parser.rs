@@ -5,7 +5,7 @@ use quick_xml::{
 
 use std::{borrow::Cow, io::BufRead, mem};
 
-use crate::{Interaction, TermOutput, Transcript, UserInput, UserInputParseError};
+use crate::{Interaction, TermOutput, Transcript, UserInput, UserInputKind, UserInputParseError};
 
 #[derive(Debug, Clone)]
 pub enum Parsed {
@@ -78,7 +78,10 @@ impl TextReadingState {
 }
 
 impl ParserState {
-    const DUMMY_INPUT: UserInput = UserInput::Command(String::new());
+    const DUMMY_INPUT: UserInput = UserInput {
+        text: String::new(),
+        kind: UserInputKind::Command,
+    };
 
     fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {
         match self {
@@ -187,6 +190,13 @@ impl ParserState {
 }
 
 impl Transcript<Parsed> {
+    /// Parses a transcript from the provided `reader`, which should point to an SVG XML tree
+    /// produced by [`SvgTemplate::render()`] (possibly within a larger document).
+    ///
+    /// # Errors
+    ///
+    /// - Returns an error if the input cannot be parsed, usually because it was not produced
+    ///   by `SvgTemplate::render()`.
     pub fn from_svg<R: BufRead>(reader: R) -> Result<Self, ParseError> {
         let mut reader = XmlReader::from_reader(reader);
         let mut buffer = vec![];
@@ -240,7 +250,7 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         let interaction = &transcript.interactions[0];
         assert_matches!(
             &interaction.input,
-            UserInput::Command(cmd) if cmd == "$ ls -al --color=always"
+            UserInput { kind: UserInputKind::Command, text } if text == "$ ls -al --color=always"
         );
         assert_matches!(
             &interaction.output,
