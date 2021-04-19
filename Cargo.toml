@@ -1,0 +1,14 @@
+[package]
+name = "term-svg"
+version = "0.1.0"
+authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+bytecount = "0.6.2"
+handlebars = "3.5.4"
+serde = { version = "1.0", features = ["derive"] }
+termcolor = "1.1.2"
+
+[dev-dependencies]
+anyhow = "1.0.40"

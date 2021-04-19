@@ -1,0 +1,45 @@
+<svg viewBox="0 0 {{width}} {{height}}" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <style>
+    .container {
+      background: {{ palette.colors.black }};
+      padding: {{ padding }}px;
+      border-radius: 6px;
+      color: {{ palette.colors.white }};
+    }
+    .container pre {
+      padding: 0;
+      margin: 0;
+      font: {{font_size}}px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      line-height: {{line_height}}px;
+    }
+
+    .user-input {
+      margin: 4px -10px;
+      color: {{ palette.intense_colors.white }};
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 2px 10px;
+    }
+
+    .bold { font-weight: bold; }
+    .italic { font-style: italic; }
+    .underline { text-decoration: underline; }
+    .dimmed { opacity: 0.7; }
+
+    {{#each palette.colors}}
+    .fg-{{@key}} { color: {{this}}; }
+    .bg-{{@key}} { background-color: {{this}}; }
+    {{/each}}
+    {{#each palette.intense_colors}}
+    .fg-i-{{@key}} { color: {{this}}; }
+    .bg-i-{{@key}} { background-color: {{this}}; }
+    {{/each}}
+  </style>
+  <foreignObject x="0" y="0" width="{{width}}" height="{{height}}">
+    <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+      {{#each interactions}}
+      <div class="user-input"><pre><span class="bold">$</span> {{ input.command }}</pre></div>
+      <pre>{{#content @index}}{{/content}}</pre>
+      {{/each}}
+    </div>
+  </foreignObject>
+</svg>
