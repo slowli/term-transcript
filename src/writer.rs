@@ -60,8 +60,8 @@ impl<'a> HtmlWriter<'a> {
 
         let mut styles = vec![];
 
-        let fg_color = spec.fg().map(|&color| ClassOrRgb::new(color)).transpose()?;
-        match fg_color {
+        let fore_color = spec.fg().map(|&color| ClassOrRgb::new(color)).transpose()?;
+        match fore_color {
             Some(ClassOrRgb::Class { value, intense }) => {
                 let intense = intense || spec.intense();
                 classes.push(value.as_str(false, intense));
@@ -72,8 +72,8 @@ impl<'a> HtmlWriter<'a> {
             None => { /* Do nothing. */ }
         }
 
-        let bg_color = spec.bg().map(|&color| ClassOrRgb::new(color)).transpose()?;
-        match bg_color {
+        let back_color = spec.bg().map(|&color| ClassOrRgb::new(color)).transpose()?;
+        match back_color {
             Some(ClassOrRgb::Class { value, intense }) => {
                 let intense = intense || spec.intense();
                 classes.push(value.as_str(true, intense));
@@ -214,6 +214,8 @@ enum ClassOrRgb {
 }
 
 impl ClassOrRgb {
+    #[allow(clippy::match_wildcard_for_single_variants)]
+    // ^-- `Color` is an old-school non-exhaustive enum
     fn new(color: Color) -> io::Result<Self> {
         Ok(match color {
             Color::Black => Self::class(ColorClass::Black),

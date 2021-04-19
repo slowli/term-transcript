@@ -76,14 +76,14 @@ impl<'a> Csi<'a> {
         let final_byte_pos = intermediates_start + final_byte_pos;
 
         let final_byte = buffer[final_byte_pos];
-        if !(0x40..=0x7e).contains(&final_byte) {
-            Err(Error::InvalidSgrFinalByte(final_byte))
-        } else {
+        if (0x40..=0x7e).contains(&final_byte) {
             Ok(Self {
                 parameters: &buffer[..intermediates_start],
                 final_byte,
                 len: final_byte_pos + 1,
             })
+        } else {
+            Err(Error::InvalidSgrFinalByte(final_byte))
         }
     }
 

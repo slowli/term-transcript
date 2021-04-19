@@ -1,3 +1,10 @@
+//! Snapshot testing for CLI / REPL applications, in a fun way.
+
+// Linter settings.
+#![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
+#![warn(clippy::all, clippy::pedantic)]
+#![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
+
 use handlebars::Output;
 use serde::Serialize;
 
@@ -11,6 +18,7 @@ pub use self::template::{SvgTemplate, SvgTemplateOptions};
 
 use self::{parser::TermOutputParser, writer::HtmlWriter};
 
+/// Errors that can occur when processing terminal output.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {
@@ -71,6 +79,7 @@ impl StdError for Error {
     }
 }
 
+/// Transcript of a user interacting with the terminal.
 #[derive(Debug, Clone, Default)]
 pub struct Transcript<'a> {
     interactions: Vec<Interaction<'a>>,
@@ -82,6 +91,7 @@ impl<'a> Transcript<'a> {
         Self::default()
     }
 
+    /// Returns interactions in this transcript.
     pub fn interactions(&self) -> &[Interaction<'a>] {
         &self.interactions
     }
@@ -93,6 +103,7 @@ impl<'a> Transcript<'a> {
     }
 }
 
+/// One-time interaction with the terminal.
 #[derive(Debug, Clone, Copy)]
 pub struct Interaction<'a> {
     input: UserInput<'a>,
@@ -100,28 +111,38 @@ pub struct Interaction<'a> {
 }
 
 impl<'a> Interaction<'a> {
+    /// Input provided by the user.
     pub fn input(self) -> UserInput<'a> {
         self.input
     }
 
+    /// Output to the terminal.
     pub fn output(self) -> &'a [u8] {
         self.output
     }
 
+    /// Counts the total number of lines in input and output.
     pub fn count_lines(self) -> usize {
         let additional_lines = if self.output.ends_with(b"\n") { 1 } else { 2 };
         bytecount::count(self.output, b'\n') + additional_lines
     }
 
-    pub fn write_output(self, writer: &mut dyn Output) -> Result<(), Error> {
+    /// Writes terminal [`output`](Self::output()) in the HTML format to the provided `writer`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there was an issue processing output.
+    pub fn write_html_output(self, writer: &mut dyn Output) -> Result<(), Error> {
         let mut html_writer = HtmlWriter::new(writer);
         TermOutputParser::new(&mut html_writer).parse(self.output)
     }
 }
 
+/// User input during interaction with a terminal.
 #[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum UserInput<'a> {
+    /// Executing the specified command.
     Command(&'a str),
 }

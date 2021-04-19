@@ -1,20 +1,27 @@
 use handlebars::{Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use std::{error::Error as StdError, fmt, io::Write, num::ParseIntError, str::FromStr};
+use std::{
+    convert::TryFrom, error::Error as StdError, fmt, io::Write, num::ParseIntError, str::FromStr,
+};
 
 use crate::{Interaction, Transcript, UserInput};
 
 const MAIN_TEMPLATE_NAME: &str = "main";
 const TEMPLATE: &str = include_str!("default.svg.handlebars");
 
+/// Configurable options of a [`SvgTemplate`].
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SvgTemplateOptions {
+    /// Padding within the rendered terminal window in pixels. Default value is `10`.
     pub padding: usize,
+    /// Font size in pixels. Default value is `12`.
     pub font_size: usize,
+    /// Line height in pixels. Default value is `15`.
     pub line_height: usize,
+    /// Width of the rendered terminal window in pixels. Default value is `650`.
     pub width: usize,
-    pub interaction_padding: usize,
+    /// Palette of terminal colors.
     pub palette: Palette,
 }
 
@@ -24,31 +31,43 @@ impl Default for SvgTemplateOptions {
             padding: 10,
             font_size: 12,
             line_height: 15,
-            width: 652,
-            interaction_padding: 12,
+            width: 650,
             palette: NamedPalette::Powershell.into(),
         }
     }
 }
 
+/// Palette of 16 standard terminal colors (8 ordinary colors + 8 intense variations).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Palette {
+    /// Ordinary colors.
     pub colors: TermColors,
+    /// Intense colors.
     pub intense_colors: TermColors,
 }
 
+/// Values of 8 standard terminal colors.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct TermColors {
+    /// Black color.
     pub black: RgbColor,
+    /// Red color.
     pub red: RgbColor,
+    /// Green color.
     pub green: RgbColor,
+    /// Yellow color.
     pub yellow: RgbColor,
+    /// Blue color.
     pub blue: RgbColor,
+    /// Magenta color.
     pub magenta: RgbColor,
+    /// Cyan color.
     pub cyan: RgbColor,
+    /// White color.
     pub white: RgbColor,
 }
 
+/// RGB color.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbColor(pub u8, pub u8, pub u8);
 
@@ -58,10 +77,15 @@ impl fmt::LowerHex for RgbColor {
     }
 }
 
+/// Errors that can occur when parsing an [`RgbColor`] from a string.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ColorParseError {
+    /// The color does not have `#` prefix.
     NoHashPrefix,
+    /// The color has incorrect string length (not 1 or 2 chars per color channel).
     IncorrectLen(usize),
+    /// Error parsing color channel value.
     IncorrectDigit(ParseIntError),
 }
 
@@ -139,10 +163,13 @@ impl<'de> Deserialize<'de> for RgbColor {
     }
 }
 
+/// Named [`Palette`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum NamedPalette {
+    /// Dracula color scheme.
     Dracula,
+    /// Powershell 6 / Windows 10 console color scheme.
     Powershell,
 }
 
@@ -198,6 +225,7 @@ impl From<NamedPalette> for Palette {
     }
 }
 
+/// Template for rendering [`Transcript`]s into an [SVG] image.
 #[derive(Debug)]
 pub struct SvgTemplate<'a> {
     options: SvgTemplateOptions,
@@ -205,6 +233,10 @@ pub struct SvgTemplate<'a> {
 }
 
 impl<'a> SvgTemplate<'a> {
+    /// Additional padding for each user input block.
+    const USER_INPUT_PADDING: usize = 12;
+
+    /// Initializes the template based on provided `options`.
     pub fn new(options: SvgTemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
@@ -218,6 +250,11 @@ impl<'a> SvgTemplate<'a> {
         }
     }
 
+    /// Renders the `transcript` as an SVG image.
+    ///
+    /// # Errors
+    ///
+    /// Returns a rendering error, if any.
     pub fn render<W: Write>(
         &mut self,
         transcript: &Transcript<'a>,
@@ -256,7 +293,7 @@ impl<'a> SvgTemplate<'a> {
             .sum();
         2 * options.padding
             + line_count * options.line_height
-            + transcript.interactions.len() * options.interaction_padding
+            + transcript.interactions.len() * Self::USER_INPUT_PADDING
     }
 }
 
@@ -279,13 +316,15 @@ impl HelperDef for ContentHelper<'_> {
             .value()
             .as_u64()
             .ok_or_else(|| RenderError::new("provided index is invalid"))?;
+        let index = usize::try_from(index)
+            .map_err(|err| RenderError::from_error("provided index is invalid", err))?;
         let interaction = self
             .0
             .interactions
-            .get(index as usize)
+            .get(index)
             .ok_or_else(|| RenderError::new("index is out of bounds"))?;
         interaction
-            .write_output(out)
+            .write_html_output(out)
             .map_err(|err| RenderError::from_error("content", err))
     }
 }
