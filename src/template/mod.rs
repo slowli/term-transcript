@@ -257,7 +257,7 @@ impl<'a> SvgTemplate<'a> {
     /// Returns a rendering error, if any.
     pub fn render<W: Write>(
         &mut self,
-        transcript: &Transcript<'a>,
+        transcript: &'a Transcript,
         destination: W,
     ) -> Result<(), RenderError> {
         #[derive(Debug, Serialize)]
@@ -270,26 +270,21 @@ impl<'a> SvgTemplate<'a> {
 
         let data = HandlebarsData {
             height: self.compute_height(transcript),
-            interactions: transcript
-                .interactions()
-                .iter()
-                .copied()
-                .map(Into::into)
-                .collect(),
+            interactions: transcript.interactions().iter().map(Into::into).collect(),
             options: self.options,
         };
         self.handlebars
-            .register_helper("content", Box::new(ContentHelper(transcript.to_owned())));
+            .register_helper("content", Box::new(ContentHelper(transcript)));
         self.handlebars
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
 
-    fn compute_height(&self, transcript: &Transcript<'_>) -> usize {
+    fn compute_height(&self, transcript: &Transcript) -> usize {
         let options = self.options;
         let line_count: usize = transcript
             .interactions
             .iter()
-            .map(|interaction| interaction.count_lines())
+            .map(Interaction::count_lines)
             .sum();
         2 * options.padding
             + line_count * options.line_height
@@ -298,7 +293,7 @@ impl<'a> SvgTemplate<'a> {
 }
 
 #[derive(Debug)]
-struct ContentHelper<'a>(Transcript<'a>);
+struct ContentHelper<'a>(&'a Transcript);
 
 impl HelperDef for ContentHelper<'_> {
     fn call<'reg: 'rc, 'rc>(
@@ -331,11 +326,13 @@ impl HelperDef for ContentHelper<'_> {
 
 #[derive(Debug, Serialize)]
 struct SerializedInteraction<'a> {
-    input: UserInput<'a>,
+    input: &'a UserInput,
 }
 
-impl<'a> From<Interaction<'a>> for SerializedInteraction<'a> {
-    fn from(value: Interaction<'a>) -> Self {
-        Self { input: value.input }
+impl<'a> From<&'a Interaction> for SerializedInteraction<'a> {
+    fn from(value: &'a Interaction) -> Self {
+        Self {
+            input: &value.input,
+        }
     }
 }
