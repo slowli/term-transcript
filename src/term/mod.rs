@@ -23,7 +23,6 @@ impl AsRef<[u8]> for Captured {
     }
 }
 
-// FIXME: unit tests for conversions.
 impl Captured {
     pub(crate) fn new(bytes: Vec<u8>) -> Self {
         Self(bytes)
@@ -91,13 +90,15 @@ impl Parsed {
     /// # Panics
     ///
     /// - Panics if `captured` output cannot be converted to plaintext / HTML.
-    /// - Panics if the assertion fails.
-    // FIXME: unit tests!
-    pub fn assert_matches(&self, captured: &Captured, match_type: MatchKind) {
+    /// - Panics if the assertion fails. If the `pretty_assertions` feature is enabled,
+    ///   the output will be formatted using the [corresponding crate].
+    ///
+    /// [corresponding crate]: https://docs.rs/pretty_assertions/
+    pub fn assert_matches(&self, captured: &Captured, match_kind: MatchKind) {
         #[cfg(feature = "pretty_assertions")]
         use pretty_assertions::assert_eq;
 
-        match match_type {
+        match match_kind {
             MatchKind::TextOnly => {
                 let captured_plaintext = captured
                     .to_plaintext()
@@ -124,4 +125,87 @@ pub enum MatchKind {
     Precise,
     /// Relaxed matching: compare only output text, but not coloring.
     TextOnly,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::io::Write;
+    use termcolor::{Ansi, Color, ColorSpec, WriteColor};
+
+    fn prepare_term_output() -> anyhow::Result<Vec<u8>> {
+        let mut writer = Ansi::new(vec![]);
+        writer.set_color(
+            ColorSpec::new()
+                .set_fg(Some(Color::Cyan))
+                .set_underline(true),
+        )?;
+        write!(writer, "Hello")?;
+        writer.reset()?;
+        write!(writer, ", ")?;
+        writer.set_color(
+            ColorSpec::new()
+                .set_fg(Some(Color::White))
+                .set_bg(Some(Color::Green))
+                .set_intense(true),
+        )?;
+        write!(writer, "world")?;
+        writer.reset()?;
+        write!(writer, "!")?;
+
+        Ok(writer.into_inner())
+    }
+
+    const EXPECTED_HTML: &str = "<span class=\"underline fg-cyan\">Hello</span>, \
+         <span class=\"fg-i-white bg-i-green\">world</span>!";
+
+    #[test]
+    fn converting_captured_output_to_text() -> anyhow::Result<()> {
+        let output = Captured(prepare_term_output()?);
+        assert_eq!(output.to_plaintext()?, "Hello, world!");
+        Ok(())
+    }
+
+    #[test]
+    fn converting_captured_output_to_html() -> anyhow::Result<()> {
+        let output = Captured(prepare_term_output()?);
+        assert_eq!(output.to_html()?, EXPECTED_HTML);
+        Ok(())
+    }
+
+    #[test]
+    fn matching_text() {
+        let captured = Captured(b"Hello, world!".to_vec());
+        let parsed = Parsed {
+            plaintext: "Hello, world!".to_owned(),
+            html: EXPECTED_HTML.to_owned(),
+        };
+
+        parsed.assert_matches(&captured, MatchKind::TextOnly);
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed")]
+    fn matching_imprecise_text() {
+        let captured = Captured(b"Hello, world!".to_vec());
+        let parsed = Parsed {
+            plaintext: "Hello, world!".to_owned(),
+            html: EXPECTED_HTML.to_owned(),
+        };
+
+        parsed.assert_matches(&captured, MatchKind::Precise);
+    }
+
+    #[test]
+    fn matching_text_and_colors() {
+        let captured = Captured(prepare_term_output().unwrap());
+        let parsed = Parsed {
+            plaintext: "Hello, world!".to_owned(),
+            html: EXPECTED_HTML.to_owned(),
+        };
+
+        parsed.assert_matches(&captured, MatchKind::TextOnly);
+        parsed.assert_matches(&captured, MatchKind::Precise);
+    }
 }
