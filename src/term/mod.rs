@@ -90,6 +90,11 @@ impl Parsed {
         &self.plaintext
     }
 
+    /// Gets the parsed HTML.
+    pub fn html(&self) -> &str {
+        &self.html
+    }
+
     /// Asserts that this parsed output matches `captured` terminal output.
     ///
     /// # Panics

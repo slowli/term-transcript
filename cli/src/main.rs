@@ -23,7 +23,7 @@ use term_svg::{
 /// CLI for capturing and snapshot-testing terminal output.
 #[derive(Debug, StructOpt)]
 enum Args {
-    /// Captures output from stdin and renders it to SVG, which is output to stdout.
+    /// Captures output from stdin and renders it to SVG, then prints to stdout.
     Capture {
         /// Command to record as user input.
         command: String,
@@ -31,7 +31,7 @@ enum Args {
     },
 
     /// Executes one or more commands in a shell and renders the captured output to SVG,
-    /// which is output to stdout.
+    /// then prints to stdout.
     Exec {
         /// Shell command without args (they are supplied separately). If omitted,
         /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
@@ -44,7 +44,7 @@ enum Args {
         inputs: Vec<String>,
     },
 
-    /// Tests SVG snapshots.
+    /// Tests previously captured SVG snapshots.
     Test {
         /// Shell command without args (they are supplied separately). If omitted,
         /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
@@ -59,7 +59,10 @@ enum Args {
         /// Prints terminal output for passed user inputs.
         #[structopt(long, short = "v")]
         verbose: bool,
-        /// Controls coloring of the output.
+        /// Matches coloring of the terminal output, rather than matching only text.
+        #[structopt(long, short = "p")]
+        precise: bool,
+        /// Controls coloring of the output. One of `always`, `ansi`, `never` or `auto`.
         #[structopt(long, short = "c", default_value = "auto")]
         color: ColorPreference,
     },
@@ -95,6 +98,7 @@ impl Args {
                 shell,
                 shell_args,
                 svg_paths,
+                precise,
                 verbose,
                 color,
             } => {
@@ -110,7 +114,7 @@ impl Args {
                     out.reset()?;
                     writeln!(out, "...")?;
 
-                    match Self::process_file(&mut out, svg_path, &mut options, verbose) {
+                    match Self::process_file(&mut out, svg_path, &mut options, precise, verbose) {
                         Ok(stats) => totals += stats,
                         Err(err) => {
                             Self::report_failure(&mut out, svg_path, err)?;
@@ -137,11 +141,12 @@ impl Args {
         out: &mut impl WriteColor,
         svg_path: &Path,
         options: &mut ShellOptions,
+        precise: bool,
         verbose: bool,
     ) -> anyhow::Result<TestStats> {
         let svg = BufReader::new(File::open(svg_path)?);
         let transcript = Transcript::from_svg(svg)?;
-        Self::test_transcript(out, &transcript, options, verbose)
+        Self::test_transcript(out, &transcript, options, precise, verbose)
     }
 
     fn report_failure(
@@ -177,6 +182,7 @@ impl Args {
         out: &mut impl WriteColor,
         transcript: &Transcript<Parsed>,
         options: &mut ShellOptions,
+        precise: bool,
         verbose: bool,
     ) -> anyhow::Result<TestStats> {
         let inputs = transcript
@@ -192,8 +198,11 @@ impl Args {
 
         let mut stats = TestStats::default();
         for (original, reproduced) in it {
-            let original_text = original.output().plaintext();
-            let reproduced_text = reproduced.to_plaintext()?;
+            let (original_text, reproduced_text) = if precise {
+                (original.output().html(), reproduced.to_html()?)
+            } else {
+                (original.output().plaintext(), reproduced.to_plaintext()?)
+            };
 
             write!(out, "  ")?;
             out.set_color(ColorSpec::new().set_intense(true))?;
