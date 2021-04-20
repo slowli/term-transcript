@@ -202,22 +202,35 @@ impl Transcript<Parsed> {
         let mut buffer = vec![];
         let mut state = ParserState::Initialized;
         let mut transcript = Self::new();
+        let mut open_tags = 0;
 
         loop {
             let event = reader.read_event(&mut buffer)?;
-
-            if let Event::Eof = event {
-                if let ParserState::EncounteredContainer = state {
-                    break;
+            match &event {
+                Event::Start(_) => {
+                    open_tags += 1;
                 }
-                return Err(ParseError::UnexpectedEof);
+                Event::End(end_tag) => {
+                    open_tags -= 1;
+                    if open_tags == 0 {
+                        debug_assert_eq!(end_tag.name(), b"svg"); // guaranteed by the parser
+                        break;
+                    }
+                }
+                Event::Eof => break,
+                _ => { /* Do nothing. */ }
             }
 
             if let Some(interaction) = state.process(event)? {
                 transcript.interactions.push(interaction);
             }
         }
-        Ok(transcript)
+
+        if let ParserState::EncounteredContainer = state {
+            Ok(transcript)
+        } else {
+            Err(ParseError::UnexpectedEof)
+        }
     }
 }
 
@@ -226,6 +239,7 @@ mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+    use std::io::{Cursor, Read};
 
     const SVG: &[u8] = br#"
         <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
@@ -259,5 +273,85 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         );
     }
 
-    // TODO: test errors
+    #[test]
+    fn reading_file_with_extra_info() {
+        let mut data = SVG.to_owned();
+        data.extend_from_slice(b"<other>data</other>");
+        let mut data = Cursor::new(data.as_slice());
+
+        let transcript = Transcript::from_svg(&mut data).unwrap();
+        assert_eq!(transcript.interactions.len(), 1);
+
+        // Check that the parser stops after `</svg>`.
+        let mut end = String::new();
+        data.read_to_string(&mut end).unwrap();
+        assert_eq!(end.trim_start(), "<other>data</other>");
+    }
+
+    #[test]
+    fn reading_file_without_svg_tag() {
+        let data: &[u8] = b"<div>Text</div>";
+        let err = Transcript::from_svg(data).unwrap_err();
+
+        assert_matches!(err, ParseError::InvalidRoot);
+    }
+
+    #[test]
+    fn reading_file_without_container() {
+        let bogus_data: &[u8] = br#"
+            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+              <style>.container { color: #eee; }</style>
+            </svg>
+        "#;
+        let err = Transcript::from_svg(bogus_data).unwrap_err();
+
+        assert_matches!(err, ParseError::UnexpectedEof);
+    }
+
+    #[test]
+    fn reading_file_with_invalid_container() {
+        const INVALID_ATTRS: &[&str] = &[
+            "",
+            // no class
+            r#"xmlns="http://www.w3.org/1999/xhtml""#,
+            // no namespace
+            r#"class="container""#,
+            // invalid namespace
+            r#"xmlns="http://www.w3.org/2000/svg" class="container""#,
+            // invalid class
+            r#"xmlns="http://www.w3.org/1999/xhtml" class="cont""#,
+        ];
+
+        for &attrs in INVALID_ATTRS {
+            let bogus_data = format!(
+                r#"
+                <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+                  <foreignObject x="0" y="0" width="652" height="344">
+                    <div {}>Test</div>
+                  </foreignObject>
+                </svg>
+                "#,
+                attrs
+            );
+            let err = Transcript::from_svg(bogus_data.as_bytes()).unwrap_err();
+
+            assert_matches!(err, ParseError::InvalidContainer);
+        }
+    }
+
+    #[test]
+    fn reading_file_without_term_output() {
+        let bogus_data: &[u8] = br#"
+            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+              <foreignObject x="0" y="0" width="652" height="344">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+                  <div class="user-input"><pre>$ ls -al --color=always</pre></div>
+                </div>
+              </foreignObject>
+            </svg>
+        "#;
+        let err = Transcript::from_svg(bogus_data).unwrap_err();
+
+        assert_matches!(err, ParseError::UnexpectedEof);
+    }
 }
