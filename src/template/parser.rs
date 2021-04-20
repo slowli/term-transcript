@@ -3,7 +3,7 @@ use quick_xml::{
     Reader as XmlReader,
 };
 
-use std::{borrow::Cow, io::BufRead, mem};
+use std::{borrow::Cow, error::Error as StdError, fmt, io::BufRead, mem};
 
 use crate::{Interaction, TermOutput, Transcript, UserInput, UserInputKind, UserInputParseError};
 
@@ -18,7 +18,7 @@ impl TermOutput for Parsed {}
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ParseError {
-    InvalidRoot,
+    UnexpectedRoot,
     InvalidContainer,
     InvalidUserInput(String, UserInputParseError),
     UnexpectedEof,
@@ -28,6 +28,30 @@ pub enum ParseError {
 impl From<quick_xml::Error> for ParseError {
     fn from(err: quick_xml::Error) -> Self {
         Self::Xml(err)
+    }
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnexpectedRoot => formatter.write_str("Unexpected root XML tag; expected <svg>"),
+            Self::InvalidContainer => formatter.write_str("Invalid transcript container"),
+            Self::InvalidUserInput(s, err) => {
+                write!(formatter, "Error parsing `{}` as user input: {}", s, err)
+            }
+            Self::UnexpectedEof => formatter.write_str("Unexpected EOF"),
+            Self::Xml(err) => write!(formatter, "Error parsing XML: {}", err),
+        }
+    }
+}
+
+impl StdError for ParseError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Self::InvalidUserInput(_, err) => Some(err),
+            Self::Xml(err) => Some(err),
+            _ => None,
+        }
     }
 }
 
@@ -90,7 +114,7 @@ impl ParserState {
                     if tag.name() == b"svg" {
                         *self = Self::EncounteredSvgTag;
                     } else {
-                        return Err(ParseError::InvalidRoot);
+                        return Err(ParseError::UnexpectedRoot);
                     }
                 }
             }
@@ -210,10 +234,9 @@ impl Transcript<Parsed> {
                 Event::Start(_) => {
                     open_tags += 1;
                 }
-                Event::End(end_tag) => {
+                Event::End(_) => {
                     open_tags -= 1;
                     if open_tags == 0 {
-                        debug_assert_eq!(end_tag.name(), b"svg"); // guaranteed by the parser
                         break;
                     }
                 }
@@ -293,7 +316,7 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         let data: &[u8] = b"<div>Text</div>";
         let err = Transcript::from_svg(data).unwrap_err();
 
-        assert_matches!(err, ParseError::InvalidRoot);
+        assert_matches!(err, ParseError::UnexpectedRoot);
     }
 
     #[test]

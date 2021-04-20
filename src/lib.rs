@@ -167,7 +167,7 @@ impl Interaction<Captured> {
 }
 
 /// User input during interaction with a terminal.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct UserInput {
     text: String,
     kind: UserInputKind,
@@ -182,6 +182,16 @@ pub enum UserInputKind {
     Command,
     /// Input into an interactive session
     Repl,
+}
+
+impl UserInputKind {
+    fn from_prompt(prompt: &str) -> Option<Self> {
+        match prompt {
+            "$" => Some(Self::Command),
+            ">>>" => Some(Self::Repl),
+            _ => None,
+        }
+    }
 }
 
 impl UserInput {
@@ -209,14 +219,35 @@ impl FromStr for UserInput {
     type Err = UserInputParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::command(s))
+        let parts: Vec<_> = s.splitn(2, |c: char| c.is_ascii_whitespace()).collect();
+        match parts.as_slice() {
+            [prompt, text] => Ok(Self {
+                kind: UserInputKind::from_prompt(prompt)
+                    .ok_or(UserInputParseError::UnrecognizedPrefix)?,
+                text: (*text).to_owned(),
+            }),
+            _ => Err(UserInputParseError::NoPrefix),
+        }
     }
 }
 
-/// FIXME
+/// Errors that can occur during parsing [`UserInput`]s.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum UserInputParseError {
-    /// FIXME
+    /// No input prefix (e.g., `$ ` in `$ ls -al`).
+    NoPrefix,
+    /// Unrecognized input prefix.
     UnrecognizedPrefix,
 }
+
+impl fmt::Display for UserInputParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoPrefix => formatter.write_str("No input prefix"),
+            Self::UnrecognizedPrefix => formatter.write_str("Unrecognized input prefix"),
+        }
+    }
+}
+
+impl StdError for UserInputParseError {}

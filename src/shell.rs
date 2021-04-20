@@ -7,6 +7,7 @@ use std::{
 };
 
 use crate::{Captured, Interaction, Transcript, UserInput};
+use std::io::Read;
 
 /// Options for executing commands in the shell. Used in [`Transcript::from_inputs()`].
 #[derive(Debug)]
@@ -151,6 +152,41 @@ impl Transcript {
             io::ErrorKind::InvalidInput | io::ErrorKind::PermissionDenied
         )
     }
+
+    /// Captures stdout / stderr of the provided `command` and adds it to [`Self::interactions()`].
+    ///
+    /// The `command` is spawned with closed stdin. This method blocks until the command exits.
+    /// The method succeeds regardless of the exit status.
+    ///
+    /// # Errors
+    ///
+    /// - Returns an error if spawning the `command` or any operations with it fail (such as reading
+    ///   stdout / stderr).
+    pub fn capture_output(
+        &mut self,
+        input: UserInput,
+        command: &mut Command,
+    ) -> io::Result<&mut Self> {
+        let (mut pipe_reader, pipe_writer) = os_pipe::pipe()?;
+        let mut child = command
+            .stdin(Stdio::null())
+            .stdout(pipe_writer.try_clone()?)
+            .stderr(pipe_writer)
+            .spawn()?;
+
+        // Drop pipe writers. This is necessary for the pipe reader to receive EOF.
+        command.stdout(Stdio::null()).stderr(Stdio::null());
+
+        let mut output = vec![];
+        pipe_reader.read_to_end(&mut output)?;
+        child.wait()?;
+
+        self.interactions.push(Interaction {
+            input,
+            output: Captured(output),
+        });
+        Ok(self)
+    }
 }
 
 #[cfg(test)]
@@ -162,12 +198,11 @@ mod tests {
     #[cfg(any(unix, windows))]
     #[test]
     fn creating_transcript_basics() -> anyhow::Result<()> {
-        let mut options = ShellOptions::default().with_io_timeout(Duration::from_millis(200));
         let inputs = vec![
             UserInput::command("echo hello"),
             UserInput::command("echo foo && echo bar >&2"),
         ];
-        let transcript = Transcript::from_inputs(&mut options, inputs)?;
+        let transcript = Transcript::from_inputs(&mut ShellOptions::default(), inputs)?;
 
         assert_eq!(transcript.interactions().len(), 2);
 
