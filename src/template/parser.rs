@@ -5,15 +5,7 @@ use quick_xml::{
 
 use std::{borrow::Cow, error::Error as StdError, fmt, io::BufRead, mem};
 
-use crate::{Interaction, TermOutput, Transcript, UserInput, UserInputKind, UserInputParseError};
-
-#[derive(Debug, Clone)]
-pub enum Parsed {
-    Plaintext(String),
-    Html(Vec<u8>),
-}
-
-impl TermOutput for Parsed {}
+use crate::{Interaction, Parsed, Transcript, UserInput, UserInputKind, UserInputParseError};
 
 #[derive(Debug)]
 #[non_exhaustive]
@@ -73,26 +65,45 @@ enum ParserState {
 
 #[derive(Debug, Default)]
 struct TextReadingState {
-    buffer: Vec<u8>,
+    html_buffer: Vec<u8>,
+    plaintext_buffer: Vec<u8>,
     open_tags: usize,
 }
 
 impl TextReadingState {
-    fn process(&mut self, event: Event<'_>) -> Result<Option<String>, ParseError> {
+    // We only retain `<span>` tags in the HTML since they are the only ones containing color info.
+    fn process(&mut self, event: Event<'_>) -> Result<Option<Parsed>, ParseError> {
         match event {
             Event::Text(text) => {
-                self.buffer.extend_from_slice(text.unescaped()?.as_ref());
+                let unescaped = text.unescaped()?;
+                self.html_buffer.extend_from_slice(unescaped.as_ref());
+                self.plaintext_buffer.extend_from_slice(unescaped.as_ref());
             }
-            Event::Start(_) => {
+            Event::Start(tag) => {
                 self.open_tags += 1;
+                if tag.name() == b"span" {
+                    self.html_buffer.push(b'<');
+                    self.html_buffer.extend_from_slice(&*tag);
+                    self.html_buffer.push(b'>');
+                }
             }
-            Event::End(_) => {
+            Event::End(tag) => {
                 self.open_tags -= 1;
+
+                if tag.name() == b"span" {
+                    self.html_buffer.extend_from_slice(b"</span>");
+                }
+
                 if self.open_tags == 0 {
-                    let buffer = mem::take(&mut self.buffer);
-                    let buffer = String::from_utf8(buffer)
+                    let html = mem::take(&mut self.html_buffer);
+                    let html = String::from_utf8(html)
                         .map_err(|err| quick_xml::Error::Utf8(err.utf8_error()))?;
-                    return Ok(Some(buffer));
+
+                    let plaintext = mem::take(&mut self.plaintext_buffer);
+                    let plaintext = String::from_utf8(plaintext)
+                        .map_err(|err| quick_xml::Error::Utf8(err.utf8_error()))?;
+
+                    return Ok(Some(Parsed { plaintext, html }));
                 }
             }
             _ => { /* Do nothing */ }
@@ -137,10 +148,10 @@ impl ParserState {
             }
 
             Self::ReadingUserInput(text_state) => {
-                if let Some(user_input) = text_state.process(event)? {
-                    let user_input = user_input
+                if let Some(Parsed { plaintext, .. }) = text_state.process(event)? {
+                    let user_input = plaintext
                         .parse()
-                        .map_err(|err| ParseError::InvalidUserInput(user_input, err))?;
+                        .map_err(|err| ParseError::InvalidUserInput(plaintext, err))?;
                     *self = Self::EncounteredUserInput(user_input);
                 }
             }
@@ -161,7 +172,7 @@ impl ParserState {
 
                     return Ok(Some(Interaction {
                         input: user_input,
-                        output: Parsed::Plaintext(term_output),
+                        output: term_output,
                     }));
                 }
             }
@@ -287,13 +298,17 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         let interaction = &transcript.interactions[0];
         assert_matches!(
             &interaction.input,
-            UserInput { kind: UserInputKind::Command, text } if text == "$ ls -al --color=always"
+            UserInput { kind: UserInputKind::Command, text } if text == "ls -al --color=always"
         );
-        assert_matches!(
-            &interaction.output,
-            Parsed::Plaintext(out) if out.starts_with("total 28\ndrwxr-xr-x") &&
-                out.contains("4096 Apr 18 12:54 .\n")
-        );
+
+        let plaintext = &interaction.output.plaintext;
+        assert!(plaintext.starts_with("total 28\ndrwxr-xr-x"));
+        assert!(plaintext.contains("4096 Apr 18 12:54 .\n"));
+        assert!(!plaintext.contains(r#"<span class="fg-blue">.</span>"#));
+
+        let html = &interaction.output.html;
+        assert!(html.starts_with("total 28\ndrwxr-xr-x"));
+        assert!(html.contains(r#"Apr 18 12:54 <span class="fg-blue">.</span>"#));
     }
 
     #[test]

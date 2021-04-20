@@ -4,7 +4,7 @@ use assert_cmd::cargo::CommandCargoExt;
 
 use std::process::Command;
 
-use term_svg::{SvgTemplate, SvgTemplateOptions, Transcript, UserInput};
+use term_svg::{MatchKind, SvgTemplate, SvgTemplateOptions, Transcript, UserInput};
 
 #[test]
 fn transcript_lifecycle() -> anyhow::Result<()> {
@@ -27,6 +27,9 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
     assert_eq!(*interaction.input(), UserInput::command("rainbow"));
 
     // 4. Compare output to the output in the original transcript.
+    interaction
+        .output()
+        .assert_matches(transcript.interactions()[0].output(), MatchKind::Precise);
 
     Ok(())
 }

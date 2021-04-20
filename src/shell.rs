@@ -109,7 +109,7 @@ impl Transcript {
             }
             transcript.interactions.push(Interaction {
                 input,
-                output: Captured(output.into_bytes()),
+                output: Captured::new(output.into_bytes()),
             });
         }
 
@@ -183,7 +183,7 @@ impl Transcript {
 
         self.interactions.push(Interaction {
             input,
-            output: Captured(output),
+            output: Captured::new(output),
         });
         Ok(self)
     }
@@ -209,13 +209,13 @@ mod tests {
         {
             let interaction = &transcript.interactions()[0];
             assert_eq!(interaction.input().text, "echo hello");
-            let output = str::from_utf8(&interaction.output().0)?;
+            let output = str::from_utf8(interaction.output().as_ref())?;
             assert_eq!(output.trim(), "hello");
         }
 
         let interaction = &transcript.interactions()[1];
         assert_eq!(interaction.input().text, "echo foo && echo bar >&2");
-        let output = str::from_utf8(&interaction.output().0)?;
+        let output = str::from_utf8(&interaction.output().as_ref())?;
         assert_eq!(
             output.split_whitespace().collect::<Vec<_>>(),
             ["foo", "bar"]

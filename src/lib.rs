@@ -5,7 +5,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
-use handlebars::Output;
 use serde::Serialize;
 
 use std::{error::Error as StdError, fmt, io, num::ParseIntError, str::FromStr};
@@ -14,22 +13,13 @@ mod html;
 mod shell;
 mod template;
 mod term;
+mod utils;
 
 pub use self::{
     shell::ShellOptions,
     template::{SvgTemplate, SvgTemplateOptions},
+    term::{Captured, MatchKind, Parsed, TermOutput},
 };
-
-use self::{html::HtmlWriter, term::TermOutputParser};
-
-/// Marker trait for supported types of terminal output.
-pub trait TermOutput: Clone + Send + Sync + 'static {}
-
-/// Output captured from the terminal.
-#[derive(Debug, Clone)]
-pub struct Captured(pub Vec<u8>);
-
-impl TermOutput for Captured {}
 
 /// Errors that can occur when processing terminal output.
 #[derive(Debug)]
@@ -120,10 +110,10 @@ impl<Out: TermOutput> Transcript<Out> {
 
 impl Transcript {
     /// Adds a new interaction into the transcript.
-    pub fn add_interaction(&mut self, input: UserInput, output: impl Into<Vec<u8>>) -> &mut Self {
+    pub fn add_interaction(&mut self, input: UserInput, output: Vec<u8>) -> &mut Self {
         self.interactions.push(Interaction {
             input,
-            output: Captured(output.into()),
+            output: Captured::new(output),
         });
         self
     }
@@ -151,18 +141,12 @@ impl<Out: TermOutput> Interaction<Out> {
 impl Interaction<Captured> {
     /// Counts the total number of lines in input and output.
     pub fn count_lines(&self) -> usize {
-        let additional_lines = if self.output.0.ends_with(b"\n") { 1 } else { 2 };
-        bytecount::count(&self.output.0, b'\n') + additional_lines
-    }
-
-    /// Writes terminal [`output`](Self::output()) in the HTML format to the provided `writer`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if there was an issue processing output.
-    pub fn write_html_output(&self, writer: &mut dyn Output) -> Result<(), Error> {
-        let mut html_writer = HtmlWriter::new(writer);
-        TermOutputParser::new(&mut html_writer).parse(&self.output.0)
+        let additional_lines = if self.output.as_ref().ends_with(b"\n") {
+            1
+        } else {
+            2
+        };
+        bytecount::count(self.output.as_ref(), b'\n') + additional_lines
     }
 }
 

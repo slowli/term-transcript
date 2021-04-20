@@ -4,6 +4,7 @@ use std::str;
 
 use crate::Error;
 
+/// Parses terminal output and issues corresponding commands to the `writer`.
 #[derive(Debug)]
 pub struct TermOutputParser<'a, W> {
     writer: &'a mut W,

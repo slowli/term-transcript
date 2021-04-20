@@ -321,7 +321,8 @@ impl HelperDef for ContentHelper<'_> {
             .get(index)
             .ok_or_else(|| RenderError::new("index is out of bounds"))?;
         interaction
-            .write_html_output(out)
+            .output()
+            .write_as_html(out)
             .map_err(|err| RenderError::from_error("content", err))
     }
 }

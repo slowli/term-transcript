@@ -297,19 +297,7 @@ impl ClassOrRgb {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use std::io::Error;
-    use std::str;
-
-    #[derive(Debug, Default)]
-    struct StringOutput(String);
-
-    impl Output for StringOutput {
-        fn write(&mut self, seg: &str) -> Result<(), Error> {
-            self.0.push_str(seg);
-            Ok(())
-        }
-    }
+    use crate::utils::StringOutput;
 
     #[test]
     fn html_escaping() -> anyhow::Result<()> {
@@ -317,7 +305,7 @@ mod tests {
         let mut writer = HtmlWriter::new(&mut buffer);
         write!(writer, "1 < 2 && 4 >= 3")?;
 
-        assert_eq!(buffer.0, "1 &lt; 2 &amp;&amp; 4 &gt;= 3");
+        assert_eq!(buffer.into_inner(), "1 &lt; 2 &amp;&amp; 4 &gt;= 3");
         Ok(())
     }
 
@@ -338,7 +326,7 @@ mod tests {
         write!(writer, "!")?;
 
         assert_eq!(
-            buffer.0,
+            buffer.into_inner(),
             r#"Hello, <span class="bold underline fg-green bg-white">world</span>!"#
         );
 
@@ -362,7 +350,7 @@ mod tests {
         write!(writer, "!")?;
 
         assert_eq!(
-            buffer.0,
+            buffer.into_inner(),
             "<span class=\"dimmed fg-green bg-white\">Hello, </span>\
              <span class=\"fg-yellow\">world</span>!"
         );
@@ -391,7 +379,7 @@ mod tests {
         write!(writer, "!")?;
 
         assert_eq!(
-            buffer.0,
+            buffer.into_inner(),
             "<span class=\"dimmed fg-green bg-white\">Hello, \
              <span class=\"fg-yellow\">world</span></span>!"
         );
@@ -416,7 +404,7 @@ mod tests {
         writer.reset()?;
 
         assert_eq!(
-            buffer.0,
+            buffer.into_inner(),
             "<span class=\"fg-magenta\">H</span>\
              <span class=\"bg-i-cyan\">e</span>\
              <span style=\"background-color: #5fd700\">l</span>\
