@@ -1,0 +1,14 @@
+[package]
+name = "term-svg-cli"
+version = "0.1.0"
+authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+anyhow = "1.0.40"
+structopt = "0.3.21"
+pretty_assertions = "0.7.2"
+textwrap = "0.11"
+
+term-svg = { version = "0.1.0", path = ".." }

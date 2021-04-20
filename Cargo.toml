@@ -21,3 +21,6 @@ assert_matches = "1.5.0"
 
 [features]
 default = ["pretty_assertions"]
+
+[workspace]
+members = [".", "cli"]

@@ -85,6 +85,11 @@ pub struct Parsed {
 }
 
 impl Parsed {
+    /// Gets the parsed plaintext.
+    pub fn plaintext(&self) -> &str {
+        &self.plaintext
+    }
+
     /// Asserts that this parsed output matches `captured` terminal output.
     ///
     /// # Panics
