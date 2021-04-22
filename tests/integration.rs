@@ -2,9 +2,13 @@
 
 use assert_cmd::cargo::CommandCargoExt;
 
-use std::process::Command;
+use std::{fs::File, io::BufReader, path::Path, process::Command};
 
-use term_svg::{MatchKind, SvgTemplate, SvgTemplateOptions, Transcript, UserInput};
+use term_svg::test::TestOutput;
+use term_svg::{
+    test::TestConfig, MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript,
+    UserInput,
+};
 
 #[test]
 fn transcript_lifecycle() -> anyhow::Result<()> {
@@ -30,6 +34,26 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
     interaction
         .output()
         .assert_matches(transcript.interactions()[0].output(), MatchKind::Precise);
+
+    Ok(())
+}
+
+#[cfg(any(unix, windows))]
+#[test]
+fn snapshot_testing() -> anyhow::Result<()> {
+    let snapshot_path = Path::new(file!())
+        .parent()
+        .expect("No parent of current file")
+        .join("snapshots/rainbow.svg");
+    let svg = BufReader::new(File::open(snapshot_path)?);
+    let transcript = Transcript::from_svg(svg)?;
+
+    let shell_options = ShellOptions::default().with_cargo_path();
+    TestConfig::new(shell_options)
+        .with_match_kind(MatchKind::Precise)
+        .with_output(TestOutput::Verbose)
+        .test_transcript(&transcript)?
+        .assert_no_errors();
 
     Ok(())
 }
