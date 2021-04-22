@@ -13,6 +13,7 @@ mod html;
 mod shell;
 mod template;
 mod term;
+pub mod test;
 mod utils;
 
 pub use self::{

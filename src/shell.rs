@@ -1,5 +1,7 @@
 use std::{
+    env,
     io::{self, BufRead, BufReader, LineWriter, Write},
+    path::PathBuf,
     process::{Command, Stdio},
     sync::mpsc,
     thread,
@@ -37,6 +39,44 @@ impl ShellOptions {
         let mut command = Command::new("cmd");
         command.arg("/Q").arg("/K").arg("echo off");
         command
+    }
+
+    // Gets the path to the cargo `target` dir. Adapted from cargo:
+    //
+    // https://github.com/rust-lang/cargo/blob/485670b3983b52289a2f353d589c57fae2f60f82/tests/testsuite/support/mod.rs#L507
+    fn target_path() -> PathBuf {
+        let mut path = env::current_exe().expect("Cannot obtain path to the executing file");
+        path.pop();
+        if path.ends_with("deps") {
+            path.pop();
+        }
+        path
+    }
+
+    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable.
+    ///
+    /// # Limitations
+    ///
+    /// - The caller must be an integration test; the method can work improperly otherwise.
+    #[cfg(any(unix, windows))]
+    pub fn with_cargo_path(mut self) -> Self {
+        #[cfg(unix)]
+        const PATH_SEPARATOR: &str = ":";
+        #[cfg(windows)]
+        const PATH_SEPARATOR: &str = ";";
+
+        // TODO: escaping paths?
+        let mut path_var = env::var_os("PATH").unwrap_or_default();
+        let target_path = Self::target_path();
+        if !path_var.is_empty() {
+            path_var.push(PATH_SEPARATOR);
+        }
+        path_var.push(target_path.join("examples"));
+        path_var.push(PATH_SEPARATOR);
+        path_var.push(target_path);
+
+        self.command.env("PATH", &path_var);
+        self
     }
 
     /// Creates options based on the specified shell command. This should be an interactive
@@ -194,6 +234,9 @@ mod tests {
     use super::*;
 
     use std::str;
+
+    // TODO: add Bash shell
+    // TODO: get Powershell working (need to find out how to switch off prompt!)
 
     #[cfg(any(unix, windows))]
     #[test]
