@@ -1,7 +1,7 @@
 use std::{
-    env,
-    io::{self, BufRead, BufReader, LineWriter, Write},
-    path::PathBuf,
+    env, fmt,
+    io::{self, BufRead, BufReader, LineWriter, Read, Write},
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::mpsc,
     thread,
@@ -9,13 +9,24 @@ use std::{
 };
 
 use crate::{Captured, Interaction, Transcript, UserInput};
-use std::io::Read;
 
 /// Options for executing commands in the shell. Used in [`Transcript::from_inputs()`].
-#[derive(Debug)]
 pub struct ShellOptions {
     command: Command,
     io_timeout: Duration,
+    init_commands: Vec<String>,
+    line_mapper: Box<dyn FnMut(String) -> Option<String>>,
+}
+
+impl fmt::Debug for ShellOptions {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ShellOptions")
+            .field("command", &self.command)
+            .field("io_timeout", &self.io_timeout)
+            .field("init_commands", &self.init_commands)
+            .finish()
+    }
 }
 
 #[cfg(any(unix, windows))]
@@ -24,6 +35,17 @@ impl Default for ShellOptions {
         Self {
             command: Self::default_shell(),
             io_timeout: Duration::from_secs(1),
+            init_commands: vec![],
+            line_mapper: Box::new(Some),
+        }
+    }
+}
+
+impl From<Command> for ShellOptions {
+    fn from(command: Command) -> Self {
+        Self {
+            command,
+            ..Self::default()
         }
     }
 }
@@ -53,11 +75,24 @@ impl ShellOptions {
         path
     }
 
+    /// Gets path to the specified cargo binary.
+    ///
+    /// # Limitations
+    ///
+    /// - The caller must be an integration test; the method will work improperly otherwise.
+    // TODO: move to `test` module?
+    pub fn cargo_bin(path: impl AsRef<Path>) -> PathBuf {
+        let mut path = Self::target_path().join(path);
+        path.set_extension(env::consts::EXE_EXTENSION);
+        path
+    }
+
     /// Adds paths to cargo binaries (including examples) to the `PATH` env variable.
     ///
     /// # Limitations
     ///
-    /// - The caller must be an integration test; the method can work improperly otherwise.
+    /// - The caller must be an integration test; the method will work improperly otherwise.
+    // TODO: move to `test` module?
     #[cfg(any(unix, windows))]
     pub fn with_cargo_path(mut self) -> Self {
         #[cfg(unix)]
@@ -79,20 +114,26 @@ impl ShellOptions {
         self
     }
 
-    /// Creates options based on the specified shell command. This should be an interactive
-    /// shell / REPL, such as `sh` / `bash` for *NIX or `cmd` / `powershell` for Windows.
-    pub fn new(command: Command, io_timeout: Duration) -> Self {
-        Self {
-            command,
-            io_timeout,
-        }
-    }
-
     /// Sets the I/O timeout for shell commands. This determines how long the code waits
     /// for output of a command before proceeding to the next command. Longer values
     /// allow to capture output more accurately, but result in longer execution.
     pub fn with_io_timeout(mut self, io_timeout: Duration) -> Self {
         self.io_timeout = io_timeout;
+        self
+    }
+
+    /// Adds an initialization command.
+    pub fn with_init_command(mut self, command: impl Into<String>) -> Self {
+        self.init_commands.push(command.into());
+        self
+    }
+
+    /// Sets the line mapper for the shell. This allows to filter and/or map outputs.
+    pub fn with_line_mapper<F>(mut self, mapper: F) -> Self
+    where
+        F: FnMut(String) -> Option<String> + 'static,
+    {
+        self.line_mapper = Box::new(mapper);
         self
     }
 }
@@ -135,14 +176,25 @@ impl Transcript {
         // ^-- `unwrap()` is safe due to configuration of the shell process.
         let mut stdin = LineWriter::new(stdin);
 
+        // Push initialization commands.
+        for cmd in &options.init_commands {
+            writeln!(stdin, "{}", cmd)?;
+        }
+        // Drain all output.
+        while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
+            // Intentionally empty.
+        }
+
         let mut transcript = Self::new();
         for input in inputs {
             writeln!(stdin, "{}", input.text)?;
 
             let mut output = String::new();
             while let Ok(line) = out_lines_recv.recv_timeout(options.io_timeout) {
-                output.push_str(&line);
-                output.push('\n');
+                if let Some(mapped_line) = (options.line_mapper)(line) {
+                    output.push_str(&mapped_line);
+                    output.push('\n');
+                }
             }
             if output.ends_with('\n') {
                 output.truncate(output.len() - 1);
@@ -234,9 +286,6 @@ mod tests {
     use super::*;
 
     use std::str;
-
-    // TODO: add Bash shell
-    // TODO: get Powershell working (need to find out how to switch off prompt!)
 
     #[cfg(any(unix, windows))]
     #[test]

@@ -3,23 +3,41 @@ use quick_xml::{
     Reader as XmlReader,
 };
 
-use std::{borrow::Cow, error::Error as StdError, fmt, io::BufRead, mem};
+use std::{
+    borrow::Cow,
+    error::Error as StdError,
+    fmt,
+    io::{self, BufRead},
+    mem,
+};
 
 use crate::{Interaction, Parsed, Transcript, UserInput, UserInputKind, UserInputParseError};
 
+/// Errors that can occur during parsing SVG transcripts.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ParseError {
+    /// Unexpected root XML tag; must be <svg>.
     UnexpectedRoot,
+    /// Invalid transcript container.
     InvalidContainer,
+    /// Error parsing user input.
     InvalidUserInput(String, UserInputParseError),
+    /// Unexpected EOF.
     UnexpectedEof,
+    /// Error parsing XML.
     Xml(quick_xml::Error),
 }
 
 impl From<quick_xml::Error> for ParseError {
     fn from(err: quick_xml::Error) -> Self {
         Self::Xml(err)
+    }
+}
+
+impl From<io::Error> for ParseError {
+    fn from(err: io::Error) -> Self {
+        Self::Xml(quick_xml::Error::Io(err))
     }
 }
 

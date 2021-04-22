@@ -18,7 +18,8 @@ mod utils;
 
 pub use self::{
     shell::ShellOptions,
-    template::{SvgTemplate, SvgTemplateOptions},
+    // TODO: make module public & remove exports
+    template::{ParseError, SvgTemplate, SvgTemplateOptions},
     term::{Captured, MatchKind, Parsed, TermOutput},
 };
 

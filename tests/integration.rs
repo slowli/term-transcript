@@ -2,12 +2,12 @@
 
 use assert_cmd::cargo::CommandCargoExt;
 
-use std::{fs::File, io::BufReader, path::Path, process::Command};
+use std::process::{Command, Stdio};
 
-use term_svg::test::TestOutput;
 use term_svg::{
-    test::TestConfig, MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript,
-    UserInput,
+    read_transcript,
+    test::{TestConfig, TestOutput},
+    MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput,
 };
 
 #[test]
@@ -38,17 +38,89 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(any(unix, windows))]
 #[test]
 fn snapshot_testing() -> anyhow::Result<()> {
-    let snapshot_path = Path::new(file!())
-        .parent()
-        .expect("No parent of current file")
-        .join("snapshots/rainbow.svg");
-    let svg = BufReader::new(File::open(snapshot_path)?);
-    let transcript = Transcript::from_svg(svg)?;
-
+    let transcript = read_transcript!("rainbow")?;
     let shell_options = ShellOptions::default().with_cargo_path();
+    TestConfig::new(shell_options)
+        .with_match_kind(MatchKind::Precise)
+        .with_output(TestOutput::Verbose)
+        .test_transcript(&transcript)?
+        .assert_no_errors();
+
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn bash_shell() -> anyhow::Result<()> {
+    // Check that the `bash` command exists; exit otherwise.
+    let command = Command::new("bash")
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    match command {
+        Ok(status) if status.success() => { /* Success! */ }
+        _ => return Ok(()),
+    }
+
+    let transcript = include_transcript!("rainbow")?;
+
+    let alias = format!(
+        "rainbow() {{ '{}' \"$@\"; }}",
+        ShellOptions::cargo_bin("examples/rainbow")
+            .to_str()
+            .ok_or_else(|| { anyhow::anyhow!("Path to example is not a UTF-8 string") })?,
+    );
+    let shell_options = ShellOptions::from(Command::new("bash")).with_init_command(alias);
+
+    TestConfig::new(shell_options)
+        .with_match_kind(MatchKind::Precise)
+        .with_output(TestOutput::Verbose)
+        .test_transcript(&transcript)?
+        .assert_no_errors();
+
+    Ok(())
+}
+
+#[test]
+fn powershell() -> anyhow::Result<()> {
+    let command = Command::new("powershell")
+        .arg("-Help")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    match command {
+        Ok(status) if status.success() => { /* Success! */ }
+        _ => return Ok(()),
+    }
+
+    let transcript = read_transcript!("rainbow")?;
+
+    let path_to_example = ShellOptions::cargo_bin("examples/rainbow");
+    let mut cmd = Command::new("powershell");
+    cmd.arg("-NoLogo").arg("-NoExit");
+
+    let alias_function = format!(
+        "function rainbow {{ & '{}' @Args }}",
+        path_to_example
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Path to example is not a UTF-8 string"))?
+    );
+    let shell_options = ShellOptions::from(cmd)
+        .with_init_command("function prompt { }")
+        .with_init_command(&alias_function)
+        .with_line_mapper(|line| {
+            if line.starts_with("PS>") {
+                None
+            } else {
+                Some(line)
+            }
+        });
+
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)

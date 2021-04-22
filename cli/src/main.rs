@@ -10,7 +10,6 @@ use std::{
     path::{Path, PathBuf},
     process::{self, Command},
     str::FromStr,
-    time::Duration,
 };
 
 use term_svg::{
@@ -185,7 +184,7 @@ impl Args {
         if let Some(shell) = shell {
             let mut command = Command::new(shell);
             command.args(shell_args);
-            ShellOptions::new(command, Duration::from_secs(1))
+            command.into()
         } else {
             ShellOptions::default()
         }

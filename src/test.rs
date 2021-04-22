@@ -3,11 +3,15 @@
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
-    io::{self, Write},
+    fs::File,
+    io::{self, BufReader, Write},
     ops,
+    path::Path,
 };
 
-use crate::{utils::IndentingWriter, Interaction, MatchKind, Parsed, ShellOptions, Transcript};
+use crate::{
+    utils::IndentingWriter, Interaction, MatchKind, ParseError, Parsed, ShellOptions, Transcript,
+};
 
 /// Test output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -208,4 +212,25 @@ impl ops::AddAssign for TestStats {
         self.passed += rhs.passed;
         self.errors += rhs.errors;
     }
+}
+
+#[doc(hidden)] // public for the sake of the `read_transcript` macro
+pub fn _read_transcript(
+    including_file: &str,
+    name: &str,
+) -> Result<Transcript<Parsed>, ParseError> {
+    let snapshot_path = Path::new(including_file)
+        .parent()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No parent of current file"))?
+        .join(format!("snapshots/{}.svg", name));
+    let svg = BufReader::new(File::open(snapshot_path)?);
+    Transcript::from_svg(svg)
+}
+
+/// Reads the transcript from a file.
+#[macro_export]
+macro_rules! read_transcript {
+    ($name:tt) => {
+        $crate::test::_read_transcript(file!(), $name)
+    };
 }

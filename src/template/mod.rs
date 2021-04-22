@@ -8,6 +8,7 @@ use std::{
 use crate::{Interaction, Transcript, UserInput};
 
 mod parser;
+pub use self::parser::ParseError;
 
 const MAIN_TEMPLATE_NAME: &str = "main";
 const TEMPLATE: &str = include_str!("default.svg.handlebars");
