@@ -1,15 +1,12 @@
 //! CLI for the `term-svg` crate.
 
-use pretty_assertions::Comparison;
 use structopt::StructOpt;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use std::{
     ffi::OsString,
-    fmt,
     fs::File,
     io::{self, BufReader, Read, Write},
-    ops,
     path::{Path, PathBuf},
     process::{self, Command},
     str::FromStr,
@@ -17,7 +14,8 @@ use std::{
 };
 
 use term_svg::{
-    Interaction, Parsed, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput,
+    test::{TestConfig, TestOutput, TestStats},
+    MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput,
 };
 
 /// CLI for capturing and snapshot-testing terminal output.
@@ -102,33 +100,39 @@ impl Args {
                 verbose,
                 color,
             } => {
-                let mut options = Self::shell_options(shell, shell_args);
-                let mut totals = TestStats::default();
+                let options = Self::shell_options(shell, shell_args);
+                let mut test_config = TestConfig::new(options);
+                test_config
+                    .with_output(if verbose {
+                        TestOutput::Verbose
+                    } else {
+                        TestOutput::Normal
+                    })
+                    .with_match_kind(if precise {
+                        MatchKind::Precise
+                    } else {
+                        MatchKind::TextOnly
+                    })
+                    .with_color_choice(color.into());
+
+                let mut totals = FullTestStats::default();
                 let out = StandardStream::stdout(color.into());
-                let mut out = out.lock();
 
                 for svg_path in &svg_paths {
-                    write!(out, "Testing file ")?;
-                    out.set_color(ColorSpec::new().set_intense(true).set_underline(true))?;
-                    write!(out, "{}", svg_path.to_string_lossy())?;
-                    out.reset()?;
-                    writeln!(out, "...")?;
-
-                    match Self::process_file(&mut out, svg_path, &mut options, precise, verbose) {
-                        Ok(stats) => totals += stats,
+                    Self::report_test_start(&out, svg_path)?;
+                    match Self::process_file(svg_path, &mut test_config) {
+                        Ok(stats) => {
+                            totals.base += stats;
+                        }
                         Err(err) => {
-                            Self::report_failure(&mut out, svg_path, err)?;
+                            Self::report_failure(&out, svg_path, err)?;
                             totals.failures += 1;
                         }
                     }
                 }
 
-                out.set_color(ColorSpec::new().set_intense(true))?;
-                write!(out, "Totals: ")?;
-                out.reset()?;
+                Self::report_totals(&out, totals)?;
 
-                totals.print(&mut out)?;
-                writeln!(out)?;
                 if !totals.is_successful() {
                     process::exit(1);
                 }
@@ -137,23 +141,23 @@ impl Args {
         Ok(())
     }
 
-    fn process_file(
-        out: &mut impl WriteColor,
-        svg_path: &Path,
-        options: &mut ShellOptions,
-        precise: bool,
-        verbose: bool,
-    ) -> anyhow::Result<TestStats> {
+    fn process_file(svg_path: &Path, test_config: &mut TestConfig) -> anyhow::Result<TestStats> {
         let svg = BufReader::new(File::open(svg_path)?);
         let transcript = Transcript::from_svg(svg)?;
-        Self::test_transcript(out, &transcript, options, precise, verbose)
+        test_config.test_transcript(&transcript).map_err(From::from)
     }
 
-    fn report_failure(
-        out: &mut impl WriteColor,
-        svg_path: &Path,
-        err: anyhow::Error,
-    ) -> io::Result<()> {
+    fn report_test_start(out: &StandardStream, svg_path: &Path) -> io::Result<()> {
+        let mut out = out.lock();
+        write!(out, "Testing file ")?;
+        out.set_color(ColorSpec::new().set_intense(true).set_underline(true))?;
+        write!(out, "{}", svg_path.to_string_lossy())?;
+        out.reset()?;
+        writeln!(out, "...")
+    }
+
+    fn report_failure(out: &StandardStream, svg_path: &Path, err: anyhow::Error) -> io::Result<()> {
+        let mut out = out.lock();
         out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
         write!(out, "Error testing file ")?;
         out.set_color(
@@ -168,6 +172,15 @@ impl Args {
         out.reset()
     }
 
+    fn report_totals(out: &StandardStream, totals: FullTestStats) -> io::Result<()> {
+        let mut out = out.lock();
+        out.set_color(ColorSpec::new().set_intense(true))?;
+        write!(out, "Totals: ")?;
+        out.reset()?;
+        totals.print(&mut out)?;
+        writeln!(out)
+    }
+
     fn shell_options(shell: Option<OsString>, shell_args: Vec<OsString>) -> ShellOptions {
         if let Some(shell) = shell {
             let mut command = Command::new(shell);
@@ -176,70 +189,6 @@ impl Args {
         } else {
             ShellOptions::default()
         }
-    }
-
-    fn test_transcript(
-        out: &mut impl WriteColor,
-        transcript: &Transcript<Parsed>,
-        options: &mut ShellOptions,
-        precise: bool,
-        verbose: bool,
-    ) -> anyhow::Result<TestStats> {
-        let inputs = transcript
-            .interactions()
-            .iter()
-            .map(|interaction| interaction.input().to_owned());
-        let reproduced = Transcript::from_inputs(options, inputs)?;
-
-        let it = transcript
-            .interactions()
-            .iter()
-            .zip(reproduced.interactions().iter().map(Interaction::output));
-
-        let mut stats = TestStats::default();
-        for (original, reproduced) in it {
-            let (original_text, reproduced_text) = if precise {
-                (original.output().html(), reproduced.to_html()?)
-            } else {
-                (original.output().plaintext(), reproduced.to_plaintext()?)
-            };
-
-            write!(out, "  ")?;
-            out.set_color(ColorSpec::new().set_intense(true))?;
-            write!(out, "[")?;
-
-            if original_text == reproduced_text {
-                stats.passed += 1;
-                out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Green)))?;
-                write!(out, "+")?;
-            } else {
-                stats.errors += 1;
-                out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Red)))?;
-                write!(out, "-")?;
-            }
-
-            out.set_color(ColorSpec::new().set_intense(true))?;
-            write!(out, "]")?;
-            out.reset()?;
-            writeln!(out, " Input: {}", original.input().as_ref())?;
-
-            if original_text != reproduced_text {
-                write!(
-                    out,
-                    "    {}",
-                    Comparison::new(&DebugStr(original_text), &DebugStr(&reproduced_text))
-                )?;
-            } else if verbose {
-                out.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(244))))?;
-                writeln!(
-                    out,
-                    "{}",
-                    textwrap::indent(original_text, "    ").trim_end()
-                )?;
-                out.reset()?;
-            }
-        }
-        Ok(stats)
     }
 }
 
@@ -282,36 +231,15 @@ impl From<ColorPreference> for ColorChoice {
     }
 }
 
-// Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
-// to switch to `fmt::Display`.
-struct DebugStr<'a>(&'a str);
-
-impl fmt::Debug for DebugStr<'_> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Align output with verbose term output. Since `Comparison` adds one space,
-        // we need to add 3 spaces instead of 4.
-        formatter.write_str(&textwrap::indent(self.0, "   "))
-    }
-}
-
 #[derive(Debug, Clone, Copy, Default)]
-struct TestStats {
-    passed: usize,
-    errors: usize,
+struct FullTestStats {
+    base: TestStats,
     failures: usize,
 }
 
-impl TestStats {
+impl FullTestStats {
     fn print(self, out: &mut impl WriteColor) -> io::Result<()> {
-        write!(out, "passed: ")?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
-        write!(out, "{}", self.passed)?;
-        out.reset()?;
-
-        write!(out, ", errors: ")?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-        write!(out, "{}", self.errors)?;
-        out.reset()?;
+        self.base.print(out)?;
 
         write!(out, ", failures: ")?;
         out.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
@@ -320,15 +248,7 @@ impl TestStats {
     }
 
     fn is_successful(self) -> bool {
-        self.errors == 0 && self.failures == 0
-    }
-}
-
-impl ops::AddAssign for TestStats {
-    fn add_assign(&mut self, rhs: Self) {
-        self.passed += rhs.passed;
-        self.errors += rhs.errors;
-        self.failures += rhs.failures;
+        self.base.errors == 0 && self.failures == 0
     }
 }
 

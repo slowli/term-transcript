@@ -189,7 +189,8 @@ impl TestStats {
         assert_eq!(self.errors, 0, "There were test errors");
     }
 
-    fn print(self, out: &mut impl WriteColor) -> io::Result<()> {
+    #[doc(hidden)]
+    pub fn print(self, out: &mut impl WriteColor) -> io::Result<()> {
         write!(out, "passed: ")?;
         out.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
         write!(out, "{}", self.passed)?;
