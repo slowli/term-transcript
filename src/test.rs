@@ -3,12 +3,10 @@
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
-    env,
     fs::File,
     io::{self, BufReader, Write},
     ops,
-    path::{Path, PathBuf},
-    process::Command,
+    path::Path,
 };
 
 use crate::{
@@ -38,9 +36,9 @@ pub struct TestConfig {
 
 impl TestConfig {
     /// Creates a new config.
-    pub fn new(shell_options: ShellOptions) -> Self {
+    pub fn new<Ext>(shell_options: ShellOptions<Ext>) -> Self {
         Self {
-            shell_options,
+            shell_options: shell_options.drop_extensions(),
             match_kind: MatchKind::TextOnly,
             output: TestOutput::Normal,
             color_choice: ColorChoice::Auto,
@@ -181,6 +179,7 @@ impl TestConfig {
 
 /// Stats of a single snapshot test.
 #[derive(Debug, Clone, Copy, Default)]
+#[non_exhaustive]
 pub struct TestStats {
     /// Number of successfully matched user inputs.
     pub passed: usize,
@@ -237,107 +236,4 @@ macro_rules! read_transcript {
     ($name:tt) => {
         $crate::test::_read_transcript(file!(), $name)
     };
-}
-
-#[derive(Debug, Clone, Copy)]
-enum ShellKind {
-    Sh,
-    Bash,
-    Powershell,
-}
-
-/// Wrapper for [`ShellOptions`] geared for testing cargo examples / binaries.
-#[derive(Debug)]
-pub struct TestShellOptions {
-    shell_kind: ShellKind,
-    inner: ShellOptions,
-}
-
-impl TestShellOptions {
-    /// Configures an `sh` shell.
-    pub fn sh() -> Self {
-        Self {
-            shell_kind: ShellKind::Sh,
-            inner: Command::new("sh").into(),
-        }
-    }
-
-    /// Configures a Bash shell.
-    pub fn bash() -> Self {
-        Self {
-            shell_kind: ShellKind::Bash,
-            inner: Command::new("bash").into(),
-        }
-    }
-
-    /// Configures PowerShell.
-    #[allow(clippy::doc_markdown)] // false positive
-    pub fn powershell() -> Self {
-        let mut cmd = Command::new("powershell");
-        cmd.arg("-NoLogo").arg("-NoExit");
-
-        // TODO: Is there a way to switch off prompt / echo?
-        let inner = ShellOptions::from(cmd)
-            .with_init_command("function prompt { }")
-            .with_line_mapper(|line| {
-                if line.starts_with("PS>") {
-                    None
-                } else {
-                    Some(line)
-                }
-            });
-
-        Self {
-            shell_kind: ShellKind::Powershell,
-            inner,
-        }
-    }
-
-    /// Gets path to the specified cargo binary.
-    pub fn cargo_bin(path: impl AsRef<Path>) -> PathBuf {
-        let mut path = ShellOptions::target_path().join(path);
-        path.set_extension(env::consts::EXE_EXTENSION);
-        path
-    }
-
-    /// Creates an alias for the specified cargo binary, such as `foo` or `examples/bar`.
-    /// This allows to call the binary using this alias without invasive preparations (such as
-    /// installing it globally via `cargo install`).
-    ///
-    /// # Limitations
-    ///
-    /// - The caller must be a unit or integration test; the method will work improperly otherwise.
-    /// - For Bash and PowerShell, `name` must be a valid name of a function. For `sh`,
-    ///   `name` must be a valid name for the `alias` command. The `name` validity
-    ///   is **not** checked.
-    #[allow(clippy::doc_markdown)] // false positive
-    pub fn with_alias(mut self, name: &str, path_to_bin: impl AsRef<Path>) -> Self {
-        let path_to_bin = Self::cargo_bin(path_to_bin);
-        let path_to_bin = path_to_bin
-            .to_str()
-            .expect("Path to example is not a UTF-8 string");
-
-        let alias_command = match self.shell_kind {
-            ShellKind::Sh => format!("alias {name}={path}", name = name, path = path_to_bin),
-            ShellKind::Bash => format!(
-                "{name}() {{ '{path}' \"$@\"; }}",
-                name = name,
-                path = path_to_bin
-            ),
-            ShellKind::Powershell => format!(
-                "function {name} {{ & '{path}' @Args }}",
-                name = name,
-                path = path_to_bin
-            ),
-        };
-
-        self.inner = self.inner.with_init_command(alias_command);
-        self
-    }
-}
-
-impl From<TestShellOptions> for TestConfig {
-    fn from(options: TestShellOptions) -> Self {
-        Self::new(options.inner)
-    }
 }

@@ -79,7 +79,8 @@
   <foreignObject x="0" y="0" width="650" height="302">
     <div xmlns="http://www.w3.org/1999/xhtml" class="container">
 
-      <div class="user-input"><pre><span class="bold">$</span> rainbow</pre></div>
+      <!-- TODO: test command args as well -->
+      <div class="user-input"><pre><span class="bold">$</span> colored-output</pre></div>
       <div class="term-output"><pre>Base colors:
 <span class="underline fg-black">black</span> <span class="fg-blue">blue</span> <span class="underline fg-green">green</span> <span class="fg-red">red</span> <span class="underline fg-cyan">cyan</span> <span class="fg-magenta">magenta</span> <span class="underline fg-yellow">yellow</span> 
 <span class="fg-i-black">black</span> <span class="underline fg-i-blue">blue</span> <span class="fg-i-green">green</span> <span class="underline fg-i-red">red</span> <span class="fg-i-cyan">cyan</span> <span class="underline fg-i-magenta">magenta</span> <span class="fg-i-yellow">yellow</span> 

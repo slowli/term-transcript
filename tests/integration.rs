@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 
 use term_svg::{
     read_transcript,
-    test::{TestConfig, TestOutput, TestShellOptions},
+    test::{TestConfig, TestOutput},
     MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput,
 };
 
@@ -54,9 +54,9 @@ fn snapshot_testing() -> anyhow::Result<()> {
 #[cfg(unix)]
 #[test]
 fn sh_shell_example() -> anyhow::Result<()> {
-    let transcript = read_transcript!("rainbow")?;
-    let shell_options = TestShellOptions::sh().with_alias("colored-output", "examples/rainbow");
-    TestConfig::from(shell_options)
+    let transcript = read_transcript!("colored-output")?;
+    let shell_options = ShellOptions::sh().with_alias("colored-output", "examples/rainbow");
+    TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
         .test_transcript(&transcript)?
@@ -70,21 +70,24 @@ fn sh_shell_example() -> anyhow::Result<()> {
 // improperly because of Windows-style paths.
 #[test]
 fn bash_shell_example() -> anyhow::Result<()> {
-    // Check that the `bash` command exists; exit otherwise.
-    let command = Command::new("bash")
-        .arg("--version")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-    match command {
-        Ok(status) if status.success() => { /* Success! */ }
-        _ => return Ok(()),
+    fn bash_exists() -> bool {
+        let exit_status = Command::new("bash")
+            .arg("--version")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        matches!(exit_status, Ok(status) if status.success())
     }
 
-    let transcript = read_transcript!("rainbow")?;
-    let shell_options = TestShellOptions::bash().with_alias("colored-output", "examples/rainbow");
-    TestConfig::from(shell_options)
+    if !bash_exists() {
+        println!("bash not found; skipping");
+        return Ok(());
+    }
+
+    let transcript = read_transcript!("colored-output")?;
+    let shell_options = ShellOptions::bash().with_alias("colored-output", "examples/rainbow");
+    TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
         .test_transcript(&transcript)?
@@ -95,21 +98,24 @@ fn bash_shell_example() -> anyhow::Result<()> {
 
 #[test]
 fn powershell_example() -> anyhow::Result<()> {
-    let command = Command::new("powershell")
-        .arg("-Help")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-    match command {
-        Ok(status) if status.success() => { /* Success! */ }
-        _ => return Ok(()),
+    fn powershell_exists() -> bool {
+        let exit_status = Command::new("powershell")
+            .arg("-Help")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        matches!(exit_status, Ok(status) if status.success())
     }
 
-    let transcript = read_transcript!("rainbow")?;
-    let shell_options =
-        TestShellOptions::powershell().with_alias("colored-output", "examples/rainbow");
-    TestConfig::from(shell_options)
+    if !powershell_exists() {
+        println!("powershell not found; exiting");
+        return Ok(());
+    }
+
+    let transcript = read_transcript!("colored-output")?;
+    let shell_options = ShellOptions::powershell().with_alias("colored-output", "examples/rainbow");
+    TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
         .test_transcript(&transcript)?

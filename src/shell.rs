@@ -1,7 +1,7 @@
 use std::{
     env, fmt,
     io::{self, BufRead, BufReader, LineWriter, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::mpsc,
     thread,
@@ -11,20 +11,22 @@ use std::{
 use crate::{Captured, Interaction, Transcript, UserInput};
 
 /// Options for executing commands in the shell. Used in [`Transcript::from_inputs()`].
-pub struct ShellOptions {
+pub struct ShellOptions<Ext = ()> {
     command: Command,
     io_timeout: Duration,
     init_commands: Vec<String>,
     line_mapper: Box<dyn FnMut(String) -> Option<String>>,
+    extensions: Ext,
 }
 
-impl fmt::Debug for ShellOptions {
+impl<Ext: fmt::Debug> fmt::Debug for ShellOptions<Ext> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("ShellOptions")
             .field("command", &self.command)
             .field("io_timeout", &self.io_timeout)
             .field("init_commands", &self.init_commands)
+            .field("extensions", &self.extensions)
             .finish()
     }
 }
@@ -32,25 +34,17 @@ impl fmt::Debug for ShellOptions {
 #[cfg(any(unix, windows))]
 impl Default for ShellOptions {
     fn default() -> Self {
-        Self {
-            command: Self::default_shell(),
-            io_timeout: Duration::from_secs(1),
-            init_commands: vec![],
-            line_mapper: Box::new(Some),
-        }
+        Self::new(Self::default_shell(), ())
     }
 }
 
 impl From<Command> for ShellOptions {
     fn from(command: Command) -> Self {
-        Self {
-            command,
-            ..Self::default()
-        }
+        Self::new(command, ())
     }
 }
 
-impl ShellOptions {
+impl<Ext> ShellOptions<Ext> {
     #[cfg(unix)]
     fn default_shell() -> Command {
         Command::new("sh")
@@ -63,43 +57,14 @@ impl ShellOptions {
         command
     }
 
-    // Gets the path to the cargo `target` dir. Adapted from cargo:
-    //
-    // https://github.com/rust-lang/cargo/blob/485670b3983b52289a2f353d589c57fae2f60f82/tests/testsuite/support/mod.rs#L507
-    pub(crate) fn target_path() -> PathBuf {
-        let mut path = env::current_exe().expect("Cannot obtain path to the executing file");
-        path.pop();
-        if path.ends_with("deps") {
-            path.pop();
+    fn new(command: Command, extensions: Ext) -> Self {
+        Self {
+            command,
+            io_timeout: Duration::from_secs(1),
+            init_commands: vec![],
+            line_mapper: Box::new(Some),
+            extensions,
         }
-        path
-    }
-
-    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable.
-    ///
-    /// # Limitations
-    ///
-    /// - The caller must be an integration test; the method will work improperly otherwise.
-    // TODO: move to `test` module?
-    #[cfg(any(unix, windows))]
-    pub fn with_cargo_path(mut self) -> Self {
-        #[cfg(unix)]
-        const PATH_SEPARATOR: &str = ":";
-        #[cfg(windows)]
-        const PATH_SEPARATOR: &str = ";";
-
-        // TODO: escaping paths?
-        let mut path_var = env::var_os("PATH").unwrap_or_default();
-        let target_path = Self::target_path();
-        if !path_var.is_empty() {
-            path_var.push(PATH_SEPARATOR);
-        }
-        path_var.push(target_path.join("examples"));
-        path_var.push(PATH_SEPARATOR);
-        path_var.push(target_path);
-
-        self.command.env("PATH", &path_var);
-        self
     }
 
     /// Sets the I/O timeout for shell commands. This determines how long the code waits
@@ -123,6 +88,133 @@ impl ShellOptions {
     {
         self.line_mapper = Box::new(mapper);
         self
+    }
+
+    // Gets the path to the cargo `target` dir. Adapted from cargo:
+    //
+    // https://github.com/rust-lang/cargo/blob/485670b3983b52289a2f353d589c57fae2f60f82/tests/testsuite/support/mod.rs#L507
+    fn target_path() -> PathBuf {
+        let mut path = env::current_exe().expect("Cannot obtain path to the executing file");
+        path.pop();
+        if path.ends_with("deps") {
+            path.pop();
+        }
+        path
+    }
+
+    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable.
+    ///
+    /// # Limitations
+    ///
+    /// - The caller must be a unit or integration test; the method will work improperly otherwise.
+    #[cfg(any(unix, windows))]
+    pub fn with_cargo_path(mut self) -> Self {
+        #[cfg(unix)]
+        const PATH_SEPARATOR: &str = ":";
+        #[cfg(windows)]
+        const PATH_SEPARATOR: &str = ";";
+
+        // TODO: escaping paths?
+        let mut path_var = env::var_os("PATH").unwrap_or_default();
+        let target_path = Self::target_path();
+        if !path_var.is_empty() {
+            path_var.push(PATH_SEPARATOR);
+        }
+        path_var.push(target_path.join("examples"));
+        path_var.push(PATH_SEPARATOR);
+        path_var.push(target_path);
+
+        self.command.env("PATH", &path_var);
+        self
+    }
+
+    pub(crate) fn drop_extensions(self) -> ShellOptions {
+        ShellOptions {
+            command: self.command,
+            io_timeout: self.io_timeout,
+            init_commands: self.init_commands,
+            line_mapper: self.line_mapper,
+            extensions: (),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
+pub enum ShellKind {
+    Sh,
+    Bash,
+    Powershell,
+}
+
+impl ShellOptions<ShellKind> {
+    /// Configures an `sh` shell.
+    pub fn sh() -> Self {
+        Self::new(Command::new("sh"), ShellKind::Sh)
+    }
+
+    /// Configures a Bash shell.
+    pub fn bash() -> Self {
+        Self::new(Command::new("bash"), ShellKind::Bash)
+    }
+
+    /// Configures PowerShell.
+    #[allow(clippy::doc_markdown)] // false positive
+    pub fn powershell() -> Self {
+        let mut cmd = Command::new("powershell");
+        cmd.arg("-NoLogo").arg("-NoExit");
+
+        Self::new(cmd, ShellKind::Powershell)
+            .with_init_command("function prompt { }")
+            .with_line_mapper(|line| {
+                if line.starts_with("PS>") {
+                    None
+                } else {
+                    Some(line)
+                }
+            })
+    }
+
+    /// Creates an alias for the specified cargo binary, such as `foo` or `examples/bar`.
+    /// This allows to call the binary using this alias without invasive preparations (such as
+    /// installing it globally via `cargo install`), and is more flexible than
+    /// [`Self::with_cargo_path()`].
+    ///
+    /// # Limitations
+    ///
+    /// - The caller must be a unit or integration test; the method will work improperly otherwise.
+    /// - For Bash and PowerShell, `name` must be a valid name of a function. For `sh`,
+    ///   `name` must be a valid name for the `alias` command. The `name` validity
+    ///   is **not** checked.
+    #[allow(clippy::doc_markdown)] // false positive
+    pub fn with_alias(self, name: &str, path_to_bin: impl AsRef<Path>) -> Self {
+        let path_to_bin = Self::cargo_bin(path_to_bin);
+        let path_to_bin = path_to_bin
+            .to_str()
+            .expect("Path to example is not a UTF-8 string");
+
+        let alias_command = match self.extensions {
+            ShellKind::Sh => format!("alias {name}=\"'{path}'\"", name = name, path = path_to_bin),
+            ShellKind::Bash => format!(
+                "{name}() {{ '{path}' \"$@\"; }}",
+                name = name,
+                path = path_to_bin
+            ),
+            ShellKind::Powershell => format!(
+                "function {name} {{ & '{path}' @Args }}",
+                name = name,
+                path = path_to_bin
+            ),
+        };
+
+        self.with_init_command(alias_command)
+    }
+
+    /// Gets path to the specified cargo binary.
+    fn cargo_bin(path: impl AsRef<Path>) -> PathBuf {
+        let mut path = Self::target_path().join(path);
+        path.set_extension(env::consts::EXE_EXTENSION);
+        path
     }
 }
 
