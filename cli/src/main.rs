@@ -98,7 +98,13 @@ impl Args {
                 verbose,
                 color,
             } => {
+                let match_kind = if precise {
+                    MatchKind::Precise
+                } else {
+                    MatchKind::TextOnly
+                };
                 let options = Self::shell_options(shell, shell_args);
+
                 let mut test_config = TestConfig::new(options);
                 test_config
                     .with_output(if verbose {
@@ -106,11 +112,7 @@ impl Args {
                     } else {
                         TestOutputConfig::Normal
                     })
-                    .with_match_kind(if precise {
-                        MatchKind::Precise
-                    } else {
-                        MatchKind::TextOnly
-                    })
+                    .with_match_kind(match_kind)
                     .with_color_choice(color.into());
 
                 let mut totals = FullTestStats::default();
@@ -120,7 +122,8 @@ impl Args {
                     Self::report_test_start(&out, svg_path)?;
                     match Self::process_file(svg_path, &mut test_config) {
                         Ok(stats) => {
-                            totals.base += stats;
+                            totals.passed += stats.passed(match_kind);
+                            totals.errors += stats.errors(match_kind);
                         }
                         Err(err) => {
                             Self::report_failure(&out, svg_path, err)?;
@@ -233,13 +236,22 @@ impl From<ColorPreference> for ColorChoice {
 
 #[derive(Debug, Clone, Copy, Default)]
 struct FullTestStats {
-    base: TestStats,
+    passed: usize,
+    errors: usize,
     failures: usize,
 }
 
 impl FullTestStats {
     fn print(self, out: &mut impl WriteColor) -> io::Result<()> {
-        self.base.print(out)?;
+        write!(out, "passed: ")?;
+        out.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
+        write!(out, "{}", self.passed)?;
+        out.reset()?;
+
+        write!(out, ", errors: ")?;
+        out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
+        write!(out, "{}", self.errors)?;
+        out.reset()?;
 
         write!(out, ", failures: ")?;
         out.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
@@ -248,7 +260,7 @@ impl FullTestStats {
     }
 
     fn is_successful(self) -> bool {
-        self.base.errors == 0 && self.failures == 0
+        self.errors == 0 && self.failures == 0
     }
 }
 

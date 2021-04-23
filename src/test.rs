@@ -34,7 +34,6 @@ use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteCol
 use std::{
     fs::File,
     io::{self, BufReader, Write},
-    ops,
     path::Path,
 };
 
@@ -107,7 +106,7 @@ impl TestConfig {
     pub fn test_transcript(&mut self, transcript: &Transcript<Parsed>) {
         self.test_transcript_for_stats(transcript)
             .unwrap_or_else(|err| panic!("{}", err))
-            .assert_no_errors();
+            .assert_no_errors(self.match_kind);
     }
 
     /// Tests the `transcript` and returns testing results.
@@ -147,7 +146,9 @@ impl TestConfig {
             .iter()
             .zip(reproduced.interactions().iter().map(Interaction::output));
 
-        let mut stats = TestStats::default();
+        let mut stats = TestStats {
+            matches: Vec::with_capacity(parsed.interactions().len()),
+        };
         for (original, reproduced) in it {
             let (original_text, reproduced_text) = match self.match_kind {
                 MatchKind::Precise => {
@@ -169,11 +170,12 @@ impl TestConfig {
             write!(out, "[")?;
 
             if original_text == reproduced_text {
-                stats.passed += 1;
+                stats.matches.push(Some(self.match_kind));
                 out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Green)))?;
                 write!(out, "+")?;
             } else {
-                stats.errors += 1;
+                // TODO: there can still be a text match if we check by HTML.
+                stats.matches.push(None);
                 out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Red)))?;
                 write!(out, "-")?;
             }
@@ -193,7 +195,7 @@ impl TestConfig {
             }
         }
 
-        stats.print(out)?;
+        stats.print_summary(out, self.match_kind)?;
         writeln!(out)?;
 
         Ok(stats)
@@ -240,51 +242,61 @@ impl TestConfig {
     }
 }
 
-/// Kind of terminal output matching. Used in [`Parsed::assert_matches()`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Kind of terminal output matching.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub enum MatchKind {
-    /// Precise matching: compare output together with colors.
-    Precise,
     /// Relaxed matching: compare only output text, but not coloring.
     TextOnly,
+    /// Precise matching: compare output together with colors.
+    Precise,
 }
 
 /// Stats of a single snapshot test.
-#[derive(Debug, Clone, Copy, Default)]
-#[non_exhaustive]
+#[derive(Debug, Clone)]
 pub struct TestStats {
-    /// Number of successfully matched user inputs.
-    pub passed: usize,
-    /// Number of unmatched user inputs.
-    pub errors: usize,
+    // Match kind per each user input.
+    matches: Vec<Option<MatchKind>>,
 }
 
 impl TestStats {
-    /// Panics if these stats contain errors.
-    #[allow(clippy::missing_panics_doc)]
-    pub fn assert_no_errors(self) {
-        assert_eq!(self.errors, 0, "There were test errors");
+    /// Returns the number of successfully matched user inputs with at least the specified
+    /// `match_level`.
+    pub fn passed(&self, match_level: MatchKind) -> usize {
+        self.matches
+            .iter()
+            .filter(|&&kind| kind >= Some(match_level))
+            .count()
     }
 
-    #[doc(hidden)]
-    pub fn print(self, out: &mut impl WriteColor) -> io::Result<()> {
+    /// Returns the number of user inputs that do not match with at least the specified
+    /// `match_level`.
+    pub fn errors(&self, match_level: MatchKind) -> usize {
+        self.matches.len() - self.passed(match_level)
+    }
+
+    /// Returns match kinds per each user input of the tested [`Transcript`]. `None` values
+    /// mean no match.
+    pub fn matches(&self) -> &[Option<MatchKind>] {
+        &self.matches
+    }
+
+    /// Panics if these stats contain errors.
+    #[allow(clippy::missing_panics_doc)]
+    pub fn assert_no_errors(&self, match_level: MatchKind) {
+        assert_eq!(self.errors(match_level), 0, "There were test errors");
+    }
+
+    fn print_summary(&self, out: &mut impl WriteColor, match_level: MatchKind) -> io::Result<()> {
         write!(out, "passed: ")?;
         out.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
-        write!(out, "{}", self.passed)?;
+        write!(out, "{}", self.passed(match_level))?;
         out.reset()?;
 
         write!(out, ", errors: ")?;
         out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-        write!(out, "{}", self.errors)?;
+        write!(out, "{}", self.errors(match_level))?;
         out.reset()
-    }
-}
-
-impl ops::AddAssign for TestStats {
-    fn add_assign(&mut self, rhs: Self) {
-        self.passed += rhs.passed;
-        self.errors += rhs.errors;
     }
 }
 

@@ -57,6 +57,14 @@ fn failed_shell_initialization() -> anyhow::Result<()> {
 fn snapshot_testing() -> anyhow::Result<()> {
     let transcript = Transcript::from_svg(read_svg_snapshot!("rainbow")?)?;
     let shell_options = ShellOptions::default().with_cargo_path();
+    TestConfig::new(shell_options).test_transcript(&transcript);
+    Ok(())
+}
+
+#[test]
+fn snapshot_testing_with_custom_settings() -> anyhow::Result<()> {
+    let transcript = Transcript::from_svg(read_svg_snapshot!("rainbow")?)?;
+    let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
