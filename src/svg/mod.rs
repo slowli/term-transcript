@@ -1,3 +1,5 @@
+//! SVG template for rendering terminal output.
+
 use handlebars::{Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -13,9 +15,9 @@ pub use self::parser::ParseError;
 const MAIN_TEMPLATE_NAME: &str = "main";
 const TEMPLATE: &str = include_str!("default.svg.handlebars");
 
-/// Configurable options of a [`SvgTemplate`].
+/// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct SvgTemplateOptions {
+pub struct TemplateOptions {
     /// Padding within the rendered terminal window in pixels. Default value is `10`.
     pub padding: usize,
     /// Font size in pixels. Default value is `12`.
@@ -28,7 +30,7 @@ pub struct SvgTemplateOptions {
     pub palette: Palette,
 }
 
-impl Default for SvgTemplateOptions {
+impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
             padding: 10,
@@ -229,18 +231,20 @@ impl From<NamedPalette> for Palette {
 }
 
 /// Template for rendering [`Transcript`]s into an [SVG] image.
+///
+/// [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
 #[derive(Debug)]
-pub struct SvgTemplate<'a> {
-    options: SvgTemplateOptions,
+pub struct Template<'a> {
+    options: TemplateOptions,
     handlebars: Handlebars<'a>,
 }
 
-impl<'a> SvgTemplate<'a> {
+impl<'a> Template<'a> {
     /// Additional padding for each user input block.
     const USER_INPUT_PADDING: usize = 12;
 
     /// Initializes the template based on provided `options`.
-    pub fn new(options: SvgTemplateOptions) -> Self {
+    pub fn new(options: TemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars
@@ -268,7 +272,7 @@ impl<'a> SvgTemplate<'a> {
             height: usize,
             interactions: Vec<SerializedInteraction<'r>>,
             #[serde(flatten)]
-            options: SvgTemplateOptions,
+            options: TemplateOptions,
         }
 
         let data = HandlebarsData {

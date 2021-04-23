@@ -10,7 +10,8 @@ use std::{
 };
 
 use crate::{
-    utils::IndentingWriter, Interaction, MatchKind, ParseError, Parsed, ShellOptions, Transcript,
+    svg::ParseError, utils::IndentingWriter, Interaction, MatchKind, Parsed, ShellOptions,
+    Transcript,
 };
 
 /// Test output.

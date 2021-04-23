@@ -244,12 +244,14 @@ impl ParserState {
 
 impl Transcript<Parsed> {
     /// Parses a transcript from the provided `reader`, which should point to an SVG XML tree
-    /// produced by [`SvgTemplate::render()`] (possibly within a larger document).
+    /// produced by [`Template::render()`] (possibly within a larger document).
     ///
     /// # Errors
     ///
     /// - Returns an error if the input cannot be parsed, usually because it was not produced
-    ///   by `SvgTemplate::render()`.
+    ///   by `Template::render()`.
+    ///
+    /// [`Template::render()`]: crate::svg::Template::render()
     pub fn from_svg<R: BufRead>(reader: R) -> Result<Self, ParseError> {
         let mut reader = XmlReader::from_reader(reader);
         let mut buffer = vec![];

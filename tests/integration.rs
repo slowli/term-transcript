@@ -6,8 +6,9 @@ use std::process::{Command, Stdio};
 
 use term_svg::{
     read_transcript,
+    svg::{Template, TemplateOptions},
     test::{TestConfig, TestOutput},
-    MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput,
+    MatchKind, ShellOptions, Transcript, UserInput,
 };
 
 #[test]
@@ -22,7 +23,7 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
 
     // 2. Render the transcript into SVG.
     let mut svg_buffer = vec![];
-    SvgTemplate::new(SvgTemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+    Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
 
     // 3. Parse SVG back to the transcript.
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;

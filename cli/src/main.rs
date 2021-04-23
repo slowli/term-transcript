@@ -13,8 +13,9 @@ use std::{
 };
 
 use term_svg::{
+    svg::{Template, TemplateOptions},
     test::{TestConfig, TestOutput, TestStats},
-    MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput,
+    MatchKind, ShellOptions, Transcript, UserInput,
 };
 
 /// CLI for capturing and snapshot-testing terminal output.
@@ -74,8 +75,7 @@ impl Args {
                 io::stdin().read_to_end(&mut term_output)?;
                 transcript.add_interaction(UserInput::command(command), term_output);
 
-                SvgTemplate::new(SvgTemplateOptions::default())
-                    .render(&transcript, io::stdout())?;
+                Template::new(TemplateOptions::default()).render(&transcript, io::stdout())?;
             }
 
             Self::Exec {
@@ -87,8 +87,7 @@ impl Args {
                 let mut options = Self::shell_options(shell, shell_args);
                 let transcript = Transcript::from_inputs(&mut options, inputs)?;
 
-                SvgTemplate::new(SvgTemplateOptions::default())
-                    .render(&transcript, io::stdout())?;
+                Template::new(TemplateOptions::default()).render(&transcript, io::stdout())?;
             }
 
             Self::Test {

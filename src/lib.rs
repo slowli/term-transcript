@@ -11,15 +11,13 @@ use std::{error::Error as StdError, fmt, io, num::ParseIntError, str::FromStr};
 
 mod html;
 mod shell;
-mod template;
+pub mod svg;
 mod term;
 pub mod test;
 mod utils;
 
 pub use self::{
     shell::{ShellOptions, StdShell},
-    // TODO: make module public & remove exports
-    template::{ParseError, SvgTemplate, SvgTemplateOptions},
     term::{Captured, MatchKind, Parsed, TermOutput},
 };
 
