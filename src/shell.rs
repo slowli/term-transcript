@@ -1,7 +1,7 @@
 use std::{
     env, fmt,
     io::{self, BufRead, BufReader, LineWriter, Read, Write},
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Command, Stdio},
     sync::mpsc,
     thread,
@@ -66,24 +66,12 @@ impl ShellOptions {
     // Gets the path to the cargo `target` dir. Adapted from cargo:
     //
     // https://github.com/rust-lang/cargo/blob/485670b3983b52289a2f353d589c57fae2f60f82/tests/testsuite/support/mod.rs#L507
-    fn target_path() -> PathBuf {
+    pub(crate) fn target_path() -> PathBuf {
         let mut path = env::current_exe().expect("Cannot obtain path to the executing file");
         path.pop();
         if path.ends_with("deps") {
             path.pop();
         }
-        path
-    }
-
-    /// Gets path to the specified cargo binary.
-    ///
-    /// # Limitations
-    ///
-    /// - The caller must be an integration test; the method will work improperly otherwise.
-    // TODO: move to `test` module?
-    pub fn cargo_bin(path: impl AsRef<Path>) -> PathBuf {
-        let mut path = Self::target_path().join(path);
-        path.set_extension(env::consts::EXE_EXTENSION);
         path
     }
 

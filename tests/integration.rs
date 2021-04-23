@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 
 use term_svg::{
     read_transcript,
-    test::{TestConfig, TestOutput},
+    test::{TestConfig, TestOutput, TestShellOptions},
     MatchKind, ShellOptions, SvgTemplate, SvgTemplateOptions, Transcript, UserInput,
 };
 
@@ -53,7 +53,23 @@ fn snapshot_testing() -> anyhow::Result<()> {
 
 #[cfg(unix)]
 #[test]
-fn bash_shell() -> anyhow::Result<()> {
+fn sh_shell_example() -> anyhow::Result<()> {
+    let transcript = read_transcript!("rainbow")?;
+    let shell_options = TestShellOptions::sh().with_alias("colored-output", "examples/rainbow");
+    TestConfig::from(shell_options)
+        .with_match_kind(MatchKind::Precise)
+        .with_output(TestOutput::Verbose)
+        .test_transcript(&transcript)?
+        .assert_no_errors();
+
+    Ok(())
+}
+
+#[cfg(unix)]
+// Although `bash` can be present on Windows, `with_alias` will most probably work
+// improperly because of Windows-style paths.
+#[test]
+fn bash_shell_example() -> anyhow::Result<()> {
     // Check that the `bash` command exists; exit otherwise.
     let command = Command::new("bash")
         .arg("--version")
@@ -66,17 +82,9 @@ fn bash_shell() -> anyhow::Result<()> {
         _ => return Ok(()),
     }
 
-    let transcript = include_transcript!("rainbow")?;
-
-    let alias = format!(
-        "rainbow() {{ '{}' \"$@\"; }}",
-        ShellOptions::cargo_bin("examples/rainbow")
-            .to_str()
-            .ok_or_else(|| { anyhow::anyhow!("Path to example is not a UTF-8 string") })?,
-    );
-    let shell_options = ShellOptions::from(Command::new("bash")).with_init_command(alias);
-
-    TestConfig::new(shell_options)
+    let transcript = read_transcript!("rainbow")?;
+    let shell_options = TestShellOptions::bash().with_alias("colored-output", "examples/rainbow");
+    TestConfig::from(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
         .test_transcript(&transcript)?
@@ -86,7 +94,7 @@ fn bash_shell() -> anyhow::Result<()> {
 }
 
 #[test]
-fn powershell() -> anyhow::Result<()> {
+fn powershell_example() -> anyhow::Result<()> {
     let command = Command::new("powershell")
         .arg("-Help")
         .stdin(Stdio::null())
@@ -99,29 +107,9 @@ fn powershell() -> anyhow::Result<()> {
     }
 
     let transcript = read_transcript!("rainbow")?;
-
-    let path_to_example = ShellOptions::cargo_bin("examples/rainbow");
-    let mut cmd = Command::new("powershell");
-    cmd.arg("-NoLogo").arg("-NoExit");
-
-    let alias_function = format!(
-        "function rainbow {{ & '{}' @Args }}",
-        path_to_example
-            .to_str()
-            .ok_or_else(|| anyhow::anyhow!("Path to example is not a UTF-8 string"))?
-    );
-    let shell_options = ShellOptions::from(cmd)
-        .with_init_command("function prompt { }")
-        .with_init_command(&alias_function)
-        .with_line_mapper(|line| {
-            if line.starts_with("PS>") {
-                None
-            } else {
-                Some(line)
-            }
-        });
-
-    TestConfig::new(shell_options)
+    let shell_options =
+        TestShellOptions::powershell().with_alias("colored-output", "examples/rainbow");
+    TestConfig::from(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
         .test_transcript(&transcript)?
