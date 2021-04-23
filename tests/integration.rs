@@ -2,13 +2,16 @@
 
 use assert_cmd::cargo::CommandCargoExt;
 
-use std::process::{Command, Stdio};
+use std::{
+    io,
+    process::{Command, Stdio},
+};
 
 use term_svg::{
-    read_transcript,
+    read_svg_snapshot,
     svg::{Template, TemplateOptions},
-    test::{TestConfig, TestOutput},
-    MatchKind, ShellOptions, Transcript, UserInput,
+    test::{MatchKind, TestConfig, TestOutputConfig},
+    ShellOptions, Transcript, UserInput,
 };
 
 #[test]
@@ -40,12 +43,23 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
 }
 
 #[test]
+fn failed_shell_initialization() -> anyhow::Result<()> {
+    let mut shell_options = ShellOptions::from(Command::cargo_bin("examples/rainbow")?);
+    let inputs = vec![UserInput::command("sup")];
+    let err = Transcript::from_inputs(&mut shell_options, inputs).unwrap_err();
+    assert_eq!(err.kind(), io::ErrorKind::BrokenPipe);
+    // We should be able to write all input to the process.
+
+    Ok(())
+}
+
+#[test]
 fn snapshot_testing() -> anyhow::Result<()> {
-    let transcript = read_transcript!("rainbow")?;
+    let transcript = Transcript::from_svg(read_svg_snapshot!("rainbow")?)?;
     let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutput::Verbose)
+        .with_output(TestOutputConfig::Verbose)
         .test_transcript(&transcript);
 
     Ok(())
@@ -54,11 +68,11 @@ fn snapshot_testing() -> anyhow::Result<()> {
 #[cfg(unix)]
 #[test]
 fn sh_shell_example() -> anyhow::Result<()> {
-    let transcript = read_transcript!("colored-output")?;
+    let transcript = Transcript::from_svg(read_svg_snapshot!("colored-output")?)?;
     let shell_options = ShellOptions::sh().with_alias("colored-output", "examples/rainbow");
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutput::Verbose)
+        .with_output(TestOutputConfig::Verbose)
         .test_transcript(&transcript);
 
     Ok(())
@@ -84,11 +98,11 @@ fn bash_shell_example() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let transcript = read_transcript!("colored-output")?;
+    let transcript = Transcript::from_svg(read_svg_snapshot!("colored-output")?)?;
     let shell_options = ShellOptions::bash().with_alias("colored-output", "examples/rainbow");
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutput::Verbose)
+        .with_output(TestOutputConfig::Verbose)
         .test_transcript(&transcript);
 
     Ok(())
@@ -111,11 +125,11 @@ fn powershell_example() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let transcript = read_transcript!("colored-output")?;
+    let transcript = Transcript::from_svg(read_svg_snapshot!("colored-output")?)?;
     let shell_options = ShellOptions::powershell().with_alias("colored-output", "examples/rainbow");
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutput::Verbose)
+        .with_output(TestOutputConfig::Verbose)
         .test_transcript(&transcript);
 
     Ok(())

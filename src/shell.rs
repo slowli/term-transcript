@@ -10,7 +10,13 @@ use std::{
 
 use crate::{Captured, Interaction, Transcript, UserInput};
 
-/// Options for executing commands in the shell. Used in [`Transcript::from_inputs()`].
+/// Options for executing commands in the shell. Used in [`Transcript::from_inputs()`]
+/// and in [`TestConfig`].
+///
+/// The type param maps to *extensions* available for the shell. For example, [`StdShell`]
+/// extension allows to specify custom aliases for the executed commands.
+///
+/// [`TestConfig`]: crate::test::TestConfig
 pub struct ShellOptions<Ext = ()> {
     command: Command,
     io_timeout: Duration,
@@ -75,13 +81,14 @@ impl<Ext> ShellOptions<Ext> {
         self
     }
 
-    /// Adds an initialization command.
+    /// Adds an initialization command. Such commands are sent to the shell before executing
+    /// any user input. The corresponding output from the shell is not captured.
     pub fn with_init_command(mut self, command: impl Into<String>) -> Self {
         self.init_commands.push(command.into());
         self
     }
 
-    /// Sets the line mapper for the shell. This allows to filter and/or map outputs.
+    /// Sets the line mapper for the shell. This allows to filter and/or map terminal outputs.
     pub fn with_line_mapper<F>(mut self, mapper: F) -> Self
     where
         F: FnMut(String) -> Option<String> + 'static,
@@ -103,6 +110,8 @@ impl<Ext> ShellOptions<Ext> {
     }
 
     /// Adds paths to cargo binaries (including examples) to the `PATH` env variable.
+    /// This allows to call them by the corresponding filename, without specifying a path
+    /// or doing complex preparations (e.g., calling `cargo install`).
     ///
     /// # Limitations
     ///
@@ -114,7 +123,6 @@ impl<Ext> ShellOptions<Ext> {
         #[cfg(windows)]
         const PATH_SEPARATOR: &str = ";";
 
-        // TODO: escaping paths?
         let mut path_var = env::var_os("PATH").unwrap_or_default();
         let target_path = Self::target_path();
         if !path_var.is_empty() {
@@ -180,7 +188,7 @@ impl ShellOptions<StdShell> {
     }
 
     /// Creates an alias for the specified cargo binary, such as `foo` or `examples/bar`.
-    /// This allows to call the binary using this alias without invasive preparations (such as
+    /// This allows to call the binary using this alias without complex preparations (such as
     /// installing it globally via `cargo install`), and is more flexible than
     /// [`Self::with_cargo_path()`].
     ///
@@ -231,7 +239,7 @@ impl Transcript {
     /// # Errors
     ///
     /// - Returns an error if spawning the shell or any operations with it fail (such as reading
-    ///   stdout / stderr).
+    ///   stdout / stderr, or writing commands to stdin).
     #[allow(clippy::missing_panics_doc)] // false positive
     pub fn from_inputs(
         options: &mut ShellOptions,

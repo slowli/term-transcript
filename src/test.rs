@@ -1,4 +1,33 @@
-//! Snapshot testing tools.
+//! Snapshot testing tools for [`Transcript`]s.
+//!
+//! # Examples
+//!
+//! Simple scenario in which the tested transcript calls to one or more Cargo binaries / examples
+//! by their original names.
+//!
+//! ```
+//! use term_svg::{
+//!     read_svg_snapshot, ShellOptions, Transcript,
+//!     test::{MatchKind, TestConfig, TestOutputConfig},
+//! };
+//!
+//! // Test configuration that can be shared across tests.
+//! fn config() -> TestConfig {
+//!     let shell_options = ShellOptions::default().with_cargo_path();
+//!     let mut config = TestConfig::new(shell_options);
+//!     config
+//!         .with_match_kind(MatchKind::Precise)
+//!         .with_output(TestOutputConfig::Verbose);
+//!     config
+//! }
+//!
+//! // Usage in tests:
+//! fn test_basics() -> anyhow::Result<()> {
+//!     let transcript = Transcript::from_svg(read_svg_snapshot!("basic")?)?;
+//!     config().test_transcript(&transcript);
+//!     Ok(())
+//! }
+//! ```
 
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
@@ -9,15 +38,12 @@ use std::{
     path::Path,
 };
 
-use crate::{
-    svg::ParseError, utils::IndentingWriter, Interaction, MatchKind, Parsed, ShellOptions,
-    Transcript,
-};
+use crate::{utils::IndentingWriter, Interaction, Parsed, ShellOptions, Transcript};
 
-/// Test output.
+/// Configuration of output produced during testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
-pub enum TestOutput {
+pub enum TestOutputConfig {
     /// Do not output anything.
     Quiet,
     /// Output normal amount of details.
@@ -26,12 +52,18 @@ pub enum TestOutput {
     Verbose,
 }
 
+impl Default for TestOutputConfig {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
 /// Testing configuration.
 #[derive(Debug)]
 pub struct TestConfig {
     shell_options: ShellOptions,
     match_kind: MatchKind,
-    output: TestOutput,
+    output: TestOutputConfig,
     color_choice: ColorChoice,
 }
 
@@ -41,7 +73,7 @@ impl TestConfig {
         Self {
             shell_options: shell_options.drop_extensions(),
             match_kind: MatchKind::TextOnly,
-            output: TestOutput::Normal,
+            output: TestOutputConfig::Normal,
             color_choice: ColorChoice::Auto,
         }
     }
@@ -59,7 +91,7 @@ impl TestConfig {
     }
 
     /// Configures test output.
-    pub fn with_output(&mut self, output: TestOutput) -> &mut Self {
+    pub fn with_output(&mut self, output: TestOutputConfig) -> &mut Self {
         self.output = output;
         self
     }
@@ -94,7 +126,7 @@ impl TestConfig {
             .map(|interaction| interaction.input().to_owned());
         let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
 
-        if self.output == TestOutput::Quiet {
+        if self.output == TestOutputConfig::Quiet {
             let mut out = NoColor::new(io::sink());
             self.compare_transcripts(&mut out, &transcript, &reproduced)
         } else {
@@ -153,7 +185,7 @@ impl TestConfig {
 
             if original_text != reproduced_text {
                 Self::write_diff(out, original_text, &reproduced_text)?;
-            } else if self.output == TestOutput::Verbose {
+            } else if self.output == TestOutputConfig::Verbose {
                 out.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(244))))?;
                 let mut out_with_indents = IndentingWriter::new(&mut *out, b"    ");
                 writeln!(out_with_indents, "{}", original.output().plaintext())?;
@@ -193,6 +225,29 @@ impl TestConfig {
             Comparison::new(&DebugStr(original), &DebugStr(reproduced))
         )
     }
+
+    #[cfg(not(feature = "pretty_assertions"))]
+    fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
+        writeln!(out, "  Original:")?;
+        for line in original.lines() {
+            writeln!(out, "    {}", line)?;
+        }
+        writeln!(out, "  Reproduced:")?;
+        for line in reproduced.lines() {
+            writeln!(out, "    {}", line)?;
+        }
+        Ok(())
+    }
+}
+
+/// Kind of terminal output matching. Used in [`Parsed::assert_matches()`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum MatchKind {
+    /// Precise matching: compare output together with colors.
+    Precise,
+    /// Relaxed matching: compare only output text, but not coloring.
+    TextOnly,
 }
 
 /// Stats of a single snapshot test.
@@ -234,24 +289,41 @@ impl ops::AddAssign for TestStats {
 }
 
 #[doc(hidden)] // public for the sake of the `read_transcript` macro
-pub fn _read_transcript(
-    including_file: &str,
-    name: &str,
-) -> Result<Transcript<Parsed>, ParseError> {
+pub fn _read_svg_snapshot(including_file: &str, name: &str) -> io::Result<BufReader<File>> {
     let snapshot_path = Path::new(including_file)
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No parent of current file"))?
         .join(format!("snapshots/{}.svg", name));
-    let svg = BufReader::new(File::open(snapshot_path)?);
-    Transcript::from_svg(svg)
+    Ok(BufReader::new(File::open(snapshot_path)?))
 }
 
-/// Reads the transcript from a file.
+/// Reads an SVG transcript from a file. Returns a [buffered reader] for the [`File`].
 ///
-/// FIXME: more details
+/// Similarly to [`insta`], the transcript is searched in the `snapshot` directory adjacent to
+/// the file invoking the macro. The `.svg` extension is automatically added to the provided name.
+///
+/// # Errors
+///
+/// - Returns I/O errors that can occur when reading the file (e.g., if the file does not exist).
+///
+/// [buffered reader]: BufReader
+/// [`insta`]: https://insta.rs/
+///
+/// # Examples
+///
+/// ```
+/// use term_svg::{read_svg_snapshot, Transcript};
+/// # use std::io;
+///
+/// # fn unused() -> io::Result<()> {
+/// // Will read from `snapshots/my-test.svg`
+/// let transcript = Transcript::from_svg(read_svg_snapshot!("my-test")?)?;
+/// # Ok(())
+/// # }
+/// ```
 #[macro_export]
-macro_rules! read_transcript {
+macro_rules! read_svg_snapshot {
     ($name:tt) => {
-        $crate::test::_read_transcript(file!(), $name)
+        $crate::test::_read_svg_snapshot(file!(), $name)
     };
 }

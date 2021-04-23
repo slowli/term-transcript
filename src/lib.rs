@@ -18,10 +18,11 @@ mod utils;
 
 pub use self::{
     shell::{ShellOptions, StdShell},
-    term::{Captured, MatchKind, Parsed, TermOutput},
+    term::{Captured, Parsed, TermOutput},
 };
 
 /// Errors that can occur when processing terminal output.
+// FIXME: rename to `TermError`
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {

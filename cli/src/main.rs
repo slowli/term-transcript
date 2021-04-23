@@ -14,8 +14,8 @@ use std::{
 
 use term_svg::{
     svg::{Template, TemplateOptions},
-    test::{TestConfig, TestOutput, TestStats},
-    MatchKind, ShellOptions, Transcript, UserInput,
+    test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
+    ShellOptions, Transcript, UserInput,
 };
 
 /// CLI for capturing and snapshot-testing terminal output.
@@ -102,9 +102,9 @@ impl Args {
                 let mut test_config = TestConfig::new(options);
                 test_config
                     .with_output(if verbose {
-                        TestOutput::Verbose
+                        TestOutputConfig::Verbose
                     } else {
-                        TestOutput::Normal
+                        TestOutputConfig::Normal
                     })
                     .with_match_kind(if precise {
                         MatchKind::Precise

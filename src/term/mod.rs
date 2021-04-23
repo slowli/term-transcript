@@ -3,6 +3,7 @@ use termcolor::NoColor;
 
 use crate::{
     html::HtmlWriter,
+    test::MatchKind,
     utils::{StringOutput, WriteAdapter},
     Error,
 };
@@ -126,16 +127,6 @@ impl Parsed {
 }
 
 impl TermOutput for Parsed {}
-
-/// Kind of terminal output matching. Used in [`Parsed::assert_matches()`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum MatchKind {
-    /// Precise matching: compare output together with colors.
-    Precise,
-    /// Relaxed matching: compare only output text, but not coloring.
-    TextOnly,
-}
 
 #[cfg(test)]
 mod tests {
