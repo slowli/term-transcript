@@ -45,8 +45,7 @@ fn snapshot_testing() -> anyhow::Result<()> {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
-        .test_transcript(&transcript)?
-        .assert_no_errors();
+        .test_transcript(&transcript);
 
     Ok(())
 }
@@ -59,8 +58,7 @@ fn sh_shell_example() -> anyhow::Result<()> {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
-        .test_transcript(&transcript)?
-        .assert_no_errors();
+        .test_transcript(&transcript);
 
     Ok(())
 }
@@ -90,8 +88,7 @@ fn bash_shell_example() -> anyhow::Result<()> {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
-        .test_transcript(&transcript)?
-        .assert_no_errors();
+        .test_transcript(&transcript);
 
     Ok(())
 }
@@ -118,8 +115,7 @@ fn powershell_example() -> anyhow::Result<()> {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutput::Verbose)
-        .test_transcript(&transcript)?
-        .assert_no_errors();
+        .test_transcript(&transcript);
 
     Ok(())
 }

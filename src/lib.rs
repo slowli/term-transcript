@@ -17,7 +17,7 @@ pub mod test;
 mod utils;
 
 pub use self::{
-    shell::ShellOptions,
+    shell::{ShellOptions, StdShell},
     // TODO: make module public & remove exports
     template::{ParseError, SvgTemplate, SvgTemplateOptions},
     term::{Captured, MatchKind, Parsed, TermOutput},

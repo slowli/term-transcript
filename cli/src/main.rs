@@ -143,7 +143,9 @@ impl Args {
     fn process_file(svg_path: &Path, test_config: &mut TestConfig) -> anyhow::Result<TestStats> {
         let svg = BufReader::new(File::open(svg_path)?);
         let transcript = Transcript::from_svg(svg)?;
-        test_config.test_transcript(&transcript).map_err(From::from)
+        test_config
+            .test_transcript_for_stats(&transcript)
+            .map_err(From::from)
     }
 
     fn report_test_start(out: &StandardStream, svg_path: &Path) -> io::Result<()> {

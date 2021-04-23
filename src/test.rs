@@ -65,11 +65,28 @@ impl TestConfig {
 
     /// Tests the `transcript`.
     ///
+    /// # Panics
+    ///
+    /// - Panics if an error occurs during reproducing the transcript or processing
+    ///   its output.
+    /// - Panics if there are mismatches between outputs in the original and reproduced
+    ///   transcripts.
+    pub fn test_transcript(&mut self, transcript: &Transcript<Parsed>) {
+        self.test_transcript_for_stats(transcript)
+            .unwrap_or_else(|err| panic!("{}", err))
+            .assert_no_errors();
+    }
+
+    /// Tests the `transcript` and returns testing results.
+    ///
     /// # Errors
     ///
     /// - Returns an error if an error occurs during reproducing the transcript or processing
     ///   its output.
-    pub fn test_transcript(&mut self, transcript: &Transcript<Parsed>) -> io::Result<TestStats> {
+    pub fn test_transcript_for_stats(
+        &mut self,
+        transcript: &Transcript<Parsed>,
+    ) -> io::Result<TestStats> {
         let inputs = transcript
             .interactions()
             .iter()

@@ -139,32 +139,36 @@ impl<Ext> ShellOptions<Ext> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+/// Shell interpreter that brings additional functionality for [`ShellOptions`].
+#[derive(Debug)]
 #[non_exhaustive]
-pub enum ShellKind {
+pub enum StdShell {
+    /// `sh` shell.
     Sh,
+    /// `bash` shell.
     Bash,
-    Powershell,
+    /// PowerShell.
+    PowerShell,
 }
 
-impl ShellOptions<ShellKind> {
-    /// Configures an `sh` shell.
+impl ShellOptions<StdShell> {
+    /// Creates options for an `sh` shell.
     pub fn sh() -> Self {
-        Self::new(Command::new("sh"), ShellKind::Sh)
+        Self::new(Command::new("sh"), StdShell::Sh)
     }
 
-    /// Configures a Bash shell.
+    /// Creates options for a Bash shell.
     pub fn bash() -> Self {
-        Self::new(Command::new("bash"), ShellKind::Bash)
+        Self::new(Command::new("bash"), StdShell::Bash)
     }
 
-    /// Configures PowerShell.
+    /// Creates options for PowerShell.
     #[allow(clippy::doc_markdown)] // false positive
     pub fn powershell() -> Self {
         let mut cmd = Command::new("powershell");
         cmd.arg("-NoLogo").arg("-NoExit");
 
-        Self::new(cmd, ShellKind::Powershell)
+        Self::new(cmd, StdShell::PowerShell)
             .with_init_command("function prompt { }")
             .with_line_mapper(|line| {
                 if line.starts_with("PS>") {
@@ -194,13 +198,13 @@ impl ShellOptions<ShellKind> {
             .expect("Path to example is not a UTF-8 string");
 
         let alias_command = match self.extensions {
-            ShellKind::Sh => format!("alias {name}=\"'{path}'\"", name = name, path = path_to_bin),
-            ShellKind::Bash => format!(
+            StdShell::Sh => format!("alias {name}=\"'{path}'\"", name = name, path = path_to_bin),
+            StdShell::Bash => format!(
                 "{name}() {{ '{path}' \"$@\"; }}",
                 name = name,
                 path = path_to_bin
             ),
-            ShellKind::Powershell => format!(
+            StdShell::PowerShell => format!(
                 "function {name} {{ & '{path}' @Args }}",
                 name = name,
                 path = path_to_bin
