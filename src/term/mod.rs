@@ -5,7 +5,7 @@ use crate::{
     html::HtmlWriter,
     test::MatchKind,
     utils::{StringOutput, WriteAdapter},
-    Error,
+    TermError,
 };
 
 mod parser;
@@ -36,7 +36,7 @@ impl Captured {
     /// # Errors
     ///
     /// Returns an error if there was an issue processing output.
-    pub fn write_as_html(&self, output: &mut dyn Output) -> Result<(), Error> {
+    pub fn write_as_html(&self, output: &mut dyn Output) -> Result<(), TermError> {
         let mut html_writer = HtmlWriter::new(output);
         TermOutputParser::new(&mut html_writer).parse(&self.0)
     }
@@ -47,7 +47,7 @@ impl Captured {
     /// # Errors
     ///
     /// Returns an error if there was an issue processing output.
-    pub fn to_html(&self) -> Result<String, Error> {
+    pub fn to_html(&self) -> Result<String, TermError> {
         let mut output = StringOutput::default();
         self.write_as_html(&mut output)?;
         Ok(output.into_inner())
@@ -58,7 +58,7 @@ impl Captured {
     /// # Errors
     ///
     /// Returns an error if there was an issue processing output.
-    pub fn write_as_plaintext(&self, output: &mut dyn Output) -> Result<(), Error> {
+    pub fn write_as_plaintext(&self, output: &mut dyn Output) -> Result<(), TermError> {
         let mut plaintext_writer = NoColor::new(WriteAdapter::new(output));
         TermOutputParser::new(&mut plaintext_writer).parse(&self.0)
     }
@@ -69,7 +69,7 @@ impl Captured {
     /// # Errors
     ///
     /// Returns an error if there was an issue processing output.
-    pub fn to_plaintext(&self) -> Result<String, Error> {
+    pub fn to_plaintext(&self) -> Result<String, TermError> {
         let mut output = StringOutput::default();
         self.write_as_plaintext(&mut output)?;
         Ok(output.into_inner())

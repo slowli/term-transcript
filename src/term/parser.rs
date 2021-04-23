@@ -2,7 +2,7 @@ use termcolor::{Color, ColorSpec, WriteColor};
 
 use std::str;
 
-use crate::Error;
+use crate::TermError;
 
 /// Parses terminal output and issues corresponding commands to the `writer`.
 #[derive(Debug)]
@@ -15,7 +15,7 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
         Self { writer }
     }
 
-    pub fn parse(&mut self, term_output: &[u8]) -> Result<(), Error> {
+    pub fn parse(&mut self, term_output: &[u8]) -> Result<(), TermError> {
         const ANSI_ESC: u8 = 0x1b;
         const ANSI_CSI: u8 = b'[';
 
@@ -26,22 +26,22 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
                 // Push preceding "ordinary" bytes into the writer.
                 self.writer
                     .write_all(&term_output[written_end..i])
-                    .map_err(Error::Io)?;
+                    .map_err(TermError::Io)?;
 
                 i += 1;
                 let next_byte = term_output
                     .get(i)
                     .copied()
-                    .ok_or(Error::UnfinishedSequence)?;
+                    .ok_or(TermError::UnfinishedSequence)?;
                 if next_byte == ANSI_CSI {
                     i += 1;
                     let csi = Csi::parse(&term_output[i..])?;
                     if let Some(color_spec) = csi.color_spec()? {
-                        self.writer.set_color(&color_spec).map_err(Error::Io)?;
+                        self.writer.set_color(&color_spec).map_err(TermError::Io)?;
                     }
                     i += csi.len;
                 } else {
-                    return Err(Error::NonCsiSequence(next_byte));
+                    return Err(TermError::NonCsiSequence(next_byte));
                 }
                 written_end = i; // skip the escape sequence
             } else {
@@ -52,7 +52,7 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
 
         self.writer
             .write_all(&term_output[written_end..i])
-            .map_err(Error::Io)
+            .map_err(TermError::Io)
     }
 }
 
@@ -64,16 +64,16 @@ struct Csi<'a> {
 }
 
 impl<'a> Csi<'a> {
-    fn parse(buffer: &'a [u8]) -> Result<Self, Error> {
+    fn parse(buffer: &'a [u8]) -> Result<Self, TermError> {
         let intermediates_start = buffer
             .iter()
             .position(|byte| !(0x30..=0x3f).contains(byte))
-            .ok_or(Error::UnfinishedSequence)?;
+            .ok_or(TermError::UnfinishedSequence)?;
 
         let final_byte_pos = buffer[intermediates_start..]
             .iter()
             .position(|byte| !(0x20..=0x2f).contains(byte))
-            .ok_or(Error::UnfinishedSequence)?;
+            .ok_or(TermError::UnfinishedSequence)?;
         let final_byte_pos = intermediates_start + final_byte_pos;
 
         let final_byte = buffer[final_byte_pos];
@@ -84,11 +84,11 @@ impl<'a> Csi<'a> {
                 len: final_byte_pos + 1,
             })
         } else {
-            Err(Error::InvalidSgrFinalByte(final_byte))
+            Err(TermError::InvalidSgrFinalByte(final_byte))
         }
     }
 
-    fn color_spec(self) -> Result<Option<ColorSpec>, Error> {
+    fn color_spec(self) -> Result<Option<ColorSpec>, TermError> {
         if self.final_byte != b'm' {
             return Ok(None);
         }
@@ -108,7 +108,7 @@ impl<'a> Csi<'a> {
     fn process_param(
         spec: &mut ColorSpec,
         mut params: impl Iterator<Item = &'a [u8]>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), TermError> {
         match params.next().unwrap() {
             b"0" => {
                 spec.set_reset(true);
@@ -208,17 +208,17 @@ impl<'a> Csi<'a> {
         Ok(())
     }
 
-    fn read_color(mut params: impl Iterator<Item = &'a [u8]>) -> Result<Color, Error> {
-        let color_type = params.next().ok_or(Error::UnfinishedColor)?;
+    fn read_color(mut params: impl Iterator<Item = &'a [u8]>) -> Result<Color, TermError> {
+        let color_type = params.next().ok_or(TermError::UnfinishedColor)?;
         match color_type {
             b"5" => {
-                let index = params.next().ok_or(Error::UnfinishedColor)?;
+                let index = params.next().ok_or(TermError::UnfinishedColor)?;
                 Self::parse_color_index(index).map(Color::Ansi256)
             }
             b"2" => {
-                let r = params.next().ok_or(Error::UnfinishedColor)?;
-                let g = params.next().ok_or(Error::UnfinishedColor)?;
-                let b = params.next().ok_or(Error::UnfinishedColor)?;
+                let r = params.next().ok_or(TermError::UnfinishedColor)?;
+                let g = params.next().ok_or(TermError::UnfinishedColor)?;
+                let b = params.next().ok_or(TermError::UnfinishedColor)?;
 
                 let r = Self::parse_color_index(r)?;
                 let g = Self::parse_color_index(g)?;
@@ -227,12 +227,12 @@ impl<'a> Csi<'a> {
             }
             _ => {
                 let color_type = String::from_utf8_lossy(color_type).into_owned();
-                Err(Error::InvalidColorType(color_type))
+                Err(TermError::InvalidColorType(color_type))
             }
         }
     }
 
-    fn parse_color_index(param: &[u8]) -> Result<u8, Error> {
+    fn parse_color_index(param: &[u8]) -> Result<u8, TermError> {
         if param.is_empty() {
             // As per ANSI standards, empty params are treated as number 0.
             return Ok(0);
@@ -243,7 +243,7 @@ impl<'a> Csi<'a> {
             // when creating a `Csi` instance.
             str::from_utf8_unchecked(param)
         };
-        param.parse().map_err(Error::InvalidColorIndex)
+        param.parse().map_err(TermError::InvalidColorIndex)
     }
 }
 

@@ -33,7 +33,7 @@
 //! - Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
 //!   are supported even on Windows nowadays, this shouldn't be a significant problem.)
 //! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI] sequences),
-//!   or lead to [`Error::NonCsiSequence`].
+//!   or lead to [`TermError::NonCsiSequence`].
 //! - Since the terminal is not not emulated, programs dependent on [`isatty`] checks can produce
 //!   different output than if launched in the actual shell. One can argue that dependence
 //!   on `isatty` is generally an anti-pattern.
@@ -131,10 +131,9 @@ pub use self::{
 };
 
 /// Errors that can occur when processing terminal output.
-// FIXME: rename to `TermError`
 #[derive(Debug)]
 #[non_exhaustive]
-pub enum Error {
+pub enum TermError {
     /// Unfinished escape sequence.
     UnfinishedSequence,
     /// Non-CSI escape sequence. The enclosed byte is the first byte of the sequence (excluding
@@ -152,7 +151,7 @@ pub enum Error {
     Io(io::Error),
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for TermError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnfinishedSequence => formatter.write_str("Unfinished ANSI escape sequence"),
@@ -182,7 +181,7 @@ impl fmt::Display for Error {
     }
 }
 
-impl StdError for Error {
+impl StdError for TermError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::InvalidColorIndex(err) => Some(err),
