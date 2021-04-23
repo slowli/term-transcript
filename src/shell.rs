@@ -117,6 +117,7 @@ impl<Ext> ShellOptions<Ext> {
     ///
     /// - The caller must be a unit or integration test; the method will work improperly otherwise.
     #[cfg(any(unix, windows))]
+    #[cfg_attr(docsrs, doc(cfg(any(unix, windows))))]
     pub fn with_cargo_path(mut self) -> Self {
         #[cfg(unix)]
         const PATH_SEPARATOR: &str = ":";

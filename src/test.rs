@@ -309,7 +309,7 @@ pub fn _read_svg_snapshot(including_file: &str, name: &str) -> io::Result<BufRea
     Ok(BufReader::new(File::open(snapshot_path)?))
 }
 
-/// Reads an SVG transcript from a file. Returns a [buffered reader] for the [`File`].
+/// Reads an SVG transcript snapshot from a file. Returns a [buffered reader] for the [`File`].
 ///
 /// Similarly to [`insta`], the transcript is searched in the `snapshot` directory adjacent to
 /// the file invoking the macro. The `.svg` extension is automatically added to the provided name.
@@ -327,7 +327,7 @@ pub fn _read_svg_snapshot(including_file: &str, name: &str) -> io::Result<BufRea
 /// use term_svg::{read_svg_snapshot, Transcript};
 /// # use std::io;
 ///
-/// # fn unused() -> io::Result<()> {
+/// # fn unused() -> anyhow::Result<()> {
 /// // Will read from `snapshots/my-test.svg`
 /// let transcript = Transcript::from_svg(read_svg_snapshot!("my-test")?)?;
 /// # Ok(())

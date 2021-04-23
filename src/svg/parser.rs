@@ -17,13 +17,13 @@ use crate::{Interaction, Parsed, Transcript, UserInput, UserInputKind, UserInput
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ParseError {
-    /// Unexpected root XML tag; must be <svg>.
+    /// Unexpected root XML tag; must be `<svg>`.
     UnexpectedRoot,
     /// Invalid transcript container.
     InvalidContainer,
     /// Error parsing user input.
     InvalidUserInput(String, UserInputParseError),
-    /// Unexpected EOF.
+    /// Unexpected end of file.
     UnexpectedEof,
     /// Error parsing XML.
     Xml(quick_xml::Error),
