@@ -8,7 +8,7 @@ use std::{
 };
 
 use std::time::Duration;
-use term_svg::{
+use term_transcript::{
     read_svg_snapshot,
     svg::{Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig},

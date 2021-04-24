@@ -6,7 +6,7 @@
 //! by their original names.
 //!
 //! ```
-//! use term_svg::{
+//! use term_transcript::{
 //!     read_svg_snapshot, ShellOptions, Transcript,
 //!     test::{MatchKind, TestConfig, TestOutputConfig},
 //! };
@@ -364,7 +364,7 @@ pub fn _read_svg_snapshot(
 /// # Examples
 ///
 /// ```
-/// use term_svg::{read_svg_snapshot, Transcript};
+/// use term_transcript::{read_svg_snapshot, Transcript};
 /// # use std::io;
 ///
 /// # fn unused() -> anyhow::Result<()> {

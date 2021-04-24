@@ -1,4 +1,4 @@
-//! CLI for the `term-svg` crate.
+//! CLI for the `term-transcript` crate.
 
 use structopt::StructOpt;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -12,7 +12,7 @@ use std::{
     str::FromStr,
 };
 
-use term_svg::{
+use term_transcript::{
     svg::{Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     ShellOptions, Transcript, UserInput,

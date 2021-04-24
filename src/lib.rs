@@ -63,7 +63,7 @@
 //! Creating a terminal [`Transcript`] and rendering it to SVG.
 //!
 //! ```
-//! use term_svg::{
+//! use term_transcript::{
 //!     svg::{Template, TemplateOptions}, ShellOptions, Transcript, UserInput,
 //! };
 //! # use std::str;
@@ -84,8 +84,8 @@
 //! Loading a `Transcript` and testing it. See the [`test` module](crate::test) for more examples.
 //!
 //! ```
-//! use term_svg::{test::TestConfig, ShellOptions, Transcript, UserInput};
-//! # use term_svg::svg::{Template, TemplateOptions};
+//! use term_transcript::{test::TestConfig, ShellOptions, Transcript, UserInput};
+//! # use term_transcript::svg::{Template, TemplateOptions};
 //! use std::io;
 //!
 //! fn read_svg_file() -> anyhow::Result<impl io::BufRead> {
