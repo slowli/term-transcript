@@ -1,0 +1,107 @@
+<svg viewBox="0 0 650 402" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .container {
+      background: #0c0c0c;
+      padding: 10px;
+      border-radius: 6px;
+      color: #cccccc;
+    }
+    .container pre {
+      padding: 0;
+      margin: 0;
+      font: 12px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      line-height: 15px;
+    }
+
+    .user-input,.more {
+      margin: 4px -10px;
+      color: #f2f2f2;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 2px 10px;
+    }
+
+    .bold,.prompt { font-weight: bold; }
+    .italic { font-style: italic; }
+    .underline { text-decoration: underline; }
+    .dimmed { opacity: 0.7; }
+
+    .fg-black { color: #0c0c0c; }
+    .bg-black { background-color: #0c0c0c; }
+
+    .fg-blue { color: #0037da; }
+    .bg-blue { background-color: #0037da; }
+
+    .fg-cyan { color: #3a96dd; }
+    .bg-cyan { background-color: #3a96dd; }
+
+    .fg-green { color: #13a10e; }
+    .bg-green { background-color: #13a10e; }
+
+    .fg-magenta { color: #881798; }
+    .bg-magenta { background-color: #881798; }
+
+    .fg-red { color: #c50f1f; }
+    .bg-red { background-color: #c50f1f; }
+
+    .fg-white { color: #cccccc; }
+    .bg-white { background-color: #cccccc; }
+
+    .fg-yellow { color: #c19c00; }
+    .bg-yellow { background-color: #c19c00; }
+    
+    .fg-i-black { color: #767676; }
+    .bg-i-black { background-color: #767676; }
+
+    .fg-i-blue { color: #3b78ff; }
+    .bg-i-blue { background-color: #3b78ff; }
+
+    .fg-i-cyan { color: #61d6d6; }
+    .bg-i-cyan { background-color: #61d6d6; }
+
+    .fg-i-green { color: #16c60c; }
+    .bg-i-green { background-color: #16c60c; }
+
+    .fg-i-magenta { color: #b4009e; }
+    .bg-i-magenta { background-color: #b4009e; }
+
+    .fg-i-red { color: #e74856; }
+    .bg-i-red { background-color: #e74856; }
+
+    .fg-i-white { color: #f2f2f2; }
+    .bg-i-white { background-color: #f2f2f2; }
+
+    .fg-i-yellow { color: #f9f1a5; }
+    .bg-i-yellow { background-color: #f9f1a5; }
+    
+    .hl { text-decoration: underline #3af; }
+  </style>
+  <foreignObject x="0" y="0" width="650" height="402">
+    <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+      <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec <span class="hl">-T 100</span> 'rainbow' &gt; /tmp/rainbow.svg
+<span style="color: #808080"># `-T` option defines the I/O timeout for the shell</span></pre></div>
+      <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 <span class="hl">-v</span> /tmp/rainbow.svg
+<span style="color: #808080"># `-v` switches on verbose output</span></pre></div>
+      <div class="term-output"><pre>Testing file <span class="underline">/tmp/rainbow.svg</span>...
+  [<span class="fg-green">+</span>] Input: rainbow
+    <span style="color: #808080">Base colors:
+    black blue green red cyan magenta yellow 
+    black blue green red cyan magenta yellow 
+    Base colors (bg):
+    black blue green red cyan magenta yellow 
+    black blue green red cyan magenta yellow 
+    ANSI color palette:
+    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
+    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
+    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
+    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
+    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
+    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
+    ANSI grayscale palette:
+    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
+    24-bit colors:
+    pink orange brown teal 
+</span>Totals: passed: <span class="fg-green">1</span>, errors: <span class="fg-red">0</span>, failures: <span class="fg-yellow">0</span></pre></div>
+
+    </div>
+  </foreignObject>
+</svg>
