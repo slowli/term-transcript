@@ -18,7 +18,7 @@ use crate::{Interaction, Parsed, Transcript, UserInput};
 #[non_exhaustive]
 pub enum ParseError {
     /// Unexpected root XML tag; must be `<svg>`.
-    UnexpectedRoot,
+    UnexpectedRoot(String),
     /// Invalid transcript container.
     InvalidContainer,
     /// Unexpected end of file.
@@ -42,7 +42,11 @@ impl From<io::Error> for ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UnexpectedRoot => formatter.write_str("Unexpected root XML tag; expected <svg>"),
+            Self::UnexpectedRoot(tag_name) => write!(
+                formatter,
+                "Unexpected root XML tag: <{}>; expected <svg>",
+                tag_name
+            ),
             Self::InvalidContainer => formatter.write_str("Invalid transcript container"),
             Self::UnexpectedEof => formatter.write_str("Unexpected EOF"),
             Self::Xml(err) => write!(formatter, "Error parsing XML: {}", err),
@@ -191,7 +195,8 @@ impl ParserState {
                     if tag.name() == b"svg" {
                         *self = Self::EncounteredSvgTag;
                     } else {
-                        return Err(ParseError::UnexpectedRoot);
+                        let tag_name = String::from_utf8_lossy(tag.name()).into_owned();
+                        return Err(ParseError::UnexpectedRoot(tag_name));
                     }
                 }
             }
@@ -221,9 +226,18 @@ impl ParserState {
 
             Self::EncounteredUserInput(user_input) => {
                 if let Event::Start(tag) = event {
-                    if Self::get_class(tag.attributes())?.as_ref() == b"term-output" {
+                    let class = Self::get_class(tag.attributes())?;
+                    if class.as_ref() == b"term-output" {
                         let user_input = mem::replace(user_input, Self::DUMMY_INPUT);
                         *self = Self::ReadingTermOutput(user_input, TextReadingState::default());
+                    } else if class.as_ref() == b"user-input" {
+                        let user_input = mem::replace(user_input, Self::DUMMY_INPUT);
+                        *self = Self::ReadingUserInput(UserInputState::default());
+
+                        return Ok(Some(Interaction {
+                            input: user_input,
+                            output: Parsed::default(),
+                        }));
                     }
                 }
             }
@@ -343,7 +357,7 @@ mod tests {
     use std::io::{Cursor, Read};
 
     const SVG: &[u8] = br#"
-        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
           <foreignObject x="0" y="0" width="652" height="344">
             <div xmlns="http://www.w3.org/1999/xhtml" class="container">
               <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
@@ -395,11 +409,41 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
     }
 
     #[test]
+    fn reading_file_with_no_output() {
+        const SVG: &[u8] = br#"
+            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+              <foreignObject x="0" y="0" width="652" height="344">
+                <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+                  <div class="user-input"><pre><span class="prompt">$</span> ls &gt; /dev/null</pre></div>
+                  <div class="user-input"><pre><span class="prompt">$</span> ls</pre></div>
+                  <div class="term-output"><pre>total 28
+    drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg-blue">.</span>
+    drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span>
+    -rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
+                  </div>
+                </div>
+              </foreignObject>
+            </svg>
+        "#;
+
+        let transcript = Transcript::from_svg(SVG).unwrap();
+        assert_eq!(transcript.interactions.len(), 2);
+
+        assert_eq!(transcript.interactions[0].input.text, "ls > /dev/null");
+        assert!(transcript.interactions[0].output.plaintext.is_empty());
+        assert!(transcript.interactions[0].output.html.is_empty());
+
+        assert_eq!(transcript.interactions[1].input.text, "ls");
+        assert!(!transcript.interactions[1].output.plaintext.is_empty());
+        assert!(!transcript.interactions[1].output.html.is_empty());
+    }
+
+    #[test]
     fn reading_file_without_svg_tag() {
         let data: &[u8] = b"<div>Text</div>";
         let err = Transcript::from_svg(data).unwrap_err();
 
-        assert_matches!(err, ParseError::UnexpectedRoot);
+        assert_matches!(err, ParseError::UnexpectedRoot(tag) if tag == "div");
     }
 
     #[test]

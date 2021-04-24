@@ -79,7 +79,7 @@ impl Captured {
 impl TermOutput for Captured {}
 
 /// Parsed terminal output.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Parsed {
     pub(crate) plaintext: String,
     pub(crate) html: String,
