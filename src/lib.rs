@@ -116,7 +116,7 @@
 
 use serde::Serialize;
 
-use std::{error::Error as StdError, fmt, io, num::ParseIntError, str::FromStr};
+use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
 mod html;
 mod shell;
@@ -263,42 +263,30 @@ impl Interaction<Captured> {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct UserInput {
     text: String,
-    kind: UserInputKind,
-}
-
-/// Kind of user input.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum UserInputKind {
-    /// Standalone shell command.
-    Command,
-    /// Input into an interactive session
-    Repl,
-}
-
-impl UserInputKind {
-    fn from_prompt(prompt: &str) -> Option<Self> {
-        match prompt {
-            "$" => Some(Self::Command),
-            ">>>" => Some(Self::Repl),
-            _ => None,
-        }
-    }
+    prompt: Option<Cow<'static, str>>,
 }
 
 impl UserInput {
+    pub(crate) fn intern_prompt(prompt: String) -> Cow<'static, str> {
+        match prompt.as_str() {
+            "$" => Cow::Borrowed("$"),
+            ">>>" => Cow::Borrowed(">>>"),
+            "..." => Cow::Borrowed("..."),
+            _ => Cow::Owned(prompt),
+        }
+    }
+
     /// Creates a command.
     pub fn command(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
-            kind: UserInputKind::Command,
+            prompt: Some(Cow::Borrowed("$")),
         }
     }
 
     /// Gets the kind of this input.
-    pub fn kind(&self) -> UserInputKind {
-        self.kind
+    pub fn prompt(&self) -> Option<&str> {
+        self.prompt.as_deref()
     }
 }
 
@@ -307,40 +295,3 @@ impl AsRef<str> for UserInput {
         &self.text
     }
 }
-
-impl FromStr for UserInput {
-    type Err = UserInputParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<_> = s.splitn(2, |c: char| c.is_ascii_whitespace()).collect();
-        match parts.as_slice() {
-            [prompt, text] => Ok(Self {
-                kind: UserInputKind::from_prompt(prompt)
-                    .ok_or(UserInputParseError::UnrecognizedPrefix)?,
-                text: (*text).to_owned(),
-            }),
-            _ => Err(UserInputParseError::NoPrefix),
-        }
-    }
-}
-
-/// Errors that can occur during parsing [`UserInput`]s.
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum UserInputParseError {
-    /// No input prefix (e.g., `$ ` in `$ ls -al`).
-    NoPrefix,
-    /// Unrecognized input prefix.
-    UnrecognizedPrefix,
-}
-
-impl fmt::Display for UserInputParseError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::NoPrefix => formatter.write_str("No input prefix"),
-            Self::UnrecognizedPrefix => formatter.write_str("Unrecognized input prefix"),
-        }
-    }
-}
-
-impl StdError for UserInputParseError {}

@@ -20,7 +20,7 @@
       padding: 2px {{padding}}px;
     }
 
-    .bold { font-weight: bold; }
+    .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
@@ -37,7 +37,7 @@
   <foreignObject x="0" y="0" width="{{width}}" height="{{height}}">
     <div xmlns="http://www.w3.org/1999/xhtml" class="container">
       {{#each interactions}}
-      <div class="user-input"><pre><span class="bold">$</span> {{ input.text }}</pre></div>
+      <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
       <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
       {{/each}}
     </div>

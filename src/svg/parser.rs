@@ -8,10 +8,10 @@ use std::{
     error::Error as StdError,
     fmt,
     io::{self, BufRead},
-    mem,
+    mem, str,
 };
 
-use crate::{Interaction, Parsed, Transcript, UserInput, UserInputKind, UserInputParseError};
+use crate::{Interaction, Parsed, Transcript, UserInput};
 
 /// Errors that can occur during parsing SVG transcripts.
 #[derive(Debug)]
@@ -21,8 +21,6 @@ pub enum ParseError {
     UnexpectedRoot,
     /// Invalid transcript container.
     InvalidContainer,
-    /// Error parsing user input.
-    InvalidUserInput(String, UserInputParseError),
     /// Unexpected end of file.
     UnexpectedEof,
     /// Error parsing XML.
@@ -46,9 +44,6 @@ impl fmt::Display for ParseError {
         match self {
             Self::UnexpectedRoot => formatter.write_str("Unexpected root XML tag; expected <svg>"),
             Self::InvalidContainer => formatter.write_str("Invalid transcript container"),
-            Self::InvalidUserInput(s, err) => {
-                write!(formatter, "Error parsing `{}` as user input: {}", s, err)
-            }
             Self::UnexpectedEof => formatter.write_str("Unexpected EOF"),
             Self::Xml(err) => write!(formatter, "Error parsing XML: {}", err),
         }
@@ -58,13 +53,13 @@ impl fmt::Display for ParseError {
 impl StdError for ParseError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            Self::InvalidUserInput(_, err) => Some(err),
             Self::Xml(err) => Some(err),
             _ => None,
         }
     }
 }
 
+/// States of the FSM for parsing SVGs.
 #[derive(Debug)]
 enum ParserState {
     /// Initial state.
@@ -74,7 +69,7 @@ enum ParserState {
     /// Encountered `<div class="container">`; searching for `<div class="user-input">`.
     EncounteredContainer,
     /// Reading user input (`<div class="user-input">` contents).
-    ReadingUserInput(TextReadingState),
+    ReadingUserInput(UserInputState),
     /// Finished reading user input; searching for `<div class="term-output">`.
     EncounteredUserInput(UserInput),
     /// Reading terminal output (`<div class="term-output">` contents).
@@ -83,8 +78,8 @@ enum ParserState {
 
 #[derive(Debug, Default)]
 struct TextReadingState {
-    html_buffer: Vec<u8>,
-    plaintext_buffer: Vec<u8>,
+    html_buffer: String,
+    plaintext_buffer: String,
     open_tags: usize,
 }
 
@@ -94,33 +89,29 @@ impl TextReadingState {
         match event {
             Event::Text(text) => {
                 let unescaped = text.unescaped()?;
-                self.html_buffer.extend_from_slice(unescaped.as_ref());
-                self.plaintext_buffer.extend_from_slice(unescaped.as_ref());
+                let unescaped_str = str::from_utf8(&unescaped).map_err(quick_xml::Error::Utf8)?;
+                self.html_buffer.push_str(unescaped_str);
+                self.plaintext_buffer.push_str(unescaped_str);
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
                 if tag.name() == b"span" {
-                    self.html_buffer.push(b'<');
-                    self.html_buffer.extend_from_slice(&*tag);
-                    self.html_buffer.push(b'>');
+                    self.html_buffer.push('<');
+                    let tag_str = str::from_utf8(&tag).map_err(quick_xml::Error::Utf8)?;
+                    self.html_buffer.push_str(tag_str);
+                    self.html_buffer.push('>');
                 }
             }
             Event::End(tag) => {
                 self.open_tags -= 1;
 
                 if tag.name() == b"span" {
-                    self.html_buffer.extend_from_slice(b"</span>");
+                    self.html_buffer.push_str("</span>");
                 }
 
                 if self.open_tags == 0 {
                     let html = mem::take(&mut self.html_buffer);
-                    let html = String::from_utf8(html)
-                        .map_err(|err| quick_xml::Error::Utf8(err.utf8_error()))?;
-
                     let plaintext = mem::take(&mut self.plaintext_buffer);
-                    let plaintext = String::from_utf8(plaintext)
-                        .map_err(|err| quick_xml::Error::Utf8(err.utf8_error()))?;
-
                     return Ok(Some(Parsed { plaintext, html }));
                 }
             }
@@ -130,10 +121,67 @@ impl TextReadingState {
     }
 }
 
+#[derive(Debug, Default)]
+struct UserInputState {
+    text: TextReadingState,
+    prompt: Option<Cow<'static, str>>,
+    prompt_open_tags: Option<usize>,
+}
+
+impl UserInputState {
+    /// Can prompt reading be started now?
+    fn can_start_prompt(&self) -> bool {
+        self.text.plaintext_buffer.is_empty()
+            && self.prompt.is_none()
+            && self.prompt_open_tags.is_none()
+    }
+
+    fn can_end_prompt(&self) -> bool {
+        self.prompt.is_none()
+            && self
+                .prompt_open_tags
+                .map_or(false, |tags| tags + 1 == self.text.open_tags)
+    }
+
+    fn process(&mut self, event: Event<'_>) -> Result<Option<UserInput>, ParseError> {
+        let mut is_prompt_end = false;
+        if let Event::Start(tag) = &event {
+            if self.can_start_prompt()
+                && ParserState::get_class(tag.attributes())?.as_ref() == b"prompt"
+            {
+                // Got prompt start.
+                self.prompt_open_tags = Some(self.text.open_tags);
+            }
+        } else if let Event::End(_) = &event {
+            if self.can_end_prompt() {
+                is_prompt_end = true;
+            }
+        }
+
+        let maybe_parsed = self.text.process(event)?;
+        if is_prompt_end {
+            if let Some(parsed) = maybe_parsed {
+                // Special case: user input consists of the prompt only.
+                return Ok(Some(UserInput {
+                    text: String::new(),
+                    prompt: Some(UserInput::intern_prompt(parsed.plaintext)),
+                }));
+            }
+            let text = mem::take(&mut self.text.plaintext_buffer);
+            self.prompt = Some(UserInput::intern_prompt(text));
+        }
+
+        Ok(maybe_parsed.map(|parsed| UserInput {
+            text: parsed.plaintext.trim_start().to_owned(),
+            prompt: self.prompt.take(),
+        }))
+    }
+}
+
 impl ParserState {
     const DUMMY_INPUT: UserInput = UserInput {
         text: String::new(),
-        kind: UserInputKind::Command,
+        prompt: None,
     };
 
     fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {
@@ -160,16 +208,13 @@ impl ParserState {
             Self::EncounteredContainer => {
                 if let Event::Start(tag) = event {
                     if Self::get_class(tag.attributes())?.as_ref() == b"user-input" {
-                        *self = Self::ReadingUserInput(TextReadingState::default());
+                        *self = Self::ReadingUserInput(UserInputState::default());
                     }
                 }
             }
 
-            Self::ReadingUserInput(text_state) => {
-                if let Some(Parsed { plaintext, .. }) = text_state.process(event)? {
-                    let user_input = plaintext
-                        .parse()
-                        .map_err(|err| ParseError::InvalidUserInput(plaintext, err))?;
+            Self::ReadingUserInput(state) => {
+                if let Some(user_input) = state.process(event)? {
                     *self = Self::EncounteredUserInput(user_input);
                 }
             }
@@ -293,13 +338,15 @@ mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+    use quick_xml::events::{BytesEnd, BytesStart, BytesText};
+
     use std::io::{Cursor, Read};
 
     const SVG: &[u8] = br#"
         <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
           <foreignObject x="0" y="0" width="652" height="344">
             <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-              <div class="user-input"><pre><span class="bold">$</span> ls -al --color=always</pre></div>
+              <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
               <div class="term-output"><pre>total 28
 drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg-blue">.</span>
 drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span>
@@ -318,7 +365,8 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         let interaction = &transcript.interactions[0];
         assert_matches!(
             &interaction.input,
-            UserInput { kind: UserInputKind::Command, text } if text == "ls -al --color=always"
+            UserInput { text, prompt }
+                if text == "ls -al --color=always" && prompt.as_deref() == Some("$")
         );
 
         let plaintext = &interaction.output.plaintext;
@@ -411,5 +459,104 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         let err = Transcript::from_svg(bogus_data).unwrap_err();
 
         assert_matches!(err, ParseError::UnexpectedEof);
+    }
+
+    #[test]
+    fn reading_user_input_with_manual_events() {
+        let mut state = UserInputState::default();
+        {
+            let event = Event::Start(BytesStart::borrowed_name(b"pre"));
+            assert!(state.process(event).unwrap().is_none());
+            assert_eq!(state.prompt_open_tags, None);
+            assert!(state.text.plaintext_buffer.is_empty());
+        }
+        {
+            let event = Event::Start(BytesStart::borrowed(br#"span class="prompt""#, 4));
+            assert!(state.process(event).unwrap().is_none());
+            assert_eq!(state.prompt_open_tags, Some(1));
+            assert!(state.text.plaintext_buffer.is_empty());
+        }
+        {
+            let event = Event::Text(BytesText::from_escaped(b"$" as &[u8]));
+            assert!(state.process(event).unwrap().is_none());
+            assert_eq!(state.text.plaintext_buffer, "$");
+        }
+        {
+            let event = Event::End(BytesEnd::borrowed(b"span"));
+            assert!(state.process(event).unwrap().is_none());
+            assert_eq!(state.prompt.as_deref(), Some("$"));
+            assert!(state.text.plaintext_buffer.is_empty());
+        }
+        {
+            let event = Event::Text(BytesText::from_escaped(b" rainbow" as &[u8]));
+            assert!(state.process(event).unwrap().is_none());
+        }
+
+        let event = Event::End(BytesEnd::borrowed(b"pre"));
+        let user_input = state.process(event).unwrap().unwrap();
+        assert_eq!(user_input.prompt(), Some("$"));
+        assert_eq!(user_input.text, "rainbow");
+    }
+
+    fn read_user_input(input: &[u8]) -> UserInput {
+        let mut reader = XmlReader::from_reader(Cursor::new(input));
+        let mut buffer = vec![];
+        let mut state = UserInputState::default();
+
+        loop {
+            let event = reader.read_event(&mut buffer).unwrap();
+            if let Event::Eof = &event {
+                panic!("Reached EOF without creating `UserInput`");
+            }
+
+            if let Some(user_input) = state.process(event).unwrap() {
+                break user_input;
+            }
+        }
+    }
+
+    #[test]
+    fn reading_user_input_base_case() {
+        let user_input =
+            read_user_input(br#"<pre><span class="prompt">&gt;</span> echo foo</pre>"#);
+
+        assert_eq!(user_input.prompt.as_deref(), Some(">"));
+        assert_eq!(user_input.text, "echo foo");
+    }
+
+    #[test]
+    fn reading_user_input_without_prompt() {
+        let user_input = read_user_input(br#"<pre>echo <span class="bold">foo</span></pre>"#);
+
+        assert_eq!(user_input.prompt.as_deref(), None);
+        assert_eq!(user_input.text, "echo foo");
+    }
+
+    #[test]
+    fn reading_user_input_with_prompt_only() {
+        let user_input = read_user_input(br#"<pre><span class="prompt">$</span></pre>"#);
+
+        assert_eq!(user_input.prompt.as_deref(), Some("$"));
+        assert_eq!(user_input.text, "");
+    }
+
+    #[test]
+    fn reading_user_input_with_bogus_prompt_location() {
+        let user_input =
+            read_user_input(br#"<pre>echo foo <span class="prompt">&gt;</span> output.log</pre>"#);
+
+        assert_eq!(user_input.prompt.as_deref(), None);
+        assert_eq!(user_input.text, "echo foo > output.log");
+    }
+
+    #[test]
+    fn reading_user_input_with_multiple_prompts() {
+        let user_input = read_user_input(
+            b"<pre><span class=\"prompt\">&gt;&gt;&gt;</span>  \
+                    echo foo <span class=\"prompt\">&gt;</span> output.log</pre>",
+        );
+
+        assert_eq!(user_input.prompt.as_deref(), Some(">>>"));
+        assert_eq!(user_input.text, "echo foo > output.log");
     }
 }
