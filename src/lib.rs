@@ -48,7 +48,7 @@
 //! - [`trybuild`](https://crates.io/crates/trybuild) snapshot-tests output
 //!   of a particular program (the Rust compiler).
 //! - Tools like [`termtosvg`](https://github.com/nbedos/termtosvg) and
-//!   [Asciinema](https://asciinema.org/) allow to record terminal sessions and save them to SVG.
+//!   [Asciinema](https://asciinema.org/) allow recording terminal sessions and save them to SVG.
 //!   The output of these tools is inherently *dynamic* (which, e.g., results in animated SVGs).
 //!   This crate [intentionally chooses](#design-decisions) a simpler static format, which
 //!   makes snapshot testing easier.
@@ -108,6 +108,7 @@
 //! ```
 
 // Documentation settings.
+#![doc(html_root_url = "https://docs.rs/term-transcript/0.1.0")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 // Linter settings.
 #![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
@@ -300,3 +301,6 @@ impl AsRef<str> for UserInput {
         &self.text
     }
 }
+
+#[cfg(doctest)]
+doc_comment::doctest!("../README.md");
