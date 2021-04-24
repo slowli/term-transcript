@@ -29,12 +29,15 @@
 //! }
 //! ```
 
+use lazy_static::lazy_static;
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
+    collections::HashMap,
     fs::File,
     io::{self, BufReader, Write},
-    path::Path,
+    path::{Path, PathBuf},
+    str,
 };
 
 use crate::{utils::IndentingWriter, Interaction, Parsed, ShellOptions, Transcript};
@@ -283,23 +286,63 @@ impl TestStats {
     pub fn assert_no_errors(&self, match_level: MatchKind) {
         assert_eq!(self.errors(match_level), 0, "There were test errors");
     }
+}
 
-    fn print_summary(&self, out: &mut impl WriteColor, match_level: MatchKind) -> io::Result<()> {
-        write!(out, "passed: ")?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
-        write!(out, "{}", self.passed(match_level))?;
-        out.reset()?;
+fn get_workspace_root(cargo_bin: &str, manifest_dir: &str) -> io::Result<PathBuf> {
+    use std::{
+        process::Command,
+        sync::{Mutex, PoisonError},
+    };
 
-        write!(out, ", errors: ")?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-        write!(out, "{}", self.errors(match_level))?;
-        out.reset()
+    lazy_static! {
+        static ref WORKSPACES: Mutex<HashMap<String, PathBuf>> = Mutex::new(HashMap::new());
     }
+
+    let mut workspaces = WORKSPACES.lock().unwrap_or_else(PoisonError::into_inner);
+    Ok(if let Some(path) = workspaces.get(manifest_dir).cloned() {
+        path
+    } else {
+        let output = Command::new(cargo_bin)
+            .arg("locate-project")
+            .arg("--message-format=plain")
+            .arg("--workspace")
+            .current_dir(manifest_dir)
+            .output()?;
+
+        if !output.status.success() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Failed executing `cargo metadata`",
+            ));
+        }
+
+        let path = str::from_utf8(&output.stdout)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?
+            .trim_end();
+        let path = Path::new(path)
+            .parent()
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Path to workspace `Cargo.toml` has no parent dir",
+                )
+            })?
+            .to_owned();
+        workspaces.insert(manifest_dir.to_owned(), path.clone());
+        path
+    })
 }
 
 #[doc(hidden)] // public for the sake of the `read_transcript` macro
-pub fn _read_svg_snapshot(including_file: &str, name: &str) -> io::Result<BufReader<File>> {
-    let snapshot_path = Path::new(including_file)
+pub fn _read_svg_snapshot(
+    cargo_bin: &str,
+    manifest_dir: &str,
+    including_file: &str,
+    name: &str,
+) -> io::Result<BufReader<File>> {
+    let workspace_root = get_workspace_root(cargo_bin, manifest_dir)?;
+    let snapshot_path = workspace_root
+        .join(including_file)
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No parent of current file"))?
         .join(format!("snapshots/{}.svg", name));
@@ -333,6 +376,6 @@ pub fn _read_svg_snapshot(including_file: &str, name: &str) -> io::Result<BufRea
 #[macro_export]
 macro_rules! read_svg_snapshot {
     ($name:tt) => {
-        $crate::test::_read_svg_snapshot(file!(), $name)
+        $crate::test::_read_svg_snapshot(env!("CARGO"), env!("CARGO_MANIFEST_DIR"), file!(), $name)
     };
 }
