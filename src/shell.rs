@@ -73,6 +73,12 @@ impl<Ext> ShellOptions<Ext> {
         }
     }
 
+    /// Changes the current directory of the command.
+    pub fn with_current_dir(mut self, current_dir: impl AsRef<Path>) -> Self {
+        self.command.current_dir(current_dir);
+        self
+    }
+
     /// Sets the I/O timeout for shell commands. This determines how long the code waits
     /// for output of a command before proceeding to the next command. Longer values
     /// allow to capture output more accurately, but result in longer execution.

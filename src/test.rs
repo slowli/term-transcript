@@ -195,9 +195,6 @@ impl TestConfig {
             }
         }
 
-        stats.print_summary(out, self.match_kind)?;
-        writeln!(out)?;
-
         Ok(stats)
     }
 
