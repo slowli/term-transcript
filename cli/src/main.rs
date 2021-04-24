@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::{self, Command},
     str::FromStr,
+    time::Duration,
 };
 
 use term_transcript::{
@@ -31,26 +32,16 @@ enum Args {
     /// Executes one or more commands in a shell and renders the captured output to SVG,
     /// then prints to stdout.
     Exec {
-        /// Shell command without args (they are supplied separately). If omitted,
-        /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
-        #[structopt(long, short = "s")]
-        shell: Option<OsString>,
-        /// Arguments to supply to the shell command.
-        #[structopt(name = "args", long, short = "a")]
-        shell_args: Vec<OsString>,
+        #[structopt(flatten)]
+        shell: ShellArgs,
         /// Inputs to supply to the shell.
         inputs: Vec<String>,
     },
 
     /// Tests previously captured SVG snapshots.
     Test {
-        /// Shell command without args (they are supplied separately). If omitted,
-        /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
-        #[structopt(long, short = "s")]
-        shell: Option<OsString>,
-        /// Arguments to supply to the shell command.
-        #[structopt(name = "args", long, short = "a")]
-        shell_args: Vec<OsString>,
+        #[structopt(flatten)]
+        shell: ShellArgs,
         /// Paths to the SVG file(s) to test.
         #[structopt(name = "svg")]
         svg_paths: Vec<PathBuf>,
@@ -66,6 +57,33 @@ enum Args {
     },
 }
 
+#[derive(Debug, StructOpt)]
+struct ShellArgs {
+    /// Shell command without args (they are supplied separately). If omitted,
+    /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
+    #[structopt(long, short = "s")]
+    shell: Option<OsString>,
+    /// Arguments to supply to the shell command.
+    #[structopt(name = "args", long, short = "a")]
+    shell_args: Vec<OsString>,
+    /// Timeout for I/O operations in milliseconds.
+    #[structopt(name = "io-timeout", long, short = "T", default_value = "1000")]
+    io_timeout: u64,
+}
+
+impl ShellArgs {
+    fn into_options(self) -> ShellOptions {
+        let options = if let Some(shell) = self.shell {
+            let mut command = Command::new(shell);
+            command.args(self.shell_args);
+            command.into()
+        } else {
+            ShellOptions::default()
+        };
+        options.with_io_timeout(Duration::from_millis(self.io_timeout))
+    }
+}
+
 impl Args {
     fn run(self) -> anyhow::Result<()> {
         match self {
@@ -78,13 +96,9 @@ impl Args {
                 Template::new(TemplateOptions::default()).render(&transcript, io::stdout())?;
             }
 
-            Self::Exec {
-                shell,
-                shell_args,
-                inputs,
-            } => {
+            Self::Exec { shell, inputs } => {
                 let inputs = inputs.into_iter().map(UserInput::command);
-                let mut options = Self::shell_options(shell, shell_args);
+                let mut options = shell.into_options();
                 let transcript = Transcript::from_inputs(&mut options, inputs)?;
 
                 Template::new(TemplateOptions::default()).render(&transcript, io::stdout())?;
@@ -92,7 +106,6 @@ impl Args {
 
             Self::Test {
                 shell,
-                shell_args,
                 svg_paths,
                 precise,
                 verbose,
@@ -103,7 +116,7 @@ impl Args {
                 } else {
                     MatchKind::TextOnly
                 };
-                let options = Self::shell_options(shell, shell_args);
+                let options = shell.into_options();
 
                 let mut test_config = TestConfig::new(options);
                 test_config
@@ -182,16 +195,6 @@ impl Args {
         out.reset()?;
         totals.print(&mut out)?;
         writeln!(out)
-    }
-
-    fn shell_options(shell: Option<OsString>, shell_args: Vec<OsString>) -> ShellOptions {
-        if let Some(shell) = shell {
-            let mut command = Command::new(shell);
-            command.args(shell_args);
-            command.into()
-        } else {
-            ShellOptions::default()
-        }
     }
 }
 
