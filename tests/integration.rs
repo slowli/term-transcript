@@ -7,6 +7,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use std::time::Duration;
 use term_svg::{
     read_svg_snapshot,
     svg::{Template, TemplateOptions},
@@ -40,6 +41,73 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
         .assert_matches(transcript.interactions()[0].output(), MatchKind::Precise);
 
     Ok(())
+}
+
+fn test_transcript_with_empty_output(mute_outputs: &[bool]) -> anyhow::Result<()> {
+    #[cfg(unix)]
+    const NULL_FILE: &str = "/dev/null";
+    #[cfg(windows)]
+    const NULL_FILE: &str = "NUL";
+
+    let inputs = mute_outputs.iter().map(|&mute| {
+        if mute {
+            UserInput::command(format!("rainbow > {}", NULL_FILE))
+        } else {
+            UserInput::command("rainbow")
+        }
+    });
+
+    let mut shell_options = ShellOptions::default()
+        .with_cargo_path()
+        .with_io_timeout(Duration::from_millis(200));
+    let transcript = Transcript::from_inputs(&mut shell_options, inputs)?;
+
+    let mut svg_buffer = vec![];
+    Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+    let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
+
+    assert_eq!(parsed.interactions().len(), mute_outputs.len());
+
+    for (interaction, &mute) in parsed.interactions().iter().zip(mute_outputs) {
+        if mute {
+            assert_eq!(interaction.output().plaintext(), "");
+            assert_eq!(interaction.output().html(), "");
+        } else {
+            assert_ne!(interaction.output().plaintext(), "");
+            assert_ne!(interaction.output().html(), "");
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn transcript_with_empty_output() -> anyhow::Result<()> {
+    test_transcript_with_empty_output(&[true])
+}
+
+#[test]
+fn transcript_with_empty_and_then_non_empty_outputs() -> anyhow::Result<()> {
+    test_transcript_with_empty_output(&[true, false])
+}
+
+#[test]
+fn transcript_with_non_empty_and_then_empty_outputs() -> anyhow::Result<()> {
+    test_transcript_with_empty_output(&[false, true])
+}
+
+#[test]
+fn transcript_with_sandwiched_empty_output() -> anyhow::Result<()> {
+    test_transcript_with_empty_output(&[false, true, false])
+}
+
+#[test]
+fn transcript_with_sandwiched_non_empty_output() -> anyhow::Result<()> {
+    test_transcript_with_empty_output(&[true, false, true])
+}
+
+#[test]
+fn transcript_with_several_non_empty_outputs_in_succession() -> anyhow::Result<()> {
+    test_transcript_with_empty_output(&[true, true, false, true])
 }
 
 #[test]

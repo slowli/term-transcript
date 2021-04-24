@@ -80,11 +80,21 @@ enum ParserState {
     ReadingTermOutput(UserInput, TextReadingState),
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct TextReadingState {
     html_buffer: String,
     plaintext_buffer: String,
     open_tags: usize,
+}
+
+impl Default for TextReadingState {
+    fn default() -> Self {
+        Self {
+            html_buffer: String::new(),
+            plaintext_buffer: String::new(),
+            open_tags: 1,
+        }
+    }
 }
 
 impl TextReadingState {
@@ -517,7 +527,7 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         {
             let event = Event::Start(BytesStart::borrowed(br#"span class="prompt""#, 4));
             assert!(state.process(event).unwrap().is_none());
-            assert_eq!(state.prompt_open_tags, Some(1));
+            assert_eq!(state.prompt_open_tags, Some(2));
             assert!(state.text.plaintext_buffer.is_empty());
         }
         {
@@ -537,15 +547,28 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         }
 
         let event = Event::End(BytesEnd::borrowed(b"pre"));
+        assert!(state.process(event).unwrap().is_none());
+
+        let event = Event::End(BytesEnd::borrowed(b"div"));
         let user_input = state.process(event).unwrap().unwrap();
         assert_eq!(user_input.prompt(), Some("$"));
         assert_eq!(user_input.text, "rainbow");
     }
 
     fn read_user_input(input: &[u8]) -> UserInput {
-        let mut reader = XmlReader::from_reader(Cursor::new(input));
+        let mut wrapped_input = Vec::with_capacity(input.len() + 11);
+        wrapped_input.extend_from_slice(b"<div>");
+        wrapped_input.extend_from_slice(input);
+        wrapped_input.extend_from_slice(b"</div>");
+
+        let mut reader = XmlReader::from_reader(wrapped_input.as_slice());
         let mut buffer = vec![];
         let mut state = UserInputState::default();
+
+        // Skip the `<div>` start event.
+        while !matches!(reader.read_event(&mut buffer).unwrap(), Event::Start(_)) {
+            // Drop the event.
+        }
 
         loop {
             let event = reader.read_event(&mut buffer).unwrap();
@@ -563,6 +586,14 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
     fn reading_user_input_base_case() {
         let user_input =
             read_user_input(br#"<pre><span class="prompt">&gt;</span> echo foo</pre>"#);
+
+        assert_eq!(user_input.prompt.as_deref(), Some(">"));
+        assert_eq!(user_input.text, "echo foo");
+    }
+
+    #[test]
+    fn reading_user_input_without_wrapper() {
+        let user_input = read_user_input(br#"<span class="prompt">&gt;</span> echo foo"#);
 
         assert_eq!(user_input.prompt.as_deref(), Some(">"));
         assert_eq!(user_input.text, "echo foo");
