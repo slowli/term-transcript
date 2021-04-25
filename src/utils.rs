@@ -97,7 +97,7 @@ mod tests {
         writeln!(writer, "world!")?;
         writeln!(writer, "many\n  lines!")?;
 
-        assert_eq!(buffer, b"  Hello, world!\n  many\n    lines!\n");
+        assert_eq!(buffer, b"  Hello, world!\n  many\n    lines!\n" as &[u8]);
         Ok(())
     }
 }

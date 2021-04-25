@@ -24,7 +24,7 @@
 //!
 //! fn read_svg_snapshot() -> io::Result<impl io::BufRead> {
 //!     // reads the snapshot, e.g. from a file
-//! #   Err(io::ErrorKind::NotFound.into())
+//! #   Ok(io::Cursor::new(vec![]))
 //! }
 //!
 //! // Usage in tests:

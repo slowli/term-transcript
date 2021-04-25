@@ -278,6 +278,17 @@ impl Transcript {
 
         let mut transcript = Self::new();
         for input in inputs {
+            // Check if the shell is still alive. It seems that older Rust versions allow
+            // to write to `stdin` even after the shell exits.
+            if let Some(exit_status) = shell.try_wait()? {
+                let message = format!(
+                    "Shell process has exited with exit status {} before \
+                     command `{}` was sent to it",
+                    exit_status, input.text
+                );
+                return Err(io::Error::new(io::ErrorKind::BrokenPipe, message));
+            }
+
             writeln!(stdin, "{}", input.text)?;
 
             let mut output = String::new();

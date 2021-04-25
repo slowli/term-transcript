@@ -12,7 +12,6 @@ env:
 
 jobs:
   build-msrv:
-    if: "false"
     strategy:
       matrix:
         os: [ ubuntu-latest ]
