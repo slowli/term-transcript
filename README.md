@@ -1,5 +1,12 @@
 # Snapshot Testing for CLI / REPL Applications
 
+[![Build Status](https://github.com/slowli/term-transcript/workflows/Rust/badge.svg?branch=master)](https://github.com/slowli/term-transcript/actions)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
+![rust 1.45.0+ required](https://img.shields.io/badge/rust-1.45.0+-blue.svg?label=Required%20Rust)
+
+**Documentation:**
+[![crate docs (master)](https://img.shields.io/badge/master-yellow.svg?label=docs)](https://slowli.github.io/term-transcript/term_transcript/)
+
 This crate allows to:
 
 - Create transcripts of interacting with a terminal, capturing both the output text

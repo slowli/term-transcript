@@ -9,12 +9,14 @@ on:
 env:
   # Minimum supported Rust version.
   msrv: 1.45.0
+  # Nightly Rust necessary for building docs.
+  nightly: nightly-2021-04-15
 
 jobs:
   build-msrv:
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, windows-latest ]
 
     runs-on: ${{ matrix.os }}
 
@@ -47,7 +49,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, windows-latest ]
 
     runs-on: ${{ matrix.os }}
 
@@ -90,3 +92,39 @@ jobs:
         with:
           command: test
           args: --all --all-features --doc
+
+  document:
+    needs:
+      - build
+      - build-msrv
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-document-target
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.nightly }}
+          profile: minimal
+          override: true
+
+      - name: Build docs
+        run: |
+          cargo clean --doc && \
+          cargo rustdoc -p term-transcript -- --cfg docsrs
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@releases/v3
+        if: github.event_name == 'push'
+        with:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: target/doc
+          SINGLE_COMMIT: true
