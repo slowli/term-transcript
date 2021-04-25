@@ -81,6 +81,18 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all --all-targets -- -D warnings
+      - name: Build (no features)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p term-transcript --no-default-features --lib
+      - name: Build (features = svg)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p term-transcript --no-default-features --features svg --lib
 
       - name: Run tests
         uses: actions-rs/cargo@v1
