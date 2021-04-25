@@ -1,0 +1,22 @@
+[package]
+name = "term-transcript-rainbow"
+version = "0.1.0"
+publish = false
+authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "rainbow"
+path = "main.rs"
+
+[[test]]
+name = "tests"
+path = "tests.rs"
+
+[dependencies]
+anyhow = "1.0.40"
+termcolor = "1.1.2"
+
+[dev-dependencies]
+term-transcript = { version = "0.1.0", path = "../.." }

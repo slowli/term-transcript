@@ -194,24 +194,23 @@ impl ShellOptions<StdShell> {
             })
     }
 
-    /// Creates an alias for the specified cargo binary, such as `foo` or `examples/bar`.
+    /// Creates an alias for the binary at `path_to_bin`, which should be an absolute path.
     /// This allows to call the binary using this alias without complex preparations (such as
     /// installing it globally via `cargo install`), and is more flexible than
     /// [`Self::with_cargo_path()`].
     ///
+    /// In integration tests, you may use [`env!("CARGO_BIN_EXE_<name>")`] to get a path
+    /// to binary targets.
+    ///
     /// # Limitations
     ///
-    /// - The caller must be a unit or integration test; the method will work improperly otherwise.
     /// - For Bash and PowerShell, `name` must be a valid name of a function. For `sh`,
     ///   `name` must be a valid name for the `alias` command. The `name` validity
     ///   is **not** checked.
+    ///
+    /// [`env!("CARGO_BIN_EXE_<name>")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
     #[allow(clippy::doc_markdown)] // false positive
-    pub fn with_alias(self, name: &str, path_to_bin: impl AsRef<Path>) -> Self {
-        let path_to_bin = Self::cargo_bin(path_to_bin);
-        let path_to_bin = path_to_bin
-            .to_str()
-            .expect("Path to example is not a UTF-8 string");
-
+    pub fn with_alias(self, name: &str, path_to_bin: &str) -> Self {
         let alias_command = match self.extensions {
             StdShell::Sh => format!("alias {name}=\"'{path}'\"", name = name, path = path_to_bin),
             StdShell::Bash => format!(
@@ -227,13 +226,6 @@ impl ShellOptions<StdShell> {
         };
 
         self.with_init_command(alias_command)
-    }
-
-    /// Gets path to the specified cargo binary.
-    fn cargo_bin(path: impl AsRef<Path>) -> PathBuf {
-        let mut path = Self::target_path().join(path);
-        path.set_extension(env::consts::EXE_EXTENSION);
-        path
     }
 }
 

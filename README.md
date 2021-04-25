@@ -45,10 +45,10 @@ See more examples in the crate docs.
 
 ### Snapshot examples
 
-Here's an SVG snapshot of [the `rainbow` example](examples/rainbow.rs)
+Here's an SVG snapshot of [the `rainbow` example](e2e-tests/rainbow)
 produced by this crate:
 
-![snapshot of rainbow example](tests/snapshots/rainbow.svg)
+![snapshot of rainbow example](examples/rainbow.svg)
 
 # Alternatives / similar tools
 
