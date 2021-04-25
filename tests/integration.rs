@@ -14,8 +14,8 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
 
     // 1. Capture output from a command.
     transcript.capture_output(
-        UserInput::command("rainbow"),
-        &mut Command::new("echo \"Hello, world!\""),
+        UserInput::command("echo \"Hello, world!\""),
+        Command::new("echo").arg("Hello, world!"),
     )?;
 
     // 2. Render the transcript into SVG.
@@ -26,7 +26,10 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
     assert_eq!(parsed.interactions().len(), 1);
     let interaction = &parsed.interactions()[0];
-    assert_eq!(*interaction.input(), UserInput::command("rainbow"));
+    assert_eq!(
+        *interaction.input(),
+        UserInput::command("echo \"Hello, world!\"")
+    );
 
     // 4. Compare output to the output in the original transcript.
     interaction
@@ -105,9 +108,10 @@ fn transcript_with_several_non_empty_outputs_in_succession() -> anyhow::Result<(
 
 #[test]
 fn failed_shell_initialization() {
-    let mut shell_options = ShellOptions::from(Command::new("echo \"Hello, world!\""));
+    let mut command = Command::new("echo");
+    command.arg("Hello, world!");
     let inputs = vec![UserInput::command("sup")];
-    let err = Transcript::from_inputs(&mut shell_options, inputs).unwrap_err();
+    let err = Transcript::from_inputs(&mut command.into(), inputs).unwrap_err();
     assert_eq!(err.kind(), io::ErrorKind::BrokenPipe);
     // We should be able to write all input to the process.
 }

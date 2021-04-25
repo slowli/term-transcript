@@ -7,9 +7,10 @@
 //!
 //! ```
 //! use term_transcript::{
-//!     read_svg_snapshot, ShellOptions, Transcript,
+//!     ShellOptions, Transcript,
 //!     test::{MatchKind, TestConfig, TestOutputConfig},
 //! };
+//! use std::io;
 //!
 //! // Test configuration that can be shared across tests.
 //! fn config() -> TestConfig {
@@ -21,22 +22,23 @@
 //!     config
 //! }
 //!
+//! fn read_svg_snapshot() -> io::Result<impl io::BufRead> {
+//!     // reads the snapshot, e.g. from a file
+//! #   Err(io::ErrorKind::NotFound.into())
+//! }
+//!
 //! // Usage in tests:
 //! fn test_basics() -> anyhow::Result<()> {
-//!     let transcript = Transcript::from_svg(read_svg_snapshot!("basic")?)?;
+//!     let transcript = Transcript::from_svg(read_svg_snapshot()?)?;
 //!     config().test_transcript(&transcript);
 //!     Ok(())
 //! }
 //! ```
 
-use lazy_static::lazy_static;
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
-    collections::HashMap,
-    fs::File,
-    io::{self, BufReader, Write},
-    path::{Path, PathBuf},
+    io::{self, Write},
     str,
 };
 
@@ -286,96 +288,4 @@ impl TestStats {
     pub fn assert_no_errors(&self, match_level: MatchKind) {
         assert_eq!(self.errors(match_level), 0, "There were test errors");
     }
-}
-
-fn get_workspace_root(cargo_bin: &str, manifest_dir: &str) -> io::Result<PathBuf> {
-    use std::{
-        process::Command,
-        sync::{Mutex, PoisonError},
-    };
-
-    lazy_static! {
-        static ref WORKSPACES: Mutex<HashMap<String, PathBuf>> = Mutex::new(HashMap::new());
-    }
-
-    let mut workspaces = WORKSPACES.lock().unwrap_or_else(PoisonError::into_inner);
-    Ok(if let Some(path) = workspaces.get(manifest_dir).cloned() {
-        path
-    } else {
-        let output = Command::new(cargo_bin)
-            .arg("locate-project")
-            .arg("--message-format=plain")
-            .arg("--workspace")
-            .current_dir(manifest_dir)
-            .output()?;
-
-        if !output.status.success() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Failed executing `cargo metadata`",
-            ));
-        }
-
-        let path = str::from_utf8(&output.stdout)
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?
-            .trim_end();
-        let path = Path::new(path)
-            .parent()
-            .ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "Path to workspace `Cargo.toml` has no parent dir",
-                )
-            })?
-            .to_owned();
-        workspaces.insert(manifest_dir.to_owned(), path.clone());
-        path
-    })
-}
-
-#[doc(hidden)] // public for the sake of the `read_transcript` macro
-pub fn _read_svg_snapshot(
-    cargo_bin: &str,
-    manifest_dir: &str,
-    including_file: &str,
-    name: &str,
-) -> io::Result<BufReader<File>> {
-    let workspace_root = get_workspace_root(cargo_bin, manifest_dir)?;
-    let snapshot_path = workspace_root
-        .join(including_file)
-        .parent()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No parent of current file"))?
-        .join(format!("snapshots/{}.svg", name));
-    Ok(BufReader::new(File::open(snapshot_path)?))
-}
-
-/// Reads an SVG transcript snapshot from a file. Returns a [buffered reader] for the [`File`].
-///
-/// Similarly to [`insta`], the transcript is searched in the `snapshot` directory adjacent to
-/// the file invoking the macro. The `.svg` extension is automatically added to the provided name.
-///
-/// # Errors
-///
-/// - Returns I/O errors that can occur when reading the file (e.g., if the file does not exist).
-///
-/// [buffered reader]: BufReader
-/// [`insta`]: https://insta.rs/
-///
-/// # Examples
-///
-/// ```
-/// use term_transcript::{read_svg_snapshot, Transcript};
-/// # use std::io;
-///
-/// # fn unused() -> anyhow::Result<()> {
-/// // Will read from `snapshots/my-test.svg`
-/// let transcript = Transcript::from_svg(read_svg_snapshot!("my-test")?)?;
-/// # Ok(())
-/// # }
-/// ```
-#[macro_export]
-macro_rules! read_svg_snapshot {
-    ($name:tt) => {
-        $crate::test::_read_svg_snapshot(env!("CARGO"), env!("CARGO_MANIFEST_DIR"), file!(), $name)
-    };
 }
