@@ -59,7 +59,8 @@ impl<Ext> ShellOptions<Ext> {
     #[cfg(windows)]
     fn default_shell() -> Command {
         let mut command = Command::new("cmd");
-        command.arg("/Q").arg("/K").arg("echo off");
+        // Switch off echoing user inputs and switch the codepage to UTF-8.
+        command.arg("/Q").arg("/K").arg("echo off && chcp 65001");
         command
     }
 
@@ -255,7 +256,7 @@ impl Transcript {
         let stdout = BufReader::new(pipe_reader);
         let (out_lines_send, out_lines_recv) = mpsc::channel();
         let io_handle = thread::spawn(move || {
-            let mut lines = stdout.lines();
+            let mut lines = stdout.split(b'\n');
             while let Some(Ok(line)) = lines.next() {
                 if out_lines_send.send(line).is_err() {
                     break; // the receiver was dropped, we don't care any more
@@ -292,7 +293,14 @@ impl Transcript {
             writeln!(stdin, "{}", input.text)?;
 
             let mut output = String::new();
-            while let Ok(line) = out_lines_recv.recv_timeout(options.io_timeout) {
+            while let Ok(mut line) = out_lines_recv.recv_timeout(options.io_timeout) {
+                if line.last() == Some(&b'\r') {
+                    // Normalize `\r\n` line ending to `\n`.
+                    line.pop();
+                }
+                let line = String::from_utf8(line)
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))?;
+
                 if let Some(mapped_line) = (options.line_mapper)(line) {
                     output.push_str(&mapped_line);
                     output.push('\n');
@@ -301,9 +309,10 @@ impl Transcript {
             if output.ends_with('\n') {
                 output.truncate(output.len() - 1);
             }
+
             transcript.interactions.push(Interaction {
                 input,
-                output: Captured::new(output.into_bytes()),
+                output: Captured::new(output),
             });
         }
 
@@ -375,6 +384,9 @@ impl Transcript {
         pipe_reader.read_to_end(&mut output)?;
         child.wait()?;
 
+        let output = String::from_utf8(output)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))?;
+
         self.interactions.push(Interaction {
             input,
             output: Captured::new(output),
@@ -386,8 +398,6 @@ impl Transcript {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use std::str;
 
     #[cfg(any(unix, windows))]
     #[test]
@@ -403,13 +413,13 @@ mod tests {
         {
             let interaction = &transcript.interactions()[0];
             assert_eq!(interaction.input().text, "echo hello");
-            let output = str::from_utf8(interaction.output().as_ref())?;
+            let output = interaction.output().as_ref();
             assert_eq!(output.trim(), "hello");
         }
 
         let interaction = &transcript.interactions()[1];
         assert_eq!(interaction.input().text, "echo foo && echo bar >&2");
-        let output = str::from_utf8(&interaction.output().as_ref())?;
+        let output = interaction.output().as_ref();
         assert_eq!(
             output.split_whitespace().collect::<Vec<_>>(),
             ["foo", "bar"]

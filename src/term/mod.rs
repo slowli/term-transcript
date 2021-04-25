@@ -1,10 +1,12 @@
 use handlebars::Output;
 use termcolor::NoColor;
 
+use std::borrow::Cow;
+
 use crate::{
     html::HtmlWriter,
     test::MatchKind,
-    utils::{StringOutput, WriteAdapter},
+    utils::{normalize_newlines, StringOutput, WriteAdapter},
     TermError,
 };
 
@@ -16,17 +18,21 @@ pub trait TermOutput: Clone + Send + Sync + 'static {}
 
 /// Output captured from the terminal.
 #[derive(Debug, Clone)]
-pub struct Captured(Vec<u8>);
+pub struct Captured(String);
 
-impl AsRef<[u8]> for Captured {
-    fn as_ref(&self) -> &[u8] {
+impl AsRef<str> for Captured {
+    fn as_ref(&self) -> &str {
         &self.0
     }
 }
 
 impl Captured {
-    pub(crate) fn new(bytes: Vec<u8>) -> Self {
-        Self(bytes)
+    pub(crate) fn new(term_output: String) -> Self {
+        // Normalize newlines to `\n`.
+        Self(match normalize_newlines(&term_output) {
+            Cow::Owned(normalized) => normalized,
+            Cow::Borrowed(_) => term_output,
+        })
     }
 
     /// Writes this output in the HTML format to the provided `writer`.
@@ -38,7 +44,7 @@ impl Captured {
     /// Returns an error if there was an issue processing output.
     pub fn write_as_html(&self, output: &mut dyn Output) -> Result<(), TermError> {
         let mut html_writer = HtmlWriter::new(output);
-        TermOutputParser::new(&mut html_writer).parse(&self.0)
+        TermOutputParser::new(&mut html_writer).parse(self.0.as_bytes())
     }
 
     /// Convenience method for converting this terminal output to an HTML string
@@ -60,7 +66,7 @@ impl Captured {
     /// Returns an error if there was an issue processing output.
     pub fn write_as_plaintext(&self, output: &mut dyn Output) -> Result<(), TermError> {
         let mut plaintext_writer = NoColor::new(WriteAdapter::new(output));
-        TermOutputParser::new(&mut plaintext_writer).parse(&self.0)
+        TermOutputParser::new(&mut plaintext_writer).parse(self.0.as_bytes())
     }
 
     /// Convenience method for converting this terminal output to plaintext
@@ -135,7 +141,7 @@ mod tests {
     use std::io::Write;
     use termcolor::{Ansi, Color, ColorSpec, WriteColor};
 
-    fn prepare_term_output() -> anyhow::Result<Vec<u8>> {
+    fn prepare_term_output() -> anyhow::Result<String> {
         let mut writer = Ansi::new(vec![]);
         writer.set_color(
             ColorSpec::new()
@@ -155,7 +161,7 @@ mod tests {
         writer.reset()?;
         write!(writer, "!")?;
 
-        Ok(writer.into_inner())
+        String::from_utf8(writer.into_inner()).map_err(From::from)
     }
 
     const EXPECTED_HTML: &str = "<span class=\"underline fg-cyan\">Hello</span>, \
@@ -177,7 +183,7 @@ mod tests {
 
     #[test]
     fn matching_text() {
-        let captured = Captured(b"Hello, world!".to_vec());
+        let captured = Captured("Hello, world!".to_owned());
         let parsed = Parsed {
             plaintext: "Hello, world!".to_owned(),
             html: EXPECTED_HTML.to_owned(),
@@ -189,7 +195,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn matching_imprecise_text() {
-        let captured = Captured(b"Hello, world!".to_vec());
+        let captured = Captured("Hello, world!".to_owned());
         let parsed = Parsed {
             plaintext: "Hello, world!".to_owned(),
             html: EXPECTED_HTML.to_owned(),

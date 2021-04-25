@@ -1,5 +1,6 @@
 //! CLI for the `term-transcript` crate.
 
+use anyhow::Context;
 use structopt::StructOpt;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
@@ -91,6 +92,10 @@ impl Args {
                 let mut transcript = Transcript::new();
                 let mut term_output = vec![];
                 io::stdin().read_to_end(&mut term_output)?;
+
+                let term_output = String::from_utf8(term_output)
+                    .map_err(|err| err.utf8_error())
+                    .with_context(|| "Failed to convert terminal output to UTF-8")?;
                 transcript.add_interaction(UserInput::command(command), term_output);
 
                 Template::new(TemplateOptions::default()).render(&transcript, io::stdout())?;

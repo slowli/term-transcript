@@ -13,3 +13,6 @@ indent_size = 4
 
 [*.{md,svg}]
 trim_trailing_whitespace = false
+
+[tests/non-utf8.txt]
+charset = latin1

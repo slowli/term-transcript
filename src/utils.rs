@@ -3,6 +3,7 @@
 use handlebars::Output;
 
 use std::{
+    borrow::Cow,
     io::{self, Write},
     str,
 };
@@ -82,6 +83,14 @@ impl<W: Write> Write for IndentingWriter<W> {
 
     fn flush(&mut self) -> io::Result<()> {
         self.inner.flush()
+    }
+}
+
+pub(crate) fn normalize_newlines(s: &str) -> Cow<'_, str> {
+    if s.contains("\r\n") {
+        Cow::Owned(s.replace("\r\n", "\n"))
+    } else {
+        Cow::Borrowed(s)
     }
 }
 

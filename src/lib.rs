@@ -220,7 +220,7 @@ impl<Out: TermOutput> Transcript<Out> {
 
 impl Transcript {
     /// Adds a new interaction into the transcript.
-    pub fn add_interaction(&mut self, input: UserInput, output: Vec<u8>) -> &mut Self {
+    pub fn add_interaction(&mut self, input: UserInput, output: String) -> &mut Self {
         self.interactions.push(Interaction {
             input,
             output: Captured::new(output),
@@ -256,8 +256,8 @@ impl Interaction<Captured> {
             input_lines += 1;
         }
 
-        let mut output_lines = bytecount::count(self.output.as_ref(), b'\n');
-        if !self.output.as_ref().ends_with(b"\n") {
+        let mut output_lines = bytecount::count(self.output.as_ref().as_bytes(), b'\n');
+        if !self.output.as_ref().ends_with('\n') {
             output_lines += 1;
         }
 

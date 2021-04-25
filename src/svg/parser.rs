@@ -11,7 +11,7 @@ use std::{
     mem, str,
 };
 
-use crate::{Interaction, Parsed, Transcript, UserInput};
+use crate::{utils::normalize_newlines, Interaction, Parsed, Transcript, UserInput};
 
 /// Errors that can occur during parsing SVG transcripts.
 #[derive(Debug)]
@@ -104,7 +104,7 @@ impl TextReadingState {
             Event::Text(text) => {
                 let unescaped = text.unescaped()?;
                 let unescaped_str = str::from_utf8(&unescaped).map_err(quick_xml::Error::Utf8)?;
-                let unescaped_str = Self::normalize_newlines(unescaped_str);
+                let unescaped_str = normalize_newlines(unescaped_str);
 
                 self.html_buffer.push_str(&unescaped_str);
                 self.plaintext_buffer.push_str(&unescaped_str);
@@ -134,14 +134,6 @@ impl TextReadingState {
             _ => { /* Do nothing */ }
         }
         Ok(None)
-    }
-
-    fn normalize_newlines(s: &str) -> Cow<'_, str> {
-        if s.contains("\r\n") {
-            Cow::Owned(s.replace("\r\n", "\n"))
-        } else {
-            Cow::Borrowed(s)
-        }
     }
 }
 
