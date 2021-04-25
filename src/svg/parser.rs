@@ -104,8 +104,10 @@ impl TextReadingState {
             Event::Text(text) => {
                 let unescaped = text.unescaped()?;
                 let unescaped_str = str::from_utf8(&unescaped).map_err(quick_xml::Error::Utf8)?;
-                self.html_buffer.push_str(unescaped_str);
-                self.plaintext_buffer.push_str(unescaped_str);
+                let unescaped_str = Self::normalize_newlines(unescaped_str);
+
+                self.html_buffer.push_str(&unescaped_str);
+                self.plaintext_buffer.push_str(&unescaped_str);
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
@@ -132,6 +134,14 @@ impl TextReadingState {
             _ => { /* Do nothing */ }
         }
         Ok(None)
+    }
+
+    fn normalize_newlines(s: &str) -> Cow<'_, str> {
+        if s.contains("\r\n") {
+            Cow::Owned(s.replace("\r\n", "\n"))
+        } else {
+            Cow::Borrowed(s)
+        }
     }
 }
 
@@ -633,5 +643,13 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
 
         assert_eq!(user_input.prompt.as_deref(), Some(">>>"));
         assert_eq!(user_input.text, "echo foo > output.log");
+    }
+
+    #[test]
+    fn newline_breaks_are_normalized() {
+        let mut state = TextReadingState::default();
+        let text = BytesText::from_escaped(b"some\ntext\r\nand more text" as &[u8]);
+        state.process(Event::Text(text)).unwrap();
+        assert_eq!(state.plaintext_buffer, "some\ntext\nand more text");
     }
 }
