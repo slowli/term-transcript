@@ -58,6 +58,15 @@
 //! [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 //! [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 //!
+//! # Crate features
+//!
+//! - `svg`. Exposes [the eponymous module](crate::svg) that allows rendering [`Transcript`]s
+//!   into the SVG format.
+//! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
+//!   from SVG files and testing them.
+//!
+//! Both `svg` and `test` features are on by default.
+//!
 //! # Examples
 //!
 //! Creating a terminal [`Transcript`] and rendering it to SVG.
@@ -222,10 +231,10 @@ impl<Out: TermOutput> Transcript<Out> {
 
 impl Transcript {
     /// Adds a new interaction into the transcript.
-    pub fn add_interaction(&mut self, input: UserInput, output: String) -> &mut Self {
+    pub fn add_interaction(&mut self, input: UserInput, output: impl Into<String>) -> &mut Self {
         self.interactions.push(Interaction {
             input,
-            output: Captured::new(output),
+            output: Captured::new(output.into()),
         });
         self
     }
