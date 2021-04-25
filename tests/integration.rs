@@ -6,7 +6,6 @@ use std::{io, path::Path, process::Command, str::Utf8Error, time::Duration};
 
 use term_transcript::{
     svg::{Template, TemplateOptions},
-    test::MatchKind,
     ShellOptions, Transcript, UserInput,
 };
 
@@ -48,10 +47,14 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
     );
 
     // 4. Compare output to the output in the original transcript.
-    interaction
-        .output()
-        .assert_matches(transcript.interactions()[0].output(), MatchKind::Precise);
-
+    assert_eq!(
+        interaction.output().plaintext(),
+        transcript.interactions()[0].output().to_plaintext()?
+    );
+    assert_eq!(
+        interaction.output().html(),
+        transcript.interactions()[0].output().to_html()?
+    );
     Ok(())
 }
 

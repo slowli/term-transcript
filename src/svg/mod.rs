@@ -4,13 +4,15 @@ use handlebars::{Context, Handlebars, Helper, HelperDef, Output, RenderContext, 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::{
-    convert::TryFrom, error::Error as StdError, fmt, io::Write, num::ParseIntError, str::FromStr,
+    convert::TryFrom,
+    error::Error as StdError,
+    fmt::{self, Write as WriteStr},
+    io::Write,
+    num::ParseIntError,
+    str::FromStr,
 };
 
 use crate::{Interaction, Transcript, UserInput};
-
-mod parser;
-pub use self::parser::ParseError;
 
 const MAIN_TEMPLATE_NAME: &str = "main";
 const TEMPLATE: &str = include_str!("default.svg.handlebars");
@@ -327,7 +329,7 @@ impl HelperDef for ContentHelper<'_> {
             .ok_or_else(|| RenderError::new("index is out of bounds"))?;
         interaction
             .output()
-            .write_as_html(out)
+            .write_as_html(&mut OutputAdapter(out))
             .map_err(|err| RenderError::from_error("content", err))
     }
 }
@@ -342,5 +344,13 @@ impl<'a> From<&'a Interaction> for SerializedInteraction<'a> {
         Self {
             input: &value.input,
         }
+    }
+}
+
+struct OutputAdapter<'a>(&'a mut dyn Output);
+
+impl WriteStr for OutputAdapter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.0.write(s).map_err(|_| fmt::Error)
     }
 }

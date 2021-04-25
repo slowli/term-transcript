@@ -18,5 +18,8 @@ path = "tests.rs"
 anyhow = "1.0.40"
 termcolor = "1.1.2"
 
-[dev-dependencies]
-term-transcript = { version = "0.1.0", path = "../.." }
+[dev-dependencies.term-transcript]
+version = "0.1.0"
+path = "../.."
+default-features = false
+features = ["test"]

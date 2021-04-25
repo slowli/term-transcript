@@ -115,14 +115,16 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
-use serde::Serialize;
-
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
 mod html;
 mod shell;
+#[cfg(feature = "svg")]
+#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub mod svg;
 mod term;
+#[cfg(feature = "test")]
+#[cfg_attr(docsrs, doc(cfg(feature = "test")))]
 pub mod test;
 mod utils;
 
@@ -266,13 +268,15 @@ impl Interaction<Captured> {
 }
 
 /// User input during interaction with a terminal.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "svg", derive(serde::Serialize))]
 pub struct UserInput {
     text: String,
     prompt: Option<Cow<'static, str>>,
 }
 
 impl UserInput {
+    #[cfg(feature = "test")]
     pub(crate) fn intern_prompt(prompt: String) -> Cow<'static, str> {
         match prompt.as_str() {
             "$" => Cow::Borrowed("$"),
