@@ -70,27 +70,6 @@ impl Captured {
 
 impl TermOutput for Captured {}
 
-/// Parsed terminal output.
-#[derive(Debug, Clone, Default)]
-pub struct Parsed {
-    pub(crate) plaintext: String,
-    pub(crate) html: String,
-}
-
-impl Parsed {
-    /// Gets the parsed plaintext.
-    pub fn plaintext(&self) -> &str {
-        &self.plaintext
-    }
-
-    /// Gets the parsed HTML.
-    pub fn html(&self) -> &str {
-        &self.html
-    }
-}
-
-impl TermOutput for Parsed {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

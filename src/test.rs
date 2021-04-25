@@ -42,10 +42,10 @@ use std::{
     str,
 };
 
-use crate::{Interaction, Parsed, ShellOptions, Transcript};
+use crate::{Interaction, ShellOptions, Transcript};
 
 mod parser;
-pub use self::parser::ParseError;
+pub use self::parser::{ParseError, Parsed};
 
 /// Configuration of output produced during testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

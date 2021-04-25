@@ -130,7 +130,7 @@ mod utils;
 
 pub use self::{
     shell::{ShellOptions, StdShell},
-    term::{Captured, Parsed, TermOutput},
+    term::{Captured, TermOutput},
 };
 
 /// Errors that can occur when processing terminal output.
