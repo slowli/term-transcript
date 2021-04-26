@@ -507,7 +507,7 @@ mod tests {
             .render(&transcript, &mut buffer)
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
-        assert!(buffer.contains(r#"Hello, <span class="fg-green">world</span>!"#));
+        assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
         assert!(!buffer.contains("<circle"));
     }
 

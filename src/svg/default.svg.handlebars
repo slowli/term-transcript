@@ -1,8 +1,13 @@
 <svg viewBox="0 {{#if window_frame}}-22{{else}}0{{/if}} {{width}} {{height}}" xmlns="http://www.w3.org/2000/svg">
   <style>
+    :root {
+      {{~#each palette.colors}}
+      --{{@key}}: {{this}}; --i-{{@key}}: {{lookup ../palette.intense_colors @key}};
+      {{~/each}}
+    }
     .container {
       padding: 0 10px;
-      color: {{ palette.colors.white }};
+      color: var(--white);
     }
     .container pre {
       padding: 0;
@@ -10,11 +15,10 @@
       font: 12px {{ font_family }};
       line-height: 15px;
     }
-
     .user-input {
       margin: 4px -10px;
-      color: {{ palette.intense_colors.white }};
-      background-color: rgba(255, 255, 255, 0.1);
+      color: var(--white);
+      background: rgba(255, 255, 255, 0.1);
       padding: 2px 10px;
     }
 
@@ -23,21 +27,29 @@
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
 
-    {{~#each palette.colors}}
-    .fg-{{@key}} { color: {{this}}; }
-    .bg-{{@key}} { background-color: {{this}}; }
-    {{~/each}}
-    {{~#each palette.intense_colors}}
-    .fg-i-{{@key}} { color: {{this}}; }
-    .bg-i-{{@key}} { background-color: {{this}}; }
-    {{~/each}}
+    .fg0 { color: var(--black); } .bg0 { background: var(--black); }
+    .fg1 { color: var(--red); } .bg1 { background: var(--red); }
+    .fg2 { color: var(--green); } .bg2 { background: var(--green); }
+    .fg3 { color: var(--yellow); } .bg3 { background: var(--yellow); }
+    .fg4 { color: var(--blue); } .bg4 { background: var(--blue); }
+    .fg5 { color: var(--magenta); } .bg5 { background: var(--magenta); }
+    .fg6 { color: var(--cyan); } .bg6 { background: var(--cyan); }
+    .fg7 { color: var(--white); } .bg7 { background: var(--white); }
+    .fg8 { color: var(--i-black); } .bg8 { background: var(--i-black); }
+    .fg9 { color: var(--i-red); } .bg9 { background: var(--i-red); }
+    .fg10 { color: var(--i-green); } .bg10 { background: var(--i-green); }
+    .fg11 { color: var(--i-yellow); } .bg11 { background: var(--i-yellow); }
+    .fg12 { color: var(--i-blue); } .bg12 { background: var(--i-blue); }
+    .fg13 { color: var(--i-magenta); } .bg13 { background: var(--i-magenta); }
+    .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
+    .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
-  <rect width="100%" height="100%" y="{{#if window_frame}}-22{{else}}0{{/if}}" rx="4.5" {{#if window_frame}}clip-path="inset(5 0 0 0)"{{/if}} style="fill: {{ palette.colors.black}};" />
+  <rect width="100%" height="100%" y="{{#if window_frame}}-22{{else}}0{{/if}}" rx="4.5" {{#if window_frame}}clip-path="inset(5 0 0 0)"{{/if}} style="fill: var(--black);" />
   {{~#if window_frame}}
-  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: {{ palette.intense_colors.black }};"/>
-  <circle cx="17" cy="-9" r="7" style="fill: {{ palette.colors.red }};"/>
-  <circle cx="37" cy="-9" r="7" style="fill: {{ palette.colors.yellow }};"/>
-  <circle cx="57" cy="-9" r="7" style="fill: {{ palette.colors.green}};"/>
+  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #333;"/>
+  <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
+  <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
+  <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
   {{~/if}}
   <foreignObject x="0" y="10" width="{{width}}" height="{{content_height}}">
     <div xmlns="http://www.w3.org/1999/xhtml" class="container">

@@ -62,26 +62,34 @@ impl<'a> HtmlWriter<'a> {
 
         let mut styles = vec![];
 
-        let fore_color = spec.fg().map(|&color| ClassOrRgb::new(color)).transpose()?;
+        let mut fore_color_class = String::with_capacity(4);
+        fore_color_class.push_str("fg");
+        let fore_color = spec.fg().map(|&color| IndexOrRgb::new(color)).transpose()?;
         match fore_color {
-            Some(ClassOrRgb::Class { value, intense }) => {
-                let intense = intense || spec.intense();
-                classes.push(value.as_str(false, intense));
+            Some(IndexOrRgb::Index(idx)) => {
+                let final_idx = if spec.intense() { idx | 8 } else { idx };
+                write!(&mut fore_color_class, "{}", final_idx).unwrap();
+                // ^-- `unwrap` is safe; writing to a string never fails.
+                classes.push(&fore_color_class);
             }
-            Some(ClassOrRgb::Rgb(r, g, b)) => {
+            Some(IndexOrRgb::Rgb(r, g, b)) => {
                 styles.push(format!("color: #{:02x}{:02x}{:02x}", r, g, b));
             }
             None => { /* Do nothing. */ }
         }
 
-        let back_color = spec.bg().map(|&color| ClassOrRgb::new(color)).transpose()?;
+        let mut back_color_class = String::with_capacity(4);
+        back_color_class.push_str("bg");
+        let back_color = spec.bg().map(|&color| IndexOrRgb::new(color)).transpose()?;
         match back_color {
-            Some(ClassOrRgb::Class { value, intense }) => {
-                let intense = intense || spec.intense();
-                classes.push(value.as_str(true, intense));
+            Some(IndexOrRgb::Index(idx)) => {
+                let final_idx = if spec.intense() { idx | 8 } else { idx };
+                write!(&mut back_color_class, "{}", final_idx).unwrap();
+                // ^-- `unwrap` is safe; writing to a string never fails.
+                classes.push(&back_color_class);
             }
-            Some(ClassOrRgb::Rgb(r, g, b)) => {
-                styles.push(format!("background-color: #{:02x}{:02x}{:02x}", r, g, b));
+            Some(IndexOrRgb::Rgb(r, g, b)) => {
+                styles.push(format!("background: #{:02x}{:02x}{:02x}", r, g, b));
             }
             None => { /* Do nothing. */ }
         }
@@ -105,7 +113,7 @@ impl<'a> HtmlWriter<'a> {
                     self.write_str("; ")?;
                 }
             }
-            self.write_str("\"")?;
+            self.write_str(";\"")?;
         }
         self.write_str(">")?;
         self.opened_spans += 1;
@@ -172,101 +180,38 @@ impl WriteColor for HtmlWriter<'_> {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum ColorClass {
-    Black,
-    Red,
-    Green,
-    Yellow,
-    Blue,
-    Magenta,
-    Cyan,
-    White,
-}
-
-impl ColorClass {
-    fn as_str(self, background: bool, intense: bool) -> &'static str {
-        macro_rules! get_str {
-            ($prefix:tt) => {
-                match self {
-                    Self::Black => concat!($prefix, "-black"),
-                    Self::Red => concat!($prefix, "-red"),
-                    Self::Green => concat!($prefix, "-green"),
-                    Self::Yellow => concat!($prefix, "-yellow"),
-                    Self::Blue => concat!($prefix, "-blue"),
-                    Self::Magenta => concat!($prefix, "-magenta"),
-                    Self::Cyan => concat!($prefix, "-cyan"),
-                    Self::White => concat!($prefix, "-white"),
-                }
-            };
-        }
-
-        match (background, intense) {
-            (false, false) => get_str!("fg"),
-            (false, true) => get_str!("fg-i"),
-            (true, false) => get_str!("bg"),
-            (true, true) => get_str!("bg-i"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum ClassOrRgb {
-    Class { value: ColorClass, intense: bool },
+enum IndexOrRgb {
+    Index(u8),
     Rgb(u8, u8, u8),
 }
 
-impl ClassOrRgb {
+impl IndexOrRgb {
     #[allow(clippy::match_wildcard_for_single_variants)]
     // ^-- `Color` is an old-school non-exhaustive enum
     fn new(color: Color) -> io::Result<Self> {
         Ok(match color {
-            Color::Black => Self::class(ColorClass::Black),
-            Color::Red => Self::class(ColorClass::Red),
-            Color::Green => Self::class(ColorClass::Green),
-            Color::Yellow => Self::class(ColorClass::Yellow),
-            Color::Blue => Self::class(ColorClass::Blue),
-            Color::Magenta => Self::class(ColorClass::Magenta),
-            Color::Cyan => Self::class(ColorClass::Cyan),
-            Color::White => Self::class(ColorClass::White),
+            Color::Black => Self::index(0),
+            Color::Red => Self::index(1),
+            Color::Green => Self::index(2),
+            Color::Yellow => Self::index(3),
+            Color::Blue => Self::index(4),
+            Color::Magenta => Self::index(5),
+            Color::Cyan => Self::index(6),
+            Color::White => Self::index(7),
             Color::Ansi256(idx) => Self::indexed_color(idx),
             Color::Rgb(r, g, b) => Self::Rgb(r, g, b),
             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unsupported color")),
         })
     }
 
-    fn class(value: ColorClass) -> Self {
-        Self::Class {
-            value,
-            intense: false,
-        }
-    }
-
-    fn intense_class(value: ColorClass) -> Self {
-        Self::Class {
-            value,
-            intense: true,
-        }
+    fn index(value: u8) -> Self {
+        debug_assert!(value < 16);
+        Self::Index(value)
     }
 
     fn indexed_color(index: u8) -> Self {
         match index {
-            0 => Self::class(ColorClass::Black),
-            1 => Self::class(ColorClass::Red),
-            2 => Self::class(ColorClass::Green),
-            3 => Self::class(ColorClass::Yellow),
-            4 => Self::class(ColorClass::Blue),
-            5 => Self::class(ColorClass::Magenta),
-            6 => Self::class(ColorClass::Cyan),
-            7 => Self::class(ColorClass::White),
-
-            8 => Self::intense_class(ColorClass::Black),
-            9 => Self::intense_class(ColorClass::Red),
-            10 => Self::intense_class(ColorClass::Green),
-            11 => Self::intense_class(ColorClass::Yellow),
-            12 => Self::intense_class(ColorClass::Blue),
-            13 => Self::intense_class(ColorClass::Magenta),
-            14 => Self::intense_class(ColorClass::Cyan),
-            15 => Self::intense_class(ColorClass::White),
+            0..=15 => Self::index(index),
 
             16..=231 => {
                 let index = index - 16;
@@ -330,7 +275,7 @@ mod tests {
 
         assert_eq!(
             buffer,
-            r#"Hello, <span class="bold underline fg-green bg-white">world</span>!"#
+            r#"Hello, <span class="bold underline fg2 bg7">world</span>!"#
         );
 
         Ok(())
@@ -354,8 +299,7 @@ mod tests {
 
         assert_eq!(
             buffer,
-            "<span class=\"dimmed fg-green bg-white\">Hello, </span>\
-             <span class=\"fg-yellow\">world</span>!"
+            "<span class=\"dimmed fg2 bg7\">Hello, </span><span class=\"fg3\">world</span>!"
         );
 
         Ok(())
@@ -383,8 +327,7 @@ mod tests {
 
         assert_eq!(
             buffer,
-            "<span class=\"dimmed fg-green bg-white\">Hello, \
-             <span class=\"fg-yellow\">world</span></span>!"
+            "<span class=\"dimmed fg2 bg7\">Hello, <span class=\"fg3\">world</span></span>!"
         );
 
         Ok(())
@@ -408,11 +351,11 @@ mod tests {
 
         assert_eq!(
             buffer,
-            "<span class=\"fg-magenta\">H</span>\
-             <span class=\"bg-i-cyan\">e</span>\
-             <span style=\"background-color: #5fd700\">l</span>\
-             <span style=\"color: #ff00d7\">l</span>\
-             <span style=\"background-color: #bcbcbc\">o</span>"
+            "<span class=\"fg5\">H</span>\
+             <span class=\"bg14\">e</span>\
+             <span style=\"background: #5fd700;\">l</span>\
+             <span style=\"color: #ff00d7;\">l</span>\
+             <span style=\"background: #bcbcbc;\">o</span>"
         );
         Ok(())
     }
