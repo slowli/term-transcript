@@ -51,6 +51,133 @@ pub struct Palette {
     pub intense_colors: TermColors,
 }
 
+impl Palette {
+    const fn dracula() -> Self {
+        Self {
+            colors: TermColors {
+                black: RgbColor(0x28, 0x29, 0x36),
+                red: RgbColor(0xea, 0x51, 0xb2),
+                green: RgbColor(0xeb, 0xff, 0x87),
+                yellow: RgbColor(0x00, 0xf7, 0x69),
+                blue: RgbColor(0x62, 0xd6, 0xe8),
+                magenta: RgbColor(0xb4, 0x5b, 0xcf),
+                cyan: RgbColor(0xa1, 0xef, 0xe4),
+                white: RgbColor(0xe9, 0xe9, 0xf4),
+            },
+            intense_colors: TermColors {
+                black: RgbColor(0x62, 0x64, 0x83),
+                red: RgbColor(0xb4, 0x5b, 0xcf),
+                green: RgbColor(0x3a, 0x3c, 0x4e),
+                yellow: RgbColor(0x4d, 0x4f, 0x68),
+                blue: RgbColor(0x62, 0xd6, 0xe8),
+                magenta: RgbColor(0xf1, 0xf2, 0xf8),
+                cyan: RgbColor(0x00, 0xf7, 0x69),
+                white: RgbColor(0xf7, 0xf7, 0xfb),
+            },
+        }
+    }
+
+    const fn powershell() -> Self {
+        Self {
+            colors: TermColors {
+                black: RgbColor(0x0c, 0x0c, 0x0c),
+                red: RgbColor(0xc5, 0x0f, 0x1f),
+                green: RgbColor(0x13, 0xa1, 0x0e),
+                yellow: RgbColor(0xc1, 0x9c, 0x00),
+                blue: RgbColor(0x00, 0x37, 0xda),
+                magenta: RgbColor(0x88, 0x17, 0x98),
+                cyan: RgbColor(0x3a, 0x96, 0xdd),
+                white: RgbColor(0xcc, 0xcc, 0xcc),
+            },
+            intense_colors: TermColors {
+                black: RgbColor(0x76, 0x76, 0x76),
+                red: RgbColor(0xe7, 0x48, 0x56),
+                green: RgbColor(0x16, 0xc6, 0x0c),
+                yellow: RgbColor(0xf9, 0xf1, 0xa5),
+                blue: RgbColor(0x3b, 0x78, 0xff),
+                magenta: RgbColor(0xb4, 0x00, 0x9e),
+                cyan: RgbColor(0x61, 0xd6, 0xd6),
+                white: RgbColor(0xf2, 0xf2, 0xf2),
+            },
+        }
+    }
+
+    const fn xterm() -> Self {
+        Self {
+            colors: TermColors {
+                black: RgbColor(0, 0, 0),
+                red: RgbColor(0xcd, 0, 0),
+                green: RgbColor(0, 0xcd, 0),
+                yellow: RgbColor(0xcd, 0xcd, 0),
+                blue: RgbColor(0, 0, 0xee),
+                magenta: RgbColor(0xcd, 0, 0xcd),
+                cyan: RgbColor(0, 0xcd, 0xcd),
+                white: RgbColor(0xe5, 0xe5, 0xe5),
+            },
+            intense_colors: TermColors {
+                black: RgbColor(0x7f, 0x7f, 0x7f),
+                red: RgbColor(0xff, 0, 0),
+                green: RgbColor(0, 0xff, 0),
+                yellow: RgbColor(0xff, 0xff, 0),
+                blue: RgbColor(0x5c, 0x5c, 0xff),
+                magenta: RgbColor(0xff, 0, 0xff),
+                cyan: RgbColor(0, 0xff, 0xff),
+                white: RgbColor(0xff, 0xff, 0xff),
+            },
+        }
+    }
+
+    const fn ubuntu() -> Self {
+        Self {
+            colors: TermColors {
+                black: RgbColor(0x01, 0x01, 0x01),
+                red: RgbColor(0xde, 0x38, 0x2b),
+                green: RgbColor(0x38, 0xb5, 0x4a),
+                yellow: RgbColor(0xff, 0xc7, 0x06),
+                blue: RgbColor(0, 0x6f, 0xb8),
+                magenta: RgbColor(0x76, 0x26, 0x71),
+                cyan: RgbColor(0x2c, 0xb5, 0xe9),
+                white: RgbColor(0xcc, 0xcc, 0xcc),
+            },
+            intense_colors: TermColors {
+                black: RgbColor(0x80, 0x80, 0x80),
+                red: RgbColor(0xff, 0, 0),
+                green: RgbColor(0, 0xff, 0),
+                yellow: RgbColor(0xff, 0xff, 0),
+                blue: RgbColor(0, 0, 0xff),
+                magenta: RgbColor(0xff, 0, 0xff),
+                cyan: RgbColor(0, 0xff, 0xff),
+                white: RgbColor(0xff, 0xff, 0xff),
+            },
+        }
+    }
+
+    const fn gjm() -> Self {
+        Self {
+            colors: TermColors {
+                black: RgbColor(0x1c, 0x1c, 0x1c),
+                red: RgbColor(0xff, 0x00, 0x5b),
+                green: RgbColor(0xce, 0xe3, 0x18),
+                yellow: RgbColor(0xff, 0xe7, 0x55),
+                blue: RgbColor(0x04, 0x8a, 0xc7),
+                magenta: RgbColor(0x83, 0x3c, 0x9f),
+                cyan: RgbColor(0x0a, 0xc1, 0xcd),
+                white: RgbColor(0xe5, 0xe5, 0xe5),
+            },
+            intense_colors: TermColors {
+                black: RgbColor(0x66, 0x66, 0x66),
+                red: RgbColor(0xff, 0x00, 0xa0),
+                green: RgbColor(0xcc, 0xff, 0x00),
+                yellow: RgbColor(0xff, 0x9f, 0x00),
+                blue: RgbColor(0x48, 0xc6, 0xff),
+                magenta: RgbColor(0xbe, 0x67, 0xe1),
+                cyan: RgbColor(0x63, 0xe7, 0xf0),
+                white: RgbColor(0xf3, 0xf3, 0xf3),
+            },
+        }
+    }
+}
+
 /// Values of 8 standard terminal colors.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct TermColors {
@@ -176,56 +303,22 @@ pub enum NamedPalette {
     Dracula,
     /// PowerShell 6 / Windows 10 console color scheme.
     PowerShell,
+    /// `xterm` color scheme.
+    Xterm,
+    /// Ubuntu terminal color scheme.
+    Ubuntu,
+    /// [GJM color scheme](https://terminal.sexy/).
+    Gjm,
 }
 
 impl From<NamedPalette> for Palette {
     fn from(value: NamedPalette) -> Self {
         match value {
-            NamedPalette::Dracula => Self {
-                colors: TermColors {
-                    black: RgbColor(0x28, 0x29, 0x36),
-                    red: RgbColor(0xea, 0x51, 0xb2),
-                    green: RgbColor(0xeb, 0xff, 0x87),
-                    yellow: RgbColor(0x00, 0xf7, 0x69),
-                    blue: RgbColor(0x62, 0xd6, 0xe8),
-                    magenta: RgbColor(0xb4, 0x5b, 0xcf),
-                    cyan: RgbColor(0xa1, 0xef, 0xe4),
-                    white: RgbColor(0xe9, 0xe9, 0xf4),
-                },
-                intense_colors: TermColors {
-                    black: RgbColor(0x62, 0x64, 0x83),
-                    red: RgbColor(0xb4, 0x5b, 0xcf),
-                    green: RgbColor(0x3a, 0x3c, 0x4e),
-                    yellow: RgbColor(0x4d, 0x4f, 0x68),
-                    blue: RgbColor(0x62, 0xd6, 0xe8),
-                    magenta: RgbColor(0xf1, 0xf2, 0xf8),
-                    cyan: RgbColor(0x00, 0xf7, 0x69),
-                    white: RgbColor(0xf7, 0xf7, 0xfb),
-                },
-            },
-
-            NamedPalette::PowerShell => Self {
-                colors: TermColors {
-                    black: RgbColor(0x0c, 0x0c, 0x0c),
-                    red: RgbColor(0xc5, 0x0f, 0x1f),
-                    green: RgbColor(0x13, 0xa1, 0x0e),
-                    yellow: RgbColor(0xc1, 0x9c, 0x00),
-                    blue: RgbColor(0x00, 0x37, 0xda),
-                    magenta: RgbColor(0x88, 0x17, 0x98),
-                    cyan: RgbColor(0x3a, 0x96, 0xdd),
-                    white: RgbColor(0xcc, 0xcc, 0xcc),
-                },
-                intense_colors: TermColors {
-                    black: RgbColor(0x76, 0x76, 0x76),
-                    red: RgbColor(0xe7, 0x48, 0x56),
-                    green: RgbColor(0x16, 0xc6, 0x0c),
-                    yellow: RgbColor(0xf9, 0xf1, 0xa5),
-                    blue: RgbColor(0x3b, 0x78, 0xff),
-                    magenta: RgbColor(0xb4, 0x00, 0x9e),
-                    cyan: RgbColor(0x61, 0xd6, 0xd6),
-                    white: RgbColor(0xf2, 0xf2, 0xf2),
-                },
-            },
+            NamedPalette::Dracula => Self::dracula(),
+            NamedPalette::PowerShell => Self::powershell(),
+            NamedPalette::Xterm => Self::xterm(),
+            NamedPalette::Ubuntu => Self::ubuntu(),
+            NamedPalette::Gjm => Self::gjm(),
         }
     }
 }
