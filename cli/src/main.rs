@@ -15,7 +15,7 @@ use std::{
 };
 
 use term_transcript::{
-    svg::{Template, TemplateOptions},
+    svg::{NamedPalette, Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     ShellOptions, Transcript, UserInput,
 };
@@ -27,7 +27,8 @@ enum Args {
     Capture {
         /// Command to record as user input.
         command: String,
-        // TODO: customize palette etc.
+        #[structopt(flatten)]
+        template: TemplateArgs,
     },
 
     /// Executes one or more commands in a shell and renders the captured output to SVG,
@@ -37,6 +38,8 @@ enum Args {
         shell: ShellArgs,
         /// Inputs to supply to the shell.
         inputs: Vec<String>,
+        #[structopt(flatten)]
+        template: TemplateArgs,
     },
 
     /// Tests previously captured SVG snapshots.
@@ -85,10 +88,30 @@ impl ShellArgs {
     }
 }
 
+#[derive(Debug, StructOpt)]
+struct TemplateArgs {
+    /// Color palette to use.
+    #[structopt(long, short = "p", default_value = "gjm8")]
+    palette: NamedPalette,
+    /// Adds a window frame around the rendered console.
+    #[structopt(long = "window", short = "w")]
+    window_frame: bool,
+}
+
+impl From<TemplateArgs> for TemplateOptions {
+    fn from(value: TemplateArgs) -> Self {
+        Self {
+            palette: value.palette.into(),
+            window_frame: value.window_frame,
+            ..Self::default()
+        }
+    }
+}
+
 impl Args {
     fn run(self) -> anyhow::Result<()> {
         match self {
-            Self::Capture { command } => {
+            Self::Capture { command, template } => {
                 let mut transcript = Transcript::new();
                 let mut term_output = vec![];
                 io::stdin().read_to_end(&mut term_output)?;
@@ -98,15 +121,19 @@ impl Args {
                     .with_context(|| "Failed to convert terminal output to UTF-8")?;
                 transcript.add_interaction(UserInput::command(command), term_output);
 
-                Template::new(TemplateOptions::default()).render(&transcript, io::stdout())?;
+                Template::new(template.into()).render(&transcript, io::stdout())?;
             }
 
-            Self::Exec { shell, inputs } => {
+            Self::Exec {
+                shell,
+                inputs,
+                template,
+            } => {
                 let inputs = inputs.into_iter().map(UserInput::command);
                 let mut options = shell.into_options();
                 let transcript = Transcript::from_inputs(&mut options, inputs)?;
 
-                Template::new(TemplateOptions::default()).render(&transcript, io::stdout())?;
+                Template::new(template.into()).render(&transcript, io::stdout())?;
             }
 
             Self::Test {

@@ -155,7 +155,7 @@ impl Palette {
         }
     }
 
-    const fn gjm() -> Self {
+    const fn gjm8() -> Self {
         Self {
             colors: TermColors {
                 black: RgbColor(0x1c, 0x1c, 0x1c),
@@ -310,8 +310,8 @@ pub enum NamedPalette {
     Xterm,
     /// Ubuntu terminal color scheme.
     Ubuntu,
-    /// [GJM color scheme](https://terminal.sexy/).
-    Gjm,
+    /// [gjm8 color scheme](https://terminal.sexy/).
+    Gjm8,
 }
 
 impl From<NamedPalette> for Palette {
@@ -321,10 +321,40 @@ impl From<NamedPalette> for Palette {
             NamedPalette::PowerShell => Self::powershell(),
             NamedPalette::Xterm => Self::xterm(),
             NamedPalette::Ubuntu => Self::ubuntu(),
-            NamedPalette::Gjm => Self::gjm(),
+            NamedPalette::Gjm8 => Self::gjm8(),
         }
     }
 }
+
+impl FromStr for NamedPalette {
+    type Err = NamedPaletteParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "dracula" => Ok(Self::Dracula),
+            "powershell" => Ok(Self::PowerShell),
+            "xterm" => Ok(Self::Xterm),
+            "ubuntu" => Ok(Self::Ubuntu),
+            "gjm8" => Ok(Self::Gjm8),
+            _ => Err(NamedPaletteParseError(())),
+        }
+    }
+}
+
+/// Errors that can occur when parsing [`NamedPalette`].
+#[derive(Debug)]
+pub struct NamedPaletteParseError(());
+
+impl fmt::Display for NamedPaletteParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(
+            "Invalid palette name; allowed names are `dracula`, `powershell`, `xterm`, \
+             `ubuntu` and `gjm8`",
+        )
+    }
+}
+
+impl StdError for NamedPaletteParseError {}
 
 /// Template for rendering [`Transcript`]s into an [SVG] image.
 ///
