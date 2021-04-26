@@ -37,7 +37,7 @@ pub struct TemplateOptions {
 impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
-            width: 650,
+            width: 600,
             palette: NamedPalette::PowerShell.into(),
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
             window_frame: false,
@@ -401,7 +401,7 @@ impl<'a> Template<'a> {
     /// Padding within the rendered terminal window in pixels.
     const WINDOW_PADDING: usize = 10;
     /// Line height in pixels.
-    const LINE_HEIGHT: usize = 15;
+    const LINE_HEIGHT: usize = 16;
     /// Height of the window frame.
     const WINDOW_FRAME_HEIGHT: usize = 22;
 

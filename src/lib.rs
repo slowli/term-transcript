@@ -262,13 +262,15 @@ impl<Out: TermOutput> Interaction<Out> {
 impl Interaction<Captured> {
     /// Counts the total number of lines in input and output.
     pub fn count_lines(&self) -> usize {
-        let mut input_lines = bytecount::count(self.input.text.as_bytes(), b'\n');
-        if !self.input.text.ends_with('\n') {
+        let input_str = &self.input.text;
+        let mut input_lines = bytecount::count(input_str.as_bytes(), b'\n');
+        if !input_str.is_empty() && !input_str.ends_with('\n') {
             input_lines += 1;
         }
 
-        let mut output_lines = bytecount::count(self.output.as_ref().as_bytes(), b'\n');
-        if !self.output.as_ref().ends_with('\n') {
+        let output_str = self.output.as_ref();
+        let mut output_lines = bytecount::count(output_str.as_bytes(), b'\n');
+        if !output_str.is_empty() && !output_str.ends_with('\n') {
             output_lines += 1;
         }
 
