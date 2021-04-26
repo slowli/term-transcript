@@ -4,7 +4,7 @@ This is a simple binary executable that prints colorful output to stdout:
 
 ![Example of output](../../examples/rainbow.svg)
 
-# Why separate crate?
+## Why separate crate?
 
 Although Cargo builds example targets when testing, it does not enforce
 a particular build order and appends a suffix for the names of produced executables. 

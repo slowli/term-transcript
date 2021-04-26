@@ -1,16 +1,22 @@
-//! SVG template for rendering terminal output.
+//! Provides the SVG template for rendering terminal output in a visual format.
+//!
+//! # Examples
+//!
+//! See [`Template`] for examples of usage.
 
 use handlebars::{Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::{
-    convert::TryFrom, error::Error as StdError, fmt, io::Write, num::ParseIntError, str::FromStr,
+    convert::TryFrom,
+    error::Error as StdError,
+    fmt::{self, Write as WriteStr},
+    io::Write,
+    num::ParseIntError,
+    str::FromStr,
 };
 
 use crate::{Interaction, Transcript, UserInput};
-
-mod parser;
-pub use self::parser::ParseError;
 
 const MAIN_TEMPLATE_NAME: &str = "main";
 const TEMPLATE: &str = include_str!("default.svg.handlebars");
@@ -37,7 +43,7 @@ impl Default for TemplateOptions {
             font_size: 12,
             line_height: 15,
             width: 650,
-            palette: NamedPalette::Powershell.into(),
+            palette: NamedPalette::PowerShell.into(),
         }
     }
 }
@@ -174,8 +180,8 @@ impl<'de> Deserialize<'de> for RgbColor {
 pub enum NamedPalette {
     /// Dracula color scheme.
     Dracula,
-    /// Powershell 6 / Windows 10 console color scheme.
-    Powershell,
+    /// PowerShell 6 / Windows 10 console color scheme.
+    PowerShell,
 }
 
 impl From<NamedPalette> for Palette {
@@ -204,7 +210,7 @@ impl From<NamedPalette> for Palette {
                 },
             },
 
-            NamedPalette::Powershell => Self {
+            NamedPalette::PowerShell => Self {
                 colors: TermColors {
                     black: RgbColor(0x0c, 0x0c, 0x0c),
                     red: RgbColor(0xc5, 0x0f, 0x1f),
@@ -233,6 +239,30 @@ impl From<NamedPalette> for Palette {
 /// Template for rendering [`Transcript`]s into an [SVG] image.
 ///
 /// [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
+///
+/// # Examples
+///
+/// ```
+/// use term_transcript::{svg::*, Transcript, UserInput};
+///
+/// # fn main() -> anyhow::Result<()> {
+/// let mut transcript = Transcript::new();
+/// transcript.add_interaction(
+///     UserInput::command("test"),
+///     "Hello, \u{1b}[32mworld\u{1b}[0m!",
+/// );
+///
+/// let template_options = TemplateOptions {
+///     palette: NamedPalette::Dracula.into(),
+///     ..TemplateOptions::default()
+/// };
+/// let mut buffer = vec![];
+/// Template::new(template_options).render(&transcript, &mut buffer)?;
+/// let buffer = String::from_utf8(buffer)?;
+/// assert!(buffer.contains(r#"Hello, <span class="fg-green">world</span>!"#));
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct Template<'a> {
     options: TemplateOptions,
@@ -327,7 +357,7 @@ impl HelperDef for ContentHelper<'_> {
             .ok_or_else(|| RenderError::new("index is out of bounds"))?;
         interaction
             .output()
-            .write_as_html(out)
+            .write_as_html(&mut OutputAdapter(out))
             .map_err(|err| RenderError::from_error("content", err))
     }
 }
@@ -342,5 +372,13 @@ impl<'a> From<&'a Interaction> for SerializedInteraction<'a> {
         Self {
             input: &value.input,
         }
+    }
+}
+
+struct OutputAdapter<'a>(&'a mut dyn Output);
+
+impl WriteStr for OutputAdapter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.0.write(s).map_err(|_| fmt::Error)
     }
 }

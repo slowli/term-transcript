@@ -11,7 +11,28 @@ use std::{
     mem, str,
 };
 
-use crate::{utils::normalize_newlines, Interaction, Parsed, Transcript, UserInput};
+use crate::{utils::normalize_newlines, Interaction, TermOutput, Transcript, UserInput};
+
+/// Parsed terminal output.
+#[derive(Debug, Clone, Default)]
+pub struct Parsed {
+    pub(crate) plaintext: String,
+    pub(crate) html: String,
+}
+
+impl Parsed {
+    /// Gets the parsed plaintext.
+    pub fn plaintext(&self) -> &str {
+        &self.plaintext
+    }
+
+    /// Gets the parsed HTML.
+    pub fn html(&self) -> &str {
+        &self.html
+    }
+}
+
+impl TermOutput for Parsed {}
 
 /// Errors that can occur during parsing SVG transcripts.
 #[derive(Debug)]

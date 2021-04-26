@@ -81,6 +81,18 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all --all-targets -- -D warnings
+      - name: Build (no features)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p term-transcript --no-default-features --lib
+      - name: Build (features = svg)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p term-transcript --no-default-features --features svg --lib
 
       - name: Run tests
         uses: actions-rs/cargo@v1
@@ -97,6 +109,7 @@ jobs:
     needs:
       - build
       - build-msrv
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -122,7 +135,6 @@ jobs:
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@releases/v3
-        if: github.event_name == 'push'
         with:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           BRANCH: gh-pages

@@ -1,12 +1,10 @@
-use handlebars::Output;
 use termcolor::NoColor;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Write as WriteStr};
 
 use crate::{
     html::HtmlWriter,
-    test::MatchKind,
-    utils::{normalize_newlines, StringOutput, WriteAdapter},
+    utils::{normalize_newlines, WriteAdapter},
     TermError,
 };
 
@@ -35,104 +33,42 @@ impl Captured {
         })
     }
 
-    /// Writes this output in the HTML format to the provided `writer`.
+    pub(crate) fn write_as_html(&self, output: &mut dyn WriteStr) -> Result<(), TermError> {
+        let mut html_writer = HtmlWriter::new(output);
+        TermOutputParser::new(&mut html_writer).parse(self.0.as_bytes())
+    }
+
+    /// Converts this terminal output to an HTML string.
     ///
     /// FIXME: more about HTML formatting
     ///
     /// # Errors
     ///
     /// Returns an error if there was an issue processing output.
-    pub fn write_as_html(&self, output: &mut dyn Output) -> Result<(), TermError> {
-        let mut html_writer = HtmlWriter::new(output);
-        TermOutputParser::new(&mut html_writer).parse(self.0.as_bytes())
-    }
-
-    /// Convenience method for converting this terminal output to an HTML string
-    /// using [`Self::write_as_html()`].
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if there was an issue processing output.
     pub fn to_html(&self) -> Result<String, TermError> {
-        let mut output = StringOutput::default();
+        let mut output = String::with_capacity(self.0.len());
         self.write_as_html(&mut output)?;
-        Ok(output.into_inner())
+        Ok(output)
     }
 
-    /// Writes this output in the plaintext format to the provided `writer`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if there was an issue processing output.
-    pub fn write_as_plaintext(&self, output: &mut dyn Output) -> Result<(), TermError> {
+    fn write_as_plaintext(&self, output: &mut dyn WriteStr) -> Result<(), TermError> {
         let mut plaintext_writer = NoColor::new(WriteAdapter::new(output));
         TermOutputParser::new(&mut plaintext_writer).parse(self.0.as_bytes())
     }
 
-    /// Convenience method for converting this terminal output to plaintext
-    /// using [`Self::write_as_plaintext()`].
+    /// Converts this terminal output to plaintext.
     ///
     /// # Errors
     ///
     /// Returns an error if there was an issue processing output.
     pub fn to_plaintext(&self) -> Result<String, TermError> {
-        let mut output = StringOutput::default();
+        let mut output = String::with_capacity(self.0.len());
         self.write_as_plaintext(&mut output)?;
-        Ok(output.into_inner())
+        Ok(output)
     }
 }
 
 impl TermOutput for Captured {}
-
-/// Parsed terminal output.
-#[derive(Debug, Clone, Default)]
-pub struct Parsed {
-    pub(crate) plaintext: String,
-    pub(crate) html: String,
-}
-
-impl Parsed {
-    /// Gets the parsed plaintext.
-    pub fn plaintext(&self) -> &str {
-        &self.plaintext
-    }
-
-    /// Gets the parsed HTML.
-    pub fn html(&self) -> &str {
-        &self.html
-    }
-
-    /// Asserts that this parsed output matches `captured` terminal output.
-    ///
-    /// # Panics
-    ///
-    /// - Panics if `captured` output cannot be converted to plaintext / HTML.
-    /// - Panics if the assertion fails. If the `pretty_assertions` feature is enabled,
-    ///   the output will be formatted using the [corresponding crate].
-    ///
-    /// [corresponding crate]: https://docs.rs/pretty_assertions/
-    pub fn assert_matches(&self, captured: &Captured, match_kind: MatchKind) {
-        #[cfg(feature = "pretty_assertions")]
-        use pretty_assertions::assert_eq;
-
-        match match_kind {
-            MatchKind::TextOnly => {
-                let captured_plaintext = captured
-                    .to_plaintext()
-                    .expect("Cannot convert captured output to plaintext");
-                assert_eq!(self.plaintext, captured_plaintext);
-            }
-            MatchKind::Precise => {
-                let captured_html = captured
-                    .to_html()
-                    .expect("Cannot convert captured output to plaintext");
-                assert_eq!(self.html, captured_html);
-            }
-        }
-    }
-}
-
-impl TermOutput for Parsed {}
 
 #[cfg(test)]
 mod tests {
@@ -179,40 +115,5 @@ mod tests {
         let output = Captured(prepare_term_output()?);
         assert_eq!(output.to_html()?, EXPECTED_HTML);
         Ok(())
-    }
-
-    #[test]
-    fn matching_text() {
-        let captured = Captured("Hello, world!".to_owned());
-        let parsed = Parsed {
-            plaintext: "Hello, world!".to_owned(),
-            html: EXPECTED_HTML.to_owned(),
-        };
-
-        parsed.assert_matches(&captured, MatchKind::TextOnly);
-    }
-
-    #[test]
-    #[should_panic(expected = "assertion failed")]
-    fn matching_imprecise_text() {
-        let captured = Captured("Hello, world!".to_owned());
-        let parsed = Parsed {
-            plaintext: "Hello, world!".to_owned(),
-            html: EXPECTED_HTML.to_owned(),
-        };
-
-        parsed.assert_matches(&captured, MatchKind::Precise);
-    }
-
-    #[test]
-    fn matching_text_and_colors() {
-        let captured = Captured(prepare_term_output().unwrap());
-        let parsed = Parsed {
-            plaintext: "Hello, world!".to_owned(),
-            html: EXPECTED_HTML.to_owned(),
-        };
-
-        parsed.assert_matches(&captured, MatchKind::TextOnly);
-        parsed.assert_matches(&captured, MatchKind::Precise);
     }
 }

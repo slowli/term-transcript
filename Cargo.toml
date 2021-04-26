@@ -7,10 +7,10 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 bytecount = "0.6.2"
-handlebars = "3.5.4"
+handlebars = { version = "3.5.4", optional = true }
 os_pipe = "0.9.2"
-serde = { version = "1.0", features = ["derive"] }
-quick-xml = "0.22.0"
+serde = { version = "1.0", optional = true, features = ["derive"] }
+quick-xml = { version = "0.22.0", optional = true }
 pretty_assertions = { version = "0.7.2", optional = true }
 termcolor = "1.1.2"
 
@@ -21,7 +21,11 @@ doc-comment = "0.3.3"
 version-sync = "0.9.2"
 
 [features]
-default = ["pretty_assertions"]
+default = ["pretty_assertions", "svg", "test"]
+# Rendering terminal transcripts into SVG snapshots
+svg = ["handlebars", "serde"]
+# Testing functionality
+test = ["quick-xml"]
 
 [workspace]
 members = [".", "cli", "e2e-tests/rainbow"]

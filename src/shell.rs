@@ -144,6 +144,7 @@ impl<Ext> ShellOptions<Ext> {
         self
     }
 
+    #[cfg(feature = "test")]
     pub(crate) fn drop_extensions(self) -> ShellOptions {
         ShellOptions {
             command: self.command,

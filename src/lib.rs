@@ -58,6 +58,15 @@
 //! [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 //! [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 //!
+//! # Crate features
+//!
+//! - `svg`. Exposes [the eponymous module](crate::svg) that allows rendering [`Transcript`]s
+//!   into the SVG format.
+//! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
+//!   from SVG files and testing them.
+//!
+//! Both `svg` and `test` features are on by default.
+//!
 //! # Examples
 //!
 //! Creating a terminal [`Transcript`] and rendering it to SVG.
@@ -115,20 +124,22 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
-use serde::Serialize;
-
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
 mod html;
 mod shell;
+#[cfg(feature = "svg")]
+#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub mod svg;
 mod term;
+#[cfg(feature = "test")]
+#[cfg_attr(docsrs, doc(cfg(feature = "test")))]
 pub mod test;
 mod utils;
 
 pub use self::{
     shell::{ShellOptions, StdShell},
-    term::{Captured, Parsed, TermOutput},
+    term::{Captured, TermOutput},
 };
 
 /// Errors that can occur when processing terminal output.
@@ -220,10 +231,10 @@ impl<Out: TermOutput> Transcript<Out> {
 
 impl Transcript {
     /// Adds a new interaction into the transcript.
-    pub fn add_interaction(&mut self, input: UserInput, output: String) -> &mut Self {
+    pub fn add_interaction(&mut self, input: UserInput, output: impl Into<String>) -> &mut Self {
         self.interactions.push(Interaction {
             input,
-            output: Captured::new(output),
+            output: Captured::new(output.into()),
         });
         self
     }
@@ -266,13 +277,15 @@ impl Interaction<Captured> {
 }
 
 /// User input during interaction with a terminal.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "svg", derive(serde::Serialize))]
 pub struct UserInput {
     text: String,
     prompt: Option<Cow<'static, str>>,
 }
 
 impl UserInput {
+    #[cfg(feature = "test")]
     pub(crate) fn intern_prompt(prompt: String) -> Cow<'static, str> {
         match prompt.as_str() {
             "$" => Cow::Borrowed("$"),
