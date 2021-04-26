@@ -25,21 +25,21 @@
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
 
-    {{#each palette.colors}}
+    {{~#each palette.colors}}
     .fg-{{@key}} { color: {{this}}; }
     .bg-{{@key}} { background-color: {{this}}; }
-    {{/each}}
-    {{#each palette.intense_colors}}
+    {{~/each}}
+    {{~#each palette.intense_colors}}
     .fg-i-{{@key}} { color: {{this}}; }
     .bg-i-{{@key}} { background-color: {{this}}; }
-    {{/each}}
+    {{~/each}}
   </style>
   <foreignObject x="0" y="0" width="{{width}}" height="{{height}}">
     <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-      {{#each interactions}}
+      {{#each interactions~}}
       <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
       <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
-      {{/each}}
+      {{~/each}}
     </div>
   </foreignObject>
 </svg>

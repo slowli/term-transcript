@@ -1,13 +1,14 @@
 use std::{
     fs::File,
-    io::{self, BufReader},
+    io::{self, BufReader, Read},
     path::Path,
     process::{Command, Stdio},
 };
 
 use term_transcript::{
+    svg::Template,
     test::{MatchKind, TestConfig, TestOutputConfig},
-    ShellOptions, Transcript,
+    ShellOptions, Transcript, UserInput,
 };
 
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
@@ -22,6 +23,22 @@ fn read_aliased_snapshot() -> io::Result<BufReader<File>> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let snapshot_path = manifest_dir.join("aliased.svg");
     File::open(&snapshot_path).map(BufReader::new)
+}
+
+#[test]
+fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
+    let mut shell_options = ShellOptions::default().with_cargo_path();
+    let transcript =
+        Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+    let mut buffer = vec![];
+    Template::default().render(&transcript, &mut buffer)?;
+    let rendered = String::from_utf8(buffer)?;
+
+    let mut snapshot = String::with_capacity(rendered.len());
+    read_main_snapshot()?.read_to_string(&mut snapshot)?;
+
+    assert_eq!(rendered, snapshot);
+    Ok(())
 }
 
 #[test]

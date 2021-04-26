@@ -25,61 +25,41 @@
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
-
-
     .fg-black { color: #0c0c0c; }
     .bg-black { background-color: #0c0c0c; }
-
     .fg-blue { color: #0037da; }
     .bg-blue { background-color: #0037da; }
-
     .fg-cyan { color: #3a96dd; }
     .bg-cyan { background-color: #3a96dd; }
-
     .fg-green { color: #13a10e; }
     .bg-green { background-color: #13a10e; }
-
     .fg-magenta { color: #881798; }
     .bg-magenta { background-color: #881798; }
-
     .fg-red { color: #c50f1f; }
     .bg-red { background-color: #c50f1f; }
-
     .fg-white { color: #cccccc; }
     .bg-white { background-color: #cccccc; }
-
     .fg-yellow { color: #c19c00; }
     .bg-yellow { background-color: #c19c00; }
-
-
     .fg-i-black { color: #767676; }
     .bg-i-black { background-color: #767676; }
-
     .fg-i-blue { color: #3b78ff; }
     .bg-i-blue { background-color: #3b78ff; }
-
     .fg-i-cyan { color: #61d6d6; }
     .bg-i-cyan { background-color: #61d6d6; }
-
     .fg-i-green { color: #16c60c; }
     .bg-i-green { background-color: #16c60c; }
-
     .fg-i-magenta { color: #b4009e; }
     .bg-i-magenta { background-color: #b4009e; }
-
     .fg-i-red { color: #e74856; }
     .bg-i-red { background-color: #e74856; }
-
     .fg-i-white { color: #f2f2f2; }
     .bg-i-white { background-color: #f2f2f2; }
-
     .fg-i-yellow { color: #f9f1a5; }
     .bg-i-yellow { background-color: #f9f1a5; }
-
   </style>
   <foreignObject x="0" y="0" width="650" height="302">
     <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-
       <!-- TODO: test command args as well -->
       <div class="user-input"><pre><span class="prompt">$</span> colored-output</pre></div>
       <div class="term-output"><pre>Base colors:
@@ -99,7 +79,6 @@ ANSI grayscale palette:
 <span style="color: #080808">!</span><span class="bold fg-white" style="background-color: #080808">?</span><span style="color: #121212">!</span><span class="bold fg-white" style="background-color: #121212">?</span><span style="color: #1c1c1c">!</span><span class="bold fg-white" style="background-color: #1c1c1c">?</span><span style="color: #262626">!</span><span class="bold fg-white" style="background-color: #262626">?</span><span style="color: #303030">!</span><span class="bold fg-white" style="background-color: #303030">?</span><span style="color: #3a3a3a">!</span><span class="bold fg-white" style="background-color: #3a3a3a">?</span><span style="color: #444444">!</span><span class="bold fg-white" style="background-color: #444444">?</span><span style="color: #4e4e4e">!</span><span class="bold fg-white" style="background-color: #4e4e4e">?</span><span style="color: #585858">!</span><span class="bold fg-white" style="background-color: #585858">?</span><span style="color: #626262">!</span><span class="bold fg-white" style="background-color: #626262">?</span><span style="color: #6c6c6c">!</span><span class="bold fg-white" style="background-color: #6c6c6c">?</span><span style="color: #767676">!</span><span class="bold fg-white" style="background-color: #767676">?</span><span style="color: #808080">!</span><span class="bold fg-black" style="background-color: #808080">?</span><span style="color: #8a8a8a">!</span><span class="bold fg-black" style="background-color: #8a8a8a">?</span><span style="color: #949494">!</span><span class="bold fg-black" style="background-color: #949494">?</span><span style="color: #9e9e9e">!</span><span class="bold fg-black" style="background-color: #9e9e9e">?</span><span style="color: #a8a8a8">!</span><span class="bold fg-black" style="background-color: #a8a8a8">?</span><span style="color: #b2b2b2">!</span><span class="bold fg-black" style="background-color: #b2b2b2">?</span><span style="color: #bcbcbc">!</span><span class="bold fg-black" style="background-color: #bcbcbc">?</span><span style="color: #c6c6c6">!</span><span class="bold fg-black" style="background-color: #c6c6c6">?</span><span style="color: #d0d0d0">!</span><span class="bold fg-black" style="background-color: #d0d0d0">?</span><span style="color: #dadada">!</span><span class="bold fg-black" style="background-color: #dadada">?</span><span style="color: #e4e4e4">!</span><span class="bold fg-black" style="background-color: #e4e4e4">?</span><span style="color: #eeeeee">!</span><span class="bold fg-black" style="background-color: #eeeeee">?</span>
 24-bit colors:
 <span style="color: #ffbbdd">pink</span> <span style="color: #ffaa44">orange</span> <span style="color: #9f4010">brown</span> <span style="color: #10889f">teal</span> </pre></div>
-
     </div>
   </foreignObject>
 </svg>

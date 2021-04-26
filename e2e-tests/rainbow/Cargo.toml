@@ -21,5 +21,3 @@ termcolor = "1.1.2"
 [dev-dependencies.term-transcript]
 version = "0.1.0"
 path = "../.."
-default-features = false
-features = ["test"]
