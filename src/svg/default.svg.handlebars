@@ -2,22 +2,22 @@
   <style>
     .container {
       background: {{ palette.colors.black }};
-      padding: {{ padding }}px;
+      padding: 10px;
       border-radius: 6px;
       color: {{ palette.colors.white }};
     }
     .container pre {
       padding: 0;
       margin: 0;
-      font: {{font_size}}px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-      line-height: {{line_height}}px;
+      font: 12px {{ font_family }};
+      line-height: 15px;
     }
 
     .user-input {
-      margin: 4px -{{padding}}px;
+      margin: 4px -10px;
       color: {{ palette.intense_colors.white }};
       background-color: rgba(255, 255, 255, 0.1);
-      padding: 2px {{padding}}px;
+      padding: 2px 10px;
     }
 
     .bold,.prompt { font-weight: bold; }

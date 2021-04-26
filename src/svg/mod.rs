@@ -22,28 +22,22 @@ const MAIN_TEMPLATE_NAME: &str = "main";
 const TEMPLATE: &str = include_str!("default.svg.handlebars");
 
 /// Configurable options of a [`Template`].
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Padding within the rendered terminal window in pixels. Default value is `10`.
-    pub padding: usize,
-    /// Font size in pixels. Default value is `12`.
-    pub font_size: usize,
-    /// Line height in pixels. Default value is `15`.
-    pub line_height: usize,
     /// Width of the rendered terminal window in pixels. Default value is `650`.
     pub width: usize,
     /// Palette of terminal colors.
     pub palette: Palette,
+    /// Font family specification in the CSS format.
+    pub font_family: String,
 }
 
 impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
-            padding: 10,
-            font_size: 12,
-            line_height: 15,
             width: 650,
             palette: NamedPalette::PowerShell.into(),
+            font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
         }
     }
 }
@@ -269,9 +263,19 @@ pub struct Template<'a> {
     handlebars: Handlebars<'a>,
 }
 
+impl Default for Template<'_> {
+    fn default() -> Self {
+        Self::new(TemplateOptions::default())
+    }
+}
+
 impl<'a> Template<'a> {
     /// Additional padding for each user input block.
     const USER_INPUT_PADDING: usize = 12;
+    /// Padding within the rendered terminal window in pixels.
+    const WINDOW_PADDING: usize = 10;
+    /// Line height in pixels.
+    const LINE_HEIGHT: usize = 15;
 
     /// Initializes the template based on provided `options`.
     pub fn new(options: TemplateOptions) -> Self {
@@ -302,13 +306,13 @@ impl<'a> Template<'a> {
             height: usize,
             interactions: Vec<SerializedInteraction<'r>>,
             #[serde(flatten)]
-            options: TemplateOptions,
+            options: &'r TemplateOptions,
         }
 
         let data = HandlebarsData {
-            height: self.compute_height(transcript),
+            height: Self::compute_height(transcript),
             interactions: transcript.interactions().iter().map(Into::into).collect(),
-            options: self.options,
+            options: &self.options,
         };
         self.handlebars
             .register_helper("content", Box::new(ContentHelper(transcript)));
@@ -316,15 +320,14 @@ impl<'a> Template<'a> {
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
 
-    fn compute_height(&self, transcript: &Transcript) -> usize {
-        let options = self.options;
+    fn compute_height(transcript: &Transcript) -> usize {
         let line_count: usize = transcript
             .interactions
             .iter()
             .map(Interaction::count_lines)
             .sum();
-        2 * options.padding
-            + line_count * options.line_height
+        2 * Self::WINDOW_PADDING
+            + line_count * Self::LINE_HEIGHT
             + transcript.interactions.len() * Self::USER_INPUT_PADDING
     }
 }
@@ -380,5 +383,26 @@ struct OutputAdapter<'a>(&'a mut dyn Output);
 impl WriteStr for OutputAdapter<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.0.write(s).map_err(|_| fmt::Error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_render_a_simple_transcript() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        Template::new(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+        assert!(buffer.contains(r#"Hello, <span class="fg-green">world</span>!"#));
     }
 }
