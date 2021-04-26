@@ -30,6 +30,8 @@ pub struct TemplateOptions {
     pub palette: Palette,
     /// Font family specification in the CSS format.
     pub font_family: String,
+    /// Display window frame?
+    pub window_frame: bool,
 }
 
 impl Default for TemplateOptions {
@@ -38,6 +40,7 @@ impl Default for TemplateOptions {
             width: 650,
             palette: NamedPalette::PowerShell.into(),
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
+            window_frame: false,
         }
     }
 }
@@ -369,6 +372,8 @@ impl<'a> Template<'a> {
     const WINDOW_PADDING: usize = 10;
     /// Line height in pixels.
     const LINE_HEIGHT: usize = 15;
+    /// Height of the window frame.
+    const WINDOW_FRAME_HEIGHT: usize = 22;
 
     /// Initializes the template based on provided `options`.
     pub fn new(options: TemplateOptions) -> Self {
@@ -397,13 +402,21 @@ impl<'a> Template<'a> {
         #[derive(Debug, Serialize)]
         struct HandlebarsData<'r> {
             height: usize,
+            content_height: usize,
             interactions: Vec<SerializedInteraction<'r>>,
             #[serde(flatten)]
             options: &'r TemplateOptions,
         }
 
+        let content_height = Self::compute_content_height(transcript);
+        let mut height = content_height + 2 * Self::WINDOW_PADDING;
+        if self.options.window_frame {
+            height += Self::WINDOW_FRAME_HEIGHT;
+        }
+
         let data = HandlebarsData {
-            height: Self::compute_height(transcript),
+            height,
+            content_height,
             interactions: transcript.interactions().iter().map(Into::into).collect(),
             options: &self.options,
         };
@@ -413,15 +426,13 @@ impl<'a> Template<'a> {
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
 
-    fn compute_height(transcript: &Transcript) -> usize {
+    fn compute_content_height(transcript: &Transcript) -> usize {
         let line_count: usize = transcript
             .interactions
             .iter()
             .map(Interaction::count_lines)
             .sum();
-        2 * Self::WINDOW_PADDING
-            + line_count * Self::LINE_HEIGHT
-            + transcript.interactions.len() * Self::USER_INPUT_PADDING
+        line_count * Self::LINE_HEIGHT + transcript.interactions.len() * Self::USER_INPUT_PADDING
     }
 }
 
@@ -484,7 +495,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_render_a_simple_transcript() {
+    fn rendering_simple_transcript() {
         let mut transcript = Transcript::new();
         transcript.add_interaction(
             UserInput::command("test"),
@@ -497,5 +508,26 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
         assert!(buffer.contains(r#"Hello, <span class="fg-green">world</span>!"#));
+        assert!(!buffer.contains("<circle"));
+    }
+
+    #[test]
+    fn rendering_transcript_with_frame() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            window_frame: true,
+            ..TemplateOptions::default()
+        };
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+        assert!(buffer.contains("<circle"));
     }
 }
