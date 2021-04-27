@@ -24,15 +24,16 @@ const TEMPLATE: &str = include_str!("default.svg.handlebars");
 /// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Width of the rendered terminal window in pixels. Default value is `650`.
+    /// Width of the rendered terminal window in pixels. Default value is `600`.
     pub width: usize,
     /// Palette of terminal colors.
     pub palette: Palette,
-    /// Font family specification in the CSS format.
+    /// Font family specification in the CSS format. Should be monospace.
     pub font_family: String,
-    /// Display window frame?
+    /// Indicates whether to display a window frame around the shell. Default value is `false`.
     pub window_frame: bool,
-    /// Options for the scroll animation.
+    /// Options for the scroll animation. If set to `None` (which is the default),
+    /// no scrolling will be enabled, and the height of the generated image is not limited.
     pub scroll: Option<ScrollOptions>,
 }
 
@@ -48,7 +49,9 @@ impl Default for TemplateOptions {
     }
 }
 
-/// Palette of 16 standard terminal colors (8 ordinary colors + 8 intense variations).
+/// Palette of [16 standard terminal colors][colors] (8 ordinary colors + 8 intense variations).
+///
+/// [colors]: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Palette {
     /// Ordinary colors.
@@ -184,7 +187,9 @@ impl Palette {
     }
 }
 
-/// Values of 8 standard terminal colors.
+/// Values of [8 base terminal colors][colors].
+///
+/// [colors]: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct TermColors {
     /// Black color.
@@ -205,7 +210,9 @@ pub struct TermColors {
     pub white: RgbColor,
 }
 
-/// RGB color.
+/// RGB color with 8-bit channels.
+///
+/// A color can be parsed from a hex string like `#fed` or `#de382b`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbColor(pub u8, pub u8, pub u8);
 
@@ -359,10 +366,11 @@ impl fmt::Display for NamedPaletteParseError {
 
 impl StdError for NamedPaletteParseError {}
 
-/// Scrolling options that influence scrolling animation.
+/// Options that influence the scrolling animation.
 ///
 /// The animation is only displayed if the console exceeds [`Self::max_height`]. In this case,
-/// the console will be scrolled vertically with interval [`Self::interval`] between each frame.
+/// the console will be scrolled vertically with the interval of [`Self::interval`] seconds
+/// between every frame.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScrollOptions {
     /// Maximum height of the console, in pixels.
@@ -403,7 +411,7 @@ impl Default for ScrollOptions {
 /// let mut buffer = vec![];
 /// Template::new(template_options).render(&transcript, &mut buffer)?;
 /// let buffer = String::from_utf8(buffer)?;
-/// assert!(buffer.contains(r#"Hello, <span class="fg-green">world</span>!"#));
+/// assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
 /// # Ok(())
 /// # }
 /// ```
