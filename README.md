@@ -55,7 +55,11 @@ See more examples in the crate docs.
 Here's an SVG snapshot of [the `rainbow` example](e2e-tests/rainbow)
 produced by this crate:
 
-![snapshot of rainbow example](examples/rainbow.svg)
+![Snapshot of rainbow example](examples/rainbow.svg)
+
+Here's a snapshot of the same example with the scrolling animation and window frame:
+
+![Animated snapshot of rainbow example](examples/animated.svg)
 
 # Alternatives / similar tools
 

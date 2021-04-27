@@ -19,6 +19,12 @@ fn read_main_snapshot() -> io::Result<BufReader<File>> {
     File::open(&snapshot_path).map(BufReader::new)
 }
 
+fn read_animated_snapshot() -> io::Result<BufReader<File>> {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let snapshot_path = manifest_dir.join("../../examples/animated.svg");
+    File::open(&snapshot_path).map(BufReader::new)
+}
+
 fn read_aliased_snapshot() -> io::Result<BufReader<File>> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let snapshot_path = manifest_dir.join("aliased.svg");
@@ -48,6 +54,14 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
 #[test]
 fn snapshot_testing() -> anyhow::Result<()> {
     let transcript = Transcript::from_svg(read_main_snapshot()?)?;
+    let shell_options = ShellOptions::default().with_cargo_path();
+    TestConfig::new(shell_options).test_transcript(&transcript);
+    Ok(())
+}
+
+#[test]
+fn animated_snapshot_testing() -> anyhow::Result<()> {
+    let transcript = Transcript::from_svg(read_animated_snapshot()?)?;
     let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options).test_transcript(&transcript);
     Ok(())
