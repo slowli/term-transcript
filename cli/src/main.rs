@@ -56,7 +56,7 @@ enum Args {
         #[structopt(long, short = "p")]
         precise: bool,
         /// Controls coloring of the output. One of `always`, `ansi`, `never` or `auto`.
-        #[structopt(long, short = "c", default_value = "auto")]
+        #[structopt(long, short = "c", default_value = "auto", env)]
         color: ColorPreference,
     },
 }
@@ -116,9 +116,14 @@ impl Args {
                 let mut term_output = vec![];
                 io::stdin().read_to_end(&mut term_output)?;
 
-                let term_output = String::from_utf8(term_output)
+                let mut term_output = String::from_utf8(term_output)
                     .map_err(|err| err.utf8_error())
                     .with_context(|| "Failed to convert terminal output to UTF-8")?;
+                // Trim the ending newline.
+                if term_output.ends_with('\n') {
+                    term_output.pop();
+                }
+
                 transcript.add_interaction(UserInput::command(command), term_output);
 
                 Template::new(template.into()).render(&transcript, io::stdout())?;

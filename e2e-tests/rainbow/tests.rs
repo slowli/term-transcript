@@ -6,7 +6,7 @@ use std::{
 };
 
 use term_transcript::{
-    svg::Template,
+    svg::{NamedPalette, Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig},
     ShellOptions, Transcript, UserInput,
 };
@@ -31,7 +31,11 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
     let mut buffer = vec![];
-    Template::default().render(&transcript, &mut buffer)?;
+    let template_options = TemplateOptions {
+        palette: NamedPalette::Gjm8.into(),
+        ..TemplateOptions::default()
+    };
+    Template::new(template_options).render(&transcript, &mut buffer)?;
     let rendered = String::from_utf8(buffer)?;
 
     let mut snapshot = String::with_capacity(rendered.len());
