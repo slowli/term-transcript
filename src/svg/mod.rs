@@ -32,6 +32,8 @@ pub struct TemplateOptions {
     pub font_family: String,
     /// Display window frame?
     pub window_frame: bool,
+    /// Options for the scroll animation.
+    pub scroll: Option<ScrollOptions>,
 }
 
 impl Default for TemplateOptions {
@@ -41,6 +43,7 @@ impl Default for TemplateOptions {
             palette: NamedPalette::PowerShell.into(),
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
             window_frame: false,
+            scroll: None,
         }
     }
 }
@@ -356,6 +359,27 @@ impl fmt::Display for NamedPaletteParseError {
 
 impl StdError for NamedPaletteParseError {}
 
+/// Scrolling options that influence scrolling animation.
+///
+/// The animation is only displayed if the console exceeds [`Self::max_height`]. In this case,
+/// the console will be scrolled vertically with interval [`Self::interval`] between each frame.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ScrollOptions {
+    /// Maximum height of the console, in pixels.
+    pub max_height: usize,
+    /// Interval between keyframes in seconds.
+    pub interval: f32,
+}
+
+impl Default for ScrollOptions {
+    fn default() -> Self {
+        Self {
+            max_height: Template::LINE_HEIGHT * 19,
+            interval: 4.0,
+        }
+    }
+}
+
 /// Template for rendering [`Transcript`]s into an [SVG] image.
 ///
 /// [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
@@ -396,14 +420,22 @@ impl Default for Template<'_> {
 }
 
 impl<'a> Template<'a> {
+    /// Bottom margin for each input or output block.
+    const BLOCK_MARGIN: usize = 6;
     /// Additional padding for each user input block.
-    const USER_INPUT_PADDING: usize = 12;
+    const USER_INPUT_PADDING: usize = 4;
     /// Padding within the rendered terminal window in pixels.
     const WINDOW_PADDING: usize = 10;
     /// Line height in pixels.
     const LINE_HEIGHT: usize = 16;
     /// Height of the window frame.
     const WINDOW_FRAME_HEIGHT: usize = 22;
+    /// Pixels scrolled vertically per each animation frame.
+    const PIXELS_PER_SCROLL: usize = Self::LINE_HEIGHT * 4;
+    /// Right offset of the scrollbar relative to the right border of the frame.
+    const SCROLLBAR_RIGHT_OFFSET: usize = 7;
+    /// Height of the scrollbar in pixels.
+    const SCROLLBAR_HEIGHT: usize = 40;
 
     /// Initializes the template based on provided `options`.
     pub fn new(options: TemplateOptions) -> Self {
@@ -436,9 +468,11 @@ impl<'a> Template<'a> {
             interactions: Vec<SerializedInteraction<'r>>,
             #[serde(flatten)]
             options: &'r TemplateOptions,
+            scroll_animation: Option<ScrollAnimationConfig>,
         }
 
-        let content_height = Self::compute_content_height(transcript);
+        let mut content_height = Self::compute_content_height(transcript);
+        let scroll_animation = self.scroll_animation(&mut content_height);
         let mut height = content_height + 2 * Self::WINDOW_PADDING;
         if self.options.window_frame {
             height += Self::WINDOW_FRAME_HEIGHT;
@@ -449,6 +483,7 @@ impl<'a> Template<'a> {
             content_height,
             interactions: transcript.interactions().iter().map(Into::into).collect(),
             options: &self.options,
+            scroll_animation,
         };
         self.handlebars
             .register_helper("content", Box::new(ContentHelper(transcript)));
@@ -462,7 +497,43 @@ impl<'a> Template<'a> {
             .iter()
             .map(Interaction::count_lines)
             .sum();
-        line_count * Self::LINE_HEIGHT + transcript.interactions.len() * Self::USER_INPUT_PADDING
+        let margin_count = transcript
+            .interactions
+            .iter()
+            .map(|interaction| {
+                if interaction.output().as_ref().is_empty() {
+                    1
+                } else {
+                    2
+                }
+            })
+            .sum::<usize>()
+            .saturating_sub(1); // The last margin is not displayed.
+        line_count * Self::LINE_HEIGHT
+            + margin_count * Self::BLOCK_MARGIN
+            + transcript.interactions.len() * Self::USER_INPUT_PADDING
+    }
+
+    #[allow(clippy::cast_precision_loss)] // no loss with sane amount of `steps`
+    fn scroll_animation(&self, content_height: &mut usize) -> Option<ScrollAnimationConfig> {
+        fn ceil(x: usize, y: usize) -> usize {
+            (x + y - 1) / y
+        }
+
+        let scroll_options = self.options.scroll.as_ref()?;
+        let max_height = scroll_options.max_height;
+        let max_offset = content_height.checked_sub(max_height)?;
+        let steps = ceil(max_offset, Self::PIXELS_PER_SCROLL);
+        debug_assert!(steps > 0);
+
+        *content_height = max_height;
+        Some(ScrollAnimationConfig {
+            max_offset,
+            steps,
+            duration: scroll_options.interval * steps as f32,
+            scrollbar_x: self.options.width - Self::SCROLLBAR_RIGHT_OFFSET,
+            bottom_scrollbar_y: max_height - Self::SCROLLBAR_HEIGHT,
+        })
     }
 }
 
@@ -512,6 +583,15 @@ impl<'a> From<&'a Interaction> for SerializedInteraction<'a> {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct ScrollAnimationConfig {
+    max_offset: usize,
+    steps: usize,
+    duration: f32,
+    scrollbar_x: usize,
+    bottom_scrollbar_y: usize,
+}
+
 struct OutputAdapter<'a>(&'a mut dyn Output);
 
 impl WriteStr for OutputAdapter<'_> {
@@ -559,5 +639,30 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
         assert!(buffer.contains("<circle"));
+    }
+
+    #[test]
+    fn rendering_transcript_with_animation() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!\n".repeat(22),
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            scroll: Some(ScrollOptions {
+                max_height: 200,
+                interval: 3.0,
+            }),
+            ..TemplateOptions::default()
+        };
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains(r#"viewBox="0 0 600 220""#));
+        assert!(buffer.contains("animation: 9s steps(3, jump-none) infinite"));
     }
 }

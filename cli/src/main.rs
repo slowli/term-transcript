@@ -15,7 +15,7 @@ use std::{
 };
 
 use term_transcript::{
-    svg::{NamedPalette, Template, TemplateOptions},
+    svg::{NamedPalette, ScrollOptions, Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     ShellOptions, Transcript, UserInput,
 };
@@ -96,6 +96,10 @@ struct TemplateArgs {
     /// Adds a window frame around the rendered console.
     #[structopt(long = "window", short = "w")]
     window_frame: bool,
+    /// Enables scrolling animation, but only if the snapshot height exceeds a threshold
+    /// corresponding to ~19 lines.
+    #[structopt(long)]
+    scroll: bool,
 }
 
 impl From<TemplateArgs> for TemplateOptions {
@@ -103,6 +107,11 @@ impl From<TemplateArgs> for TemplateOptions {
         Self {
             palette: value.palette.into(),
             window_frame: value.window_frame,
+            scroll: if value.scroll {
+                Some(ScrollOptions::default())
+            } else {
+                None
+            },
             ..Self::default()
         }
     }
