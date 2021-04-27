@@ -47,7 +47,7 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
     let mut snapshot = String::with_capacity(rendered.len());
     read_main_snapshot()?.read_to_string(&mut snapshot)?;
 
-    assert_eq!(rendered, snapshot);
+    pretty_assertions::assert_eq!(rendered, snapshot);
     Ok(())
 }
 

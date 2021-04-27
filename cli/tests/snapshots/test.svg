@@ -1,89 +1,73 @@
-<svg viewBox="0 0 650 402" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 600 446" width="600" xmlns="http://www.w3.org/2000/svg">
   <style>
+    :root {
+      --black: #000000; --i-black: #7f7f7f;
+      --blue: #0000ee; --i-blue: #5c5cff;
+      --cyan: #00cdcd; --i-cyan: #00ffff;
+      --green: #00cd00; --i-green: #00ff00;
+      --magenta: #cd00cd; --i-magenta: #ff00ff;
+      --red: #cd0000; --i-red: #ff0000;
+      --white: #e5e5e5; --i-white: #ffffff;
+      --yellow: #cdcd00; --i-yellow: #ffff00;
+      --hl-black: rgba(255, 255, 255, 0.1);
+    }
     .container {
-      background: #0c0c0c;
-      padding: 10px;
-      border-radius: 6px;
-      color: #cccccc;
+      padding: 0 10px;
+      color: var(--white);
+      line-height: 16px;
     }
     .container pre {
       padding: 0;
       margin: 0;
       font: 12px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-      line-height: 15px;
+      line-height: inherit;
     }
-
-    .user-input,.more {
-      margin: 4px -10px;
-      color: #f2f2f2;
-      background-color: rgba(255, 255, 255, 0.1);
+    .user-input {
+      margin: 0 -10px 6px;
+      color: var(--white);
+      background: var(--hl-black);
       padding: 2px 10px;
     }
+    .term-output { margin-bottom: 6px; }
 
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
+    .hl { text-decoration: underline #3af; } /* Custom addition. */
 
-    .fg-black { color: #0c0c0c; }
-    .bg-black { background-color: #0c0c0c; }
-
-    .fg-blue { color: #0037da; }
-    .bg-blue { background-color: #0037da; }
-
-    .fg-cyan { color: #3a96dd; }
-    .bg-cyan { background-color: #3a96dd; }
-
-    .fg-green { color: #13a10e; }
-    .bg-green { background-color: #13a10e; }
-
-    .fg-magenta { color: #881798; }
-    .bg-magenta { background-color: #881798; }
-
-    .fg-red { color: #c50f1f; }
-    .bg-red { background-color: #c50f1f; }
-
-    .fg-white { color: #cccccc; }
-    .bg-white { background-color: #cccccc; }
-
-    .fg-yellow { color: #c19c00; }
-    .bg-yellow { background-color: #c19c00; }
-    
-    .fg-i-black { color: #767676; }
-    .bg-i-black { background-color: #767676; }
-
-    .fg-i-blue { color: #3b78ff; }
-    .bg-i-blue { background-color: #3b78ff; }
-
-    .fg-i-cyan { color: #61d6d6; }
-    .bg-i-cyan { background-color: #61d6d6; }
-
-    .fg-i-green { color: #16c60c; }
-    .bg-i-green { background-color: #16c60c; }
-
-    .fg-i-magenta { color: #b4009e; }
-    .bg-i-magenta { background-color: #b4009e; }
-
-    .fg-i-red { color: #e74856; }
-    .bg-i-red { background-color: #e74856; }
-
-    .fg-i-white { color: #f2f2f2; }
-    .bg-i-white { background-color: #f2f2f2; }
-
-    .fg-i-yellow { color: #f9f1a5; }
-    .bg-i-yellow { background-color: #f9f1a5; }
-    
-    .hl { text-decoration: underline #3af; }
+    .fg0 { color: var(--black); } .bg0 { background: var(--black); }
+    .fg1 { color: var(--red); } .bg1 { background: var(--red); }
+    .fg2 { color: var(--green); } .bg2 { background: var(--green); }
+    .fg3 { color: var(--yellow); } .bg3 { background: var(--yellow); }
+    .fg4 { color: var(--blue); } .bg4 { background: var(--blue); }
+    .fg5 { color: var(--magenta); } .bg5 { background: var(--magenta); }
+    .fg6 { color: var(--cyan); } .bg6 { background: var(--cyan); }
+    .fg7 { color: var(--white); } .bg7 { background: var(--white); }
+    .fg8 { color: var(--i-black); } .bg8 { background: var(--i-black); }
+    .fg9 { color: var(--i-red); } .bg9 { background: var(--i-red); }
+    .fg10 { color: var(--i-green); } .bg10 { background: var(--i-green); }
+    .fg11 { color: var(--i-yellow); } .bg11 { background: var(--i-yellow); }
+    .fg12 { color: var(--i-blue); } .bg12 { background: var(--i-blue); }
+    .fg13 { color: var(--i-magenta); } .bg13 { background: var(--i-magenta); }
+    .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
+    .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
-  <foreignObject x="0" y="0" width="650" height="402">
+  <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: var(--black);" />
+  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: var(--hl-black);"/>
+  <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
+  <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
+  <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
+  <foreignObject x="0" y="10" width="600" height="404">
     <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+      <!-- Note that a second line was added manually for both inputs. -->
       <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec <span class="hl">-T 100</span> 'rainbow' &gt; /tmp/rainbow.svg
 <span style="color: #808080"># `-T` option defines the I/O timeout for the shell</span></pre></div>
       <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 <span class="hl">-v</span> /tmp/rainbow.svg
 <span style="color: #808080"># `-v` switches on verbose output</span></pre></div>
       <div class="term-output"><pre>Testing file <span class="underline">/tmp/rainbow.svg</span>...
-  [<span class="fg-green">+</span>] Input: rainbow
-    <span style="color: #808080">Base colors:
+  [<span class="fg2">+</span>] Input: rainbow
+<span style="color: #808080;">    Base colors:
     black blue green red cyan magenta yellow 
     black blue green red cyan magenta yellow 
     Base colors (bg):
@@ -100,8 +84,7 @@
     !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
     24-bit colors:
     pink orange brown teal 
-</span>Totals: passed: <span class="fg-green">1</span>, errors: <span class="fg-red">0</span>, failures: <span class="fg-yellow">0</span></pre></div>
-
+</span>Totals: passed: <span class="fg2">1</span>, errors: <span class="fg1">0</span>, failures: <span class="fg3">0</span></pre></div>
     </div>
   </foreignObject>
 </svg>
