@@ -105,6 +105,10 @@ jobs:
           command: test
           args: --all --all-features --doc
 
+      - name: Generate snapshots
+        if: matrix.os == 'ubuntu-latest'
+        run: ./examples/generate-snapshots.sh
+
   document:
     needs:
       - build
