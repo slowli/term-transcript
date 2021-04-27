@@ -41,7 +41,7 @@ impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
             width: 600,
-            palette: NamedPalette::PowerShell.into(),
+            palette: Palette::default(),
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
             window_frame: false,
             scroll: None,
@@ -58,6 +58,12 @@ pub struct Palette {
     pub colors: TermColors,
     /// Intense colors.
     pub intense_colors: TermColors,
+}
+
+impl Default for Palette {
+    fn default() -> Self {
+        Self::gjm8()
+    }
 }
 
 impl Palette {
@@ -322,6 +328,12 @@ pub enum NamedPalette {
     Ubuntu,
     /// [gjm8 color scheme](https://terminal.sexy/).
     Gjm8,
+}
+
+impl Default for NamedPalette {
+    fn default() -> Self {
+        Self::Gjm8
+    }
 }
 
 impl From<NamedPalette> for Palette {
