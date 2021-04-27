@@ -47,6 +47,9 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
     let mut snapshot = String::with_capacity(rendered.len());
     read_main_snapshot()?.read_to_string(&mut snapshot)?;
 
+    // Normalize newlines.
+    let rendered = rendered.replace("\r\n", "\n");
+    let snapshot = snapshot.replace("\r\n", "\n");
     pretty_assertions::assert_eq!(rendered, snapshot);
     Ok(())
 }
