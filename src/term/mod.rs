@@ -100,8 +100,8 @@ mod tests {
         String::from_utf8(writer.into_inner()).map_err(From::from)
     }
 
-    const EXPECTED_HTML: &str = "<span class=\"underline fg-cyan\">Hello</span>, \
-         <span class=\"fg-i-white bg-i-green\">world</span>!";
+    const EXPECTED_HTML: &str = "<span class=\"underline fg6\">Hello</span>, \
+         <span class=\"fg15 bg10\">world</span>!";
 
     #[test]
     fn converting_captured_output_to_text() -> anyhow::Result<()> {

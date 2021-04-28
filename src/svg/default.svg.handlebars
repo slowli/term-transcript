@@ -1,45 +1,78 @@
-<svg viewBox="0 0 {{width}} {{height}}" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 {{#if window_frame}}-22{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" xmlns="http://www.w3.org/2000/svg">
   <style>
+    :root {
+      {{~#each palette.colors}}
+      --{{@key}}: {{this}}; --i-{{@key}}: {{lookup ../palette.intense_colors @key}};
+      {{~/each}}
+      --hl-black: rgba(255, 255, 255, 0.1);
+    }
     .container {
-      background: {{ palette.colors.black }};
-      padding: {{ padding }}px;
-      border-radius: 6px;
-      color: {{ palette.colors.white }};
+      padding: 0 10px;
+      color: var(--white);
+      line-height: 18px;
     }
     .container pre {
       padding: 0;
       margin: 0;
-      font: {{font_size}}px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-      line-height: {{line_height}}px;
+      font: 14px {{ font_family }};
+      line-height: inherit;
     }
-
     .user-input {
-      margin: 4px -{{padding}}px;
-      color: {{ palette.intense_colors.white }};
-      background-color: rgba(255, 255, 255, 0.1);
-      padding: 2px {{padding}}px;
+      margin: 0 -10px 6px;
+      color: var(--white);
+      background: var(--hl-black);
+      padding: 2px 10px;
     }
+    .term-output { margin-bottom: 6px; }
+    {{~#if scroll_animation}}
+    .scrollbar { fill: rgba(255, 255, 255, 0.35); }
+    {{~/if}}
 
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
 
-    {{#each palette.colors}}
-    .fg-{{@key}} { color: {{this}}; }
-    .bg-{{@key}} { background-color: {{this}}; }
-    {{/each}}
-    {{#each palette.intense_colors}}
-    .fg-i-{{@key}} { color: {{this}}; }
-    .bg-i-{{@key}} { background-color: {{this}}; }
-    {{/each}}
+    .fg0 { color: var(--black); } .bg0 { background: var(--black); }
+    .fg1 { color: var(--red); } .bg1 { background: var(--red); }
+    .fg2 { color: var(--green); } .bg2 { background: var(--green); }
+    .fg3 { color: var(--yellow); } .bg3 { background: var(--yellow); }
+    .fg4 { color: var(--blue); } .bg4 { background: var(--blue); }
+    .fg5 { color: var(--magenta); } .bg5 { background: var(--magenta); }
+    .fg6 { color: var(--cyan); } .bg6 { background: var(--cyan); }
+    .fg7 { color: var(--white); } .bg7 { background: var(--white); }
+    .fg8 { color: var(--i-black); } .bg8 { background: var(--i-black); }
+    .fg9 { color: var(--i-red); } .bg9 { background: var(--i-red); }
+    .fg10 { color: var(--i-green); } .bg10 { background: var(--i-green); }
+    .fg11 { color: var(--i-yellow); } .bg11 { background: var(--i-yellow); }
+    .fg12 { color: var(--i-blue); } .bg12 { background: var(--i-blue); }
+    .fg13 { color: var(--i-magenta); } .bg13 { background: var(--i-magenta); }
+    .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
+    .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
-  <foreignObject x="0" y="0" width="{{width}}" height="{{height}}">
-    <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-      {{#each interactions}}
-      <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-      <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
-      {{/each}}
-    </div>
-  </foreignObject>
+  <rect width="100%" height="100%" y="{{#if window_frame}}-22{{else}}0{{/if}}" rx="4.5" style="fill: var(--black);" />
+  {{~#if window_frame}}
+  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: var(--hl-black);"/>
+  <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
+  <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
+  <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
+  {{~/if}}
+  <svg x="0" y="10" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
+    {{~#if scroll_animation}}
+    <animate attributeName="viewBox" values="{{scroll_animation.view_box}}" dur="{{scroll_animation.duration}}s" repeatCount="indefinite" calcMode="discrete" />
+    {{~/if}}
+    <foreignObject width="{{width}}" height="{{content_height}}">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+        {{~#each interactions}}
+        <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
+        <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
+        {{~/each}}
+      </div>
+    </foreignObject>
+  </svg>
+  {{~#if scroll_animation}}
+  <rect class="scrollbar" x="{{scroll_animation.scrollbar_x}}" y="10" width="5" height="40">
+    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scroll_animation.scrollbar_y}}" dur="{{scroll_animation.duration}}s" repeatCount="indefinite" calcMode="discrete" />
+  </rect>
+  {{~/if}}
 </svg>
