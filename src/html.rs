@@ -1,4 +1,5 @@
 use termcolor::{Color, ColorSpec, WriteColor};
+use unicode_width::UnicodeWidthChar;
 
 use std::{fmt::Write as WriteStr, io, str};
 
@@ -6,6 +7,7 @@ pub struct HtmlWriter<'a> {
     output: &'a mut dyn WriteStr,
     opened_spans: usize,
     current_spec: Option<ColorSpec>,
+    line_splitter: Option<LineSplitter>,
 }
 
 impl<'a> HtmlWriter<'a> {
@@ -14,6 +16,14 @@ impl<'a> HtmlWriter<'a> {
             output,
             opened_spans: 0,
             current_spec: None,
+            line_splitter: None,
+        }
+    }
+
+    pub fn with_line_wrap(output: &'a mut dyn WriteStr, max_width: usize) -> Self {
+        Self {
+            line_splitter: Some(LineSplitter::new(max_width)),
+            ..Self::new(output)
         }
     }
 
@@ -43,6 +53,39 @@ impl<'a> HtmlWriter<'a> {
         self.output
             .write_str(s)
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    }
+
+    #[allow(clippy::option_if_let_else)] // false positive
+    fn write_text(&mut self, s: &str) -> io::Result<()> {
+        if let Some(splitter) = &mut self.line_splitter {
+            let lines = splitter.split_lines(s);
+            self.write_lines(lines)
+        } else {
+            self.write_str(s)
+        }
+    }
+
+    fn write_lines(&mut self, lines: Vec<Line<'_>>) -> io::Result<()> {
+        let lines_count = lines.len();
+        for (i, Line { text, br }) in lines.into_iter().enumerate() {
+            self.write_str(text)?;
+            if let Some(br) = br {
+                self.write_str(br.as_html())?;
+            } else if i + 1 < lines_count {
+                self.write_str("\n")?;
+            }
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::option_if_let_else)] // false positive
+    fn write_escaped_char(&mut self, escaped: &str) -> io::Result<()> {
+        if let Some(splitter) = &mut self.line_splitter {
+            let lines = splitter.write_as_char(escaped);
+            self.write_lines(lines)
+        } else {
+            self.write_str(escaped)
+        }
     }
 
     fn write_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
@@ -138,14 +181,14 @@ impl io::Write for HtmlWriter<'_> {
             };
             let saved_str = str::from_utf8(&buffer[last_escape..i])
                 .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-            self.write_str(saved_str)?;
-            self.write_str(escaped)?;
+            self.write_text(saved_str)?;
+            self.write_escaped_char(escaped)?;
             last_escape = i + 1;
         }
 
         let saved_str = str::from_utf8(&buffer[last_escape..])
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-        self.write_str(saved_str)?;
+        self.write_text(saved_str)?;
         Ok(buffer.len())
     }
 
@@ -237,6 +280,94 @@ impl IndexOrRgb {
             4 => 0xd7,
             5 => 0xff,
             _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct LineSplitter {
+    max_width: usize,
+    current_width: usize,
+}
+
+impl LineSplitter {
+    fn new(max_width: usize) -> Self {
+        Self {
+            max_width,
+            current_width: 0,
+        }
+    }
+
+    fn split_lines<'a>(&mut self, text: &'a str) -> Vec<Line<'a>> {
+        text.lines()
+            .chain(if text.ends_with('\n') { Some("") } else { None })
+            .enumerate()
+            .flat_map(|(i, line)| {
+                if i > 0 {
+                    self.current_width = 0;
+                }
+                self.process_line(line)
+            })
+            .collect()
+    }
+
+    fn write_as_char<'a>(&mut self, text: &'a str) -> Vec<Line<'a>> {
+        if self.current_width + 1 > self.max_width {
+            self.current_width = 1;
+            vec![
+                Line {
+                    text: "",
+                    br: Some(LineBreak::Hard),
+                },
+                Line { text, br: None },
+            ]
+        } else {
+            self.current_width += 1;
+            vec![Line { text, br: None }]
+        }
+    }
+
+    fn process_line<'a>(&mut self, line: &'a str) -> Vec<Line<'a>> {
+        let mut output_lines = vec![];
+        let mut line_start = 0;
+
+        for (pos, char) in line.char_indices() {
+            let char_width = char.width().unwrap_or(0);
+            if self.current_width + char_width > self.max_width {
+                output_lines.push(Line {
+                    text: &line[line_start..pos],
+                    br: Some(LineBreak::Hard),
+                });
+                line_start = pos;
+                self.current_width = char_width;
+            } else {
+                self.current_width += char_width;
+            }
+        }
+
+        output_lines.push(Line {
+            text: &line[line_start..],
+            br: None,
+        });
+        output_lines
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct Line<'a> {
+    text: &'a str,
+    br: Option<LineBreak>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum LineBreak {
+    Hard,
+}
+
+impl LineBreak {
+    fn as_html(self) -> &'static str {
+        match self {
+            Self::Hard => r#"<br class="hard"/>"#,
         }
     }
 }
@@ -356,6 +487,94 @@ mod tests {
              <span style=\"background: #5fd700;\">l</span>\
              <span style=\"color: #ff00d7;\">l</span>\
              <span style=\"background: #bcbcbc;\">o</span>"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn splitting_lines() {
+        let mut splitter = LineSplitter::new(5);
+        let lines = splitter
+            .split_lines("tex text \u{7d75}\u{6587}\u{5b57}\n\u{1f602}\u{1f602}\u{1f602}\n");
+
+        #[rustfmt::skip]
+        let expected_lines = vec![
+            Line { text: "tex t", br: Some(LineBreak::Hard) },
+            Line { text: "ext ", br: Some(LineBreak::Hard) },
+            Line { text: "\u{7d75}\u{6587}", br: Some(LineBreak::Hard) },
+            Line { text: "\u{5b57}", br: None },
+            Line { text: "\u{1f602}\u{1f602}", br: Some(LineBreak::Hard) },
+            Line { text: "\u{1f602}", br: None },
+        ];
+        assert_eq!(lines, expected_lines);
+    }
+
+    #[test]
+    fn slitting_lines_in_writer() -> anyhow::Result<()> {
+        let mut buffer = String::new();
+        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+
+        write!(writer, "Hello, ")?;
+        writer.set_color(
+            ColorSpec::new()
+                .set_bold(true)
+                .set_underline(true)
+                .set_fg(Some(Color::Green))
+                .set_bg(Some(Color::White)),
+        )?;
+        write!(writer, "world")?;
+        writer.reset()?;
+        write!(writer, "! More>\ntext")?;
+
+        assert_eq!(
+            buffer,
+            "Hello<br class=\"hard\"/>, <span class=\"bold underline fg2 bg7\">\
+             wor<br class=\"hard\"/>ld</span>! M<br class=\"hard\"/>ore&gt;\ntext"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
+        let mut buffer = String::new();
+        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+
+        writeln!(writer, ">>>>>>>")?;
+        assert_eq!(buffer, "&gt;&gt;&gt;&gt;&gt;<br class=\"hard\"/>&gt;&gt;\n");
+
+        {
+            buffer.clear();
+            let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+            for _ in 0..7 {
+                write!(writer, ">")?;
+            }
+            assert_eq!(buffer, "&gt;&gt;&gt;&gt;&gt;<br class=\"hard\"/>&gt;&gt;");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn splitting_lines_with_newlines() -> anyhow::Result<()> {
+        let mut buffer = String::new();
+        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+
+        for _ in 0..2 {
+            writeln!(writer, "< test >")?;
+        }
+        assert_eq!(
+            buffer,
+            "&lt; tes<br class=\"hard\"/>t &gt;\n&lt; tes<br class=\"hard\"/>t &gt;\n"
+        );
+
+        buffer.clear();
+        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+        for _ in 0..2 {
+            writeln!(writer, "<< test >>")?;
+        }
+        assert_eq!(
+            buffer,
+            "&lt;&lt; te<br class=\"hard\"/>st &gt;&gt;\n\
+             &lt;&lt; te<br class=\"hard\"/>st &gt;&gt;\n"
         );
         Ok(())
     }
