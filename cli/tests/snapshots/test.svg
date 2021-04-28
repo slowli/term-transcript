@@ -1,4 +1,4 @@
-<svg viewBox="0 -22 600 446" width="600" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 700 494" width="700" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #000000; --i-black: #7f7f7f;
@@ -14,12 +14,12 @@
     .container {
       padding: 0 10px;
       color: var(--white);
-      line-height: 16px;
+      line-height: 18px;
     }
     .container pre {
       padding: 0;
       margin: 0;
-      font: 12px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
       line-height: inherit;
     }
     .user-input {
@@ -58,14 +58,15 @@
   <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
   <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
   <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
-  <foreignObject x="0" y="10" width="600" height="404">
-    <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-      <!-- Note that a second line was added manually for both inputs. -->
-      <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec <span class="hl">-T 100</span> 'rainbow' &gt; /tmp/rainbow.svg
+  <svg x="0" y="10" width="700" height="452" viewBox="0 0 700 452">
+    <foreignObject width="700" height="452">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+        <!-- Note that a second line was added manually for both inputs. -->
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec <span class="hl">-T 100</span> 'rainbow' &gt; /tmp/rainbow.svg
 <span style="color: #808080"># `-T` option defines the I/O timeout for the shell</span></pre></div>
-      <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 <span class="hl">-v</span> /tmp/rainbow.svg
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 <span class="hl">-v</span> /tmp/rainbow.svg
 <span style="color: #808080"># `-v` switches on verbose output</span></pre></div>
-      <div class="term-output"><pre>Testing file <span class="underline">/tmp/rainbow.svg</span>...
+        <div class="term-output"><pre>Testing file <span class="underline">/tmp/rainbow.svg</span>...
   [<span class="fg2">+</span>] Input: rainbow
 <span style="color: #808080;">    Base colors:
     black blue green red cyan magenta yellow 
@@ -85,6 +86,7 @@
     24-bit colors:
     pink orange brown teal 
 </span>Totals: passed: <span class="fg2">1</span>, errors: <span class="fg1">0</span>, failures: <span class="fg3">0</span></pre></div>
-    </div>
-  </foreignObject>
+      </div>
+    </foreignObject>
+  </svg>
 </svg>

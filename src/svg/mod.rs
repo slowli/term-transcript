@@ -24,7 +24,7 @@ const TEMPLATE: &str = include_str!("default.svg.handlebars");
 /// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Width of the rendered terminal window in pixels. Default value is `600`.
+    /// Width of the rendered terminal window in pixels. Default value is `700`.
     pub width: usize,
     /// Palette of terminal colors.
     pub palette: Palette,
@@ -40,7 +40,7 @@ pub struct TemplateOptions {
 impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
-            width: 600,
+            width: 700,
             palette: Palette::default(),
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
             window_frame: false,
@@ -447,7 +447,7 @@ impl<'a> Template<'a> {
     /// Padding within the rendered terminal window in pixels.
     const WINDOW_PADDING: usize = 10;
     /// Line height in pixels.
-    const LINE_HEIGHT: usize = 16;
+    const LINE_HEIGHT: usize = 18;
     /// Height of the window frame.
     const WINDOW_FRAME_HEIGHT: usize = 22;
     /// Pixels scrolled vertically per each animation frame.
@@ -484,6 +484,7 @@ impl<'a> Template<'a> {
         #[derive(Debug, Serialize)]
         struct HandlebarsData<'r> {
             height: usize,
+            screen_height: usize,
             content_height: usize,
             interactions: Vec<SerializedInteraction<'r>>,
             #[serde(flatten)]
@@ -491,9 +492,18 @@ impl<'a> Template<'a> {
             scroll_animation: Option<ScrollAnimationConfig>,
         }
 
-        let mut content_height = Self::compute_content_height(transcript);
-        let scroll_animation = self.scroll_animation(&mut content_height);
-        let mut height = content_height + 2 * Self::WINDOW_PADDING;
+        let content_height = Self::compute_content_height(transcript);
+        let scroll_animation = self.scroll_animation(content_height);
+        let screen_height = if scroll_animation.is_some() {
+            self.options
+                .scroll
+                .as_ref()
+                .map_or(content_height, |scroll| scroll.max_height)
+        } else {
+            content_height
+        };
+
+        let mut height = screen_height + 2 * Self::WINDOW_PADDING;
         if self.options.window_frame {
             height += Self::WINDOW_FRAME_HEIGHT;
         }
@@ -501,6 +511,7 @@ impl<'a> Template<'a> {
         let data = HandlebarsData {
             height,
             content_height,
+            screen_height,
             interactions: transcript.interactions().iter().map(Into::into).collect(),
             options: &self.options,
             scroll_animation,
@@ -535,24 +546,44 @@ impl<'a> Template<'a> {
     }
 
     #[allow(clippy::cast_precision_loss)] // no loss with sane amount of `steps`
-    fn scroll_animation(&self, content_height: &mut usize) -> Option<ScrollAnimationConfig> {
-        fn ceil(x: usize, y: usize) -> usize {
+    fn scroll_animation(&self, content_height: usize) -> Option<ScrollAnimationConfig> {
+        fn div_ceil(x: usize, y: usize) -> usize {
             (x + y - 1) / y
         }
 
         let scroll_options = self.options.scroll.as_ref()?;
         let max_height = scroll_options.max_height;
         let max_offset = content_height.checked_sub(max_height)?;
-        let steps = ceil(max_offset, Self::PIXELS_PER_SCROLL);
+        let steps = div_ceil(max_offset, Self::PIXELS_PER_SCROLL);
         debug_assert!(steps > 0);
 
-        *content_height = max_height;
+        let mut view_box = (0..=steps).fold(String::new(), |mut acc, i| {
+            let y = (Self::PIXELS_PER_SCROLL as f32 * i as f32).round();
+            write!(
+                &mut acc,
+                "0 {y} {width} {height};",
+                y = y,
+                width = self.options.width,
+                height = max_height
+            )
+            .unwrap(); // safe; writing to a string is infallible
+            acc
+        });
+        view_box.pop(); // trim the last ';'
+
+        let y_step = (max_height - Self::SCROLLBAR_HEIGHT) as f32 / steps as f32;
+        let mut scrollbar_y = (0..=steps).fold(String::new(), |mut acc, i| {
+            let y = (y_step * i as f32).round();
+            write!(&mut acc, "0 {};", y).unwrap();
+            acc
+        });
+        scrollbar_y.pop(); // trim the last ';'
+
         Some(ScrollAnimationConfig {
-            max_offset,
-            steps,
             duration: scroll_options.interval * steps as f32,
+            view_box,
             scrollbar_x: self.options.width - Self::SCROLLBAR_RIGHT_OFFSET,
-            bottom_scrollbar_y: max_height - Self::SCROLLBAR_HEIGHT,
+            scrollbar_y,
         })
     }
 }
@@ -605,11 +636,10 @@ impl<'a> From<&'a Interaction> for SerializedInteraction<'a> {
 
 #[derive(Debug, Serialize)]
 struct ScrollAnimationConfig {
-    max_offset: usize,
-    steps: usize,
     duration: f32,
+    view_box: String,
     scrollbar_x: usize,
-    bottom_scrollbar_y: usize,
+    scrollbar_y: String,
 }
 
 struct OutputAdapter<'a>(&'a mut dyn Output);
@@ -672,7 +702,7 @@ mod tests {
         let mut buffer = vec![];
         let options = TemplateOptions {
             scroll: Some(ScrollOptions {
-                max_height: 200,
+                max_height: 240,
                 interval: 3.0,
             }),
             ..TemplateOptions::default()
@@ -682,7 +712,7 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
-        assert!(buffer.contains(r#"viewBox="0 0 600 220""#));
-        assert!(buffer.contains("animation: 9s steps(3, jump-none) infinite"));
+        assert!(buffer.contains(r#"viewBox="0 0 700 260""#));
+        assert!(buffer.contains("<animateTransform"));
     }
 }

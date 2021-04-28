@@ -1,4 +1,4 @@
-<svg viewBox="0 0 600 318" width="600" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 700 354" width="700" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #1c1c1c; --i-black: #666666;
@@ -14,12 +14,12 @@
     .container {
       padding: 0 10px;
       color: var(--white);
-      line-height: 16px;
+      line-height: 18px;
     }
     .container pre {
       padding: 0;
       margin: 0;
-      font: 12px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
       line-height: inherit;
     }
     .user-input {
@@ -53,10 +53,11 @@
     .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
   <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
-  <foreignObject x="0" y="10" width="600" height="298">
-    <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-      <div class="user-input"><pre><span class="prompt">$</span> colored-output</pre></div>
-      <div class="term-output"><pre>Base colors:
+  <svg x="0" y="10" width="700" height="334" viewBox="0 0 700 334">
+    <foreignObject width="700" height="334">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+        <div class="user-input"><pre><span class="prompt">$</span> colored-output</pre></div>
+        <div class="term-output"><pre>Base colors:
 <span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
 <span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 
 Base colors (bg):
@@ -73,6 +74,7 @@ ANSI grayscale palette:
 <span style="color: #080808;">!</span><span class="bold fg7" style="background: #080808;">?</span><span style="color: #121212;">!</span><span class="bold fg7" style="background: #121212;">?</span><span style="color: #1c1c1c;">!</span><span class="bold fg7" style="background: #1c1c1c;">?</span><span style="color: #262626;">!</span><span class="bold fg7" style="background: #262626;">?</span><span style="color: #303030;">!</span><span class="bold fg7" style="background: #303030;">?</span><span style="color: #3a3a3a;">!</span><span class="bold fg7" style="background: #3a3a3a;">?</span><span style="color: #444444;">!</span><span class="bold fg7" style="background: #444444;">?</span><span style="color: #4e4e4e;">!</span><span class="bold fg7" style="background: #4e4e4e;">?</span><span style="color: #585858;">!</span><span class="bold fg7" style="background: #585858;">?</span><span style="color: #626262;">!</span><span class="bold fg7" style="background: #626262;">?</span><span style="color: #6c6c6c;">!</span><span class="bold fg7" style="background: #6c6c6c;">?</span><span style="color: #767676;">!</span><span class="bold fg7" style="background: #767676;">?</span><span style="color: #808080;">!</span><span class="bold fg0" style="background: #808080;">?</span><span style="color: #8a8a8a;">!</span><span class="bold fg0" style="background: #8a8a8a;">?</span><span style="color: #949494;">!</span><span class="bold fg0" style="background: #949494;">?</span><span style="color: #9e9e9e;">!</span><span class="bold fg0" style="background: #9e9e9e;">?</span><span style="color: #a8a8a8;">!</span><span class="bold fg0" style="background: #a8a8a8;">?</span><span style="color: #b2b2b2;">!</span><span class="bold fg0" style="background: #b2b2b2;">?</span><span style="color: #bcbcbc;">!</span><span class="bold fg0" style="background: #bcbcbc;">?</span><span style="color: #c6c6c6;">!</span><span class="bold fg0" style="background: #c6c6c6;">?</span><span style="color: #d0d0d0;">!</span><span class="bold fg0" style="background: #d0d0d0;">?</span><span style="color: #dadada;">!</span><span class="bold fg0" style="background: #dadada;">?</span><span style="color: #e4e4e4;">!</span><span class="bold fg0" style="background: #e4e4e4;">?</span><span style="color: #eeeeee;">!</span><span class="bold fg0" style="background: #eeeeee;">?</span>
 24-bit colors:
 <span style="color: #ffbbdd;">pink</span> <span style="color: #ffaa44;">orange</span> <span style="color: #9f4010;">brown</span> <span style="color: #10889f;">teal</span> </pre></div>
-    </div>
-  </foreignObject>
+      </div>
+    </foreignObject>
+  </svg>
 </svg>

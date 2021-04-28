@@ -9,30 +9,12 @@
     .container {
       padding: 0 10px;
       color: var(--white);
-      line-height: 16px;
-      {{~#if scroll_animation}}
-      position: relative;
-      animation: {{ scroll_animation.duration }}s steps({{ scroll_animation.steps }}, jump-none) infinite container-animation;
-      {{~/if}}
+      line-height: 18px;
     }
-    {{~#if scroll_animation}}
-    @keyframes container-animation {
-      from { top: 0; }
-      to { top: -{{ scroll_animation.max_offset }}px; }
-    }
-    .scrollbar {
-      fill: rgba(255, 255, 255, 0.35);
-      animation: {{ scroll_animation.duration }}s steps({{ scroll_animation.steps }}, jump-none) infinite scrollbar-animation;
-    }
-    @keyframes scrollbar-animation {
-      from { transform: translate(0px, 0px); }
-      to { transform: translate(0px, {{ scroll_animation.bottom_scrollbar_y }}px); }
-    }
-    {{~/if}}
     .container pre {
       padding: 0;
       margin: 0;
-      font: 12px {{ font_family }};
+      font: 14px {{ font_family }};
       line-height: inherit;
     }
     .user-input {
@@ -42,6 +24,9 @@
       padding: 2px 10px;
     }
     .term-output { margin-bottom: 6px; }
+    {{~#if scroll_animation}}
+    .scrollbar { fill: rgba(255, 255, 255, 0.35); }
+    {{~/if}}
 
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
@@ -72,15 +57,22 @@
   <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
   <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
   {{~/if}}
-  <foreignObject x="0" y="10" width="{{width}}" height="{{content_height}}">
-    <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-      {{~#each interactions}}
-      <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-      <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
-      {{~/each}}
-    </div>
-  </foreignObject>
+  <svg x="0" y="10" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
+    {{~#if scroll_animation}}
+    <animate attributeName="viewBox" values="{{scroll_animation.view_box}}" dur="{{scroll_animation.duration}}s" repeatCount="indefinite" calcMode="discrete" />
+    {{~/if}}
+    <foreignObject width="{{width}}" height="{{content_height}}">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+        {{~#each interactions}}
+        <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
+        <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
+        {{~/each}}
+      </div>
+    </foreignObject>
+  </svg>
   {{~#if scroll_animation}}
-  <rect class="scrollbar" x="{{scroll_animation.scrollbar_x}}" y="10" width="5" height="40" />
+  <rect class="scrollbar" x="{{scroll_animation.scrollbar_x}}" y="10" width="5" height="40">
+    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scroll_animation.scrollbar_y}}" dur="{{scroll_animation.duration}}s" repeatCount="indefinite" calcMode="discrete" />
+  </rect>
   {{~/if}}
 </svg>
