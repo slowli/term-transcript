@@ -33,8 +33,12 @@ impl Captured {
         })
     }
 
-    pub(crate) fn write_as_html(&self, output: &mut dyn WriteStr) -> Result<(), TermError> {
-        let mut html_writer = HtmlWriter::new(output);
+    pub(crate) fn write_as_html(
+        &self,
+        output: &mut dyn WriteStr,
+        wrap_width: Option<usize>,
+    ) -> Result<(), TermError> {
+        let mut html_writer = HtmlWriter::new(output, wrap_width);
         TermOutputParser::new(&mut html_writer).parse(self.0.as_bytes())
     }
 
@@ -47,7 +51,7 @@ impl Captured {
     /// Returns an error if there was an issue processing output.
     pub fn to_html(&self) -> Result<String, TermError> {
         let mut output = String::with_capacity(self.0.len());
-        self.write_as_html(&mut output)?;
+        self.write_as_html(&mut output, None)?;
         Ok(output)
     }
 

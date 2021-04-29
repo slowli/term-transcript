@@ -32,6 +32,26 @@
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
+    {{~#if wrap}}
+    .hard-br {
+      position: relative;
+      margin-left: 4px;
+    }
+    .hard-br:before {
+      content: '»';
+      border: 1px solid;
+      border-radius: 4px;
+      background: var(--hl-black);
+      font-size: 12px;
+      line-height: 14px;
+      position: absolute;
+      bottom: 0;
+      box-sizing: border-box;
+      width: 16px;
+      height: 16px;
+      text-align: center;
+    }
+    {{~/if}}
 
     .fg0 { color: var(--black); } .bg0 { background: var(--black); }
     .fg1 { color: var(--red); } .bg1 { background: var(--red); }
@@ -65,7 +85,7 @@
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         {{~#each interactions}}
         <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-        <div class="term-output"><pre>{{#content @index}}{{/content}}</pre></div>
+        <div class="term-output"><pre>{{{output_html}}}</pre></div>
         {{~/each}}
       </div>
     </foreignObject>
