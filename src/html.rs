@@ -11,19 +11,12 @@ pub struct HtmlWriter<'a> {
 }
 
 impl<'a> HtmlWriter<'a> {
-    pub fn new(output: &'a mut dyn WriteStr) -> Self {
+    pub fn new(output: &'a mut dyn WriteStr, max_width: Option<usize>) -> Self {
         Self {
             output,
             opened_spans: 0,
             current_spec: None,
-            line_splitter: None,
-        }
-    }
-
-    pub fn with_line_wrap(output: &'a mut dyn WriteStr, max_width: usize) -> Self {
-        Self {
-            line_splitter: Some(LineSplitter::new(max_width)),
-            ..Self::new(output)
+            line_splitter: max_width.map(LineSplitter::new),
         }
     }
 
@@ -49,12 +42,14 @@ impl<'a> HtmlWriter<'a> {
         }
     }
 
+    /// Writes the specified string as-is tp the underlying `output`.
     fn write_str(&mut self, s: &str) -> io::Result<()> {
         self.output
             .write_str(s)
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
     }
 
+    /// Writes the specified text displayed to the user that should be subjected to wrapping.
     #[allow(clippy::option_if_let_else)] // false positive
     fn write_text(&mut self, s: &str) -> io::Result<()> {
         if let Some(splitter) = &mut self.line_splitter {
@@ -78,13 +73,14 @@ impl<'a> HtmlWriter<'a> {
         Ok(())
     }
 
+    /// Writes the specified HTML `entity` as if it were displayed as a single char.
     #[allow(clippy::option_if_let_else)] // false positive
-    fn write_escaped_char(&mut self, escaped: &str) -> io::Result<()> {
+    fn write_html_entity(&mut self, entity: &str) -> io::Result<()> {
         if let Some(splitter) = &mut self.line_splitter {
-            let lines = splitter.write_as_char(escaped);
+            let lines = splitter.write_as_char(entity);
             self.write_lines(lines)
         } else {
-            self.write_str(escaped)
+            self.write_str(entity)
         }
     }
 
@@ -182,7 +178,7 @@ impl io::Write for HtmlWriter<'_> {
             let saved_str = str::from_utf8(&buffer[last_escape..i])
                 .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
             self.write_text(saved_str)?;
-            self.write_escaped_char(escaped)?;
+            self.write_html_entity(escaped)?;
             last_escape = i + 1;
         }
 
@@ -367,7 +363,7 @@ enum LineBreak {
 impl LineBreak {
     fn as_html(self) -> &'static str {
         match self {
-            Self::Hard => r#"<br class="hard"/>"#,
+            Self::Hard => r#"<b class="hard-br"><br/></b>"#,
         }
     }
 }
@@ -381,7 +377,7 @@ mod tests {
     #[test]
     fn html_escaping() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::new(&mut buffer);
+        let mut writer = HtmlWriter::new(&mut buffer, None);
         write!(writer, "1 < 2 && 4 >= 3")?;
 
         assert_eq!(buffer, "1 &lt; 2 &amp;&amp; 4 &gt;= 3");
@@ -391,7 +387,7 @@ mod tests {
     #[test]
     fn html_writer_basic_colors() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::new(&mut buffer);
+        let mut writer = HtmlWriter::new(&mut buffer, None);
         write!(writer, "Hello, ")?;
         writer.set_color(
             ColorSpec::new()
@@ -415,7 +411,7 @@ mod tests {
     #[test]
     fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::new(&mut buffer);
+        let mut writer = HtmlWriter::new(&mut buffer, None);
         writer.set_color(
             ColorSpec::new()
                 .set_dimmed(true)
@@ -439,7 +435,7 @@ mod tests {
     #[test]
     fn html_writer_embedded_spans_without_reset() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::new(&mut buffer);
+        let mut writer = HtmlWriter::new(&mut buffer, None);
         writer.set_color(
             ColorSpec::new()
                 .set_dimmed(true)
@@ -467,7 +463,7 @@ mod tests {
     #[test]
     fn html_writer_custom_colors() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::new(&mut buffer);
+        let mut writer = HtmlWriter::new(&mut buffer, None);
         writer.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(5))))?;
         write!(writer, "H")?;
         writer.set_color(ColorSpec::new().set_bg(Some(Color::Ansi256(14))))?;
@@ -505,6 +501,7 @@ mod tests {
             Line { text: "\u{5b57}", br: None },
             Line { text: "\u{1f602}\u{1f602}", br: Some(LineBreak::Hard) },
             Line { text: "\u{1f602}", br: None },
+            Line { text: "", br: None },
         ];
         assert_eq!(lines, expected_lines);
     }
@@ -512,7 +509,7 @@ mod tests {
     #[test]
     fn slitting_lines_in_writer() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+        let mut writer = HtmlWriter::new(&mut buffer, Some(5));
 
         write!(writer, "Hello, ")?;
         writer.set_color(
@@ -528,8 +525,9 @@ mod tests {
 
         assert_eq!(
             buffer,
-            "Hello<br class=\"hard\"/>, <span class=\"bold underline fg2 bg7\">\
-             wor<br class=\"hard\"/>ld</span>! M<br class=\"hard\"/>ore&gt;\ntext"
+            "Hello<b class=\"hard-br\"><br/></b>, <span class=\"bold underline fg2 bg7\">\
+             wor<b class=\"hard-br\"><br/></b>ld</span>! \
+             M<b class=\"hard-br\"><br/></b>ore&gt;\ntext"
         );
         Ok(())
     }
@@ -537,18 +535,24 @@ mod tests {
     #[test]
     fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+        let mut writer = HtmlWriter::new(&mut buffer, Some(5));
 
         writeln!(writer, ">>>>>>>")?;
-        assert_eq!(buffer, "&gt;&gt;&gt;&gt;&gt;<br class=\"hard\"/>&gt;&gt;\n");
+        assert_eq!(
+            buffer,
+            "&gt;&gt;&gt;&gt;&gt;<b class=\"hard-br\"><br/></b>&gt;&gt;\n"
+        );
 
         {
             buffer.clear();
-            let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+            let mut writer = HtmlWriter::new(&mut buffer, Some(5));
             for _ in 0..7 {
                 write!(writer, ">")?;
             }
-            assert_eq!(buffer, "&gt;&gt;&gt;&gt;&gt;<br class=\"hard\"/>&gt;&gt;");
+            assert_eq!(
+                buffer,
+                "&gt;&gt;&gt;&gt;&gt;<b class=\"hard-br\"><br/></b>&gt;&gt;"
+            );
         }
         Ok(())
     }
@@ -556,25 +560,26 @@ mod tests {
     #[test]
     fn splitting_lines_with_newlines() -> anyhow::Result<()> {
         let mut buffer = String::new();
-        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+        let mut writer = HtmlWriter::new(&mut buffer, Some(5));
 
         for _ in 0..2 {
             writeln!(writer, "< test >")?;
         }
         assert_eq!(
             buffer,
-            "&lt; tes<br class=\"hard\"/>t &gt;\n&lt; tes<br class=\"hard\"/>t &gt;\n"
+            "&lt; tes<b class=\"hard-br\"><br/></b>t &gt;\n&lt; \
+             tes<b class=\"hard-br\"><br/></b>t &gt;\n"
         );
 
         buffer.clear();
-        let mut writer = HtmlWriter::with_line_wrap(&mut buffer, 5);
+        let mut writer = HtmlWriter::new(&mut buffer, Some(5));
         for _ in 0..2 {
             writeln!(writer, "<< test >>")?;
         }
         assert_eq!(
             buffer,
-            "&lt;&lt; te<br class=\"hard\"/>st &gt;&gt;\n\
-             &lt;&lt; te<br class=\"hard\"/>st &gt;&gt;\n"
+            "&lt;&lt; te<b class=\"hard-br\"><br/></b>st &gt;&gt;\n\
+             &lt;&lt; te<b class=\"hard-br\"><br/></b>st &gt;&gt;\n"
         );
         Ok(())
     }
