@@ -259,25 +259,6 @@ impl<Out: TermOutput> Interaction<Out> {
     }
 }
 
-impl Interaction<Captured> {
-    /// Counts the total number of lines in input and output.
-    pub fn count_lines(&self) -> usize {
-        let input_str = &self.input.text;
-        let mut input_lines = bytecount::count(input_str.as_bytes(), b'\n');
-        if !input_str.is_empty() && !input_str.ends_with('\n') {
-            input_lines += 1;
-        }
-
-        let output_str = self.output.as_ref();
-        let mut output_lines = bytecount::count(output_str.as_bytes(), b'\n');
-        if !output_str.is_empty() && !output_str.ends_with('\n') {
-            output_lines += 1;
-        }
-
-        input_lines + output_lines
-    }
-}
-
 /// User input during interaction with a terminal.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "svg", derive(serde::Serialize))]

@@ -4,11 +4,10 @@
 //!
 //! See [`Template`] for examples of usage.
 
-use handlebars::{Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError};
+use handlebars::{Handlebars, RenderError};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::{
-    convert::TryFrom,
     error::Error as StdError,
     fmt::{self, Write as WriteStr},
     io::Write,
@@ -16,7 +15,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{Interaction, Transcript, UserInput};
+use crate::{TermError, Transcript, UserInput};
 
 const MAIN_TEMPLATE_NAME: &str = "main";
 const TEMPLATE: &str = include_str!("default.svg.handlebars");
@@ -24,7 +23,7 @@ const TEMPLATE: &str = include_str!("default.svg.handlebars");
 /// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Width of the rendered terminal window in pixels. Default value is `700`.
+    /// Width of the rendered terminal window in pixels. Default value is `720`.
     pub width: usize,
     /// Palette of terminal colors.
     pub palette: Palette,
@@ -35,16 +34,19 @@ pub struct TemplateOptions {
     /// Options for the scroll animation. If set to `None` (which is the default),
     /// no scrolling will be enabled, and the height of the generated image is not limited.
     pub scroll: Option<ScrollOptions>,
+    /// Text wrapping options.
+    pub wrap: Option<WrapOptions>,
 }
 
 impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
-            width: 700,
+            width: 720,
             palette: Palette::default(),
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
             window_frame: false,
             scroll: None,
+            wrap: Some(WrapOptions::HardBreakAt(80)),
         }
     }
 }
@@ -400,6 +402,20 @@ impl Default for ScrollOptions {
     }
 }
 
+/// Text wrapping options.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[non_exhaustive]
+pub enum WrapOptions {
+    /// Perform a hard break at the specified character width.
+    HardBreakAt(usize),
+}
+
+impl Default for WrapOptions {
+    fn default() -> Self {
+        Self::HardBreakAt(80)
+    }
+}
+
 /// Template for rendering [`Transcript`]s into an [SVG] image.
 ///
 /// [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
@@ -492,7 +508,11 @@ impl<'a> Template<'a> {
             scroll_animation: Option<ScrollAnimationConfig>,
         }
 
-        let content_height = Self::compute_content_height(transcript);
+        let rendered_outputs = self
+            .render_outputs(transcript)
+            .map_err(|err| RenderError::from_error("content", err))?;
+
+        let content_height = Self::compute_content_height(transcript, &rendered_outputs);
         let scroll_animation = self.scroll_animation(content_height);
         let screen_height = if scroll_animation.is_some() {
             self.options
@@ -512,21 +532,53 @@ impl<'a> Template<'a> {
             height,
             content_height,
             screen_height,
-            interactions: transcript.interactions().iter().map(Into::into).collect(),
+            interactions: transcript
+                .interactions()
+                .iter()
+                .zip(rendered_outputs)
+                .map(|(interaction, output_html)| SerializedInteraction {
+                    input: interaction.input(),
+                    output_html,
+                })
+                .collect(),
             options: &self.options,
             scroll_animation,
         };
-        self.handlebars
-            .register_helper("content", Box::new(ContentHelper(transcript)));
+
         self.handlebars
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
 
-    fn compute_content_height(transcript: &Transcript) -> usize {
+    fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<String>, TermError> {
+        let max_width = self
+            .options
+            .wrap
+            .as_ref()
+            .map(|wrap_options| match wrap_options {
+                WrapOptions::HardBreakAt(width) => *width,
+            });
+
+        transcript
+            .interactions
+            .iter()
+            .map(|interaction| {
+                let output = interaction.output();
+                let mut buffer = String::with_capacity(output.as_ref().len());
+                output.write_as_html(&mut buffer, max_width)?;
+                Ok(buffer)
+            })
+            .collect()
+    }
+
+    fn compute_content_height(transcript: &Transcript, rendered_outputs: &[String]) -> usize {
         let line_count: usize = transcript
             .interactions
             .iter()
-            .map(Interaction::count_lines)
+            .zip(rendered_outputs)
+            .map(|(interaction, output_html)| {
+                Self::count_lines_in_input(interaction.input().as_ref())
+                    + Self::count_lines_in_output(output_html)
+            })
             .sum();
         let margin_count = transcript
             .interactions
@@ -543,6 +595,24 @@ impl<'a> Template<'a> {
         line_count * Self::LINE_HEIGHT
             + margin_count * Self::BLOCK_MARGIN
             + transcript.interactions.len() * Self::USER_INPUT_PADDING
+    }
+
+    fn count_lines_in_input(input_str: &str) -> usize {
+        let mut input_lines = bytecount::count(input_str.as_bytes(), b'\n');
+        if !input_str.is_empty() && !input_str.ends_with('\n') {
+            input_lines += 1;
+        }
+        input_lines
+    }
+
+    fn count_lines_in_output(output_html: &str) -> usize {
+        let mut output_lines =
+            bytecount::count(output_html.as_bytes(), b'\n') + output_html.matches("<br/>").count();
+
+        if !output_html.is_empty() && !output_html.ends_with('\n') {
+            output_lines += 1;
+        }
+        output_lines
     }
 
     #[allow(clippy::cast_precision_loss)] // no loss with sane amount of `steps`
@@ -588,50 +658,10 @@ impl<'a> Template<'a> {
     }
 }
 
-#[derive(Debug)]
-struct ContentHelper<'a>(&'a Transcript);
-
-impl HelperDef for ContentHelper<'_> {
-    fn call<'reg: 'rc, 'rc>(
-        &self,
-        helper: &Helper<'reg, 'rc>,
-        _registry: &'reg Handlebars<'reg>,
-        _ctx: &'rc Context,
-        _render_context: &mut RenderContext<'reg, 'rc>,
-        out: &mut dyn Output,
-    ) -> Result<(), RenderError> {
-        let index = helper
-            .param(0)
-            .ok_or_else(|| RenderError::new("no index provided"))?;
-        let index = index
-            .value()
-            .as_u64()
-            .ok_or_else(|| RenderError::new("provided index is invalid"))?;
-        let index = usize::try_from(index)
-            .map_err(|err| RenderError::from_error("provided index is invalid", err))?;
-        let interaction = self
-            .0
-            .interactions
-            .get(index)
-            .ok_or_else(|| RenderError::new("index is out of bounds"))?;
-        interaction
-            .output()
-            .write_as_html(&mut OutputAdapter(out))
-            .map_err(|err| RenderError::from_error("content", err))
-    }
-}
-
 #[derive(Debug, Serialize)]
 struct SerializedInteraction<'a> {
     input: &'a UserInput,
-}
-
-impl<'a> From<&'a Interaction> for SerializedInteraction<'a> {
-    fn from(value: &'a Interaction) -> Self {
-        Self {
-            input: &value.input,
-        }
-    }
+    output_html: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -640,14 +670,6 @@ struct ScrollAnimationConfig {
     view_box: String,
     scrollbar_x: usize,
     scrollbar_y: String,
-}
-
-struct OutputAdapter<'a>(&'a mut dyn Output);
-
-impl WriteStr for OutputAdapter<'_> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.0.write(s).map_err(|_| fmt::Error)
-    }
 }
 
 #[cfg(test)]
@@ -712,7 +734,29 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
-        assert!(buffer.contains(r#"viewBox="0 0 700 260""#));
-        assert!(buffer.contains("<animateTransform"));
+        assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{}", buffer);
+        assert!(buffer.contains("<animateTransform"), "{}", buffer);
+    }
+
+    #[test]
+    fn rendering_transcript_with_wraps() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            wrap: Some(WrapOptions::HardBreakAt(5)),
+            ..TemplateOptions::default()
+        };
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{}", buffer);
+        assert!(buffer.contains("<br/>"), "{}", buffer);
     }
 }

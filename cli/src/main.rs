@@ -15,7 +15,7 @@ use std::{
 };
 
 use term_transcript::{
-    svg::{NamedPalette, ScrollOptions, Template, TemplateOptions},
+    svg::{NamedPalette, ScrollOptions, Template, TemplateOptions, WrapOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     ShellOptions, Transcript, UserInput,
 };
@@ -100,6 +100,10 @@ struct TemplateArgs {
     /// corresponding to ~19 lines.
     #[structopt(long)]
     scroll: bool,
+    /// Disable text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
+    /// will be hidden.
+    #[structopt(long = "no-wrap")]
+    no_wrap: bool,
 }
 
 impl From<TemplateArgs> for TemplateOptions {
@@ -111,6 +115,11 @@ impl From<TemplateArgs> for TemplateOptions {
                 Some(ScrollOptions::default())
             } else {
                 None
+            },
+            wrap: if value.no_wrap {
+                None
+            } else {
+                Some(WrapOptions::default())
             },
             ..Self::default()
         }

@@ -2,7 +2,10 @@
 
 use termcolor::{Ansi, Color, ColorSpec, WriteColor};
 
-use std::io::{self, Write};
+use std::{
+    env,
+    io::{self, Write},
+};
 
 const BASE_COLORS: &[(&str, Color)] = &[
     ("black", Color::Black),
@@ -21,7 +24,11 @@ const RGB_COLORS: &[(&str, Color)] = &[
     ("teal", Color::Rgb(0x10, 0x88, 0x9f)),
 ];
 
-fn write_base_colors(writer: &mut impl WriteColor, intense: bool) -> anyhow::Result<()> {
+fn write_base_colors(
+    writer: &mut impl WriteColor,
+    intense: bool,
+    long_lines: bool,
+) -> anyhow::Result<()> {
     for (i, &(name, color)) in BASE_COLORS.iter().enumerate() {
         let mut color_spec = ColorSpec::new();
         color_spec.set_fg(Some(color)).set_intense(intense);
@@ -32,6 +39,16 @@ fn write_base_colors(writer: &mut impl WriteColor, intense: bool) -> anyhow::Res
         write!(writer, "{}", name)?;
         writer.reset()?;
         write!(writer, " ")?;
+
+        if long_lines {
+            color_spec
+                .set_underline(!color_spec.underline())
+                .set_italic(true);
+            writer.set_color(&color_spec)?;
+            write!(writer, "{}/italic", name)?;
+            writer.reset()?;
+            write!(writer, " ")?;
+        }
     }
     writeln!(writer)?;
     Ok(())
@@ -54,11 +71,12 @@ fn write_base_colors_bg(writer: &mut impl WriteColor, intense: bool) -> anyhow::
 }
 
 fn main() -> anyhow::Result<()> {
+    let long_lines = env::args().any(|arg| arg == "--long-lines");
     let mut writer = Ansi::new(io::stdout());
 
     writeln!(writer, "Base colors:")?;
-    write_base_colors(&mut writer, false)?;
-    write_base_colors(&mut writer, true)?;
+    write_base_colors(&mut writer, false, long_lines)?;
+    write_base_colors(&mut writer, true, long_lines)?;
 
     writeln!(writer, "Base colors (bg):")?;
     write_base_colors_bg(&mut writer, false)?;
@@ -78,10 +96,15 @@ fn main() -> anyhow::Result<()> {
         )?;
         write!(writer, "?")?;
 
-        if col == 35 {
+        if col == 35 && !long_lines {
             writer.reset()?;
             writeln!(writer)?;
         }
+    }
+
+    if long_lines {
+        writer.reset()?;
+        writeln!(writer)?;
     }
 
     writeln!(writer, "ANSI grayscale palette:")?;

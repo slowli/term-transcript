@@ -1,4 +1,4 @@
-<svg viewBox="0 -22 700 494" width="700" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 494" width="720" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #000000; --i-black: #7f7f7f;
@@ -35,6 +35,19 @@
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
     .hl { text-decoration: underline #3af; } /* Custom addition. */
+    .hard-br {
+      position: relative;
+      margin-left: 5px;
+    }
+    .hard-br:before {
+      content: '↓';
+      font-size: 16px;
+      height: 16px;
+      position: absolute;
+      bottom: 0;
+      transform: rotate(45deg);
+      opacity: 0.8;
+    }
 
     .fg0 { color: var(--black); } .bg0 { background: var(--black); }
     .fg1 { color: var(--red); } .bg1 { background: var(--red); }
@@ -58,8 +71,8 @@
   <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
   <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
   <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
-  <svg x="0" y="10" width="700" height="452" viewBox="0 0 700 452">
-    <foreignObject width="700" height="452">
+  <svg x="0" y="10" width="720" height="452" viewBox="0 0 720 452">
+    <foreignObject width="720" height="452">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         <!-- Note that a second line was added manually for both inputs. -->
         <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec <span class="hl">-T 100</span> 'rainbow' &gt; /tmp/rainbow.svg
