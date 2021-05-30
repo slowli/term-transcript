@@ -34,6 +34,13 @@ echo "Creating aliased rainbow snapshot..."
 rainbow | term-transcript capture 'colored-output' \
   > "$ROOT_DIR/e2e-tests/rainbow/aliased.$EXTENSION"
 
+echo "Creating REPL snapshot..."
+term-transcript exec -T 100 --shell rainbow-repl \
+  'yellow intense bold green cucumber' \
+  'neutral #fa4 underline #c0ffee' \
+  '#9f4010 (brown) italic' \
+  > "$ROOT_DIR/e2e-tests/rainbow/repl.$EXTENSION"
+
 echo "Creating CLI test snapshot..."
 export COLOR=always
 term-transcript exec -T 500 --palette xterm --window \

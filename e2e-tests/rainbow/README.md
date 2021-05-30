@@ -1,8 +1,13 @@
 # E2E Test for term-transcript
 
-This is a simple binary executable that prints colorful output to stdout:
+This is a simple binary crate that prints colorful output to stdout:
 
 ![Example of output](../../examples/rainbow.svg)
+
+The crate also has a separate REPL binary that echoes provided input
+with colors / styles applied according to keywords:
+
+![Example of REPL output](repl.svg)
 
 ## Why separate crate?
 
