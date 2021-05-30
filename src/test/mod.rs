@@ -130,7 +130,7 @@ impl TestConfig {
         let inputs = transcript
             .interactions()
             .iter()
-            .map(|interaction| interaction.input().to_owned());
+            .map(|interaction| interaction.input().clone());
         let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
 
         if self.output == TestOutputConfig::Quiet {

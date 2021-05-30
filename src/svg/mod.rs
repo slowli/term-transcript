@@ -23,7 +23,7 @@ const TEMPLATE: &str = include_str!("default.svg.handlebars");
 /// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Width of the rendered terminal window in pixels. Default value is `700`.
+    /// Width of the rendered terminal window in pixels. Default value is `720`.
     pub width: usize,
     /// Palette of terminal colors.
     pub palette: Palette,
