@@ -406,7 +406,7 @@ impl Default for ScrollOptions {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[non_exhaustive]
 pub enum WrapOptions {
-    /// Perform a hard break at the specified character.
+    /// Perform a hard break at the specified character width.
     HardBreakAt(usize),
 }
 
