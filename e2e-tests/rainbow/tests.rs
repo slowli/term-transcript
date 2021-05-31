@@ -12,6 +12,7 @@ use term_transcript::{
 };
 
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
+const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
 
 fn read_main_snapshot() -> io::Result<BufReader<File>> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -28,6 +29,12 @@ fn read_animated_snapshot() -> io::Result<BufReader<File>> {
 fn read_aliased_snapshot() -> io::Result<BufReader<File>> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let snapshot_path = manifest_dir.join("aliased.svg");
+    File::open(&snapshot_path).map(BufReader::new)
+}
+
+fn read_repl_snapshot() -> io::Result<BufReader<File>> {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let snapshot_path = manifest_dir.join("repl.svg");
     File::open(&snapshot_path).map(BufReader::new)
 }
 
@@ -147,6 +154,17 @@ fn powershell_example() -> anyhow::Result<()> {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
+        .test_transcript(&transcript);
+
+    Ok(())
+}
+
+#[test]
+fn repl_snapshot_testing() -> anyhow::Result<()> {
+    let transcript = Transcript::from_svg(read_repl_snapshot()?)?;
+    let shell_options = ShellOptions::from(Command::new(PATH_TO_REPL_BIN));
+    TestConfig::new(shell_options)
+        .with_match_kind(MatchKind::Precise)
         .test_transcript(&transcript);
 
     Ok(())
