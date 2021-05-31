@@ -20,7 +20,6 @@ path = "tests.rs"
 
 [dependencies]
 anyhow = "1.0.40"
-rustyline = "8.2.0"
 termcolor = "1.1.2"
 
 [dependencies.term-transcript]

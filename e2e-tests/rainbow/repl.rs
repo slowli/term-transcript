@@ -1,13 +1,10 @@
 //! Simple REPL application that echoes the input with coloring / styles applied.
 
-use rustyline::{error::ReadlineError, Editor};
 use termcolor::{Ansi, Color, ColorSpec, WriteColor};
 
-use std::io;
+use std::io::{self, BufRead};
 
 use term_transcript::svg::RgbColor;
-
-const PROMPT: &str = ">>> ";
 
 fn process_line(writer: &mut impl WriteColor, line: &str) -> io::Result<()> {
     let parts: Vec<_> = line.split_whitespace().collect();
@@ -72,27 +69,11 @@ fn process_line(writer: &mut impl WriteColor, line: &str) -> io::Result<()> {
 }
 
 fn main() -> anyhow::Result<()> {
-    let mut rl = Editor::<()>::new();
     let mut writer = Ansi::new(io::stdout());
-
-    loop {
-        let line = rl.readline(PROMPT);
-        match line {
-            Ok(line) => {
-                process_line(&mut writer, &line)?;
-                rl.add_history_entry(line);
-            }
-
-            Err(ReadlineError::Interrupted) => {
-                println!("Bye");
-                break Ok(());
-            }
-
-            Err(ReadlineError::Eof) => {
-                break Ok(());
-            }
-
-            Err(e) => panic!("Error reading command: {}", e),
-        }
+    let stdin = io::stdin();
+    let mut lines = stdin.lock().lines();
+    while let Some(line) = lines.next().transpose()? {
+        process_line(&mut writer, &line)?;
     }
+    Ok(())
 }
