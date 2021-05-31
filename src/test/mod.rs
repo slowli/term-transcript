@@ -66,6 +66,10 @@ impl Default for TestOutputConfig {
 }
 
 /// Testing configuration.
+///
+/// # Examples
+///
+/// See the [module docs](crate::test) for the examples of usage.
 #[derive(Debug)]
 pub struct TestConfig {
     shell_options: ShellOptions,
@@ -257,7 +261,7 @@ pub enum MatchKind {
     Precise,
 }
 
-/// Stats of a single snapshot test.
+/// Stats of a single snapshot test output by [`TestConfig::test_transcript_for_stats()`].
 #[derive(Debug, Clone)]
 pub struct TestStats {
     // Match kind per each user input.

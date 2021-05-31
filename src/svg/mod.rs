@@ -23,9 +23,9 @@ const TEMPLATE: &str = include_str!("default.svg.handlebars");
 /// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Width of the rendered terminal window in pixels. Default value is `720`.
+    /// Width of the rendered terminal window in pixels. The default value is `720`.
     pub width: usize,
-    /// Palette of terminal colors.
+    /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     pub palette: Palette,
     /// Font family specification in the CSS format. Should be monospace.
     pub font_family: String,
@@ -34,7 +34,7 @@ pub struct TemplateOptions {
     /// Options for the scroll animation. If set to `None` (which is the default),
     /// no scrolling will be enabled, and the height of the generated image is not limited.
     pub scroll: Option<ScrollOptions>,
-    /// Text wrapping options.
+    /// Text wrapping options. The default value of [`WrapOptions`] is used by default.
     pub wrap: Option<WrapOptions>,
 }
 
@@ -46,7 +46,7 @@ impl Default for TemplateOptions {
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
             window_frame: false,
             scroll: None,
-            wrap: Some(WrapOptions::HardBreakAt(80)),
+            wrap: Some(WrapOptions::default()),
         }
     }
 }
@@ -62,6 +62,7 @@ pub struct Palette {
     pub intense_colors: TermColors,
 }
 
+/// Returns the palette specified by [`NamedPalette::Gjm8`].
 impl Default for Palette {
     fn default() -> Self {
         Self::gjm8()
@@ -220,7 +221,7 @@ pub struct TermColors {
 
 /// RGB color with 8-bit channels.
 ///
-/// A color can be parsed from a hex string like `#fed` or `#de382b`.
+/// A color [can be parsed](FromStr) from a hex string like `#fed` or `#de382b`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbColor(pub u8, pub u8, pub u8);
 
@@ -230,10 +231,10 @@ impl fmt::LowerHex for RgbColor {
     }
 }
 
-/// Errors that can occur when parsing an [`RgbColor`] from a string.
+/// Errors that can occur when [parsing](FromStr) an [`RgbColor`] from a string.
 #[derive(Debug)]
 #[non_exhaustive]
-pub enum ColorParseError {
+pub enum RgbColorParseError {
     /// The color does not have `#` prefix.
     NoHashPrefix,
     /// The color has incorrect string length (not 1 or 2 chars per color channel).
@@ -242,7 +243,7 @@ pub enum ColorParseError {
     IncorrectDigit(ParseIntError),
 }
 
-impl fmt::Display for ColorParseError {
+impl fmt::Display for RgbColorParseError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoHashPrefix => formatter.write_str("Missing '#' prefix"),
@@ -256,7 +257,7 @@ impl fmt::Display for ColorParseError {
     }
 }
 
-impl StdError for ColorParseError {
+impl StdError for RgbColorParseError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::IncorrectDigit(err) => Some(err),
@@ -266,23 +267,23 @@ impl StdError for ColorParseError {
 }
 
 impl FromStr for RgbColor {
-    type Err = ColorParseError;
+    type Err = RgbColorParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() || s.as_bytes()[0] != b'#' {
-            Err(ColorParseError::NoHashPrefix)
+            Err(RgbColorParseError::NoHashPrefix)
         } else if s.len() == 4 {
-            let r = u8::from_str_radix(&s[1..2], 16).map_err(ColorParseError::IncorrectDigit)?;
-            let g = u8::from_str_radix(&s[2..3], 16).map_err(ColorParseError::IncorrectDigit)?;
-            let b = u8::from_str_radix(&s[3..], 16).map_err(ColorParseError::IncorrectDigit)?;
+            let r = u8::from_str_radix(&s[1..2], 16).map_err(RgbColorParseError::IncorrectDigit)?;
+            let g = u8::from_str_radix(&s[2..3], 16).map_err(RgbColorParseError::IncorrectDigit)?;
+            let b = u8::from_str_radix(&s[3..], 16).map_err(RgbColorParseError::IncorrectDigit)?;
             Ok(Self(r * 17, g * 17, b * 17))
         } else if s.len() == 7 {
-            let r = u8::from_str_radix(&s[1..3], 16).map_err(ColorParseError::IncorrectDigit)?;
-            let g = u8::from_str_radix(&s[3..5], 16).map_err(ColorParseError::IncorrectDigit)?;
-            let b = u8::from_str_radix(&s[5..], 16).map_err(ColorParseError::IncorrectDigit)?;
+            let r = u8::from_str_radix(&s[1..3], 16).map_err(RgbColorParseError::IncorrectDigit)?;
+            let g = u8::from_str_radix(&s[3..5], 16).map_err(RgbColorParseError::IncorrectDigit)?;
+            let b = u8::from_str_radix(&s[5..], 16).map_err(RgbColorParseError::IncorrectDigit)?;
             Ok(Self(r, g, b))
         } else {
-            Err(ColorParseError::IncorrectLen(s.len()))
+            Err(RgbColorParseError::IncorrectLen(s.len()))
         }
     }
 }
@@ -320,7 +321,7 @@ impl<'de> Deserialize<'de> for RgbColor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum NamedPalette {
-    /// Dracula color scheme.
+    /// Dracula color scheme. This is the [`Default`] value.
     Dracula,
     /// PowerShell 6 / Windows 10 console color scheme.
     PowerShell,
@@ -365,7 +366,7 @@ impl FromStr for NamedPalette {
     }
 }
 
-/// Errors that can occur when parsing [`NamedPalette`].
+/// Errors that can occur when [parsing](FromStr) [`NamedPalette`] from a string.
 #[derive(Debug)]
 pub struct NamedPaletteParseError(());
 
@@ -384,12 +385,14 @@ impl StdError for NamedPaletteParseError {}
 ///
 /// The animation is only displayed if the console exceeds [`Self::max_height`]. In this case,
 /// the console will be scrolled vertically with the interval of [`Self::interval`] seconds
-/// between every frame.
+/// between every frame. The view is moved 4 lines of text per scroll.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScrollOptions {
-    /// Maximum height of the console, in pixels.
+    /// Maximum height of the console, in pixels. The default value allows to fit 19 lines
+    /// of text into the view (potentially, slightly less because of vertical margins around
+    /// user inputs).
     pub max_height: usize,
-    /// Interval between keyframes in seconds.
+    /// Interval between keyframes in seconds. The default value is `4`.
     pub interval: f32,
 }
 
@@ -406,7 +409,8 @@ impl Default for ScrollOptions {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[non_exhaustive]
 pub enum WrapOptions {
-    /// Perform a hard break at the specified character width.
+    /// Perform a hard break at the specified width of output. The [`Default`] implementation
+    /// returns this variant with width 80.
     HardBreakAt(usize),
 }
 
@@ -491,7 +495,8 @@ impl<'a> Template<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a rendering error, if any.
+    /// Returns a Handlebars rendering error, if any. Normally, the only errors could be
+    /// related to I/O (e.g., the image cannot be written to a file).
     pub fn render<W: Write>(
         &mut self,
         transcript: &'a Transcript,

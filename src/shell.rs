@@ -80,7 +80,8 @@ impl<Ext> ShellOptions<Ext> {
         self
     }
 
-    /// Sets the I/O timeout for shell commands. This determines how long the code waits
+    /// Sets the I/O timeout for shell commands. This determines how long methods like
+    /// [`Transcript::from_inputs()`] wait
     /// for output of a command before proceeding to the next command. Longer values
     /// allow to capture output more accurately, but result in longer execution.
     pub fn with_io_timeout(mut self, io_timeout: Duration) -> Self {

@@ -64,8 +64,12 @@
 //!   into the SVG format.
 //! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
 //!   from SVG files and testing them.
+//! - `pretty_assertions`. Uses [the eponymous crate][`pretty_assertions`] when testing SVG files.
+//!   Only really makes sense together with the `test` feature.
 //!
-//! Both `svg` and `test` features are on by default.
+//! `svg`, `test` and `pretty_assertions` features are on by default.
+//!
+//! [`pretty_assertions`]: https://docs.rs/pretty_assertions/
 //!
 //! # Examples
 //!
