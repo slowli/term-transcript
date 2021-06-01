@@ -44,11 +44,28 @@ impl Captured {
 
     /// Converts this terminal output to an HTML string.
     ///
-    /// FIXME: more about HTML formatting
+    /// The conversion applies styles by wrapping colored / styled text into `span`s with
+    /// the following `class`es:
+    ///
+    /// - `bold`, `italic`, `dimmed`, `underline` are self-explanatory
+    /// - `fg0`, `fg1`, ..., `fg15` are used to indicate indexed 4-bit ANSI color of the text.
+    ///   Indexes 0..=7 correspond to the ordinary color variations, and 8..=15
+    ///   to the intense ones.
+    /// - `bg0`, `bg1`, ..., `bg15` work similarly, but for the background color instead of
+    ///   text color.
+    ///
+    /// Indexed ANSI colors with indexes >15 and ANSI RGB colors are rendered using the `style`
+    /// attribute.
+    ///
+    /// The output string retains whitespace of the input. Hence, it needs to be wrapped
+    /// into a `pre` element or an element with the [`white-space`] CSS property set to `pre`
+    /// in order to be displayed properly.
     ///
     /// # Errors
     ///
     /// Returns an error if there was an issue processing output.
+    ///
+    /// [`white-space`]: https://developer.mozilla.org/en-US/docs/Web/CSS/white-space
     pub fn to_html(&self) -> Result<String, TermError> {
         let mut output = String::with_capacity(self.0.len());
         self.write_as_html(&mut output, None)?;

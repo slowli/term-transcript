@@ -1,6 +1,10 @@
 # term-transcript CLI
 
-This crate provides command-line interface for `term-transcript`. It allows capturing
+[![Build Status](https://github.com/slowli/term-transcript/workflows/Rust/badge.svg?branch=master)](https://github.com/slowli/term-transcript/actions)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
+![rust 1.45.0+ required](https://img.shields.io/badge/rust-1.45.0+-blue.svg?label=Required%20Rust)
+
+This crate provides command-line interface for [`term-transcript`]. It allows capturing
 terminal output to SVG and testing the captured snapshots.
 
 ## Usage
@@ -16,8 +20,8 @@ for each subcommand.
 
 ### Examples
 
-This example creates [a snapshot](../tests/snapshots/rainbow.svg)
-of [the `rainbow` example](../examples/rainbow.rs) and then tests it.
+This example creates [a snapshot](../examples/rainbow.svg)
+of [the `rainbow` example](../e2e-tests/rainbow) and then tests it.
 
 ![Testing rainbow example](tests/snapshots/test.svg)
 
@@ -33,3 +37,5 @@ or [MIT license](LICENSE-MIT) at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in `term-transcript` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions. 
+
+[`term-transcript`]: https://crates.io/crates/term-transcript

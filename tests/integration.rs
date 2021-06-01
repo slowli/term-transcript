@@ -168,5 +168,3 @@ fn non_utf8_shell_output() {
     assert_matches!(err.kind(), io::ErrorKind::InvalidData);
     assert!(err.get_ref().unwrap().is::<Utf8Error>(), "{:?}", err);
 }
-
-// FIXME: restore snapshot testing with a simple command (`echo`?).

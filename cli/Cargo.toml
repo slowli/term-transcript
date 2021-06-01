@@ -3,7 +3,12 @@ name = "term-transcript-cli"
 version = "0.1.0"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 edition = "2018"
+readme = "README.md"
 license = "MIT OR Apache-2.0"
+keywords = ["snapshot", "terminal", "SVG"]
+categories = ["command-line-utilities", "development-tools::testing", "visualization"]
+description = "CLI wrapper for term-transcript"
+repository = "https://github.com/slowli/term-transcript"
 
 [[bin]]
 name = "term-transcript"

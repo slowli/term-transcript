@@ -66,6 +66,10 @@ impl Default for TestOutputConfig {
 }
 
 /// Testing configuration.
+///
+/// # Examples
+///
+/// See the [module docs](crate::test) for the examples of usage.
 #[derive(Debug)]
 pub struct TestConfig {
     shell_options: ShellOptions,
@@ -127,20 +131,28 @@ impl TestConfig {
         &mut self,
         transcript: &Transcript<Parsed>,
     ) -> io::Result<TestStats> {
+        if self.output == TestOutputConfig::Quiet {
+            let mut out = NoColor::new(io::sink());
+            self.test_transcript_inner(&mut out, transcript)
+        } else {
+            let out = StandardStream::stdout(self.color_choice);
+            let mut out = out.lock();
+            self.test_transcript_inner(&mut out, transcript)
+        }
+    }
+
+    fn test_transcript_inner(
+        &mut self,
+        out: &mut impl WriteColor,
+        transcript: &Transcript<Parsed>,
+    ) -> io::Result<TestStats> {
         let inputs = transcript
             .interactions()
             .iter()
             .map(|interaction| interaction.input().clone());
         let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
 
-        if self.output == TestOutputConfig::Quiet {
-            let mut out = NoColor::new(io::sink());
-            self.compare_transcripts(&mut out, &transcript, &reproduced)
-        } else {
-            let out = StandardStream::stdout(self.color_choice);
-            let mut out = out.lock();
-            self.compare_transcripts(&mut out, &transcript, &reproduced)
-        }
+        self.compare_transcripts(out, &transcript, &reproduced)
     }
 
     fn compare_transcripts(
@@ -257,7 +269,7 @@ pub enum MatchKind {
     Precise,
 }
 
-/// Stats of a single snapshot test.
+/// Stats of a single snapshot test output by [`TestConfig::test_transcript_for_stats()`].
 #[derive(Debug, Clone)]
 pub struct TestStats {
     // Match kind per each user input.
@@ -333,6 +345,10 @@ impl<W: Write> Write for IndentingWriter<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        svg::{Template, TemplateOptions},
+        UserInput,
+    };
 
     #[test]
     fn indenting_writer_basics() -> io::Result<()> {
@@ -344,5 +360,82 @@ mod tests {
 
         assert_eq!(buffer, b"  Hello, world!\n  many\n    lines!\n" as &[u8]);
         Ok(())
+    }
+
+    fn test_snapshot_testing(test_config: &mut TestConfig) -> anyhow::Result<()> {
+        let transcript = Transcript::from_inputs(
+            &mut ShellOptions::default(),
+            vec![UserInput::command("echo \"Hello, world!\"")],
+        )?;
+
+        let mut svg_buffer = vec![];
+        Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+
+        let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
+        test_config.test_transcript(&parsed);
+        Ok(())
+    }
+
+    #[test]
+    fn snapshot_testing_with_default_params() -> anyhow::Result<()> {
+        let mut test_config = TestConfig::new(ShellOptions::default());
+        test_snapshot_testing(&mut test_config)
+    }
+
+    #[test]
+    fn snapshot_testing_with_exact_match() -> anyhow::Result<()> {
+        let mut test_config = TestConfig::new(ShellOptions::default());
+        test_snapshot_testing(&mut test_config.with_match_kind(MatchKind::Precise))
+    }
+
+    fn test_negative_snapshot_testing(
+        out: &mut Vec<u8>,
+        test_config: &mut TestConfig,
+    ) -> anyhow::Result<()> {
+        let mut transcript = Transcript::from_inputs(
+            &mut ShellOptions::default(),
+            vec![UserInput::command("echo \"Hello, world!\"")],
+        )?;
+        transcript.add_interaction(UserInput::command("echo \"Sup?\""), "Nah");
+
+        let mut svg_buffer = vec![];
+        Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+
+        let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
+        let stats = test_config.test_transcript_inner(&mut NoColor::new(out), &parsed)?;
+        assert_eq!(stats.errors(MatchKind::TextOnly), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn negative_snapshot_testing_with_default_output() {
+        let mut out = vec![];
+        let mut test_config = TestConfig::new(ShellOptions::default());
+        test_config.with_color_choice(ColorChoice::Never);
+        test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();
+
+        let out = String::from_utf8(out).unwrap();
+        assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{}", out);
+        assert_eq!(out.matches("Hello, world!").count(), 1, "{}", out);
+        // ^ output for successful interactions should not be included
+        assert!(out.contains("[-] Input: echo \"Sup?\""), "{}", out);
+        assert!(out.contains("Nah"), "{}", out);
+    }
+
+    #[test]
+    fn negative_snapshot_testing_with_verbose_output() {
+        let mut out = vec![];
+        let mut test_config = TestConfig::new(ShellOptions::default());
+        test_config
+            .with_output(TestOutputConfig::Verbose)
+            .with_color_choice(ColorChoice::Never);
+        test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();
+
+        let out = String::from_utf8(out).unwrap();
+        assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{}", out);
+        assert_eq!(out.matches("Hello, world!").count(), 2, "{}", out);
+        // ^ output for successful interactions should be included
+        assert!(out.contains("[-] Input: echo \"Sup?\""), "{}", out);
+        assert!(out.contains("Nah"), "{}", out);
     }
 }

@@ -34,8 +34,10 @@
 //!   are supported even on Windows nowadays, this shouldn't be a significant problem.)
 //! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI] sequences),
 //!   or lead to [`TermError::NonCsiSequence`].
-//! - Since the terminal is not not emulated, programs dependent on [`isatty`] checks can produce
-//!   different output than if launched in the actual shell. One can argue that dependence
+//! - Pseudo-terminal (PTY) APIs are not used in order to be more portable. This can change
+//!   in the future releases.
+//! - Since the terminal is not emulated, programs dependent on [`isatty`] checks can produce
+//!   different output than if launched in an actual shell. One can argue that dependence
 //!   on `isatty` is generally an anti-pattern.
 //! - As a consequence of the last point, CLI tools frequently switch off output coloring if not
 //!   writing to a terminal. For some tools, this can be amended by adding an arg to the command,
@@ -64,8 +66,12 @@
 //!   into the SVG format.
 //! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
 //!   from SVG files and testing them.
+//! - `pretty_assertions`. Uses [the eponymous crate][`pretty_assertions`] when testing SVG files.
+//!   Only really makes sense together with the `test` feature.
 //!
-//! Both `svg` and `test` features are on by default.
+//! `svg`, `test` and `pretty_assertions` features are on by default.
+//!
+//! [`pretty_assertions`]: https://docs.rs/pretty_assertions/
 //!
 //! # Examples
 //!
