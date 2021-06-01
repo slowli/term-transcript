@@ -3,14 +3,26 @@ name = "term-transcript"
 version = "0.1.0"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 edition = "2018"
+readme = "README.md"
 license = "MIT OR Apache-2.0"
+keywords = ["snapshot", "terminal", "SVG"]
+categories = ["development-tools::testing", "visualization"]
+description = "Snapshotting and snapshot testing for CLI / REPL applications"
+repository = "https://github.com/slowli/term-transcript"
+
+[package.metadata.docs.rs]
+# Set `docsrs` to enable unstable `doc(cfg(...))` attributes.
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+# Public dependencies (present in the public API).
+quick-xml = { version = "0.22.0", optional = true }
+
+# Private dependencies (not exposed in the public API).
 bytecount = "0.6.2"
 handlebars = { version = "3.5.4", optional = true }
 os_pipe = "0.9.2"
 serde = { version = "1.0", optional = true, features = ["derive"] }
-quick-xml = { version = "0.22.0", optional = true }
 pretty_assertions = { version = "0.7.2", optional = true }
 termcolor = "1.1.2"
 unicode-width = "0.1.8"
@@ -25,7 +37,7 @@ version-sync = "0.9.2"
 default = ["pretty_assertions", "svg", "test"]
 # Rendering terminal transcripts into SVG snapshots
 svg = ["handlebars", "serde"]
-# Testing functionality
+# Allows parsing transcripts from SVG snapshots and testing them
 test = ["quick-xml"]
 
 [workspace]

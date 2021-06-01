@@ -65,6 +65,8 @@ Here's a snapshot of the same example with the scrolling animation and window fr
 
 - [`insta`](https://crates.io/crates/insta) is a generic snapshot testing library, which
   is amazing in general, but *kind of* too low-level for E2E CLI testing.
+- [`rexpect`](https://crates.io/crates/rexpect) allows testing CLI / REPL applications
+  by scripting interactions with them in tests. It works in Unix only.
 - [`trybuild`](https://crates.io/crates/trybuild) snapshot-tests output
   of a particular program (the Rust compiler).
 - Tools like [`termtosvg`](https://github.com/nbedos/termtosvg) and
