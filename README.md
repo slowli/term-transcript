@@ -61,7 +61,22 @@ Here's a snapshot of the same example with the scrolling animation and window fr
 
 ![Animated snapshot of rainbow example](examples/animated.svg)
 
-# Alternatives / similar tools
+## Limitations
+
+- Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
+  are supported even on Windows nowadays, this shouldn't be a significant problem.)
+- ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI] sequences),
+  or lead to an error.
+- Pseudo-terminal (PTY) APIs are not used in order to be more portable. This can change
+  in the future releases.
+- Since the terminal is not emulated, programs dependent on [`isatty`] checks can produce
+  different output than if launched in an actual shell. One can argue that dependence
+  on `isatty` is generally an anti-pattern.
+- As a consequence of the last point, CLI tools frequently switch off output coloring if not
+  writing to a terminal. For some tools, this can be amended by adding an arg to the command,
+  such as `--color=always`.
+
+## Alternatives / similar tools
 
 - [`insta`](https://crates.io/crates/insta) is a generic snapshot testing library, which
   is amazing in general, but *kind of* too low-level for E2E CLI testing.
@@ -85,3 +100,5 @@ shall be dual licensed as above, without any additional terms or conditions.
 
 [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
 [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
+[CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
+[`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
