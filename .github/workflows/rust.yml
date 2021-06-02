@@ -5,6 +5,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  schedule:
+    - cron: '30 3 * * THU'
 
 env:
   # Minimum supported Rust version.
