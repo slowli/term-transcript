@@ -20,12 +20,12 @@ for each subcommand.
 
 ### Examples
 
-This example creates [a snapshot](../examples/rainbow.svg)
-of [the `rainbow` example](../e2e-tests/rainbow) and then tests it.
+This example creates [a snapshot][snapshot-link]
+of [the `rainbow` example][rainbow-example-link] and then tests it.
 
-![Testing rainbow example](tests/snapshots/test.svg)
+![Testing rainbow example][test-snapshot-link]
 
-The snapshot itself [is tested](tests/e2e.rs), too! It also shows
+The snapshot itself [is tested][test-link], too! It also shows
 that SVG output by the program is editable; in the snapshot, this is used to
 highlight command-line args and to change color of comments in the user inputs.
 
@@ -39,3 +39,7 @@ for inclusion in `term-transcript` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions. 
 
 [`term-transcript`]: https://crates.io/crates/term-transcript
+[snapshot-link]: https://github.com/slowli/term-transcript/blob/master/examples/rainbow.svg
+[rainbow-example-link]: https://github.com/slowli/term-transcript/tree/master/e2e-tests/rainbow
+[test-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test.svg?sanitize=true
+[test-link]: https://github.com/slowli/term-transcript/blob/master/cli/tests/e2e.rs
