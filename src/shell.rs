@@ -180,20 +180,32 @@ impl ShellOptions<StdShell> {
         Self::new(Command::new("bash"), StdShell::Bash)
     }
 
-    /// Creates options for PowerShell.
+    /// Creates options for PowerShell. These options set up
+    /// a [line mapper](Self::with_line_mapper()) that mutes lines starting with the prompt
+    /// (`PS>`); you can change the line mapper if this is not what you want.
     #[allow(clippy::doc_markdown)] // false positive
     pub fn powershell() -> Self {
+        fn is_init_command(line: &str) -> bool {
+            line.starts_with("PS") && line.ends_with("> function prompt { }")
+        }
+
         let mut cmd = Command::new("powershell");
         cmd.arg("-NoLogo").arg("-NoExit");
+        let mut is_first_command = true;
 
         Self::new(cmd, StdShell::PowerShell)
             .with_init_command("function prompt { }")
-            .with_line_mapper(|line| {
-                if line.starts_with("PS>") {
-                    None
-                } else {
-                    Some(line)
-                }
+            .with_line_mapper(move |line| {
+                // PowerShell may take long enough to start that the init command ends up
+                // in the captured output.
+                let output =
+                    if line.starts_with("PS>") || (is_first_command && is_init_command(&line)) {
+                        None
+                    } else {
+                        Some(line)
+                    };
+                is_first_command = false;
+                output
             })
     }
 
