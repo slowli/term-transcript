@@ -17,10 +17,10 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 # Public dependencies (present in the public API).
 quick-xml = { version = "0.22.0", optional = true }
+handlebars = { version = "4.0.0", optional = true }
 
 # Private dependencies (not exposed in the public API).
 bytecount = "0.6.2"
-handlebars = { version = "4.0.0", optional = true }
 os_pipe = "0.9.2"
 serde = { version = "1.0", optional = true, features = ["derive"] }
 pretty_assertions = { version = "0.7.2", optional = true }
