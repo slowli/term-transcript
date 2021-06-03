@@ -18,8 +18,6 @@ path = "src/main.rs"
 anyhow = "1.0.40"
 atty = "0.2.14"
 structopt = "0.3.21"
-pretty_assertions = "0.7.2"
 termcolor = "1.1.2"
-textwrap = "0.11"
 
 term-transcript = { version = "0.1.0", path = ".." }
