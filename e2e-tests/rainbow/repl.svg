@@ -29,7 +29,6 @@
       padding: 2px 10px;
     }
     .term-output { margin-bottom: 6px; }
-
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
@@ -47,7 +46,6 @@
       transform: rotate(45deg);
       opacity: 0.8;
     }
-
     .fg0 { color: var(--black); } .bg0 { background: var(--black); }
     .fg1 { color: var(--red); } .bg1 { background: var(--red); }
     .fg2 { color: var(--green); } .bg2 { background: var(--green); }
