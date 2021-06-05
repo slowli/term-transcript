@@ -133,6 +133,7 @@
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
 mod html;
+#[cfg(feature = "portable-pty")]
 mod pty;
 mod shell;
 #[cfg(feature = "svg")]
@@ -142,10 +143,13 @@ mod term;
 #[cfg(feature = "test")]
 #[cfg_attr(docsrs, doc(cfg(feature = "test")))]
 pub mod test;
+pub mod traits;
 mod utils;
 
+#[cfg(feature = "portable-pty")]
+pub use self::pty::{PtyCommand, PtyShell};
 pub use self::{
-    shell::{ShellOptions, SpawnShell, StdShell},
+    shell::{ShellOptions, StdShell},
     term::{Captured, TermOutput},
 };
 

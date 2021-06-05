@@ -1,22 +1,29 @@
 //! Spawning shell in PTY via `portable-pty` crate.
 
-#![allow(missing_docs)]
-
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtyPair, PtySize};
 
 use std::{
     collections::HashMap,
+    error::Error as StdError,
     ffi::{OsStr, OsString},
     io,
     path::{Path, PathBuf},
 };
 
 use crate::{
-    shell::{ConfigureCommand, ShellProcess, SpawnedShell},
-    utils::{into_io_error, is_recoverable_kill_error},
-    SpawnShell,
+    traits::{ConfigureCommand, ShellProcess, SpawnShell, SpawnedShell},
+    utils::is_recoverable_kill_error,
 };
 
+fn into_io_error(err: Box<dyn StdError + Send + Sync>) -> io::Error {
+    err.downcast::<io::Error>()
+        .map_or_else(|err| io::Error::new(io::ErrorKind::Other, err), |err| *err)
+}
+
+/// Command to spawn in a pseudo-terminal (PTY).
+// Unfortunately, the `portable-pty` is structured in a way that makes reusing `Command`
+// from the standard library impossible.
+#[cfg_attr(docsrs, doc(cfg(feature = "portable-pty")))]
 #[derive(Debug, Clone)]
 pub struct PtyCommand {
     args: Vec<OsString>,
@@ -42,6 +49,7 @@ impl Default for PtyCommand {
 }
 
 impl PtyCommand {
+    /// Creates a new command based on the executable.
     pub fn new(command: impl Into<OsString>) -> Self {
         Self {
             args: vec![command.into()],
@@ -56,6 +64,7 @@ impl PtyCommand {
         }
     }
 
+    /// Adds a command argument.
     pub fn arg(&mut self, arg: impl Into<OsString>) -> &mut Self {
         self.args.push(arg.into());
         self
@@ -110,6 +119,8 @@ impl SpawnShell for PtyCommand {
     }
 }
 
+/// Spawned shell process connected to pseudo-terminal (PTY).
+#[cfg_attr(docsrs, doc(cfg(feature = "portable-pty")))]
 #[derive(Debug)]
 pub struct PtyShell {
     child: Box<dyn Child + Send + Sync>,

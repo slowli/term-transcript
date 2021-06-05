@@ -1,6 +1,6 @@
 //! Misc utils.
 
-use std::{borrow::Cow, error::Error as StdError, fmt::Write as WriteStr, io, str};
+use std::{borrow::Cow, fmt::Write as WriteStr, io, str};
 
 /// Adapter for `dyn fmt::Write` that implements `io::Write`.
 pub(crate) struct WriteAdapter<'a> {
@@ -51,9 +51,4 @@ pub(crate) fn is_recoverable_kill_error(err: &io::Error) -> bool {
         err.kind(),
         io::ErrorKind::InvalidInput | io::ErrorKind::PermissionDenied
     )
-}
-
-pub(crate) fn into_io_error(err: Box<dyn StdError + Send + Sync>) -> io::Error {
-    err.downcast::<io::Error>()
-        .map_or_else(|err| io::Error::new(io::ErrorKind::Other, err), |err| *err)
 }

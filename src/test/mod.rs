@@ -43,7 +43,7 @@ use std::{
     str,
 };
 
-use crate::{Interaction, ShellOptions, SpawnShell, Transcript};
+use crate::{traits::SpawnShell, Interaction, ShellOptions, Transcript};
 
 mod parser;
 pub use self::parser::{ParseError, Parsed};
