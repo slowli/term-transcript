@@ -1,14 +1,39 @@
+//! Shell-related types.
+
+#![allow(missing_docs, clippy::missing_errors_doc)] // FIXME: remove
+
 use std::{
-    env, fmt,
-    io::{self, BufRead, BufReader, LineWriter, Read, Write},
+    env,
+    ffi::OsStr,
+    fmt,
+    io::{self, BufRead, BufReader, LineWriter, Read},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Child, ChildStdin, Command, Stdio},
     sync::mpsc,
     thread,
     time::Duration,
 };
 
-use crate::{Captured, Interaction, Transcript, UserInput};
+use crate::{utils::is_recoverable_kill_error, Captured, Interaction, Transcript, UserInput};
+
+/// Common denominator for types that can be used to configure commands for
+/// execution in the terminal.
+pub trait ConfigureCommand {
+    /// Sets the current directory.
+    fn current_dir(&mut self, dir: &Path);
+    /// Sets an environment variable.
+    fn env(&mut self, name: &str, value: &OsStr);
+}
+
+impl ConfigureCommand for Command {
+    fn current_dir(&mut self, dir: &Path) {
+        self.current_dir(dir);
+    }
+
+    fn env(&mut self, name: &str, value: &OsStr) {
+        self.env(name, value);
+    }
+}
 
 /// Options for executing commands in the shell. Used in [`Transcript::from_inputs()`]
 /// and in [`TestConfig`].
@@ -17,22 +42,20 @@ use crate::{Captured, Interaction, Transcript, UserInput};
 /// extension allows to specify custom aliases for the executed commands.
 ///
 /// [`TestConfig`]: crate::test::TestConfig
-pub struct ShellOptions<Ext = ()> {
-    command: Command,
+pub struct ShellOptions<Cmd = Command> {
+    command: Cmd,
     io_timeout: Duration,
     init_commands: Vec<String>,
     line_mapper: Box<dyn FnMut(String) -> Option<String>>,
-    extensions: Ext,
 }
 
-impl<Ext: fmt::Debug> fmt::Debug for ShellOptions<Ext> {
+impl<Cmd: fmt::Debug> fmt::Debug for ShellOptions<Cmd> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("ShellOptions")
             .field("command", &self.command)
             .field("io_timeout", &self.io_timeout)
             .field("init_commands", &self.init_commands)
-            .field("extensions", &self.extensions)
             .finish()
     }
 }
@@ -40,17 +63,17 @@ impl<Ext: fmt::Debug> fmt::Debug for ShellOptions<Ext> {
 #[cfg(any(unix, windows))]
 impl Default for ShellOptions {
     fn default() -> Self {
-        Self::new(Self::default_shell(), ())
+        Self::new(Self::default_shell())
     }
 }
 
 impl From<Command> for ShellOptions {
     fn from(command: Command) -> Self {
-        Self::new(command, ())
+        Self::new(command)
     }
 }
 
-impl<Ext> ShellOptions<Ext> {
+impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     #[cfg(unix)]
     fn default_shell() -> Command {
         Command::new("sh")
@@ -64,19 +87,19 @@ impl<Ext> ShellOptions<Ext> {
         command
     }
 
-    fn new(command: Command, extensions: Ext) -> Self {
+    /// Creates new options with the provided `command`.
+    pub fn new(command: Cmd) -> Self {
         Self {
             command,
             io_timeout: Duration::from_secs(1),
             init_commands: vec![],
             line_mapper: Box::new(Some),
-            extensions,
         }
     }
 
     /// Changes the current directory of the command.
     pub fn with_current_dir(mut self, current_dir: impl AsRef<Path>) -> Self {
-        self.command.current_dir(current_dir);
+        self.command.current_dir(current_dir.as_ref());
         self
     }
 
@@ -144,23 +167,10 @@ impl<Ext> ShellOptions<Ext> {
         self.command.env("PATH", &path_var);
         self
     }
-
-    #[cfg(feature = "test")]
-    pub(crate) fn drop_extensions(self) -> ShellOptions {
-        ShellOptions {
-            command: self.command,
-            io_timeout: self.io_timeout,
-            init_commands: self.init_commands,
-            line_mapper: self.line_mapper,
-            extensions: (),
-        }
-    }
 }
 
-/// Shell interpreter that brings additional functionality for [`ShellOptions`].
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum StdShell {
+#[derive(Debug, Clone, Copy)]
+enum StdShellType {
     /// `sh` shell.
     Sh,
     /// `bash` shell.
@@ -169,15 +179,38 @@ pub enum StdShell {
     PowerShell,
 }
 
+/// Shell interpreter that brings additional functionality for [`ShellOptions`].
+#[derive(Debug)]
+pub struct StdShell {
+    shell_type: StdShellType,
+    command: Command,
+}
+
+impl ConfigureCommand for StdShell {
+    fn current_dir(&mut self, dir: &Path) {
+        self.command.current_dir(dir);
+    }
+
+    fn env(&mut self, name: &str, value: &OsStr) {
+        self.command.env(name, value);
+    }
+}
+
 impl ShellOptions<StdShell> {
     /// Creates options for an `sh` shell.
     pub fn sh() -> Self {
-        Self::new(Command::new("sh"), StdShell::Sh)
+        Self::new(StdShell {
+            shell_type: StdShellType::Sh,
+            command: Command::new("sh"),
+        })
     }
 
     /// Creates options for a Bash shell.
     pub fn bash() -> Self {
-        Self::new(Command::new("bash"), StdShell::Bash)
+        Self::new(StdShell {
+            shell_type: StdShellType::Bash,
+            command: Command::new("bash"),
+        })
     }
 
     /// Creates options for PowerShell. These options set up
@@ -189,11 +222,16 @@ impl ShellOptions<StdShell> {
             line.starts_with("PS") && line.ends_with("> function prompt { }")
         }
 
-        let mut cmd = Command::new("powershell");
-        cmd.arg("-NoLogo").arg("-NoExit");
+        let mut command = Command::new("powershell");
+        command.arg("-NoLogo").arg("-NoExit");
         let mut is_first_command = true;
 
-        Self::new(cmd, StdShell::PowerShell)
+        let command = StdShell {
+            shell_type: StdShellType::PowerShell,
+            command,
+        };
+
+        Self::new(command)
             .with_init_command("function prompt { }")
             .with_line_mapper(move |line| {
                 // PowerShell may take long enough to start that the init command ends up
@@ -226,14 +264,16 @@ impl ShellOptions<StdShell> {
     /// [`env!("CARGO_BIN_EXE_<name>")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
     #[allow(clippy::doc_markdown)] // false positive
     pub fn with_alias(self, name: &str, path_to_bin: &str) -> Self {
-        let alias_command = match self.extensions {
-            StdShell::Sh => format!("alias {name}=\"'{path}'\"", name = name, path = path_to_bin),
-            StdShell::Bash => format!(
+        let alias_command = match self.command.shell_type {
+            StdShellType::Sh => {
+                format!("alias {name}=\"'{path}'\"", name = name, path = path_to_bin)
+            }
+            StdShellType::Bash => format!(
                 "{name}() {{ '{path}' \"$@\"; }}",
                 name = name,
                 path = path_to_bin
             ),
-            StdShell::PowerShell => format!(
+            StdShellType::PowerShell => format!(
                 "function {name} {{ & '{path}' @Args }}",
                 name = name,
                 path = path_to_bin
@@ -244,7 +284,138 @@ impl ShellOptions<StdShell> {
     }
 }
 
+pub trait SpawnShell {
+    type ShellProcess: ShellProcess;
+    type Reader: io::Read + 'static + Send;
+    type Writer: io::Write;
+
+    fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>>;
+}
+
+pub trait ShellProcess {
+    /// Returns `true` if the input commands are echoed back to the output.
+    fn is_echoing(&self) -> bool;
+    /// Checks if the process is alive. Returns an error if the process is not alive.
+    fn check_is_alive(&mut self) -> io::Result<()>;
+    /// Terminates the shell process. This can include killing it if necessary.
+    fn terminate(self) -> io::Result<()>;
+}
+
+#[derive(Debug)]
+pub struct ChildShell {
+    child: Child,
+    is_echoing: bool,
+}
+
+impl ChildShell {
+    /// Creates a `ChildShell` instance based on the `child` process and an indicator
+    /// whether it is echoing.
+    pub fn new(child: Child, is_echoing: bool) -> Self {
+        Self { child, is_echoing }
+    }
+}
+
+impl ShellProcess for ChildShell {
+    fn is_echoing(&self) -> bool {
+        self.is_echoing
+    }
+
+    fn check_is_alive(&mut self) -> io::Result<()> {
+        if let Some(exit_status) = self.child.try_wait()? {
+            let message = format!(
+                "Shell process has prematurely exited with exit status {}",
+                exit_status
+            );
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, message))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn terminate(mut self) -> io::Result<()> {
+        if self.child.try_wait()?.is_none() {
+            self.child.kill().or_else(|err| {
+                if is_recoverable_kill_error(&err) {
+                    // The shell has already exited. We don't consider this an error.
+                    Ok(())
+                } else {
+                    Err(err)
+                }
+            })?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct SpawnedShell<S: SpawnShell + ?Sized> {
+    pub shell: S::ShellProcess,
+    pub reader: S::Reader,
+    pub writer: S::Writer,
+}
+
+impl SpawnShell for Command {
+    type ShellProcess = ChildShell;
+    type Reader = os_pipe::PipeReader;
+    type Writer = ChildStdin;
+
+    fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
+        let (pipe_reader, pipe_writer) = os_pipe::pipe()?;
+        let mut shell = self
+            .stdin(Stdio::piped())
+            .stdout(pipe_writer.try_clone()?)
+            .stderr(pipe_writer)
+            .spawn()?;
+
+        self.stdout(Stdio::null()).stderr(Stdio::null());
+
+        let stdin = shell.stdin.take().unwrap();
+        // ^-- `unwrap()` is safe due to configuration of the shell process.
+
+        Ok(SpawnedShell {
+            shell: ChildShell::new(shell, false),
+            reader: pipe_reader,
+            writer: stdin,
+        })
+    }
+}
+
+impl SpawnShell for StdShell {
+    type ShellProcess = ChildShell;
+    type Reader = os_pipe::PipeReader;
+    type Writer = ChildStdin;
+
+    fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
+        let SpawnedShell {
+            mut shell,
+            reader,
+            writer,
+        } = self.command.spawn_shell()?;
+
+        if matches!(self.shell_type, StdShellType::PowerShell) {
+            shell.is_echoing = true;
+        }
+
+        Ok(SpawnedShell {
+            shell,
+            reader,
+            writer,
+        })
+    }
+}
+
 impl Transcript {
+    #[cfg(not(windows))]
+    fn write_line(writer: &mut impl io::Write, line: &str) -> io::Result<()> {
+        writeln!(writer, "{}", line)
+    }
+
+    // Lines need to end with `\r\n` to be properly processed, at least when writing to a PTY.
+    #[cfg(windows)]
+    fn write_line(writer: &mut impl io::Write, line: &str) -> io::Result<()> {
+        writeln!(writer, "{}\r", line)
+    }
+
     /// Constructs a transcript from the sequence of given user `input`s.
     ///
     /// The inputs are executed in the shell specified in `options`. A single shell is shared
@@ -255,19 +426,17 @@ impl Transcript {
     /// - Returns an error if spawning the shell or any operations with it fail (such as reading
     ///   stdout / stderr, or writing commands to stdin).
     #[allow(clippy::missing_panics_doc)] // false positive
-    pub fn from_inputs(
-        options: &mut ShellOptions,
+    pub fn from_inputs<Cmd: SpawnShell>(
+        options: &mut ShellOptions<Cmd>,
         inputs: impl IntoIterator<Item = UserInput>,
     ) -> io::Result<Self> {
-        let (pipe_reader, pipe_writer) = os_pipe::pipe()?;
-        let mut shell = options
-            .command
-            .stdin(Stdio::piped())
-            .stdout(pipe_writer.try_clone()?)
-            .stderr(pipe_writer)
-            .spawn()?;
+        let SpawnedShell {
+            mut shell,
+            reader,
+            writer,
+        } = options.command.spawn_shell()?;
 
-        let stdout = BufReader::new(pipe_reader);
+        let stdout = BufReader::new(reader);
         let (out_lines_send, out_lines_recv) = mpsc::channel();
         let io_handle = thread::spawn(move || {
             let mut lines = stdout.split(b'\n');
@@ -278,13 +447,11 @@ impl Transcript {
             }
         });
 
-        let stdin = shell.stdin.take().unwrap();
-        // ^-- `unwrap()` is safe due to configuration of the shell process.
-        let mut stdin = LineWriter::new(stdin);
+        let mut stdin = LineWriter::new(writer);
 
         // Push initialization commands.
         for cmd in &options.init_commands {
-            writeln!(stdin, "{}", cmd)?;
+            Self::write_line(&mut stdin, cmd)?;
         }
         // Drain all output.
         while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
@@ -295,19 +462,23 @@ impl Transcript {
         for input in inputs {
             // Check if the shell is still alive. It seems that older Rust versions allow
             // to write to `stdin` even after the shell exits.
-            if let Some(exit_status) = shell.try_wait()? {
-                let message = format!(
-                    "Shell process has exited with exit status {} before \
-                     command `{}` was sent to it",
-                    exit_status, input.text
-                );
-                return Err(io::Error::new(io::ErrorKind::BrokenPipe, message));
-            }
+            shell.check_is_alive()?;
 
-            writeln!(stdin, "{}", input.text)?;
+            Self::write_line(&mut stdin, &input.text)?;
+
+            let mut skipped_lines = if shell.is_echoing() {
+                bytecount::count(input.text.as_bytes(), b'\n') + 1
+            } else {
+                0
+            };
 
             let mut output = String::new();
             while let Ok(mut line) = out_lines_recv.recv_timeout(options.io_timeout) {
+                if skipped_lines > 0 {
+                    skipped_lines -= 1;
+                    continue;
+                }
+
                 if line.last() == Some(&b'\r') {
                     // Normalize `\r\n` line ending to `\n`.
                     line.pop();
@@ -319,6 +490,15 @@ impl Transcript {
                     output.push_str(&mapped_line);
                     output.push('\n');
                 }
+            }
+
+            if skipped_lines > 0 {
+                let err = format!(
+                    "could not read all input `{}` back from an echoing terminal \
+                     (left to read: {} lines)",
+                    input.text, skipped_lines
+                );
+                return Err(io::Error::new(io::ErrorKind::BrokenPipe, err));
             }
             if output.ends_with('\n') {
                 output.truncate(output.len() - 1);
@@ -332,42 +512,12 @@ impl Transcript {
 
         drop(stdin); // signals to shell that we're done
 
-        // Drop pipe writers. This is necessary for the pipe reader to receive EOF.
-        options.command.stdout(Stdio::null()).stderr(Stdio::null());
-
         // Give a chance for the shell process to exit. This will reduce kill errors later.
         thread::sleep(options.io_timeout / 4);
 
-        if shell.try_wait()?.is_none() {
-            shell.kill().or_else(|err| {
-                if Self::is_recoverable_kill_error(&err) {
-                    // The shell has already exited. We don't consider this an error.
-                    Ok(())
-                } else {
-                    Err(err)
-                }
-            })?;
-        }
-
-        io_handle.join().ok(); // the I/O thread should not panic
+        shell.terminate()?;
+        io_handle.join().ok(); // the I/O thread should not panic, so we ignore errors here
         Ok(transcript)
-    }
-
-    #[cfg(not(windows))]
-    fn is_recoverable_kill_error(err: &io::Error) -> bool {
-        matches!(err.kind(), io::ErrorKind::InvalidInput)
-    }
-
-    #[cfg(windows)]
-    fn is_recoverable_kill_error(err: &io::Error) -> bool {
-        // As per `TerminateProcess` docs (`TerminateProcess` is used by `Child::kill()`),
-        // the call will result in ERROR_ACCESS_DENIED if the process has already terminated.
-        //
-        // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
-        matches!(
-            err.kind(),
-            io::ErrorKind::InvalidInput | io::ErrorKind::PermissionDenied
-        )
     }
 
     /// Captures stdout / stderr of the provided `command` and adds it to [`Self::interactions()`].

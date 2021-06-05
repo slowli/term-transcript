@@ -133,6 +133,7 @@
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
 mod html;
+mod pty;
 mod shell;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
@@ -144,7 +145,7 @@ pub mod test;
 mod utils;
 
 pub use self::{
-    shell::{ShellOptions, StdShell},
+    shell::{ShellOptions, SpawnShell, StdShell},
     term::{Captured, TermOutput},
 };
 
