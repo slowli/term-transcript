@@ -224,4 +224,18 @@ mod tests {
         );
         Ok(())
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn pty_transcript_with_multiline_input() -> anyhow::Result<()> {
+        let mut options = ShellOptions::new(PtyCommand::default());
+        let inputs = vec![UserInput::command("echo \\\nhello")];
+        let transcript = Transcript::from_inputs(&mut options, inputs)?;
+
+        assert_eq!(transcript.interactions().len(), 1);
+        let interaction = &transcript.interactions()[0];
+        let output = interaction.output().as_ref();
+        assert_eq!(output.trim(), "hello");
+        Ok(())
+    }
 }

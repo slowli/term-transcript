@@ -329,21 +329,24 @@ impl Transcript {
             // to write to `stdin` even after the shell exits.
             shell.check_is_alive()?;
 
-            Self::write_line(&mut stdin, &input.text)?;
-
-            let mut skipped_lines = if shell.is_echoing() {
-                bytecount::count(input.text.as_bytes(), b'\n') + 1
-            } else {
-                0
-            };
+            let input_lines = input.text.split('\n');
+            for input_line in input_lines {
+                Self::write_line(&mut stdin, input_line)?;
+                if shell.is_echoing() {
+                    if out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
+                        // OK; received an echo of the input line.
+                    } else {
+                        let err = format!(
+                            "could not read all input `{}` back from an echoing terminal",
+                            input_line
+                        );
+                        return Err(io::Error::new(io::ErrorKind::BrokenPipe, err));
+                    }
+                }
+            }
 
             let mut output = String::new();
             while let Ok(mut line) = out_lines_recv.recv_timeout(options.io_timeout) {
-                if skipped_lines > 0 {
-                    skipped_lines -= 1;
-                    continue;
-                }
-
                 if line.last() == Some(&b'\r') {
                     // Normalize `\r\n` line ending to `\n`.
                     line.pop();
@@ -357,14 +360,6 @@ impl Transcript {
                 }
             }
 
-            if skipped_lines > 0 {
-                let err = format!(
-                    "could not read all input `{}` back from an echoing terminal \
-                     (left to read: {} lines)",
-                    input.text, skipped_lines
-                );
-                return Err(io::Error::new(io::ErrorKind::BrokenPipe, err));
-            }
             if output.ends_with('\n') {
                 output.truncate(output.len() - 1);
             }
@@ -453,6 +448,20 @@ mod tests {
             output.split_whitespace().collect::<Vec<_>>(),
             ["foo", "bar"]
         );
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn transcript_with_multiline_input() -> anyhow::Result<()> {
+        let mut options = ShellOptions::default();
+        let inputs = vec![UserInput::command("echo \\\nhello")];
+        let transcript = Transcript::from_inputs(&mut options, inputs)?;
+
+        assert_eq!(transcript.interactions().len(), 1);
+        let interaction = &transcript.interactions()[0];
+        let output = interaction.output().as_ref();
+        assert_eq!(output.trim(), "hello");
         Ok(())
     }
 }

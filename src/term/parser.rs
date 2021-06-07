@@ -16,8 +16,33 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
     }
 
     pub fn parse(&mut self, term_output: &[u8]) -> Result<(), TermError> {
+        let lines: Vec<_> = term_output.split(|&ch| ch == b'\n').collect();
+        let line_count = lines.len();
+
+        for (i, line) in lines.into_iter().enumerate() {
+            let line = if line.last().copied() == Some(b'\r') {
+                &line[..line.len() - 1]
+            } else {
+                line
+            };
+
+            // We ignore everything before the last occurrence of `\r` as a stop-gap measure
+            // that works reasonably well in some cases.
+            let processed_line = line.rsplitn(2, |&ch| ch == b'\r').next().unwrap_or(&[]);
+            self.parse_line(processed_line)?;
+
+            if i + 1 < line_count {
+                writeln!(self.writer).map_err(TermError::Io)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn parse_line(&mut self, term_output: &[u8]) -> Result<(), TermError> {
         const ANSI_ESC: u8 = 0x1b;
+        const ANSI_BEL: u8 = 0x07;
         const ANSI_CSI: u8 = b'[';
+        const ANSI_OCS: u8 = b']';
 
         let mut i = 0;
         let mut written_end = 0;
@@ -40,6 +65,28 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
                         self.writer.set_color(&color_spec).map_err(TermError::Io)?;
                     }
                     i += csi.len;
+                } else if next_byte == ANSI_OCS {
+                    // Operating system command. Skip all chars until BEL (\u{7}) or ST (\u{1b}\).
+                    while i < term_output.len()
+                        && term_output[i] != ANSI_BEL
+                        && term_output[i] != ANSI_ESC
+                    {
+                        i += 1;
+                    }
+
+                    if i == term_output.len() {
+                        return Err(TermError::UnfinishedSequence);
+                    }
+                    if term_output[i] == ANSI_ESC {
+                        i += 1;
+                        if i == term_output.len() {
+                            return Err(TermError::UnfinishedSequence);
+                        }
+                        if term_output[i] != b'\\' {
+                            return Err(TermError::NonCsiSequence(term_output[i]));
+                        }
+                    }
+                    i += 1;
                 } else {
                     return Err(TermError::NonCsiSequence(next_byte));
                 }
@@ -105,107 +152,108 @@ impl<'a> Csi<'a> {
         Ok(Some(spec))
     }
 
+    #[allow(clippy::too_many_lines)] // TODO: split off
     fn process_param(
         spec: &mut ColorSpec,
         mut params: impl Iterator<Item = &'a [u8]>,
     ) -> Result<(), TermError> {
-        match params.next().unwrap() {
-            b"0" => {
-                spec.set_reset(true);
-            }
-            b"1" => {
-                spec.set_bold(true);
-            }
-            b"2" => {
-                spec.set_dimmed(true);
-            }
-            b"3" => {
-                spec.set_italic(true);
-            }
-            b"4" => {
-                spec.set_underline(true);
-            }
+        let param = params.next().unwrap();
+        if let Some(fg_color) = Self::parse_simple_fg_color(param) {
+            spec.set_fg(Some(fg_color));
+        } else if let Some(bg_color) = Self::parse_simple_bg_color(param) {
+            spec.set_bg(Some(bg_color));
+        } else {
+            match param {
+                b"" | b"0" => {
+                    spec.set_reset(true);
+                }
+                b"1" => {
+                    spec.set_bold(true);
+                }
+                b"2" => {
+                    spec.set_dimmed(true);
+                }
+                b"3" => {
+                    spec.set_italic(true);
+                }
+                b"4" => {
+                    spec.set_underline(true);
+                }
 
-            // TODO: 2x codes need more complex processing
-            b"22" => {
-                spec.set_bold(false).set_dimmed(false);
-            }
-            b"23" => {
-                spec.set_italic(false);
-            }
-            b"24" => {
-                spec.set_underline(false);
-            }
+                // TODO: 2x codes need more complex processing
+                b"22" => {
+                    spec.set_bold(false).set_dimmed(false);
+                }
+                b"23" => {
+                    spec.set_italic(false);
+                }
+                b"24" => {
+                    spec.set_underline(false);
+                }
 
-            // Foreground colors
-            b"30" => {
-                spec.set_fg(Some(Color::Black));
-            }
-            b"31" => {
-                spec.set_fg(Some(Color::Red));
-            }
-            b"32" => {
-                spec.set_fg(Some(Color::Green));
-            }
-            b"33" => {
-                spec.set_fg(Some(Color::Yellow));
-            }
-            b"34" => {
-                spec.set_fg(Some(Color::Blue));
-            }
-            b"35" => {
-                spec.set_fg(Some(Color::Magenta));
-            }
-            b"36" => {
-                spec.set_fg(Some(Color::Cyan));
-            }
-            b"37" => {
-                spec.set_fg(Some(Color::White));
-            }
-            b"38" => {
-                let color = Self::read_color(params)?;
-                spec.set_fg(Some(color));
-            }
-            b"39" => {
-                spec.set_fg(None);
-            }
+                // Compound foreground color spec
+                b"38" => {
+                    let color = Self::read_color(params)?;
+                    spec.set_fg(Some(color));
+                }
+                // Compound background color spec
+                b"48" => {
+                    let color = Self::read_color(params)?;
+                    spec.set_bg(Some(color));
+                }
 
-            // Background colors
-            b"40" => {
-                spec.set_bg(Some(Color::Black));
+                _ => { /* Do nothing */ }
             }
-            b"41" => {
-                spec.set_bg(Some(Color::Red));
-            }
-            b"42" => {
-                spec.set_bg(Some(Color::Green));
-            }
-            b"43" => {
-                spec.set_bg(Some(Color::Yellow));
-            }
-            b"44" => {
-                spec.set_bg(Some(Color::Blue));
-            }
-            b"45" => {
-                spec.set_bg(Some(Color::Magenta));
-            }
-            b"46" => {
-                spec.set_bg(Some(Color::Cyan));
-            }
-            b"47" => {
-                spec.set_bg(Some(Color::White));
-            }
-            b"48" => {
-                let color = Self::read_color(params)?;
-                spec.set_bg(Some(color));
-            }
-            b"49" => {
-                spec.set_bg(None);
-            }
-
-            _ => { /* Do nothing */ }
         }
         Ok(())
+    }
+
+    fn parse_simple_fg_color(param: &[u8]) -> Option<Color> {
+        Some(match param {
+            b"30" => Color::Black,
+            b"31" => Color::Red,
+            b"32" => Color::Green,
+            b"33" => Color::Yellow,
+            b"34" => Color::Blue,
+            b"35" => Color::Magenta,
+            b"36" => Color::Cyan,
+            b"37" | b"39" => Color::White,
+
+            b"90" => Color::Ansi256(8),
+            b"91" => Color::Ansi256(9),
+            b"92" => Color::Ansi256(10),
+            b"93" => Color::Ansi256(11),
+            b"94" => Color::Ansi256(12),
+            b"95" => Color::Ansi256(13),
+            b"96" => Color::Ansi256(14),
+            b"97" => Color::Ansi256(15),
+
+            _ => return None,
+        })
+    }
+
+    fn parse_simple_bg_color(param: &[u8]) -> Option<Color> {
+        Some(match param {
+            b"40" | b"49" => Color::Black,
+            b"41" => Color::Red,
+            b"42" => Color::Green,
+            b"43" => Color::Yellow,
+            b"44" => Color::Blue,
+            b"45" => Color::Magenta,
+            b"46" => Color::Cyan,
+            b"47" => Color::White,
+
+            b"100" => Color::Ansi256(8),
+            b"101" => Color::Ansi256(9),
+            b"102" => Color::Ansi256(10),
+            b"103" => Color::Ansi256(11),
+            b"104" => Color::Ansi256(12),
+            b"105" => Color::Ansi256(13),
+            b"106" => Color::Ansi256(14),
+            b"107" => Color::Ansi256(15),
+
+            _ => return None,
+        })
     }
 
     fn read_color(mut params: impl Iterator<Item = &'a [u8]>) -> Result<Color, TermError> {
@@ -363,6 +411,87 @@ mod tests {
         TermOutputParser::new(&mut new_writer).parse(&term_output)?;
         let new_term_output = new_writer.into_inner();
         assert_eq_term_output(&new_term_output, &term_output);
+        Ok(())
+    }
+
+    #[test]
+    fn skipping_ocs_sequence_with_bell_terminator() -> anyhow::Result<()> {
+        let term_output = "\u{1b}]0;C:\\WINDOWS\\system32\\cmd.EXE\u{7}echo foo";
+
+        let mut writer = Ansi::new(vec![]);
+        TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+        let rendered_output = writer.into_inner();
+
+        assert_eq!(String::from_utf8(rendered_output)?, "echo foo");
+        Ok(())
+    }
+
+    #[test]
+    fn skipping_ocs_sequence_with_st_terminator() -> anyhow::Result<()> {
+        let term_output = "\u{1b}]0;C:\\WINDOWS\\system32\\cmd.EXE\u{1b}\\echo foo";
+
+        let mut writer = Ansi::new(vec![]);
+        TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+        let rendered_output = writer.into_inner();
+
+        assert_eq!(String::from_utf8(rendered_output)?, "echo foo");
+        Ok(())
+    }
+
+    #[test]
+    fn skipping_non_color_csi_sequence() -> anyhow::Result<()> {
+        let term_output = "\u{1b}[49Xecho foo";
+
+        let mut writer = Ansi::new(vec![]);
+        TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+        let rendered_output = writer.into_inner();
+
+        assert_eq!(String::from_utf8(rendered_output)?, "echo foo");
+        Ok(())
+    }
+
+    #[test]
+    fn implicit_reset_sequence() -> anyhow::Result<()> {
+        let term_output = "\u{1b}[34mblue\u{1b}[m";
+
+        let mut writer = Ansi::new(vec![]);
+        TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+        let rendered_output = writer.into_inner();
+
+        assert_eq!(
+            String::from_utf8(rendered_output)?,
+            "\u{1b}[34mblue\u{1b}[0m"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn intense_color() -> anyhow::Result<()> {
+        let term_output = "\u{1b}[94mblue\u{1b}[m";
+
+        let mut writer = Ansi::new(vec![]);
+        TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+        let rendered_output = writer.into_inner();
+
+        assert_eq!(
+            String::from_utf8(rendered_output)?,
+            "\u{1b}[38;5;12mblue\u{1b}[0m"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn carriage_return_at_middle_of_line() -> anyhow::Result<()> {
+        let term_output = "\u{1b}[32mgreen\u{1b}[m\r\u{1b}[34mblue\u{1b}[m";
+
+        let mut writer = Ansi::new(vec![]);
+        TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+        let rendered_output = writer.into_inner();
+
+        assert_eq!(
+            String::from_utf8(rendered_output)?,
+            "\u{1b}[34mblue\u{1b}[0m"
+        );
         Ok(())
     }
 }

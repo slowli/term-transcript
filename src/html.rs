@@ -34,6 +34,10 @@ impl<'a> HtmlWriter<'a> {
         if spec.underline() {
             current_spec.set_underline(true);
         }
+        if spec.intense() {
+            current_spec.set_intense(true);
+        }
+
         if let Some(color) = spec.fg() {
             current_spec.set_fg(Some(*color));
         }
@@ -405,6 +409,19 @@ mod tests {
             r#"Hello, <span class="bold underline fg2 bg7">world</span>!"#
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn html_writer_intense_color() -> anyhow::Result<()> {
+        let mut buffer = String::new();
+        let mut writer = HtmlWriter::new(&mut buffer, None);
+
+        writer.set_color(ColorSpec::new().set_intense(true).set_fg(Some(Color::Blue)))?;
+        write!(writer, "blue")?;
+        writer.reset()?;
+
+        assert_eq!(buffer, r#"<span class="fg12">blue</span>"#);
         Ok(())
     }
 
