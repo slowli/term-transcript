@@ -161,9 +161,9 @@ pub use self::{
 pub enum TermError {
     /// Unfinished escape sequence.
     UnfinishedSequence,
-    /// Non-CSI escape sequence. The enclosed byte is the first byte of the sequence (excluding
-    /// `0x1b`).
-    NonCsiSequence(u8),
+    /// Unrecognized escape sequence (not a CSI or OSC one). The enclosed byte
+    /// is the first byte of the sequence (excluding `0x1b`).
+    UnrecognizedSequence(u8),
     /// Invalid final byte for an SGR escape sequence.
     InvalidSgrFinalByte(u8),
     /// Unfinished color spec.
@@ -180,10 +180,10 @@ impl fmt::Display for TermError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnfinishedSequence => formatter.write_str("Unfinished ANSI escape sequence"),
-            Self::NonCsiSequence(byte) => {
+            Self::UnrecognizedSequence(byte) => {
                 write!(
                     formatter,
-                    "Non-CSI escape sequence (first byte is {})",
+                    "Unrecognized escape sequence (first byte is {})",
                     byte
                 )
             }

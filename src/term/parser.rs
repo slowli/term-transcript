@@ -90,12 +90,12 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
                             return Err(TermError::UnfinishedSequence);
                         }
                         if term_output[i] != b'\\' {
-                            return Err(TermError::NonCsiSequence(term_output[i]));
+                            return Err(TermError::UnrecognizedSequence(term_output[i]));
                         }
                     }
                     i += 1;
                 } else {
-                    return Err(TermError::NonCsiSequence(next_byte));
+                    return Err(TermError::UnrecognizedSequence(next_byte));
                 }
                 written_end = i; // skip the escape sequence
             } else {
