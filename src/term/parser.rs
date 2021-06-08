@@ -1,3 +1,6 @@
+//! Parser for terminal output that converts it to a sequence of instructions to
+//! a writer implementing `WriteColor`.
+
 use termcolor::{Color, ColorSpec, WriteColor};
 
 use std::str;
@@ -8,11 +11,15 @@ use crate::TermError;
 #[derive(Debug)]
 pub struct TermOutputParser<'a, W> {
     writer: &'a mut W,
+    color_spec: ColorSpec,
 }
 
 impl<'a, W: WriteColor> TermOutputParser<'a, W> {
     pub fn new(writer: &'a mut W) -> Self {
-        Self { writer }
+        Self {
+            writer,
+            color_spec: ColorSpec::new(),
+        }
     }
 
     pub fn parse(&mut self, term_output: &[u8]) -> Result<(), TermError> {
@@ -44,14 +51,14 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
         const ANSI_CSI: u8 = b'[';
         const ANSI_OCS: u8 = b']';
 
+        let mut dirty_color_spec = false;
+
         let mut i = 0;
         let mut written_end = 0;
         while i < term_output.len() {
             if term_output[i] == ANSI_ESC {
-                // Push preceding "ordinary" bytes into the writer.
-                self.writer
-                    .write_all(&term_output[written_end..i])
-                    .map_err(TermError::Io)?;
+                // Push the preceding "ordinary" bytes into the writer.
+                self.write_ordinary_text(&term_output[written_end..i], &mut dirty_color_spec)?;
 
                 i += 1;
                 let next_byte = term_output
@@ -61,9 +68,9 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
                 if next_byte == ANSI_CSI {
                     i += 1;
                     let csi = Csi::parse(&term_output[i..])?;
-                    if let Some(color_spec) = csi.color_spec()? {
-                        self.writer.set_color(&color_spec).map_err(TermError::Io)?;
-                    }
+                    let prev_color_spec = self.color_spec.clone();
+                    csi.update_color_spec(&mut self.color_spec)?;
+                    dirty_color_spec = dirty_color_spec || prev_color_spec != self.color_spec;
                     i += csi.len;
                 } else if next_byte == ANSI_OCS {
                     // Operating system command. Skip all chars until BEL (\u{7}) or ST (\u{1b}\).
@@ -97,9 +104,33 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
             }
         }
 
+        // We write the terminal color spec even if the text is empty.
+        if dirty_color_spec {
+            self.writer
+                .set_color(&self.color_spec)
+                .map_err(TermError::Io)?;
+        }
         self.writer
             .write_all(&term_output[written_end..i])
             .map_err(TermError::Io)
+    }
+
+    fn write_ordinary_text(
+        &mut self,
+        text: &[u8],
+        dirty_color_spec: &mut bool,
+    ) -> Result<(), TermError> {
+        if text.is_empty() {
+            Ok(())
+        } else {
+            if *dirty_color_spec {
+                *dirty_color_spec = false;
+                self.writer
+                    .set_color(&self.color_spec)
+                    .map_err(TermError::Io)?;
+            }
+            self.writer.write_all(text).map_err(TermError::Io)
+        }
     }
 }
 
@@ -135,24 +166,21 @@ impl<'a> Csi<'a> {
         }
     }
 
-    fn color_spec(self) -> Result<Option<ColorSpec>, TermError> {
+    fn update_color_spec(self, spec: &mut ColorSpec) -> Result<(), TermError> {
         if self.final_byte != b'm' {
-            return Ok(None);
+            return Ok(());
         }
-        let mut spec = ColorSpec::new();
-        spec.set_reset(false);
 
         let mut params = self.parameters.split(|&byte| byte == b';').peekable();
         if params.peek().is_none() {
-            spec.set_reset(true);
+            *spec = ColorSpec::new(); // reset
         }
         while params.peek().is_some() {
-            Self::process_param(&mut spec, &mut params)?;
+            Self::process_param(spec, &mut params)?;
         }
-        Ok(Some(spec))
+        Ok(())
     }
 
-    #[allow(clippy::too_many_lines)] // TODO: split off
     fn process_param(
         spec: &mut ColorSpec,
         mut params: impl Iterator<Item = &'a [u8]>,
@@ -165,7 +193,7 @@ impl<'a> Csi<'a> {
         } else {
             match param {
                 b"" | b"0" => {
-                    spec.set_reset(true);
+                    *spec = ColorSpec::new();
                 }
                 b"1" => {
                     spec.set_bold(true);
@@ -180,7 +208,6 @@ impl<'a> Csi<'a> {
                     spec.set_underline(true);
                 }
 
-                // TODO: 2x codes need more complex processing
                 b"22" => {
                     spec.set_bold(false).set_dimmed(false);
                 }
@@ -196,10 +223,16 @@ impl<'a> Csi<'a> {
                     let color = Self::read_color(params)?;
                     spec.set_fg(Some(color));
                 }
+                b"39" => {
+                    spec.set_fg(None);
+                }
                 // Compound background color spec
                 b"48" => {
                     let color = Self::read_color(params)?;
                     spec.set_bg(Some(color));
+                }
+                b"49" => {
+                    spec.set_bg(None);
                 }
 
                 _ => { /* Do nothing */ }
@@ -217,7 +250,7 @@ impl<'a> Csi<'a> {
             b"34" => Color::Blue,
             b"35" => Color::Magenta,
             b"36" => Color::Cyan,
-            b"37" | b"39" => Color::White,
+            b"37" => Color::White,
 
             b"90" => Color::Ansi256(8),
             b"91" => Color::Ansi256(9),
@@ -234,7 +267,7 @@ impl<'a> Csi<'a> {
 
     fn parse_simple_bg_color(param: &[u8]) -> Option<Color> {
         Some(match param {
-            b"40" | b"49" => Color::Black,
+            b"40" => Color::Black,
             b"41" => Color::Red,
             b"42" => Color::Green,
             b"43" => Color::Yellow,
@@ -337,14 +370,12 @@ mod tests {
                 .set_fg(Some(Color::Black)),
         )?;
         write!(writer, "ll")?;
-        writer.reset()?;
         writer.set_color(
             ColorSpec::new()
                 .set_intense(true)
                 .set_fg(Some(Color::Magenta)),
         )?;
         write!(writer, "o")?;
-        writer.reset()?;
         writer.set_color(
             ColorSpec::new()
                 .set_italic(true)
@@ -352,7 +383,6 @@ mod tests {
                 .set_bg(Some(Color::Yellow)),
         )?;
         write!(writer, "world")?;
-        writer.reset()?;
         writer.set_color(
             ColorSpec::new()
                 .set_underline(true)
@@ -460,7 +490,7 @@ mod tests {
 
         assert_eq!(
             String::from_utf8(rendered_output)?,
-            "\u{1b}[34mblue\u{1b}[0m"
+            "\u{1b}[0m\u{1b}[34mblue\u{1b}[0m"
         );
         Ok(())
     }
@@ -475,7 +505,7 @@ mod tests {
 
         assert_eq!(
             String::from_utf8(rendered_output)?,
-            "\u{1b}[38;5;12mblue\u{1b}[0m"
+            "\u{1b}[0m\u{1b}[38;5;12mblue\u{1b}[0m"
         );
         Ok(())
     }
@@ -490,7 +520,7 @@ mod tests {
 
         assert_eq!(
             String::from_utf8(rendered_output)?,
-            "\u{1b}[34mblue\u{1b}[0m"
+            "\u{1b}[0m\u{1b}[34mblue\u{1b}[0m"
         );
         Ok(())
     }
