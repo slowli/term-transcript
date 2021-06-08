@@ -11,6 +11,7 @@ description = "Snapshotting and snapshot testing for CLI / REPL applications"
 repository = "https://github.com/slowli/term-transcript"
 
 [package.metadata.docs.rs]
+all-features = true
 # Set `docsrs` to enable unstable `doc(cfg(...))` attributes.
 rustdoc-args = ["--cfg", "docsrs"]
 

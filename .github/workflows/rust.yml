@@ -41,12 +41,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --all-targets
+          args: --workspace --all-features --all-targets
       - name: Run doc tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --doc
+          args: --workspace --all-features --doc
 
   build:
     strategy:
@@ -82,7 +82,7 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all --all-targets -- -D warnings
+          args: --workspace --all-features --all-targets -- -D warnings
       - name: Build (no features)
         if: matrix.os == 'ubuntu-latest'
         uses: actions-rs/cargo@v1
@@ -100,12 +100,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --all-features --all-targets
+          args: --workspace --all-features --all-targets
       - name: Run doc tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --all-features --doc
+          args: --workspace --all-features --doc
 
       - name: Generate snapshots
         if: matrix.os == 'ubuntu-latest'
@@ -137,7 +137,7 @@ jobs:
       - name: Build docs
         run: |
           cargo clean --doc && \
-          cargo rustdoc -p term-transcript -- --cfg docsrs
+          cargo rustdoc -p term-transcript --all-features -- --cfg docsrs
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@releases/v3
