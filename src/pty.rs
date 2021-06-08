@@ -21,6 +21,23 @@ fn into_io_error(err: Box<dyn StdError + Send + Sync>) -> io::Error {
 }
 
 /// Command to spawn in a pseudo-terminal (PTY).
+///
+/// # Examples
+///
+/// Since shell spawning is performed [in a generic way](crate::traits::SpawnShell),
+/// [`PtyCommand`] can be used as a drop-in replacement for [`Command`](std::process::Command):
+///
+/// ```
+/// # use term_transcript::{PtyCommand, ShellOptions, UserInput, Transcript};
+/// # fn main() -> anyhow::Result<()> {
+/// let transcript = Transcript::from_inputs(
+///     &mut ShellOptions::new(PtyCommand::default()),
+///     vec![UserInput::command(r#"echo "Hello world!""#)],
+/// )?;
+/// // do something with `transcript`...
+/// # Ok(())
+/// # }
+/// ```
 // Unfortunately, the `portable-pty` is structured in a way that makes reusing `Command`
 // from the standard library impossible.
 #[cfg_attr(docsrs, doc(cfg(feature = "portable-pty")))]

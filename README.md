@@ -67,14 +67,13 @@ Here's a snapshot of the same example with the scrolling animation and window fr
   are supported even on Windows nowadays, this shouldn't be a significant problem.)
 - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI] sequences),
   or lead to an error.
-- Pseudo-terminal (PTY) APIs are not used in order to be more portable. This can change
-  in the future releases.
-- Since the terminal is not emulated, programs dependent on [`isatty`] checks can produce
-  different output than if launched in an actual shell. One can argue that dependence
-  on `isatty` is generally an anti-pattern.
-- As a consequence of the last point, CLI tools frequently switch off output coloring if not
-  writing to a terminal. For some tools, this can be amended by adding an arg to the command,
-  such as `--color=always`.
+- By default, the crate exposes APIs to perform capture via OS pipes.
+  Since the terminal is not emulated in this case, programs dependent on [`isatty`] checks
+  or getting term size can produce different output than if launched in an actual shell
+  (no coloring, no line wrapping etc.).
+- It is possible to capture output from a pseudo-terminal (PTY) using the `portable-pty`
+  crate feature. However, since most escape sequences are dropped, this is still not a good
+  option to capture complex outputs (e.g., ones moving cursor).
 
 ## Alternatives / similar tools
 

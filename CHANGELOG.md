@@ -5,6 +5,11 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Support interacting with shell using pseudo-terminal (PTY) via `portable-pty`
+  crate.
+
 ### Changed
 
 - Update `handlebars` dependency.

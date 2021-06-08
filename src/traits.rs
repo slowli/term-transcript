@@ -29,12 +29,30 @@ impl ConfigureCommand for Command {
 }
 
 /// Encapsulates spawning and sending inputs / receiving outputs from the shell.
+///
+/// The crate provides two principal implementations of this trait:
+///
+/// - [`Command`] and [`StdShell`](crate::StdShell) communicate with the spawned process
+///   via OS pipes. Because stdin of the child process is not connected to a terminal / TTY,
+///   this can lead to the differences in output compared to launching the process in a terminal
+///   (no coloring, different formatting, etc.). On the other hand, this is the most widely
+///   supported option.
+/// - [`PtyCommand`](crate::PtyCommand) (available with the `portable-pty` crate feature)
+///   communicates with the child process via a pseudo-terminal (PTY). This makes the output
+///   closer to what it would like in the terminal, at the cost of lesser platform coverage
+///   (Unix + newer Windows distributions).
+///
+/// External implementations are possible as well! E.g., for REPL applications written in Rust
+/// or packaged as a [WASI] module, it could be possible to write an implementation that "spawns"
+/// the application in the same process.
+///
+/// [WASI]: https://wasi.dev/
 pub trait SpawnShell {
     /// Spawned shell process.
     type ShellProcess: ShellProcess;
-    /// Reader of shell output.
+    /// Reader of the shell output.
     type Reader: io::Read + 'static + Send;
-    /// Writer to shell input.
+    /// Writer to the shell input.
     type Writer: io::Write + 'static + Send;
 
     /// Spawns a shell process.
@@ -75,6 +93,12 @@ pub struct SpawnedShell<S: SpawnShell + ?Sized> {
     pub writer: S::Writer,
 }
 
+/// Uses pipes to communicate with the spawned process. This has a potential downside that
+/// the process output will differ from the case if the process was launched in the shell.
+/// See [`PtyCommand`] for an alternative that connects the spawned process to a pseudo-terminal
+/// (PTY).
+///
+/// [`PtyCommand`]: crate::PtyCommand
 impl SpawnShell for Command {
     type ShellProcess = ChildShell;
     type Reader = os_pipe::PipeReader;
