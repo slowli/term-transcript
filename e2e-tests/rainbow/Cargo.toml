@@ -24,6 +24,7 @@ termcolor = "1.1.2"
 
 [dependencies.term-transcript]
 version = "0.1.0"
+features = ["portable-pty"]
 path = "../.."
 
 [dev-dependencies]

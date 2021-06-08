@@ -8,7 +8,7 @@ use std::{
 use term_transcript::{
     svg::{NamedPalette, Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig},
-    ShellOptions, Transcript, UserInput,
+    PtyCommand, ShellOptions, Transcript, UserInput,
 };
 
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
@@ -62,9 +62,46 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
 }
 
 #[test]
+fn main_snapshot_can_be_rendered_from_pty() -> anyhow::Result<()> {
+    let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let transcript =
+        Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+    Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
+    Ok(())
+}
+
+#[test]
+fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
+    let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let transcript = Transcript::from_inputs(
+        &mut shell_options,
+        vec![UserInput::command("rainbow --long-lines")],
+    )?;
+
+    let interaction = &transcript.interactions()[0];
+    let output = interaction.output().to_plaintext()?;
+    assert!(
+        output.contains("\nblack blue green red cyan magenta yellow"),
+        "{}",
+        output
+    );
+
+    Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
+    Ok(())
+}
+
+#[test]
 fn snapshot_testing() -> anyhow::Result<()> {
     let transcript = Transcript::from_svg(read_main_snapshot()?)?;
     let shell_options = ShellOptions::default().with_cargo_path();
+    TestConfig::new(shell_options).test_transcript(&transcript);
+    Ok(())
+}
+
+#[test]
+fn snapshot_testing_with_pty() -> anyhow::Result<()> {
+    let transcript = Transcript::from_svg(read_main_snapshot()?)?;
+    let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
     TestConfig::new(shell_options).test_transcript(&transcript);
     Ok(())
 }
