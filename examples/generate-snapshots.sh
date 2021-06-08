@@ -26,7 +26,7 @@ term-transcript exec -T 100 --palette gjm8 rainbow \
   > "$ROOT_DIR/examples/rainbow.$EXTENSION"
 
 echo "Creating animated rainbow snapshot..."
-term-transcript exec -T 100 --palette powershell --window --scroll \
+term-transcript exec -T 100 --palette powershell --window --scroll --pty \
   rainbow 'rainbow --long-lines' \
   > "$ROOT_DIR/examples/animated.$EXTENSION"
 
@@ -40,6 +40,11 @@ term-transcript exec -T 100 --shell rainbow-repl \
   'neutral #fa4 underline #c0ffee' \
   '#9f4010 (brown) italic' \
   > "$ROOT_DIR/e2e-tests/rainbow/repl.$EXTENSION"
+
+echo "Creating CLI help snapshot..."
+term-transcript exec -T 100 --palette xterm --pty --window \
+  'term-transcript --help' \
+  > "$ROOT_DIR/cli/tests/snapshots/help.$EXTENSION"
 
 echo "Creating CLI test snapshot..."
 export COLOR=always

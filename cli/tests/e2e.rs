@@ -1,8 +1,8 @@
 #![cfg(unix)]
 
-use term_transcript::{test::TestConfig, ShellOptions, Transcript};
-
 use std::{fs::File, io, path::Path, time::Duration};
+
+use term_transcript::{test::TestConfig, PtyCommand, ShellOptions, Transcript};
 
 fn read_svg_snapshot(name: &str) -> io::Result<io::BufReader<File>> {
     let mut snapshot_path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -11,6 +11,16 @@ fn read_svg_snapshot(name: &str) -> io::Result<io::BufReader<File>> {
     snapshot_path.set_extension("svg");
 
     File::open(snapshot_path).map(io::BufReader::new)
+}
+
+#[test]
+fn help_example() -> anyhow::Result<()> {
+    let transcript = Transcript::from_svg(read_svg_snapshot("help")?)?;
+    let shell_options = ShellOptions::new(PtyCommand::default())
+        .with_io_timeout(Duration::from_millis(100))
+        .with_cargo_path();
+    TestConfig::new(shell_options).test_transcript(&transcript);
+    Ok(())
 }
 
 #[test]
