@@ -28,3 +28,6 @@ path = "../.."
 
 [dev-dependencies]
 pretty_assertions = "0.7.2"
+
+[features]
+portable-pty = ["term-transcript/portable-pty"]

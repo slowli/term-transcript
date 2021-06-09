@@ -29,6 +29,14 @@ The snapshot itself [is tested][test-link], too! It also shows
 that SVG output by the program is editable; in the snapshot, this is used to
 highlight command-line args and to change color of comments in the user inputs.
 
+Another snapshot created by capturing help output from a pseudo-terminal
+(the `--pty` flag):
+
+![Output of `test-transcript --help`][help-snapshot-link]
+
+Using PTY enables coloring output by default and formatting dependent
+on the terminal size.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
@@ -43,3 +51,5 @@ shall be dual licensed as above, without any additional terms or conditions.
 [rainbow-example-link]: https://github.com/slowli/term-transcript/tree/master/e2e-tests/rainbow
 [test-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test.svg?sanitize=true
 [test-link]: https://github.com/slowli/term-transcript/blob/master/cli/tests/e2e.rs
+<!-- FIXME: change link similarly to `test-snapshot-link` -->
+[help-snapshot-link]: tests/snapshots/help.svg

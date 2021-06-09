@@ -5,6 +5,8 @@ use std::{
     process::{Command, Stdio},
 };
 
+#[cfg(feature = "portable-pty")]
+use term_transcript::PtyCommand;
 use term_transcript::{
     svg::{NamedPalette, Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig},
@@ -61,10 +63,50 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "portable-pty")]
+#[test]
+fn main_snapshot_can_be_rendered_from_pty() -> anyhow::Result<()> {
+    let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let transcript =
+        Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+    Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
+    Ok(())
+}
+
+#[cfg(feature = "portable-pty")]
+#[test]
+fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
+    let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let transcript = Transcript::from_inputs(
+        &mut shell_options,
+        vec![UserInput::command("rainbow --long-lines")],
+    )?;
+
+    let interaction = &transcript.interactions()[0];
+    let output = interaction.output().to_plaintext()?;
+    assert!(
+        output.contains("\nblack blue green red cyan magenta yellow"),
+        "{}",
+        output
+    );
+
+    Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
+    Ok(())
+}
+
 #[test]
 fn snapshot_testing() -> anyhow::Result<()> {
     let transcript = Transcript::from_svg(read_main_snapshot()?)?;
     let shell_options = ShellOptions::default().with_cargo_path();
+    TestConfig::new(shell_options).test_transcript(&transcript);
+    Ok(())
+}
+
+#[cfg(feature = "portable-pty")]
+#[test]
+fn snapshot_testing_with_pty() -> anyhow::Result<()> {
+    let transcript = Transcript::from_svg(read_main_snapshot()?)?;
+    let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
     TestConfig::new(shell_options).test_transcript(&transcript);
     Ok(())
 }

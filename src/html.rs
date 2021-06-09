@@ -3,10 +3,13 @@ use unicode_width::UnicodeWidthChar;
 
 use std::{fmt::Write as WriteStr, io, str};
 
+/// `WriteColor` implementation that renders output as HTML.
+///
+/// **NB.** The implementation relies on `ColorSpec`s supplied to `set_color` always having
+/// `reset()` flag set. This is true for `TermOutputParser`.
 pub struct HtmlWriter<'a> {
     output: &'a mut dyn WriteStr,
-    opened_spans: usize,
-    current_spec: Option<ColorSpec>,
+    is_colored: bool,
     line_splitter: Option<LineSplitter>,
 }
 
@@ -14,31 +17,8 @@ impl<'a> HtmlWriter<'a> {
     pub fn new(output: &'a mut dyn WriteStr, max_width: Option<usize>) -> Self {
         Self {
             output,
-            opened_spans: 0,
-            current_spec: None,
+            is_colored: false,
             line_splitter: max_width.map(LineSplitter::new),
-        }
-    }
-
-    fn push_spec(&mut self, spec: &ColorSpec) {
-        let current_spec = self.current_spec.get_or_insert_with(ColorSpec::new);
-        if spec.bold() {
-            current_spec.set_bold(true);
-        }
-        if spec.dimmed() {
-            current_spec.set_dimmed(true);
-        }
-        if spec.italic() {
-            current_spec.set_italic(true);
-        }
-        if spec.underline() {
-            current_spec.set_underline(true);
-        }
-        if let Some(color) = spec.fg() {
-            current_spec.set_fg(Some(*color));
-        }
-        if let Some(color) = spec.bg() {
-            current_spec.set_bg(Some(*color));
         }
     }
 
@@ -155,7 +135,6 @@ impl<'a> HtmlWriter<'a> {
             self.write_str(";\"")?;
         }
         self.write_str(">")?;
-        self.opened_spans += 1;
 
         Ok(())
     }
@@ -163,10 +142,6 @@ impl<'a> HtmlWriter<'a> {
 
 impl io::Write for HtmlWriter<'_> {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        if let Some(spec) = self.current_spec.take() {
-            self.write_color(&spec)?;
-        }
-
         let mut last_escape = 0;
         for (i, &byte) in buffer.iter().enumerate() {
             let escaped = match byte {
@@ -199,21 +174,20 @@ impl WriteColor for HtmlWriter<'_> {
     }
 
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        if spec.reset() {
-            self.reset()?;
-        }
+        debug_assert!(spec.reset());
+        self.reset()?;
         if !spec.is_none() {
-            self.push_spec(spec);
+            self.write_color(spec)?;
+            self.is_colored = true;
         }
         Ok(())
     }
 
     fn reset(&mut self) -> io::Result<()> {
-        for _ in 0..self.opened_spans {
+        if self.is_colored {
+            self.is_colored = false;
             self.write_str("</span>")?;
         }
-        self.opened_spans = 0;
-        self.current_spec = None;
         Ok(())
     }
 }
@@ -409,6 +383,19 @@ mod tests {
     }
 
     #[test]
+    fn html_writer_intense_color() -> anyhow::Result<()> {
+        let mut buffer = String::new();
+        let mut writer = HtmlWriter::new(&mut buffer, None);
+
+        writer.set_color(ColorSpec::new().set_intense(true).set_fg(Some(Color::Blue)))?;
+        write!(writer, "blue")?;
+        writer.reset()?;
+
+        assert_eq!(buffer, r#"<span class="fg12">blue</span>"#);
+        Ok(())
+    }
+
+    #[test]
     fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
         let mut buffer = String::new();
         let mut writer = HtmlWriter::new(&mut buffer, None);
@@ -427,34 +414,6 @@ mod tests {
         assert_eq!(
             buffer,
             "<span class=\"dimmed fg2 bg7\">Hello, </span><span class=\"fg3\">world</span>!"
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn html_writer_embedded_spans_without_reset() -> anyhow::Result<()> {
-        let mut buffer = String::new();
-        let mut writer = HtmlWriter::new(&mut buffer, None);
-        writer.set_color(
-            ColorSpec::new()
-                .set_dimmed(true)
-                .set_fg(Some(Color::Green))
-                .set_bg(Some(Color::White)),
-        )?;
-        write!(writer, "Hello, ")?;
-        writer.set_color(
-            ColorSpec::new()
-                .set_reset(false)
-                .set_fg(Some(Color::Yellow)),
-        )?;
-        write!(writer, "world")?;
-        writer.reset()?;
-        write!(writer, "!")?;
-
-        assert_eq!(
-            buffer,
-            "<span class=\"dimmed fg2 bg7\">Hello, <span class=\"fg3\">world</span></span>!"
         );
 
         Ok(())

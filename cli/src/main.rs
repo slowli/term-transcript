@@ -1,6 +1,7 @@
 //! CLI for the `term-transcript` crate.
 
 use anyhow::Context;
+use clap::AppSettings;
 use structopt::StructOpt;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
@@ -8,12 +9,15 @@ use std::{
     ffi::OsString,
     fs::File,
     io::{self, BufReader, Read, Write},
+    mem,
     path::{Path, PathBuf},
     process::{self, Command},
     str::FromStr,
     time::Duration,
 };
 
+#[cfg(feature = "portable-pty")]
+use term_transcript::PtyCommand;
 use term_transcript::{
     svg::{NamedPalette, ScrollOptions, Template, TemplateOptions, WrapOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
@@ -22,6 +26,7 @@ use term_transcript::{
 
 /// CLI for capturing and snapshot-testing terminal output.
 #[derive(Debug, StructOpt)]
+#[structopt(global_setting = AppSettings::ColoredHelp)]
 enum Args {
     /// Captures output from stdin and renders it to SVG, then prints to stdout.
     Capture {
@@ -55,14 +60,24 @@ enum Args {
         /// Matches coloring of the terminal output, rather than matching only text.
         #[structopt(long, short = "p")]
         precise: bool,
-        /// Controls coloring of the output. One of `always`, `ansi`, `never` or `auto`.
-        #[structopt(long, short = "c", default_value = "auto", env)]
+        /// Controls coloring of the output.
+        #[structopt(
+            long,
+            short = "c",
+            default_value = "auto",
+            possible_values = &["always", "ansi", "never", "auto"],
+            env
+        )]
         color: ColorPreference,
     },
 }
 
 #[derive(Debug, StructOpt)]
 struct ShellArgs {
+    /// Execute shell in a pseudo-terminal (PTY), rather than connecting to it via pipes.
+    #[cfg(feature = "portable-pty")]
+    #[structopt(long)]
+    pty: bool,
     /// Shell command without args (they are supplied separately). If omitted,
     /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
     #[structopt(long, short = "s")]
@@ -71,12 +86,18 @@ struct ShellArgs {
     #[structopt(name = "args", long, short = "a")]
     shell_args: Vec<OsString>,
     /// Timeout for I/O operations in milliseconds.
-    #[structopt(name = "io-timeout", long, short = "T", default_value = "1000")]
+    #[structopt(
+        name = "io-timeout",
+        long,
+        short = "T",
+        value_name = "millis",
+        default_value = "1000"
+    )]
     io_timeout: u64,
 }
 
 impl ShellArgs {
-    fn into_options(self) -> ShellOptions {
+    fn into_std_options(self) -> ShellOptions {
         let options = if let Some(shell) = self.shell {
             let mut command = Command::new(shell);
             command.args(self.shell_args);
@@ -86,12 +107,54 @@ impl ShellArgs {
         };
         options.with_io_timeout(Duration::from_millis(self.io_timeout))
     }
+
+    #[cfg(feature = "portable-pty")]
+    fn into_pty_options(self) -> ShellOptions<PtyCommand> {
+        let command = if let Some(shell) = self.shell {
+            let mut command = PtyCommand::new(shell);
+            for arg in self.shell_args {
+                command.arg(arg);
+            }
+            command
+        } else {
+            PtyCommand::default()
+        };
+        ShellOptions::new(command).with_io_timeout(Duration::from_millis(self.io_timeout))
+    }
+
+    #[cfg(feature = "portable-pty")]
+    fn create_transcript(
+        self,
+        inputs: impl IntoIterator<Item = UserInput>,
+    ) -> io::Result<Transcript> {
+        if self.pty {
+            let mut options = self.into_pty_options();
+            Transcript::from_inputs(&mut options, inputs)
+        } else {
+            let mut options = self.into_std_options();
+            Transcript::from_inputs(&mut options, inputs)
+        }
+    }
+
+    #[cfg(not(feature = "portable-pty"))]
+    fn create_transcript(
+        self,
+        inputs: impl IntoIterator<Item = UserInput>,
+    ) -> io::Result<Transcript> {
+        let mut options = self.into_std_options();
+        Transcript::from_inputs(&mut options, inputs)
+    }
 }
 
 #[derive(Debug, StructOpt)]
 struct TemplateArgs {
     /// Color palette to use.
-    #[structopt(long, short = "p", default_value = "gjm8")]
+    #[structopt(
+        long,
+        short = "p",
+        default_value = "gjm8",
+        possible_values = &["gjm8", "ubuntu", "xterm", "dracula", "powershell"]
+    )]
     palette: NamedPalette,
     /// Adds a window frame around the rendered console.
     #[structopt(long = "window", short = "w")]
@@ -104,6 +167,9 @@ struct TemplateArgs {
     /// will be hidden.
     #[structopt(long = "no-wrap")]
     no_wrap: bool,
+    /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.
+    #[structopt(long = "out", short = "o")]
+    out: Option<PathBuf>,
 }
 
 impl From<TemplateArgs> for TemplateOptions {
@@ -126,6 +192,18 @@ impl From<TemplateArgs> for TemplateOptions {
     }
 }
 
+impl TemplateArgs {
+    fn render(mut self, transcript: &Transcript) -> anyhow::Result<()> {
+        if let Some(out_path) = mem::take(&mut self.out) {
+            let out = File::create(out_path)?;
+            Template::new(self.into()).render(&transcript, out)?;
+        } else {
+            Template::new(self.into()).render(&transcript, io::stdout())?;
+        }
+        Ok(())
+    }
+}
+
 impl Args {
     fn run(self) -> anyhow::Result<()> {
         match self {
@@ -143,8 +221,7 @@ impl Args {
                 }
 
                 transcript.add_interaction(UserInput::command(command), term_output);
-
-                Template::new(template.into()).render(&transcript, io::stdout())?;
+                template.render(&transcript)?;
             }
 
             Self::Exec {
@@ -153,10 +230,8 @@ impl Args {
                 template,
             } => {
                 let inputs = inputs.into_iter().map(UserInput::command);
-                let mut options = shell.into_options();
-                let transcript = Transcript::from_inputs(&mut options, inputs)?;
-
-                Template::new(template.into()).render(&transcript, io::stdout())?;
+                let transcript = shell.create_transcript(inputs)?;
+                template.render(&transcript)?;
             }
 
             Self::Test {
@@ -171,7 +246,7 @@ impl Args {
                 } else {
                     MatchKind::TextOnly
                 };
-                let options = shell.into_options();
+                let options = shell.into_std_options();
 
                 let mut test_config = TestConfig::new(options);
                 test_config

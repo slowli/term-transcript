@@ -39,10 +39,11 @@ use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteCol
 
 use std::{
     io::{self, Write},
+    process::Command,
     str,
 };
 
-use crate::{Interaction, ShellOptions, Transcript};
+use crate::{traits::SpawnShell, Interaction, ShellOptions, Transcript};
 
 mod parser;
 pub use self::parser::{ParseError, Parsed};
@@ -71,18 +72,18 @@ impl Default for TestOutputConfig {
 ///
 /// See the [module docs](crate::test) for the examples of usage.
 #[derive(Debug)]
-pub struct TestConfig {
-    shell_options: ShellOptions,
+pub struct TestConfig<Cmd = Command> {
+    shell_options: ShellOptions<Cmd>,
     match_kind: MatchKind,
     output: TestOutputConfig,
     color_choice: ColorChoice,
 }
 
-impl TestConfig {
+impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// Creates a new config.
-    pub fn new<Ext>(shell_options: ShellOptions<Ext>) -> Self {
+    pub fn new(shell_options: ShellOptions<Cmd>) -> Self {
         Self {
-            shell_options: shell_options.drop_extensions(),
+            shell_options,
             match_kind: MatchKind::TextOnly,
             output: TestOutputConfig::Normal,
             color_choice: ColorChoice::Auto,

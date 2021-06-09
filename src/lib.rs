@@ -32,16 +32,15 @@
 //!
 //! - Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
 //!   are supported even on Windows nowadays, this shouldn't be a significant problem.)
-//! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI] sequences),
-//!   or lead to [`TermError::NonCsiSequence`].
-//! - Pseudo-terminal (PTY) APIs are not used in order to be more portable. This can change
-//!   in the future releases.
-//! - Since the terminal is not emulated, programs dependent on [`isatty`] checks can produce
-//!   different output than if launched in an actual shell. One can argue that dependence
-//!   on `isatty` is generally an anti-pattern.
-//! - As a consequence of the last point, CLI tools frequently switch off output coloring if not
-//!   writing to a terminal. For some tools, this can be amended by adding an arg to the command,
-//!   such as `--color=always`.
+//! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI]
+//!   and OSC sequences), or lead to [`TermError::NonCsiSequence`].
+//! - By default, the crate exposes APIs to perform capture via OS pipes.
+//!   Since the terminal is not emulated in this case, programs dependent on [`isatty`] checks
+//!   or getting term size can produce different output than if launched in an actual shell
+//!   (no coloring, no line wrapping etc.).
+//! - It is possible to capture output from a pseudo-terminal (PTY) using the `portable-pty`
+//!   crate feature. However, since most escape sequences are dropped, this is still not a good
+//!   option to capture complex outputs (e.g., ones moving cursor).
 //!
 //! # Alternatives / similar tools
 //!
@@ -62,6 +61,8 @@
 //!
 //! # Crate features
 //!
+//! - `portable-pty`. Allows using pseudo-terminal (PTY) to capture terminal output rather
+//!   than pipes. Uses [the eponymous crate][`portable-pty`] under the hood.
 //! - `svg`. Exposes [the eponymous module](crate::svg) that allows rendering [`Transcript`]s
 //!   into the SVG format.
 //! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
@@ -72,6 +73,7 @@
 //! `svg`, `test` and `pretty_assertions` features are on by default.
 //!
 //! [`pretty_assertions`]: https://docs.rs/pretty_assertions/
+//! [`portable-pty`]: https://docs.rs/portable-pty/
 //!
 //! # Examples
 //!
@@ -133,6 +135,8 @@
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
 mod html;
+#[cfg(feature = "portable-pty")]
+mod pty;
 mod shell;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
@@ -141,8 +145,11 @@ mod term;
 #[cfg(feature = "test")]
 #[cfg_attr(docsrs, doc(cfg(feature = "test")))]
 pub mod test;
+pub mod traits;
 mod utils;
 
+#[cfg(feature = "portable-pty")]
+pub use self::pty::{PtyCommand, PtyShell};
 pub use self::{
     shell::{ShellOptions, StdShell},
     term::{Captured, TermOutput},
@@ -154,9 +161,9 @@ pub use self::{
 pub enum TermError {
     /// Unfinished escape sequence.
     UnfinishedSequence,
-    /// Non-CSI escape sequence. The enclosed byte is the first byte of the sequence (excluding
-    /// `0x1b`).
-    NonCsiSequence(u8),
+    /// Unrecognized escape sequence (not a CSI or OSC one). The enclosed byte
+    /// is the first byte of the sequence (excluding `0x1b`).
+    UnrecognizedSequence(u8),
     /// Invalid final byte for an SGR escape sequence.
     InvalidSgrFinalByte(u8),
     /// Unfinished color spec.
@@ -173,10 +180,10 @@ impl fmt::Display for TermError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnfinishedSequence => formatter.write_str("Unfinished ANSI escape sequence"),
-            Self::NonCsiSequence(byte) => {
+            Self::UnrecognizedSequence(byte) => {
                 write!(
                     formatter,
-                    "Non-CSI escape sequence (first byte is {})",
+                    "Unrecognized escape sequence (first byte is {})",
                     byte
                 )
             }
