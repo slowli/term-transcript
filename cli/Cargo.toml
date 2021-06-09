@@ -21,5 +21,8 @@ clap = "2.33.3"
 structopt = { version = "0.3.21", features = ["color", "wrap_help"] }
 termcolor = "1.1.2"
 
-# TODO: make `portable-pty` optional
-term-transcript = { version = "0.1.0", path = "..", features = ["portable-pty"] }
+term-transcript = { version = "0.1.0", path = ".." }
+
+[features]
+# Enables capturing output via pseudo-terminal (PTY).
+portable-pty = ["term-transcript/portable-pty"]

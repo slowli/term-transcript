@@ -16,10 +16,12 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "portable-pty")]
+use term_transcript::PtyCommand;
 use term_transcript::{
     svg::{NamedPalette, ScrollOptions, Template, TemplateOptions, WrapOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
-    PtyCommand, ShellOptions, Transcript, UserInput,
+    ShellOptions, Transcript, UserInput,
 };
 
 /// CLI for capturing and snapshot-testing terminal output.
@@ -73,6 +75,7 @@ enum Args {
 #[derive(Debug, StructOpt)]
 struct ShellArgs {
     /// Execute shell in a pseudo-terminal (PTY), rather than connecting to it via pipes.
+    #[cfg(feature = "portable-pty")]
     #[structopt(long)]
     pty: bool,
     /// Shell command without args (they are supplied separately). If omitted,
@@ -105,6 +108,7 @@ impl ShellArgs {
         options.with_io_timeout(Duration::from_millis(self.io_timeout))
     }
 
+    #[cfg(feature = "portable-pty")]
     fn into_pty_options(self) -> ShellOptions<PtyCommand> {
         let command = if let Some(shell) = self.shell {
             let mut command = PtyCommand::new(shell);
@@ -118,6 +122,7 @@ impl ShellArgs {
         ShellOptions::new(command).with_io_timeout(Duration::from_millis(self.io_timeout))
     }
 
+    #[cfg(feature = "portable-pty")]
     fn create_transcript(
         self,
         inputs: impl IntoIterator<Item = UserInput>,
@@ -129,6 +134,15 @@ impl ShellArgs {
             let mut options = self.into_std_options();
             Transcript::from_inputs(&mut options, inputs)
         }
+    }
+
+    #[cfg(not(feature = "portable-pty"))]
+    fn create_transcript(
+        self,
+        inputs: impl IntoIterator<Item = UserInput>,
+    ) -> io::Result<Transcript> {
+        let mut options = self.into_std_options();
+        Transcript::from_inputs(&mut options, inputs)
     }
 }
 

@@ -5,10 +5,12 @@ use std::{
     process::{Command, Stdio},
 };
 
+#[cfg(feature = "portable-pty")]
+use term_transcript::PtyCommand;
 use term_transcript::{
     svg::{NamedPalette, Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig},
-    PtyCommand, ShellOptions, Transcript, UserInput,
+    ShellOptions, Transcript, UserInput,
 };
 
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
@@ -61,6 +63,7 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "portable-pty")]
 #[test]
 fn main_snapshot_can_be_rendered_from_pty() -> anyhow::Result<()> {
     let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
@@ -70,6 +73,7 @@ fn main_snapshot_can_be_rendered_from_pty() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "portable-pty")]
 #[test]
 fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
     let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
@@ -98,6 +102,7 @@ fn snapshot_testing() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "portable-pty")]
 #[test]
 fn snapshot_testing_with_pty() -> anyhow::Result<()> {
     let transcript = Transcript::from_svg(read_main_snapshot()?)?;

@@ -136,6 +136,7 @@ jobs:
     needs:
       - build
       - build-msrv
+      - build-msrv-pty
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
 

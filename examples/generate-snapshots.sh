@@ -12,7 +12,11 @@ ROOT_DIR=$(dirname "$0")
 ROOT_DIR=$(realpath -L "$ROOT_DIR/..")
 TARGET_DIR="$ROOT_DIR/target/debug"
 
-(cd "$ROOT_DIR"; cargo build -p term-transcript-cli -p term-transcript-rainbow)
+(
+  cd "$ROOT_DIR"
+  cargo build -p term-transcript-rainbow
+  cargo build -p term-transcript-cli --all-features
+)
 
 if [[ ! -x "$TARGET_DIR/term-transcript" ]]; then
   echo "Executable term-transcript not found in expected location $TARGET_DIR"
