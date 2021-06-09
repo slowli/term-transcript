@@ -10,7 +10,8 @@ on:
 
 env:
   # Minimum supported Rust version.
-  msrv: 1.51.0
+  msrv: 1.45.0
+  msrv-pty: 1.51.0
   # Nightly Rust necessary for building docs.
   nightly: nightly-2021-04-15
 
@@ -41,6 +42,35 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --workspace --all-targets
+      - name: Run doc tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --doc
+
+  build-msrv-pty:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-msrv-pty-cargo-build-target
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.msrv-pty }}
+          override: true
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
           args: --workspace --all-features --all-targets
       - name: Run doc tests
         uses: actions-rs/cargo@v1
@@ -49,11 +79,7 @@ jobs:
           args: --workspace --all-features --doc
 
   build:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest ]
-
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -72,25 +98,21 @@ jobs:
           components: rustfmt, clippy
 
       - name: Format
-        if: matrix.os == 'ubuntu-latest'
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
       - name: Clippy
-        if: matrix.os == 'ubuntu-latest'
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --workspace --all-features --all-targets -- -D warnings
       - name: Build (no features)
-        if: matrix.os == 'ubuntu-latest'
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: -p term-transcript --no-default-features --lib
       - name: Build (features = svg)
-        if: matrix.os == 'ubuntu-latest'
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -108,7 +130,6 @@ jobs:
           args: --workspace --all-features --doc
 
       - name: Generate snapshots
-        if: matrix.os == 'ubuntu-latest'
         run: ./examples/generate-snapshots.sh
 
   document:

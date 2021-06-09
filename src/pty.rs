@@ -121,13 +121,14 @@ impl SpawnShell for PtyCommand {
             .openpty(self.pty_size)
             .map_err(|err| into_io_error(err.into()))?;
 
+        let child = slave
+            .spawn_command(self.to_command_builder())
+            .map_err(|err| into_io_error(err.into()))?;
+
         let reader = master
             .try_clone_reader()
             .map_err(|err| into_io_error(err.into()))?;
 
-        let child = slave
-            .spawn_command(self.to_command_builder())
-            .map_err(|err| into_io_error(err.into()))?;
         Ok(SpawnedShell {
             shell: PtyShell { child },
             reader,
@@ -151,11 +152,11 @@ impl ShellProcess for PtyShell {
     fn check_is_alive(&mut self) -> io::Result<()> {
         if let Some(exit_status) = self.child.try_wait()? {
             let message = format!(
-                "Shell process has prematurely exited with {}",
+                "Shell process has prematurely exited with {} exit status",
                 if exit_status.success() {
-                    "success"
+                    "zero"
                 } else {
-                    "failure"
+                    "non-zero"
                 }
             );
             Err(io::Error::new(io::ErrorKind::BrokenPipe, message))
@@ -209,8 +210,7 @@ mod tests {
         let mut buffer = String::new();
         spawned.reader.read_to_string(&mut buffer)?;
 
-        assert!(buffer.contains("Hello"), "{}", buffer);
-
+        assert!(buffer.contains("Hello"), "Unexpected buffer: {:?}", buffer);
         Ok(())
     }
 
