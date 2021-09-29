@@ -25,7 +25,7 @@ portable-pty = { version = "0.4.0", optional = true }
 bytecount = "0.6.2"
 os_pipe = "0.9.2"
 serde = { version = "1.0", optional = true, features = ["derive"] }
-pretty_assertions = { version = "0.7.2", optional = true }
+pretty_assertions = { version = "1.0.0", optional = true }
 termcolor = "1.1.2"
 unicode-width = "0.1.8"
 
