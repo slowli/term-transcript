@@ -12,7 +12,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ### Changed
 
-- Update `handlebars` dependency.
+- Update `handlebars` and `pretty_assertions` dependencies.
 - Generalize `TermError::NonCsiSequence` variant to `UnrecognizedSequence`.
 
 ### Fixed
