@@ -5,12 +5,10 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  schedule:
-    - cron: '30 3 * * THU'
 
 env:
   # Minimum supported Rust version.
-  msrv: 1.45.0
+  msrv: 1.46.0
   msrv-pty: 1.51.0
   # Nightly Rust necessary for building docs.
   nightly: nightly-2021-04-15

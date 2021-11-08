@@ -196,9 +196,9 @@ impl TemplateArgs {
     fn render(mut self, transcript: &Transcript) -> anyhow::Result<()> {
         if let Some(out_path) = mem::take(&mut self.out) {
             let out = File::create(out_path)?;
-            Template::new(self.into()).render(&transcript, out)?;
+            Template::new(self.into()).render(transcript, out)?;
         } else {
-            Template::new(self.into()).render(&transcript, io::stdout())?;
+            Template::new(self.into()).render(transcript, io::stdout())?;
         }
         Ok(())
     }

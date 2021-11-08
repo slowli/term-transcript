@@ -153,7 +153,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             .map(|interaction| interaction.input().clone());
         let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
 
-        self.compare_transcripts(out, &transcript, &reproduced)
+        self.compare_transcripts(out, transcript, &reproduced)
     }
 
     fn compare_transcripts(
