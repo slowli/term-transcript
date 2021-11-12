@@ -75,9 +75,11 @@ enum Args {
 #[derive(Debug, StructOpt)]
 struct ShellArgs {
     /// Execute shell in a pseudo-terminal (PTY), rather than connecting to it via pipes.
+    /// Can specify PTY size by providing a string like 19x80.
     #[cfg(feature = "portable-pty")]
     #[structopt(long)]
-    pty: bool,
+    pty: Option<Option<PtySize>>,
+
     /// Shell command without args (they are supplied separately). If omitted,
     /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
     #[structopt(long, short = "s")]
@@ -109,8 +111,8 @@ impl ShellArgs {
     }
 
     #[cfg(feature = "portable-pty")]
-    fn into_pty_options(self) -> ShellOptions<PtyCommand> {
-        let command = if let Some(shell) = self.shell {
+    fn into_pty_options(self, pty_size: Option<PtySize>) -> ShellOptions<PtyCommand> {
+        let mut command = if let Some(shell) = self.shell {
             let mut command = PtyCommand::new(shell);
             for arg in self.shell_args {
                 command.arg(arg);
@@ -119,6 +121,10 @@ impl ShellArgs {
         } else {
             PtyCommand::default()
         };
+
+        if let Some(size) = pty_size {
+            command.with_size(size.rows, size.cols);
+        }
         ShellOptions::new(command).with_io_timeout(Duration::from_millis(self.io_timeout))
     }
 
@@ -127,8 +133,8 @@ impl ShellArgs {
         self,
         inputs: impl IntoIterator<Item = UserInput>,
     ) -> io::Result<Transcript> {
-        if self.pty {
-            let mut options = self.into_pty_options();
+        if let Some(pty_size) = self.pty {
+            let mut options = self.into_pty_options(pty_size);
             Transcript::from_inputs(&mut options, inputs)
         } else {
             let mut options = self.into_std_options();
@@ -143,6 +149,36 @@ impl ShellArgs {
     ) -> io::Result<Transcript> {
         let mut options = self.into_std_options();
         Transcript::from_inputs(&mut options, inputs)
+    }
+}
+
+#[cfg(feature = "portable-pty")]
+#[derive(Debug, Clone, Copy)]
+struct PtySize {
+    rows: u16,
+    cols: u16,
+}
+
+#[cfg(feature = "portable-pty")]
+impl FromStr for PtySize {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s.splitn(2, 'x').collect();
+        match parts.as_slice() {
+            [rows_str, cols_str] => {
+                let rows: u16 = rows_str
+                    .parse()
+                    .context("Cannot parse row count in PTY config")?;
+                let cols: u16 = cols_str
+                    .parse()
+                    .context("Cannot parse column count in PTY config")?;
+                Ok(Self { rows, cols })
+            }
+            _ => Err(anyhow::anyhow!(
+                "Invalid PTY config, expected a `{rows}x{cols}` string"
+            )),
+        }
     }
 }
 

@@ -30,7 +30,7 @@ term-transcript exec -T 100 --palette gjm8 rainbow \
   > "$ROOT_DIR/examples/rainbow.$EXTENSION"
 
 echo "Creating animated rainbow snapshot..."
-term-transcript exec -T 100 --palette powershell --window --scroll --pty \
+term-transcript exec -T 100 --palette powershell --pty --window --scroll \
   rainbow 'rainbow --long-lines' \
   > "$ROOT_DIR/examples/animated.$EXTENSION"
 
