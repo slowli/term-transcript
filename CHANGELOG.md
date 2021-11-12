@@ -28,6 +28,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Fix rendering intense colors into HTML. Previously, intense color marker
   was dropped in certain cases.
 - Fix waiting for echoed initialization commands.
+- Add `height` attribute to top-level SVG to fix its rendering.
 
 ## 0.1.0 - 2021-06-01
 
