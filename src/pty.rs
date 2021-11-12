@@ -1,5 +1,7 @@
 //! Spawning shell in PTY via `portable-pty` crate.
 
+// FIXME: Prompt incorrectly read from PTY in some cases (#24)
+
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtyPair, PtySize};
 
 use std::{
@@ -67,6 +69,8 @@ impl Default for PtyCommand {
 
 impl PtyCommand {
     /// Creates a new command based on the executable.
+    ///
+    /// This uses a reasonable default for the PTY size (19 character rows, 80 columns).
     pub fn new(command: impl Into<OsString>) -> Self {
         Self {
             args: vec![command.into()],
@@ -79,6 +83,13 @@ impl PtyCommand {
                 pixel_height: 0,
             },
         }
+    }
+
+    /// Sets the size of the PTY in characters.
+    pub fn with_size(&mut self, rows: u16, cols: u16) -> &mut Self {
+        self.pty_size.rows = rows;
+        self.pty_size.cols = cols;
+        self
     }
 
     /// Adds a command argument.
