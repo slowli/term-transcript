@@ -502,17 +502,6 @@ impl<'a> Template<'a> {
         transcript: &'a Transcript,
         destination: W,
     ) -> Result<(), RenderError> {
-        #[derive(Debug, Serialize)]
-        struct HandlebarsData<'r> {
-            height: usize,
-            screen_height: usize,
-            content_height: usize,
-            interactions: Vec<SerializedInteraction<'r>>,
-            #[serde(flatten)]
-            options: &'r TemplateOptions,
-            scroll_animation: Option<ScrollAnimationConfig>,
-        }
-
         let rendered_outputs = self
             .render_outputs(transcript)
             .map_err(|err| RenderError::from_error("content", err))?;
@@ -534,6 +523,7 @@ impl<'a> Template<'a> {
         }
 
         let data = HandlebarsData {
+            creator: CreatorData::default(),
             height,
             content_height,
             screen_height,
@@ -660,6 +650,36 @@ impl<'a> Template<'a> {
             scrollbar_x: self.options.width - Self::SCROLLBAR_RIGHT_OFFSET,
             scrollbar_y,
         })
+    }
+}
+
+/// Root data structure sent to the Handlebars template.
+#[derive(Debug, Serialize)]
+struct HandlebarsData<'r> {
+    creator: CreatorData,
+    height: usize,
+    screen_height: usize,
+    content_height: usize,
+    interactions: Vec<SerializedInteraction<'r>>,
+    #[serde(flatten)]
+    options: &'r TemplateOptions,
+    scroll_animation: Option<ScrollAnimationConfig>,
+}
+
+#[derive(Debug, Serialize)]
+struct CreatorData {
+    name: &'static str,
+    version: &'static str,
+    repo: &'static str,
+}
+
+impl Default for CreatorData {
+    fn default() -> Self {
+        Self {
+            name: env!("CARGO_PKG_NAME"),
+            version: env!("CARGO_PKG_VERSION"),
+            repo: env!("CARGO_PKG_REPOSITORY"),
+        }
     }
 }
 
