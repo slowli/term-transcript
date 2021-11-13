@@ -171,42 +171,55 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             matches: Vec::with_capacity(parsed.interactions().len()),
         };
         for (original, reproduced) in it {
-            let (original_text, reproduced_text) = match self.match_kind {
-                MatchKind::Precise => {
-                    let reproduced_html = reproduced
-                        .to_html()
-                        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-                    (original.output().html(), reproduced_html)
-                }
-                MatchKind::TextOnly => {
-                    let reproduced_plaintext = reproduced
-                        .to_plaintext()
-                        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-                    (original.output().plaintext(), reproduced_plaintext)
-                }
-            };
-
             write!(out, "  ")?;
             out.set_color(ColorSpec::new().set_intense(true))?;
             write!(out, "[")?;
 
-            if original_text == reproduced_text {
-                stats.matches.push(Some(self.match_kind));
+            // First, process text only.
+            let original_text = original.output().plaintext();
+            let reproduced_text = reproduced
+                .to_plaintext()
+                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+            let mut actual_match = if original_text == reproduced_text {
+                Some(MatchKind::TextOnly)
+            } else {
+                None
+            };
+
+            // If we do precise matching, check it as well.
+            let html_diff = if self.match_kind == MatchKind::Precise && actual_match.is_some() {
+                let original_html = original.output().html();
+                let reproduced_html = reproduced
+                    .to_html()
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+
+                if original_html == reproduced_html {
+                    actual_match = Some(MatchKind::Precise);
+                    None
+                } else {
+                    Some((original_html, reproduced_html))
+                }
+            } else {
+                None
+            };
+
+            stats.matches.push(actual_match);
+            if actual_match >= Some(self.match_kind) {
                 out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Green)))?;
                 write!(out, "+")?;
             } else {
-                // TODO: there can still be a text match if we check by HTML.
-                stats.matches.push(None);
                 out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Red)))?;
                 write!(out, "-")?;
             }
-
             out.set_color(ColorSpec::new().set_intense(true))?;
             write!(out, "]")?;
             out.reset()?;
             writeln!(out, " Input: {}", original.input().as_ref())?;
 
-            if original_text != reproduced_text {
+            if let Some((original_html, reproduced_html)) = html_diff {
+                // FIXME: compare by color
+                Self::write_diff(out, original_html, &reproduced_html)?;
+            } else if actual_match.is_none() {
                 Self::write_diff(out, original_text, &reproduced_text)?;
             } else if self.output == TestOutputConfig::Verbose {
                 out.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(244))))?;
@@ -348,7 +361,7 @@ mod tests {
     use super::*;
     use crate::{
         svg::{Template, TemplateOptions},
-        UserInput,
+        Captured, UserInput,
     };
 
     #[test]
@@ -438,5 +451,65 @@ mod tests {
         // ^ output for successful interactions should be included
         assert!(out.contains("[-] Input: echo \"Sup?\""), "{}", out);
         assert!(out.contains("Nah"), "{}", out);
+    }
+
+    fn diff_snapshot_with_color(
+        expected_capture: &str,
+        actual_capture: &str,
+    ) -> (TestStats, String) {
+        let expected_capture = Captured::new(expected_capture.to_owned());
+        let parsed = Transcript {
+            interactions: vec![Interaction {
+                input: UserInput::command("test"),
+                output: Parsed {
+                    plaintext: expected_capture.to_plaintext().unwrap(),
+                    ansi_text: expected_capture.as_ref().to_owned(),
+                    html: expected_capture.to_html().unwrap(),
+                },
+            }],
+        };
+
+        let mut reproduced = Transcript::new();
+        reproduced.add_interaction(UserInput::command("test"), actual_capture);
+
+        let mut out: Vec<u8> = vec![];
+        let stats = TestConfig::new(ShellOptions::default())
+            .with_match_kind(MatchKind::Precise)
+            .compare_transcripts(&mut NoColor::new(&mut out), &parsed, &reproduced)
+            .unwrap();
+        (stats, String::from_utf8(out).unwrap())
+    }
+
+    #[test]
+    fn snapshot_testing_with_color_diff() {
+        let (stats, out) = diff_snapshot_with_color(
+            "Apr 18 12:54 \u{1b}[0m\u{1b}[34m.\u{1b}[0m",
+            "Apr 18 12:54 \u{1b}[0m\u{1b}[34m.\u{1b}[0m",
+        );
+
+        assert_eq!(stats.matches(), [Some(MatchKind::Precise)]);
+        assert!(out.contains("[+] Input: test"), "{}", out);
+    }
+
+    #[test]
+    fn no_match_for_snapshot_testing_with_color_diff() {
+        let (stats, out) = diff_snapshot_with_color(
+            "Apr 18 12:54 \u{1b}[0m\u{1b}[33m.\u{1b}[0m",
+            "Apr 19 12:54 \u{1b}[0m\u{1b}[33m.\u{1b}[0m",
+        );
+
+        assert_eq!(stats.matches(), [None]);
+        assert!(out.contains("[-] Input: test"), "{}", out);
+    }
+
+    #[test]
+    fn text_match_for_snapshot_testing_with_color_diff() {
+        let (stats, out) = diff_snapshot_with_color(
+            "Apr 18 12:54 \u{1b}[0m\u{1b}[33m.\u{1b}[0m",
+            "Apr 18 12:54 \u{1b}[0m\u{1b}[34m.\u{1b}[0m",
+        );
+
+        assert_eq!(stats.matches(), [Some(MatchKind::TextOnly)]);
+        assert!(out.contains("[-] Input: test"), "{}", out);
     }
 }

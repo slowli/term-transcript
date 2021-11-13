@@ -36,6 +36,11 @@ impl Parsed {
         &self.plaintext
     }
 
+    /// Gets the parsed text with ANSI color sequences.
+    pub fn ansi_text(&self) -> &str {
+        &self.ansi_text
+    }
+
     /// Gets the parsed HTML.
     pub fn html(&self) -> &str {
         &self.html
@@ -156,7 +161,7 @@ impl TextReadingState {
                 self.html_buffer.push_str(&unescaped_str);
                 self.plaintext_buffer.push_str(&unescaped_str);
                 self.ansi_text_buffer
-                    .write(unescaped_str.as_bytes())
+                    .write_all(unescaped_str.as_bytes())
                     .expect("cannot write to ANSI buffer");
                 // ^ expect() should safe - writing to a string never fails
             }
@@ -227,7 +232,7 @@ impl TextReadingState {
     }
 
     fn parse_color_from_classes(color_spec: &mut ColorSpec, class_attr: &[u8]) {
-        let classes = class_attr.split(|ch| ch.is_ascii_whitespace());
+        let classes = class_attr.split(u8::is_ascii_whitespace);
         for class in classes {
             // Note that `class` may be empty because of multiple sequential whitespace chars.
             // This is OK for us.
