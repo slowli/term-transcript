@@ -75,11 +75,10 @@ enum Args {
 #[derive(Debug, StructOpt)]
 struct ShellArgs {
     /// Execute shell in a pseudo-terminal (PTY), rather than connecting to it via pipes.
-    /// Can specify PTY size by providing a string like 19x80.
+    /// PTY size can be specified by providing row and column count in a string like 19x80.
     #[cfg(feature = "portable-pty")]
     #[structopt(long)]
     pty: Option<Option<PtySize>>,
-
     /// Shell command without args (they are supplied separately). If omitted,
     /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
     #[structopt(long, short = "s")]
