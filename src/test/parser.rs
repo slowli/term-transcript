@@ -1,22 +1,27 @@
 use quick_xml::{
-    events::{attributes::Attributes, Event},
+    events::{attributes::Attributes, BytesStart, Event},
     Reader as XmlReader,
 };
+use termcolor::{Ansi, Color, ColorSpec, WriteColor};
 
 use std::{
     borrow::Cow,
     error::Error as StdError,
     fmt,
-    io::{self, BufRead},
+    io::{self, BufRead, Write},
     mem, str,
 };
 
-use crate::{utils::normalize_newlines, Interaction, TermOutput, Transcript, UserInput};
+use crate::{
+    utils::{normalize_newlines, RgbColor},
+    Interaction, TermOutput, Transcript, UserInput,
+};
 
 /// Parsed terminal output.
 #[derive(Debug, Clone, Default)]
 pub struct Parsed {
     pub(crate) plaintext: String,
+    pub(crate) ansi_text: String,
     pub(crate) html: String,
 }
 
@@ -101,17 +106,33 @@ enum ParserState {
     ReadingTermOutput(UserInput, TextReadingState),
 }
 
-#[derive(Debug)]
 struct TextReadingState {
     html_buffer: String,
+    ansi_text_buffer: Ansi<Vec<u8>>,
     plaintext_buffer: String,
     open_tags: usize,
+}
+
+impl fmt::Debug for TextReadingState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ansi_text_buffer = self.ansi_text_buffer.get_ref();
+        let ansi_text_buffer = str::from_utf8(ansi_text_buffer).unwrap_or("(invalid UTF-8)");
+
+        formatter
+            .debug_struct("TextReadingState")
+            .field("html_buffer", &self.html_buffer)
+            .field("ansi_text_buffer", &ansi_text_buffer)
+            .field("plaintext_buffer", &self.plaintext_buffer)
+            .field("open_tags", &self.open_tags)
+            .finish()
+    }
 }
 
 impl Default for TextReadingState {
     fn default() -> Self {
         Self {
             html_buffer: String::new(),
+            ansi_text_buffer: Ansi::new(Vec::new()),
             plaintext_buffer: String::new(),
             open_tags: 1,
         }
@@ -129,6 +150,10 @@ impl TextReadingState {
 
                 self.html_buffer.push_str(&unescaped_str);
                 self.plaintext_buffer.push_str(&unescaped_str);
+                self.ansi_text_buffer
+                    .write(unescaped_str.as_bytes())
+                    .expect("cannot write to ANSI buffer");
+                // ^ expect() should safe - writing to a string never fails
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
@@ -137,6 +162,14 @@ impl TextReadingState {
                     let tag_str = str::from_utf8(&tag).map_err(quick_xml::Error::Utf8)?;
                     self.html_buffer.push_str(tag_str);
                     self.html_buffer.push('>');
+
+                    let color_spec = Self::parse_color_from_span(&tag)?;
+                    if !color_spec.is_none() {
+                        self.ansi_text_buffer
+                            .set_color(&color_spec)
+                            .expect("cannot set color for ANSI buffer");
+                        // ^ expect() should be safe - writing to a string never fails
+                    }
                 }
             }
             Event::End(tag) => {
@@ -144,17 +177,140 @@ impl TextReadingState {
 
                 if tag.name() == b"span" {
                     self.html_buffer.push_str("</span>");
+
+                    // FIXME: check embedded color specs (should never be produced).
+                    self.ansi_text_buffer
+                        .reset()
+                        .expect("cannot reset color for ANSI buffer");
+                    // ^ expect() should be safe - writing to a string never fails
                 }
 
                 if self.open_tags == 0 {
                     let html = mem::take(&mut self.html_buffer);
                     let plaintext = mem::take(&mut self.plaintext_buffer);
-                    return Ok(Some(Parsed { plaintext, html }));
+                    let ansi_text = mem::take(self.ansi_text_buffer.get_mut());
+                    return Ok(Some(Parsed {
+                        plaintext,
+                        ansi_text: String::from_utf8(ansi_text).expect("ANSI buffer is not UTF-8"),
+                        html,
+                    }));
                 }
             }
             _ => { /* Do nothing */ }
         }
         Ok(None)
+    }
+
+    /// Parses color spec from a `span`.
+    ///
+    /// **NB.** Must correspond to the span creation logic in the `html` module.
+    fn parse_color_from_span(span_tag: &BytesStart) -> Result<ColorSpec, ParseError> {
+        let class_attr = ParserState::get_class(span_tag.attributes())?;
+        let mut color_spec = ColorSpec::new();
+        Self::parse_color_from_classes(&mut color_spec, &class_attr);
+
+        let mut style = Cow::Borrowed(&[] as &[u8]);
+        for attr in span_tag.attributes() {
+            let attr = attr?;
+            if attr.key == b"style" {
+                style = attr.value;
+            }
+        }
+        Self::parse_color_from_style(&mut color_spec, &style)?;
+
+        Ok(color_spec)
+    }
+
+    fn parse_color_from_classes(color_spec: &mut ColorSpec, class_attr: &[u8]) {
+        let classes = class_attr.split(|ch| ch.is_ascii_whitespace());
+        for class in classes {
+            // Note that `class` may be empty because of multiple sequential whitespace chars.
+            // This is OK for us.
+            match class {
+                b"bold" => {
+                    color_spec.set_bold(true);
+                }
+                b"dimmed" => {
+                    color_spec.set_dimmed(true);
+                }
+                b"italic" => {
+                    color_spec.set_italic(true);
+                }
+                b"underline" => {
+                    color_spec.set_underline(true);
+                }
+
+                // Indexed foreground color candidate.
+                fg if fg.starts_with(b"fg") => {
+                    if let Some(color) = Self::parse_indexed_color(&fg[2..]) {
+                        color_spec.set_fg(Some(color));
+                    }
+                }
+                // Indexed background color candidate.
+                bg if bg.starts_with(b"bg") => {
+                    if let Some(color) = Self::parse_indexed_color(&bg[2..]) {
+                        color_spec.set_bg(Some(color));
+                    }
+                }
+
+                _ => { /* Ignore other classes. */ }
+            }
+        }
+    }
+
+    // **NB.** This parser is pretty rudimentary (e.g., does not understand comments).
+    fn parse_color_from_style(color_spec: &mut ColorSpec, style: &[u8]) -> Result<(), ParseError> {
+        for style_property in style.split(|&ch| ch == b';') {
+            let name_and_value: Vec<_> = style_property.splitn(2, |&ch| ch == b':').collect();
+            let (property_name, property_value) = match name_and_value.as_slice() {
+                [name, value] => (name, value),
+                _ => continue,
+            };
+
+            let property_name = str::from_utf8(property_name)
+                .map_err(quick_xml::Error::Utf8)?
+                .trim();
+            let property_value = str::from_utf8(property_value)
+                .map_err(quick_xml::Error::Utf8)?
+                .trim();
+
+            match property_name {
+                "color" => {
+                    if let Ok(color) = property_value.parse::<RgbColor>() {
+                        color_spec.set_fg(Some(color.into_ansi_color()));
+                    }
+                }
+                "background" | "background-color" => {
+                    if let Ok(color) = property_value.parse::<RgbColor>() {
+                        color_spec.set_bg(Some(color.into_ansi_color()));
+                    }
+                }
+                _ => { /* Ignore other properties. */ }
+            }
+        }
+        Ok(())
+    }
+
+    fn parse_indexed_color(class: &[u8]) -> Option<Color> {
+        Some(match class {
+            b"0" => Color::Black,
+            b"1" => Color::Red,
+            b"2" => Color::Green,
+            b"3" => Color::Yellow,
+            b"4" => Color::Blue,
+            b"5" => Color::Magenta,
+            b"6" => Color::Cyan,
+            b"7" => Color::White,
+            b"8" | b"9" => Color::Ansi256(class[0] - b'0'),
+            b"10" | b"11" | b"12" | b"13" | b"14" | b"15" => Color::Ansi256(10 + class[1] - b'0'),
+            _ => return None,
+        })
+    }
+}
+
+impl RgbColor {
+    fn into_ansi_color(self) -> Color {
+        Color::Rgb(self.0, self.1, self.2)
     }
 }
 
@@ -395,8 +551,8 @@ mod tests {
             <div xmlns="http://www.w3.org/1999/xhtml" class="container">
               <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
               <div class="term-output"><pre>total 28
-drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg-blue">.</span>
-drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span>
+drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg4">.</span>
+drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
 -rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
               </div>
             </div>
@@ -419,11 +575,15 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         let plaintext = &interaction.output.plaintext;
         assert!(plaintext.starts_with("total 28\ndrwxr-xr-x"));
         assert!(plaintext.contains("4096 Apr 18 12:54 .\n"));
-        assert!(!plaintext.contains(r#"<span class="fg-blue">.</span>"#));
+        assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
 
         let html = &interaction.output.html;
         assert!(html.starts_with("total 28\ndrwxr-xr-x"));
-        assert!(html.contains(r#"Apr 18 12:54 <span class="fg-blue">.</span>"#));
+        assert!(html.contains(r#"Apr 18 12:54 <span class="fg4">.</span>"#));
+
+        let ansi_text = &interaction.output.ansi_text;
+        assert!(ansi_text.starts_with("total 28\ndrwxr-xr-x"));
+        assert!(ansi_text.contains("Apr 18 12:54 \u{1b}[0m\u{1b}[34m.\u{1b}[0m"));
     }
 
     #[test]
@@ -664,5 +824,71 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         let text = BytesText::from_escaped(b"some\ntext\r\nand more text" as &[u8]);
         state.process(Event::Text(text)).unwrap();
         assert_eq!(state.plaintext_buffer, "some\ntext\nand more text");
+    }
+
+    #[test]
+    fn parsing_color_index() {
+        assert_eq!(
+            TextReadingState::parse_indexed_color(b"0"),
+            Some(Color::Black)
+        );
+        assert_eq!(
+            TextReadingState::parse_indexed_color(b"3"),
+            Some(Color::Yellow)
+        );
+        assert_eq!(
+            TextReadingState::parse_indexed_color(b"9"),
+            Some(Color::Ansi256(9))
+        );
+        assert_eq!(
+            TextReadingState::parse_indexed_color(b"10"),
+            Some(Color::Ansi256(10))
+        );
+        assert_eq!(
+            TextReadingState::parse_indexed_color(b"15"),
+            Some(Color::Ansi256(15))
+        );
+
+        assert_eq!(TextReadingState::parse_indexed_color(b""), None);
+        assert_eq!(TextReadingState::parse_indexed_color(b"17"), None);
+        assert_eq!(TextReadingState::parse_indexed_color(b"01"), None);
+        assert_eq!(TextReadingState::parse_indexed_color(b"333"), None);
+    }
+
+    #[test]
+    fn parsing_color_from_classes() {
+        let mut color_spec = ColorSpec::new();
+        TextReadingState::parse_color_from_classes(&mut color_spec, b"bold fg3 underline bg11");
+
+        assert!(color_spec.bold(), "{:?}", color_spec);
+        assert!(color_spec.underline(), "{:?}", color_spec);
+        assert_eq!(color_spec.fg(), Some(&Color::Ansi256(3)));
+        assert_eq!(color_spec.bg(), Some(&Color::Ansi256(11)));
+    }
+
+    #[test]
+    fn parsing_color_from_style() {
+        let mut color_spec = ColorSpec::new();
+        TextReadingState::parse_color_from_style(
+            &mut color_spec,
+            b"color: #fed; background: #c0ffee",
+        )
+        .unwrap();
+
+        assert_eq!(color_spec.fg(), Some(&Color::Rgb(0xff, 0xee, 0xdd)));
+        assert_eq!(color_spec.bg(), Some(&Color::Rgb(0xc0, 0xff, 0xee)));
+    }
+
+    #[test]
+    fn parsing_color_from_style_with_terminal_semicolon() {
+        let mut color_spec = ColorSpec::new();
+        TextReadingState::parse_color_from_style(
+            &mut color_spec,
+            b"color: #fed; background: #c0ffee;",
+        )
+        .unwrap();
+
+        assert_eq!(color_spec.fg(), Some(&Color::Rgb(0xff, 0xee, 0xdd)));
+        assert_eq!(color_spec.bg(), Some(&Color::Rgb(0xc0, 0xff, 0xee)));
     }
 }
