@@ -281,6 +281,22 @@ impl Transcript {
         writeln!(writer, "{}\r", line)
     }
 
+    fn read_echo(
+        input_line: &str,
+        lines_recv: &mpsc::Receiver<Vec<u8>>,
+        io_timeout: Duration,
+    ) -> io::Result<()> {
+        if lines_recv.recv_timeout(io_timeout).is_ok() {
+            Ok(())
+        } else {
+            let err = format!(
+                "could not read all input `{}` back from an echoing terminal",
+                input_line
+            );
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, err))
+        }
+    }
+
     /// Constructs a transcript from the sequence of given user `input`s.
     ///
     /// The inputs are executed in the shell specified in `options`. A single shell is shared
@@ -315,10 +331,25 @@ impl Transcript {
         let mut stdin = LineWriter::new(writer);
 
         // Push initialization commands.
-        for cmd in &options.init_commands {
-            Self::write_line(&mut stdin, cmd)?;
+        if shell.is_echoing() {
+            for cmd in &options.init_commands {
+                Self::write_line(&mut stdin, cmd)?;
+                Self::read_echo(cmd, &out_lines_recv, options.io_timeout)?;
+
+                // Drain all other output as well.
+                while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
+                    // Intentionally empty.
+                }
+            }
+        } else {
+            // Since we don't care about getting all echoes back, we can push all lines at once and
+            // drain the output afterwards.
+            for cmd in &options.init_commands {
+                Self::write_line(&mut stdin, cmd)?;
+            }
         }
-        // Drain all output.
+
+        // Drain all output left after commands and let the shell get fully initialized.
         while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
             // Intentionally empty.
         }
@@ -333,15 +364,7 @@ impl Transcript {
             for input_line in input_lines {
                 Self::write_line(&mut stdin, input_line)?;
                 if shell.is_echoing() {
-                    if out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
-                        // OK; received an echo of the input line.
-                    } else {
-                        let err = format!(
-                            "could not read all input `{}` back from an echoing terminal",
-                            input_line
-                        );
-                        return Err(io::Error::new(io::ErrorKind::BrokenPipe, err));
-                    }
+                    Self::read_echo(input_line, &out_lines_recv, options.io_timeout)?;
                 }
             }
 

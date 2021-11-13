@@ -8,15 +8,11 @@ license = "MIT OR Apache-2.0"
 
 [[bin]]
 name = "rainbow"
-path = "main.rs"
+path = "src/main.rs"
 
 [[bin]]
 name = "rainbow-repl"
-path = "repl.rs"
-
-[[test]]
-name = "tests"
-path = "tests.rs"
+path = "src/bin/repl.rs"
 
 [dependencies]
 anyhow = "1.0.40"
@@ -27,7 +23,7 @@ version = "0.1.0"
 path = "../.."
 
 [dev-dependencies]
-pretty_assertions = "0.7.2"
+pretty_assertions = "1.0.0"
 
 [features]
 portable-pty = ["term-transcript/portable-pty"]
