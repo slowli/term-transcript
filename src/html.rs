@@ -193,7 +193,7 @@ impl WriteColor for HtmlWriter<'_> {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum IndexOrRgb {
+pub(crate) enum IndexOrRgb {
     Index(u8),
     Rgb(u8, u8, u8),
 }
@@ -222,7 +222,7 @@ impl IndexOrRgb {
         Self::Index(value)
     }
 
-    fn indexed_color(index: u8) -> Self {
+    pub fn indexed_color(index: u8) -> Self {
         match index {
             0..=15 => Self::index(index),
 

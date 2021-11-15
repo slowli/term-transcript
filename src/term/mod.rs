@@ -9,7 +9,7 @@ use crate::{
 };
 
 mod parser;
-use self::parser::TermOutputParser;
+pub(crate) use self::parser::TermOutputParser;
 
 /// Marker trait for supported types of terminal output.
 pub trait TermOutput: Clone + Send + Sync + 'static {}

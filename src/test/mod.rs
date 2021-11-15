@@ -43,10 +43,14 @@ use std::{
     str,
 };
 
-use crate::{traits::SpawnShell, Interaction, ShellOptions, Transcript};
+use crate::{traits::SpawnShell, Interaction, ShellOptions, TermError, Transcript};
 
+mod color_diff;
 mod parser;
+
+use self::color_diff::ColorSpan;
 pub use self::parser::{ParseError, Parsed};
+use crate::test::color_diff::ColorDiff;
 
 /// Configuration of output produced during testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -187,17 +191,24 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             };
 
             // If we do precise matching, check it as well.
-            let html_diff = if self.match_kind == MatchKind::Precise && actual_match.is_some() {
-                let original_html = original.output().html();
-                let reproduced_html = reproduced
-                    .to_html()
-                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+            let color_diff = if self.match_kind == MatchKind::Precise && actual_match.is_some() {
+                let original_spans =
+                    ColorSpan::parse(original.output().ansi_text()).map_err(|err| match err {
+                        TermError::Io(err) => err,
+                        other => io::Error::new(io::ErrorKind::InvalidInput, other),
+                    })?;
+                let reproduced_spans =
+                    ColorSpan::parse(reproduced.as_ref()).map_err(|err| match err {
+                        TermError::Io(err) => err,
+                        other => io::Error::new(io::ErrorKind::InvalidInput, other),
+                    })?;
 
-                if original_html == reproduced_html {
+                let diff = ColorDiff::new(&original_spans, &reproduced_spans);
+                if diff.is_empty() {
                     actual_match = Some(MatchKind::Precise);
                     None
                 } else {
-                    Some((original_html, reproduced_html))
+                    Some(diff)
                 }
             } else {
                 None
@@ -216,9 +227,13 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             out.reset()?;
             writeln!(out, " Input: {}", original.input().as_ref())?;
 
-            if let Some((original_html, reproduced_html)) = html_diff {
-                // FIXME: compare by color
-                Self::write_diff(out, original_html, &reproduced_html)?;
+            if let Some(diff) = color_diff {
+                if out.supports_color() {
+                    diff.highlight_on_text(out, original_text)?;
+                    writeln!(out)?;
+                }
+                // TODO: highlight with `^^^`s if color is not supported?
+                diff.write_as_table(out)?;
             } else if actual_match.is_none() {
                 Self::write_diff(out, original_text, &reproduced_text)?;
             } else if self.output == TestOutputConfig::Verbose {
@@ -511,5 +526,6 @@ mod tests {
 
         assert_eq!(stats.matches(), [Some(MatchKind::TextOnly)]);
         assert!(out.contains("[-] Input: test"), "{}", out);
+        assert!(out.contains("13..14 ____   yellow/(none)   ____     blue/(none)"));
     }
 }

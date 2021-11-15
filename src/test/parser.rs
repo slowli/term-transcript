@@ -23,6 +23,7 @@ use crate::{
 mod tests;
 
 /// Parsed terminal output.
+// FIXME: parse to spans instead of to ANSI text
 #[derive(Debug, Clone, Default)]
 pub struct Parsed {
     pub(crate) plaintext: String,
