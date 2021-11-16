@@ -4,7 +4,7 @@ use quick_xml::{
     events::{attributes::Attributes, BytesStart, Event},
     Reader as XmlReader,
 };
-use termcolor::{Ansi, Color, ColorSpec, WriteColor};
+use termcolor::{Color, ColorSpec, WriteColor};
 
 use std::{
     borrow::Cow,
@@ -15,6 +15,7 @@ use std::{
 };
 
 use crate::{
+    test::color_diff::{ColorSpan, ColorSpansWriter},
     utils::{normalize_newlines, RgbColor},
     Interaction, TermOutput, Transcript, UserInput,
 };
@@ -23,11 +24,10 @@ use crate::{
 mod tests;
 
 /// Parsed terminal output.
-// FIXME: parse to spans instead of to ANSI text
 #[derive(Debug, Clone, Default)]
 pub struct Parsed {
     pub(crate) plaintext: String,
-    pub(crate) ansi_text: String,
+    pub(crate) color_spans: Vec<ColorSpan>,
     pub(crate) html: String,
 }
 
@@ -37,9 +37,13 @@ impl Parsed {
         &self.plaintext
     }
 
-    /// Gets the parsed text with ANSI color sequences.
-    pub fn ansi_text(&self) -> &str {
-        &self.ansi_text
+    /// Writes the parsed text with coloring / styles applied.
+    ///
+    /// # Errors
+    ///
+    /// - Returns an I/O error should it occur when writing to `out`.
+    pub fn write_colorized(&self, out: &mut impl WriteColor) -> io::Result<()> {
+        ColorSpan::write_colorized(&self.color_spans, out, &self.plaintext)
     }
 
     /// Gets the parsed HTML.
@@ -117,33 +121,19 @@ enum ParserState {
     ReadingTermOutput(UserInput, TextReadingState),
 }
 
+#[derive(Debug)]
 struct TextReadingState {
     html_buffer: String,
-    ansi_text_buffer: Ansi<Vec<u8>>,
+    color_spans_writer: ColorSpansWriter,
     plaintext_buffer: String,
     open_tags: usize,
-}
-
-impl fmt::Debug for TextReadingState {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let ansi_text_buffer = self.ansi_text_buffer.get_ref();
-        let ansi_text_buffer = str::from_utf8(ansi_text_buffer).unwrap_or("(invalid UTF-8)");
-
-        formatter
-            .debug_struct("TextReadingState")
-            .field("html_buffer", &self.html_buffer)
-            .field("ansi_text_buffer", &ansi_text_buffer)
-            .field("plaintext_buffer", &self.plaintext_buffer)
-            .field("open_tags", &self.open_tags)
-            .finish()
-    }
 }
 
 impl Default for TextReadingState {
     fn default() -> Self {
         Self {
             html_buffer: String::new(),
-            ansi_text_buffer: Ansi::new(Vec::new()),
+            color_spans_writer: ColorSpansWriter::default(),
             plaintext_buffer: String::new(),
             open_tags: 1,
         }
@@ -161,10 +151,9 @@ impl TextReadingState {
 
                 self.html_buffer.push_str(&unescaped_str);
                 self.plaintext_buffer.push_str(&unescaped_str);
-                self.ansi_text_buffer
+                self.color_spans_writer
                     .write_all(unescaped_str.as_bytes())
                     .expect("cannot write to ANSI buffer");
-                // ^ expect() should safe - writing to a string never fails
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
@@ -176,10 +165,9 @@ impl TextReadingState {
 
                     let color_spec = Self::parse_color_from_span(&tag)?;
                     if !color_spec.is_none() {
-                        self.ansi_text_buffer
+                        self.color_spans_writer
                             .set_color(&color_spec)
                             .expect("cannot set color for ANSI buffer");
-                        // ^ expect() should be safe - writing to a string never fails
                     }
                 }
             }
@@ -190,19 +178,18 @@ impl TextReadingState {
                     self.html_buffer.push_str("</span>");
 
                     // FIXME: check embedded color specs (should never be produced).
-                    self.ansi_text_buffer
+                    self.color_spans_writer
                         .reset()
                         .expect("cannot reset color for ANSI buffer");
-                    // ^ expect() should be safe - writing to a string never fails
                 }
 
                 if self.open_tags == 0 {
                     let html = mem::take(&mut self.html_buffer);
                     let plaintext = mem::take(&mut self.plaintext_buffer);
-                    let ansi_text = mem::take(self.ansi_text_buffer.get_mut());
+                    let color_spans = mem::take(&mut self.color_spans_writer).into_inner();
                     return Ok(Some(Parsed {
                         plaintext,
-                        ansi_text: String::from_utf8(ansi_text).expect("ANSI buffer is not UTF-8"),
+                        color_spans,
                         html,
                     }));
                 }

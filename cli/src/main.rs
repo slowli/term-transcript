@@ -407,7 +407,10 @@ impl Args {
             if color == ColorChoice::Never {
                 writeln!(out, "{}", interaction.output().plaintext())?;
             } else {
-                writeln!(out, "{}", interaction.output().ansi_text())?;
+                interaction.output().write_colorized(&mut out)?;
+                if !interaction.output().plaintext().ends_with('\n') {
+                    writeln!(out)?;
+                }
             }
         }
         Ok(())

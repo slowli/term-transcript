@@ -192,18 +192,14 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
 
             // If we do precise matching, check it as well.
             let color_diff = if self.match_kind == MatchKind::Precise && actual_match.is_some() {
-                let original_spans =
-                    ColorSpan::parse(original.output().ansi_text()).map_err(|err| match err {
-                        TermError::Io(err) => err,
-                        other => io::Error::new(io::ErrorKind::InvalidInput, other),
-                    })?;
+                let original_spans = &original.output().color_spans;
                 let reproduced_spans =
                     ColorSpan::parse(reproduced.as_ref()).map_err(|err| match err {
                         TermError::Io(err) => err,
                         other => io::Error::new(io::ErrorKind::InvalidInput, other),
                     })?;
 
-                let diff = ColorDiff::new(&original_spans, &reproduced_spans);
+                let diff = ColorDiff::new(original_spans, &reproduced_spans);
                 if diff.is_empty() {
                     actual_match = Some(MatchKind::Precise);
                     None
@@ -478,7 +474,7 @@ mod tests {
                 input: UserInput::command("test"),
                 output: Parsed {
                     plaintext: expected_capture.to_plaintext().unwrap(),
-                    ansi_text: expected_capture.as_ref().to_owned(),
+                    color_spans: ColorSpan::parse(expected_capture.as_ref()).unwrap(),
                     html: expected_capture.to_html().unwrap(),
                 },
             }],

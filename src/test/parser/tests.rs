@@ -41,9 +41,8 @@ fn reading_file() {
     assert!(html.starts_with("total 28\ndrwxr-xr-x"));
     assert!(html.contains(r#"Apr 18 12:54 <span class="fg4">.</span>"#));
 
-    let ansi_text = &interaction.output.ansi_text;
-    assert!(ansi_text.starts_with("total 28\ndrwxr-xr-x"));
-    assert!(ansi_text.contains("Apr 18 12:54 \u{1b}[0m\u{1b}[34m.\u{1b}[0m"));
+    let color_spans = &interaction.output.color_spans;
+    panic!("{:?}", color_spans);
 }
 
 #[test]

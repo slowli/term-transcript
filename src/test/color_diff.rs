@@ -19,11 +19,29 @@ impl ColorSpan {
         TermOutputParser::new(&mut spans).parse(ansi_text.as_bytes())?;
         Ok(spans.shrink().spans)
     }
+
+    pub fn write_colorized(
+        spans: &[Self],
+        out: &mut impl WriteColor,
+        plaintext: &str,
+    ) -> io::Result<()> {
+        debug_assert_eq!(
+            spans.iter().map(|span| span.len).sum::<usize>(),
+            plaintext.len()
+        );
+        let mut pos = 0;
+        for span in spans {
+            out.set_color(&span.color_spec)?;
+            write!(out, "{}", &plaintext[pos..pos + span.len])?;
+            pos += span.len;
+        }
+        Ok(())
+    }
 }
 
 /// `Write` / `WriteColor` implementation recording `ColorSpan`s for the input text.
 #[derive(Debug, Default)]
-struct ColorSpansWriter {
+pub(crate) struct ColorSpansWriter {
     spans: Vec<ColorSpan>,
     color_spec: ColorSpec,
 }
@@ -78,6 +96,10 @@ impl ColorSpansWriter {
             spans: shrunk_spans,
             color_spec: self.color_spec,
         }
+    }
+
+    pub fn into_inner(self) -> Vec<ColorSpan> {
+        self.shrink().spans
     }
 }
 
