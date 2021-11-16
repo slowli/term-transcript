@@ -29,6 +29,10 @@ The snapshot itself [is tested][test-link], too! It also shows
 that SVG output by the program is editable; in the snapshot, this is used to
 highlight command-line args and to change color of comments in the user inputs.
 
+The `test` command can compare colors as well:
+
+![Testing color match][test-color-snapshot-link]
+
 Another snapshot created by capturing help output from a pseudo-terminal
 (the `--pty` flag):
 
@@ -50,6 +54,8 @@ shall be dual licensed as above, without any additional terms or conditions.
 [snapshot-link]: https://github.com/slowli/term-transcript/blob/master/examples/rainbow.svg
 [rainbow-example-link]: https://github.com/slowli/term-transcript/tree/master/e2e-tests/rainbow
 [test-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test.svg?sanitize=true
+<!-- FIXME: change link similarly to `test-snapshot-link` -->
+[test-color-snapshot-link]: tests/snapshots/test-fail.svg
 [test-link]: https://github.com/slowli/term-transcript/blob/master/cli/tests/e2e.rs
 <!-- FIXME: change link similarly to `test-snapshot-link` -->
 [help-snapshot-link]: tests/snapshots/help.svg
