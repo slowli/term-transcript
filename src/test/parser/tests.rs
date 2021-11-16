@@ -42,7 +42,7 @@ fn reading_file() {
     assert!(html.contains(r#"Apr 18 12:54 <span class="fg4">.</span>"#));
 
     let color_spans = &interaction.output.color_spans;
-    panic!("{:?}", color_spans);
+    assert_eq!(color_spans.len(), 5); // 2 colored regions + 3 surrounding areas
 }
 
 #[test]
@@ -320,7 +320,7 @@ fn parsing_color_from_classes() {
 
     assert!(color_spec.bold(), "{:?}", color_spec);
     assert!(color_spec.underline(), "{:?}", color_spec);
-    assert_eq!(color_spec.fg(), Some(&Color::Ansi256(3)));
+    assert_eq!(color_spec.fg(), Some(&Color::Yellow));
     assert_eq!(color_spec.bg(), Some(&Color::Ansi256(11)));
 }
 
