@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.1.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 376" width="720" height="376" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 430" width="720" height="430" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #000000; --i-black: #7f7f7f;
@@ -69,8 +69,8 @@
   <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
   <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
   <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
-  <svg x="0" y="10" width="720" height="334" viewBox="0 0 720 334">
-    <foreignObject width="720" height="334">
+  <svg x="0" y="10" width="720" height="388" viewBox="0 0 720 388">
+    <foreignObject width="720" height="388">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         <div class="user-input"><pre><span class="prompt">$</span> term-transcript --help</pre></div>
         <div class="term-output"><pre><span class="fg2">term-transcript-cli</span> 0.1.0
@@ -89,6 +89,9 @@ USAGE:</span>
     <span class="fg2">exec</span>       Executes one or more commands in a shell and renders the
                captured output to SVG, then prints to stdout
     <span class="fg2">help</span>       Prints this message or the help of the given subcommand(s)
+    <span class="fg2">print</span>      Prints a previously saved SVG file to stdout with the
+               captured coloring (unless the coloring of the output is
+               switched off)
     <span class="fg2">test</span>       Tests previously captured SVG snapshots</pre></div>
       </div>
     </foreignObject>

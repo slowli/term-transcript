@@ -70,6 +70,23 @@ enum Args {
         )]
         color: ColorPreference,
     },
+
+    /// Prints a previously saved SVG file to stdout with the captured coloring (unless
+    /// the coloring of the output is switched off).
+    Print {
+        /// Path to the SVG file to output.
+        #[structopt(name = "svg")]
+        svg_path: PathBuf,
+        /// Controls coloring of the output.
+        #[structopt(
+            long,
+            short = "c",
+            default_value = "auto",
+            possible_values = &["always", "ansi", "never", "auto"],
+            env
+        )]
+        color: ColorPreference,
+    },
 }
 
 #[derive(Debug, StructOpt)]
@@ -316,6 +333,8 @@ impl Args {
                     process::exit(1);
                 }
             }
+
+            Self::Print { svg_path, color } => Self::print_file(&svg_path, color)?,
         }
         Ok(())
     }
@@ -360,6 +379,41 @@ impl Args {
         out.reset()?;
         totals.print(&mut out)?;
         writeln!(out)
+    }
+
+    fn print_file(svg_path: &Path, color: ColorPreference) -> anyhow::Result<()> {
+        let svg = BufReader::new(File::open(svg_path)?);
+        let transcript = Transcript::from_svg(svg)?;
+
+        let color = ColorChoice::from(color);
+        let out = StandardStream::stdout(color);
+        let mut out = out.lock();
+
+        for (i, interaction) in transcript.interactions().iter().enumerate() {
+            if i > 0 {
+                writeln!(out)?;
+            }
+            out.set_color(ColorSpec::new().set_bold(true))?;
+            writeln!(out, "----------  Input #{} ----------", i + 1)?;
+            out.reset()?;
+
+            let input = interaction.input();
+            writeln!(out, "{} {}", input.prompt().unwrap_or("$"), input.as_ref())?;
+
+            out.set_color(ColorSpec::new().set_bold(true))?;
+            writeln!(out, "\n---------- Output #{} ----------", i + 1)?;
+            out.reset()?;
+
+            if color == ColorChoice::Never {
+                writeln!(out, "{}", interaction.output().plaintext())?;
+            } else {
+                interaction.output().write_colorized(&mut out)?;
+                if !interaction.output().plaintext().ends_with('\n') {
+                    writeln!(out)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 

@@ -9,6 +9,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 - Support interacting with shell using pseudo-terminal (PTY) via `portable-pty`
   crate.
+- Add `ShellOptions::with_env()` to set environment variables for the shell.
+- Make style / color comparisons more detailed and human-readable.
 
 ### Changed
 

@@ -101,6 +101,12 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         self
     }
 
+    /// Sets the `value` of an environment variable with the specified `name`.
+    pub fn with_env(mut self, name: impl AsRef<str>, value: impl AsRef<OsStr>) -> Self {
+        self.command.env(name.as_ref(), value.as_ref());
+        self
+    }
+
     /// Sets the line mapper for the shell. This allows to filter and/or map terminal outputs.
     pub fn with_line_mapper<F>(mut self, mapper: F) -> Self
     where
