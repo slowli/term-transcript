@@ -1,0 +1,96 @@
+<!-- Created with term-transcript v0.1.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 0 720 426" width="720" height="426" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    :root {
+      --black: #1c1c1c; --i-black: #666666;
+      --blue: #048ac7; --i-blue: #48c6ff;
+      --cyan: #0ac1cd; --i-cyan: #63e7f0;
+      --green: #cee318; --i-green: #ccff00;
+      --magenta: #833c9f; --i-magenta: #be67e1;
+      --red: #ff005b; --i-red: #ff00a0;
+      --white: #e5e5e5; --i-white: #f3f3f3;
+      --yellow: #ffe755; --i-yellow: #ff9f00;
+      --hl-black: rgba(255, 255, 255, 0.1);
+    }
+    .container {
+      padding: 0 10px;
+      color: var(--white);
+      line-height: 18px;
+    }
+    .container pre {
+      padding: 0;
+      margin: 0;
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      line-height: inherit;
+    }
+    .user-input {
+      margin: 0 -10px 6px;
+      color: var(--white);
+      background: var(--hl-black);
+      padding: 2px 10px;
+    }
+    .term-output { margin-bottom: 6px; }
+    .bold,.prompt { font-weight: bold; }
+    .italic { font-style: italic; }
+    .underline { text-decoration: underline; }
+    .dimmed { opacity: 0.7; }
+    .hard-br {
+      position: relative;
+      margin-left: 5px;
+    }
+    .hard-br:before {
+      content: '↓';
+      font-size: 16px;
+      height: 16px;
+      position: absolute;
+      bottom: 0;
+      transform: rotate(45deg);
+      opacity: 0.8;
+    }
+    .fg0 { color: var(--black); } .bg0 { background: var(--black); }
+    .fg1 { color: var(--red); } .bg1 { background: var(--red); }
+    .fg2 { color: var(--green); } .bg2 { background: var(--green); }
+    .fg3 { color: var(--yellow); } .bg3 { background: var(--yellow); }
+    .fg4 { color: var(--blue); } .bg4 { background: var(--blue); }
+    .fg5 { color: var(--magenta); } .bg5 { background: var(--magenta); }
+    .fg6 { color: var(--cyan); } .bg6 { background: var(--cyan); }
+    .fg7 { color: var(--white); } .bg7 { background: var(--white); }
+    .fg8 { color: var(--i-black); } .bg8 { background: var(--i-black); }
+    .fg9 { color: var(--i-red); } .bg9 { background: var(--i-red); }
+    .fg10 { color: var(--i-green); } .bg10 { background: var(--i-green); }
+    .fg11 { color: var(--i-yellow); } .bg11 { background: var(--i-yellow); }
+    .fg12 { color: var(--i-blue); } .bg12 { background: var(--i-blue); }
+    .fg13 { color: var(--i-magenta); } .bg13 { background: var(--i-magenta); }
+    .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
+    .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
+  </style>
+  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
+  <svg x="0" y="10" width="720" height="406" viewBox="0 0 720 406">
+    <foreignObject width="720" height="406">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 100 --shell rainbow-repl \
+  &quot;test italic #c0ffee&quot; &gt; /tmp/bogus.svg</pre></div>
+        <div class="term-output"><pre></pre></div>
+        <div class="user-input"><pre><span class="prompt">$</span> sed -i -E -e &#x27;s/class&#x3D;&quot;italic&quot;//g&#x27; /tmp/bogus.svg
+# Mutate the captured output, removing one of the styles</pre></div>
+        <div class="term-output"><pre></pre></div>
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 --shell rainbow-repl /tmp/bogus.svg
+# By default, only text is matched during testing, so this should pass</pre></div>
+        <div class="term-output"><pre>Testing file <span class="underline">/tmp/bogus.svg</span>...
+  [<span class="fg2">+</span>] Input: test italic #c0ffee
+Totals: passed: <span class="fg2">1</span>, errors: <span class="fg1">0</span>, failures: <span class="fg3">0</span></pre></div>
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 --precise \
+  --shell rainbow-repl /tmp/bogus.svg
+# With the --precise flag, colors are compared as well</pre></div>
+        <div class="term-output"><pre>Testing file <span class="underline">/tmp/bogus.svg</span>...
+  [<span class="fg1">-</span>] Input: test italic #c0ffee
+test <span class="fg7 bg1">italic</span> <span class="fg7 bg1">#c0ffee</span>
+<span class="bold">Positions         Expected                Actual        
+========== ====================== ======================
+</span>     5..11 ____   (none)/(none)   <span class="italic">_i__   (none)/(none)  </span>
+    12..19 <span style="color: #c0ffee;">____  #c0ffee/(none)  </span> <span class="italic" style="color: #c0ffee;">_i__  #c0ffee/(none)  </span>
+Totals: passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></pre></div>
+      </div>
+    </foreignObject>
+  </svg>
+</svg>

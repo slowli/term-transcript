@@ -56,3 +56,16 @@ term-transcript exec -T 500 --palette xterm --window \
   'term-transcript exec -T 100 rainbow > /tmp/rainbow.svg' \
   'term-transcript test -T 100 -v /tmp/rainbow.svg' \
   > "$ROOT_DIR/cli/tests/snapshots/test.$EXTENSION"
+
+echo "Creating failed CLI test snapshot..."
+term-transcript exec -T 500 --palette gjm8 \
+  'term-transcript exec -T 100 --shell rainbow-repl \
+  "test italic #c0ffee" > /tmp/bogus.svg' \
+  'sed -i -E -e '\''s/class="italic"//g'\'' /tmp/bogus.svg
+# Mutate the captured output, removing one of the styles' \
+  'term-transcript test -T 100 --shell rainbow-repl /tmp/bogus.svg
+# By default, only text is matched during testing, so this should pass' \
+  'term-transcript test -T 100 --precise \
+  --shell rainbow-repl /tmp/bogus.svg
+# With the --precise flag, colors are compared as well' \
+  > "$ROOT_DIR/cli/tests/snapshots/test-fail.$EXTENSION"
