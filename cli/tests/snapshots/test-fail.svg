@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.1.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 426" width="720" height="426" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 720 338" width="720" height="338" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #1c1c1c; --i-black: #666666;
@@ -65,8 +65,8 @@
     .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
   <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
-  <svg x="0" y="10" width="720" height="406" viewBox="0 0 720 406">
-    <foreignObject width="720" height="406">
+  <svg x="0" y="10" width="720" height="318" viewBox="0 0 720 318">
+    <foreignObject width="720" height="318">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 100 --shell rainbow-repl \
   &quot;test italic #c0ffee&quot; &gt; /tmp/bogus.svg</pre></div>
@@ -74,18 +74,14 @@
         <div class="user-input"><pre><span class="prompt">$</span> sed -i -E -e &#x27;s/class&#x3D;&quot;italic&quot;//g&#x27; /tmp/bogus.svg
 # Mutate the captured output, removing one of the styles</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 --shell rainbow-repl /tmp/bogus.svg
-# By default, only text is matched during testing, so this should pass</pre></div>
-        <div class="term-output"><pre>Testing file <span class="underline">/tmp/bogus.svg</span>...
-  [<span class="fg2">+</span>] Input: test italic #c0ffee
-Totals: passed: <span class="fg2">1</span>, errors: <span class="fg1">0</span>, failures: <span class="fg3">0</span></pre></div>
         <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 --precise \
   --shell rainbow-repl /tmp/bogus.svg
-# With the --precise flag, colors are compared as well</pre></div>
+# --precise / -p flag enables comparison by style</pre></div>
         <div class="term-output"><pre>Testing file <span class="underline">/tmp/bogus.svg</span>...
-  [<span class="fg1">-</span>] Input: test italic #c0ffee
-test <span class="fg7 bg1">italic</span> <span class="fg7 bg1">#c0ffee</span>
-<span class="bold">Positions         Expected                Actual        
+  [<span class="fg1">#</span>] Input: test italic #c0ffee
+<span class="fg1">&gt; </span>test italic <span style="color: #c0ffee;">#c0ffee</span>
+<span class="fg1">&gt; </span>     <span class="fg7 bg1">^^^^^^</span> <span class="fg7 bg1">^^^^^^^</span>
+<span class="bold">Positions      Expected style          Actual style     
 ========== ====================== ======================
 </span>     5..11 ____   (none)/(none)   <span class="italic">_i__   (none)/(none)  </span>
     12..19 <span style="color: #c0ffee;">____  #c0ffee/(none)  </span> <span class="italic" style="color: #c0ffee;">_i__  #c0ffee/(none)  </span>

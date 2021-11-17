@@ -408,6 +408,7 @@ impl Args {
                 writeln!(out, "{}", interaction.output().plaintext())?;
             } else {
                 interaction.output().write_colorized(&mut out)?;
+                out.reset()?;
                 if !interaction.output().plaintext().ends_with('\n') {
                     writeln!(out)?;
                 }
