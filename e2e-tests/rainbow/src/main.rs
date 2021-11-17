@@ -72,6 +72,7 @@ fn write_base_colors_bg(writer: &mut impl WriteColor, intense: bool) -> anyhow::
 
 fn main() -> anyhow::Result<()> {
     let long_lines = env::args().any(|arg| arg == "--long-lines");
+    let short = env::args().any(|arg| arg == "--short");
     let mut writer = Ansi::new(io::stdout());
 
     writeln!(writer, "Base colors:")?;
@@ -81,6 +82,10 @@ fn main() -> anyhow::Result<()> {
     writeln!(writer, "Base colors (bg):")?;
     write_base_colors_bg(&mut writer, false)?;
     write_base_colors_bg(&mut writer, true)?;
+
+    if short {
+        return Ok(());
+    }
 
     writeln!(writer, "ANSI color palette:")?;
     for color_idx in 16_u8..232 {
