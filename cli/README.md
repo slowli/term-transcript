@@ -14,6 +14,7 @@ terminal output to SVG and testing the captured snapshots.
 - The `exec` subcommand executes one or more commands in the shell, captures
   their outputs, renders to an SVG image and outputs it to stdout.
 - The `test` subcommand allows testing snapshots from the command line.
+- The `print` subcommand parses an SVG snapshot and outputs it to the command line.
 
 Launch the CLI with the `--help` option for more details about arguments
 for each subcommand.

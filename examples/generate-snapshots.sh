@@ -67,3 +67,9 @@ term-transcript exec -T 500 --palette gjm8 \
   --shell rainbow-repl /tmp/bogus.svg
 # --precise / -p flag enables comparison by style' \
   > "$ROOT_DIR/cli/tests/snapshots/test-fail.$EXTENSION"
+
+echo "Creating CLI print snapshot..."
+term-transcript exec -T 500 --palette gjm8 \
+  'term-transcript exec -T 100 "rainbow --short" > /tmp/rainbow-short.svg' \
+  'term-transcript print /tmp/rainbow-short.svg' \
+  > "$ROOT_DIR/cli/tests/snapshots/print.$EXTENSION"

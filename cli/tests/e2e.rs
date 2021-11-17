@@ -51,3 +51,16 @@ fn test_failure_example() -> anyhow::Result<()> {
         .test_transcript(&transcript);
     Ok(())
 }
+
+#[test]
+fn print_example() -> anyhow::Result<()> {
+    let transcript = Transcript::from_svg(read_svg_snapshot("print")?)?;
+    let shell_options = ShellOptions::default()
+        .with_io_timeout(Duration::from_millis(500))
+        .with_env("COLOR", "always")
+        .with_cargo_path();
+    TestConfig::new(shell_options)
+        .with_match_kind(MatchKind::Precise)
+        .test_transcript(&transcript);
+    Ok(())
+}
