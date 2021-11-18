@@ -63,9 +63,13 @@ term-transcript exec -T 500 --palette gjm8 \
   "test italic #c0ffee" > /tmp/bogus.svg' \
   'sed -i -E -e '\''s/class="italic"//g'\'' /tmp/bogus.svg
 # Mutate the captured output, removing one of the styles' \
-  'term-transcript test -T 100 --shell rainbow-repl /tmp/bogus.svg
-# By default, only text is matched during testing, so this should pass' \
   'term-transcript test -T 100 --precise \
   --shell rainbow-repl /tmp/bogus.svg
-# With the --precise flag, colors are compared as well' \
+# --precise / -p flag enables comparison by style' \
   > "$ROOT_DIR/cli/tests/snapshots/test-fail.$EXTENSION"
+
+echo "Creating CLI print snapshot..."
+term-transcript exec -T 500 --palette gjm8 \
+  'term-transcript exec -T 100 "rainbow --short" > /tmp/rainbow-short.svg' \
+  'term-transcript print /tmp/rainbow-short.svg' \
+  > "$ROOT_DIR/cli/tests/snapshots/print.$EXTENSION"

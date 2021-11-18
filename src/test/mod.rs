@@ -216,7 +216,11 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 write!(out, "+")?;
             } else {
                 out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Red)))?;
-                write!(out, "-")?;
+                if color_diff.is_some() {
+                    write!(out, "#")?;
+                } else {
+                    write!(out, "-")?;
+                }
             }
             out.set_color(ColorSpec::new().set_intense(true))?;
             write!(out, "]")?;
@@ -224,11 +228,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             writeln!(out, " Input: {}", original.input().as_ref())?;
 
             if let Some(diff) = color_diff {
-                if out.supports_color() {
-                    diff.highlight_on_text(out, original_text)?;
-                    writeln!(out)?;
-                }
-                // TODO: highlight with `^^^`s if color is not supported?
+                let original_spans = &original.output().color_spans;
+                diff.highlight_text(out, original_text, original_spans)?;
                 diff.write_as_table(out)?;
             } else if actual_match.is_none() {
                 Self::write_diff(out, original_text, &reproduced_text)?;
@@ -521,7 +522,7 @@ mod tests {
         );
 
         assert_eq!(stats.matches(), [Some(MatchKind::TextOnly)]);
-        assert!(out.contains("[-] Input: test"), "{}", out);
+        assert!(out.contains("[#] Input: test"), "{}", out);
         assert!(out.contains("13..14 ____   yellow/(none)   ____     blue/(none)"));
     }
 }

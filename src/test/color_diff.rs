@@ -3,6 +3,7 @@ use termcolor::{Color, ColorSpec, WriteColor};
 use std::{
     cmp::{self, Ordering},
     io,
+    iter::{self, Peekable},
 };
 
 use crate::{html::IndexOrRgb, term::TermOutputParser, TermError};
@@ -36,6 +37,39 @@ impl ColorSpan {
             pos += span.len;
         }
         Ok(())
+    }
+
+    /// Writes a single plaintext `line` to `out` using styles from `styles_iter`.
+    /// `first_span_len` can be used to overwrite the effective length of the first span;
+    /// this is used when calling this method multiple times in succession.
+    fn write_line<'a, I: Iterator<Item = &'a Self>>(
+        spans_iter: &mut Peekable<I>,
+        out: &mut impl WriteColor,
+        line: &str,
+        first_span_len: usize,
+    ) -> io::Result<usize> {
+        let mut pos = 0;
+        let mut is_first_span = true;
+        while pos < line.len() {
+            let span = spans_iter.peek().expect("spans ended before lines");
+            let span_len = if is_first_span {
+                first_span_len
+            } else {
+                span.len
+            };
+            let span_end = cmp::min(pos + span_len, line.len());
+            out.set_color(&span.color_spec)?;
+            write!(out, "{}", &line[pos..span_end])?;
+            if span_end == pos + span_len {
+                // The span has ended, can proceed to the next one.
+                is_first_span = false;
+                spans_iter.next();
+            }
+            pos += span_len;
+        }
+        out.reset()?;
+        writeln!(out)?;
+        Ok(pos - line.len())
     }
 }
 
@@ -214,46 +248,84 @@ impl ColorDiff {
         self.differing_spans.is_empty()
     }
 
-    pub fn highlight_on_text(&self, out: &mut impl WriteColor, text: &str) -> io::Result<()> {
-        let mut main_highlight = ColorSpec::new();
-        main_highlight
-            .set_fg(Some(Color::White))
-            .set_bg(Some(Color::Red));
-        let mut aux_highlight = ColorSpec::new();
-        aux_highlight
-            .set_fg(Some(Color::Black))
-            .set_bg(Some(Color::Yellow));
+    /// Highlights this diff on the specified `text` which has styling set with `color_spans`.
+    pub fn highlight_text(
+        &self,
+        out: &mut impl WriteColor,
+        text: &str,
+        color_spans: &[ColorSpan],
+    ) -> io::Result<()> {
+        let mut sideline_hl = ColorSpec::new();
+        sideline_hl.set_fg(Some(Color::Red));
 
+        let highlights = HighlightedSpan::new(&self.differing_spans);
+        let mut highlights = highlights.iter().copied().peekable();
+        let mut first_span_len = color_spans.first().map_or(0, |span| span.len);
+        let mut color_spans = color_spans.iter().peekable();
         let mut pos = 0;
-        let mut sequential_span_counter = 0;
-        for differing_span in &self.differing_spans {
-            debug_assert!(pos <= differing_span.start);
-            if pos < differing_span.start {
-                write!(out, "{}", &text[pos..differing_span.start])?;
-            }
 
-            out.set_color(if pos < differing_span.start {
-                sequential_span_counter = 0;
-                &main_highlight
+        for line in text.split('\n') {
+            let line_contains_spans = highlights
+                .peek()
+                .map_or(false, |span| span.start <= pos + line.len());
+
+            if line_contains_spans {
+                out.set_color(&sideline_hl)?;
+                write!(out, "> ")?;
+                out.reset()?;
+                first_span_len =
+                    ColorSpan::write_line(&mut color_spans, out, line, first_span_len)?;
+                out.set_color(&sideline_hl)?;
+                write!(out, "> ")?;
+                out.reset()?;
+                Self::highlight_line(out, &mut highlights, pos, line.len())?;
             } else {
-                sequential_span_counter += 1;
-                if sequential_span_counter % 2 == 1 {
-                    &main_highlight
-                } else {
-                    &aux_highlight
-                }
-            })?;
-            let span_end = differing_span.start + differing_span.len;
-            write!(out, "{}", &text[differing_span.start..span_end])?;
-            pos = span_end;
-            out.reset()?;
-        }
-
-        // Write the remainder of the text if appropriate.
-        if pos < text.len() {
-            write!(out, "{}", &text[pos..])?;
+                write!(out, "= ")?;
+                first_span_len =
+                    ColorSpan::write_line(&mut color_spans, out, line, first_span_len)?;
+            }
+            pos += line.len() + 1;
         }
         Ok(())
+    }
+
+    fn highlight_line<I: Iterator<Item = HighlightedSpan>>(
+        out: &mut impl WriteColor,
+        spans_iter: &mut Peekable<I>,
+        line_offset: usize,
+        line_len: usize,
+    ) -> io::Result<()> {
+        let mut line_pos = 0;
+        while line_pos < line_len {
+            let span = if let Some(span) = spans_iter.peek() {
+                span
+            } else {
+                break;
+            };
+            let span_start = span.start.saturating_sub(line_offset);
+            if span_start >= line_len {
+                break;
+            }
+            let span_end = cmp::min(span.start + span.len - line_offset, line_len);
+
+            if span_start > line_pos {
+                let spaces: String = " ".repeat(span_start - line_pos);
+                write!(out, "{}", spaces)?;
+            }
+
+            let ch = span.kind.underline_char();
+            let underline: String = iter::repeat(ch).take(span_end - span_start).collect();
+            out.set_color(&span.kind.highlight_spec())?;
+            write!(out, "{}", underline)?;
+            out.reset()?;
+
+            line_pos = span_end;
+            if span.start + span.len <= line_offset + line_len {
+                // Span is finished on this line; can proceed to the next one.
+                spans_iter.next();
+            }
+        }
+        writeln!(out)
     }
 
     pub fn write_as_table(&self, out: &mut impl WriteColor) -> io::Result<()> {
@@ -271,8 +343,8 @@ impl ColorDiff {
             pos_width = POS_WIDTH,
             style_width = STYLE_WIDTH,
             pos = "Positions",
-            lhs = "Expected",
-            rhs = "Actual"
+            lhs = "Expected style",
+            rhs = "Actual style"
         )?;
         writeln!(
             out,
@@ -353,6 +425,72 @@ impl ColorDiff {
 
             _ => unreachable!(), // must be transformed during color normalization
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SpanHighlightKind {
+    Main,
+    Aux,
+}
+
+impl SpanHighlightKind {
+    fn underline_char(self) -> char {
+        match self {
+            Self::Main => '^',
+            Self::Aux => '!',
+        }
+    }
+
+    fn highlight_spec(self) -> ColorSpec {
+        let mut spec = ColorSpec::new();
+        match self {
+            Self::Main => {
+                spec.set_fg(Some(Color::White)).set_bg(Some(Color::Red));
+            }
+            Self::Aux => {
+                spec.set_fg(Some(Color::Black)).set_bg(Some(Color::Yellow));
+            }
+        }
+        spec
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct HighlightedSpan {
+    start: usize,
+    len: usize,
+    kind: SpanHighlightKind,
+}
+
+impl HighlightedSpan {
+    fn new(differing_spans: &[DiffColorSpan]) -> Vec<Self> {
+        let mut sequential_span_count = 1;
+        let span_highlights = differing_spans.windows(2).map(|window| match window {
+            [prev, next] => {
+                if prev.start + prev.len == next.start {
+                    sequential_span_count += 1;
+                } else {
+                    sequential_span_count = 1;
+                }
+                if sequential_span_count % 2 == 0 {
+                    SpanHighlightKind::Aux
+                } else {
+                    SpanHighlightKind::Main
+                }
+            }
+            _ => unreachable!(),
+        });
+
+        iter::once(SpanHighlightKind::Main)
+            .chain(span_highlights)
+            .zip(differing_spans)
+            .map(|(kind, span)| Self {
+                start: span.start,
+                len: span.len,
+                kind,
+            })
+            .collect()
     }
 }
 
@@ -483,7 +621,7 @@ mod tests {
     #[test]
     fn writing_color_diff_table() {
         const EXPECTED_TABLE_LINES: &[&str] = &[
-            "Positions         Expected                Actual        ",
+            "Positions      Expected style          Actual style     ",
             "========== ====================== ======================",
             "      0..2 ____   (none)/(none)   b___      red/white   ",
         ];
@@ -511,32 +649,115 @@ mod tests {
         }
     }
 
+    fn diff_span(start: usize, len: usize) -> DiffColorSpan {
+        DiffColorSpan {
+            start,
+            len,
+            lhs_color_spec: ColorSpec::default(),
+            rhs_color_spec: ColorSpec::default(),
+        }
+    }
+
     #[test]
     fn highlighting_diff_on_text() {
-        fn span(start: usize, len: usize) -> DiffColorSpan {
-            DiffColorSpan {
-                start,
-                len,
-                lhs_color_spec: ColorSpec::default(),
-                rhs_color_spec: ColorSpec::default(),
-            }
-        }
-
-        let mut red = ColorSpec::new();
-        red.set_fg(Some(Color::Red));
+        let mut green = ColorSpec::default();
+        green.set_fg(Some(Color::Green));
+        let color_spans = [
+            ColorSpan {
+                len: 2,
+                color_spec: ColorSpec::default(),
+            },
+            ColorSpan {
+                len: 11,
+                color_spec: green,
+            },
+        ];
         let color_diff = ColorDiff {
-            differing_spans: vec![span(0, 2), span(2, 2), span(4, 1), span(10, 1)],
+            differing_spans: vec![
+                diff_span(0, 2),
+                diff_span(2, 2),
+                diff_span(4, 1),
+                diff_span(10, 1),
+            ],
         };
 
         let mut buffer = String::new();
         let mut out = HtmlWriter::new(&mut buffer, None);
         color_diff
-            .highlight_on_text(&mut out, "Hello, world!")
+            .highlight_text(&mut out, "Hello, world!", &color_spans)
             .unwrap();
         assert_eq!(
             buffer,
-            "<span class=\"fg7 bg1\">He</span><span class=\"fg0 bg3\">ll</span>\
-             <span class=\"fg7 bg1\">o</span>, wor<span class=\"fg7 bg1\">l</span>d!"
+            "<span class=\"fg1\">&gt; </span>He<span class=\"fg2\">llo, world!</span>\n\
+             <span class=\"fg1\">&gt; </span><span class=\"fg7 bg1\">^^</span>\
+             <span class=\"fg0 bg3\">!!</span><span class=\"fg7 bg1\">^</span>     \
+             <span class=\"fg7 bg1\">^</span>\n"
         );
+    }
+
+    fn test_highlight(color_diff: &ColorDiff, text: &str) -> String {
+        let color_span = ColorSpan {
+            len: text.len(),
+            color_spec: ColorSpec::default(),
+        };
+        let mut buffer = vec![];
+        color_diff
+            .highlight_text(&mut NoColor::new(&mut buffer), text, &[color_span])
+            .unwrap();
+        String::from_utf8(buffer).unwrap()
+    }
+
+    #[test]
+    fn plaintext_highlight_simple() {
+        let color_diff = ColorDiff {
+            differing_spans: vec![
+                diff_span(0, 2),
+                diff_span(2, 2),
+                diff_span(4, 1),
+                diff_span(10, 1),
+            ],
+        };
+
+        let buffer = test_highlight(&color_diff, "Hello, world!");
+        let expected_buffer = // (prevents formatter from breaking alignment)
+            "> Hello, world!\n\
+             > ^^!!^     ^\n";
+        assert_eq!(buffer, expected_buffer);
+    }
+
+    #[test]
+    fn plaintext_highlight_with_multiple_lines() {
+        let color_diff = ColorDiff {
+            differing_spans: vec![diff_span(4, 12)],
+        };
+
+        let buffer = test_highlight(&color_diff, "Hello,\nworld!\nMore text");
+        let expected_buffer = // (prevents formatter from breaking alignment)
+            "> Hello,\n\
+             >     ^^\n\
+             > world!\n\
+             > ^^^^^^\n\
+             > More text\n\
+             > ^^\n";
+        assert_eq!(buffer, expected_buffer);
+    }
+
+    #[test]
+    fn plaintext_highlight_with_skipped_lines() {
+        let color_diff = ColorDiff {
+            differing_spans: vec![diff_span(4, 6), diff_span(26, 2)],
+        };
+
+        let buffer = test_highlight(&color_diff, "Hello,\nworld!\nMore\ntext\nhere");
+        let expected_buffer = // (prevents formatter from breaking alignment)
+            "> Hello,\n\
+             >     ^^\n\
+             > world!\n\
+             > ^^^\n\
+             = More\n\
+             = text\n\
+             > here\n\
+             >   ^^\n";
+        assert_eq!(buffer, expected_buffer);
     }
 }
