@@ -22,16 +22,9 @@
 //!     config
 //! }
 //!
-//! fn read_svg_snapshot() -> io::Result<impl io::BufRead> {
-//!     // reads the snapshot, e.g. from a file
-//! #   Ok(io::Cursor::new(vec![]))
-//! }
-//!
 //! // Usage in tests:
-//! fn test_basics() -> anyhow::Result<()> {
-//!     let transcript = Transcript::from_svg(read_svg_snapshot()?)?;
-//!     config().test_transcript(&transcript);
-//!     Ok(())
+//! fn test_basics() {
+//!     config().test("snapshots/help.svg", ["my-command --help"]);
 //! }
 //! ```
 
@@ -129,12 +122,20 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
 
     /// Tests a snapshot at the specified path with the provided inputs.
     ///
+    /// Similar to other kinds of snapshot testing, a new snapshot will be generated if
+    /// there is no existing snapshot or there are mismatches between inputs or outputs
+    /// in the original and reproduced transcripts. This new snapshot will have the same path
+    /// as the original snapshot, but with the `.new.svg` extension. As an example,
+    /// if the snapshot at `snapshots/help.svg` is tested, the new snapshot will be saved at
+    /// `snapshots/help.new.svg`.
+    ///
     /// # Panics
     ///
-    /// - Panics if there is no snapshot at the specified path.
+    /// - Panics if there is no snapshot at the specified path, or if the path points
+    ///   to a directory.
     /// - Panics if an error occurs during reproducing the transcript or processing
     ///   its output.
-    /// - Panics if there are mismatches between outputs in the original and reproduced
+    /// - Panics if there are mismatches between inputs or outputs in the original and reproduced
     ///   transcripts.
     #[cfg(feature = "svg")]
     #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
@@ -235,7 +236,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         new_path
     }
 
-    /// Tests the `transcript`.
+    /// Tests the `transcript`. This is a lower-level alternative to [`Self::test()`].
     ///
     /// # Panics
     ///
