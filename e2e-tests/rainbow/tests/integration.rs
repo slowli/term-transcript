@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::{self, BufReader, Read},
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -16,28 +16,27 @@ use term_transcript::{
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
 
+fn main_snapshot_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/rainbow.svg")
+}
+
 fn read_main_snapshot() -> io::Result<BufReader<File>> {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let snapshot_path = manifest_dir.join("../../examples/rainbow.svg");
-    File::open(&snapshot_path).map(BufReader::new)
+    File::open(main_snapshot_path()).map(BufReader::new)
 }
 
-fn read_animated_snapshot() -> io::Result<BufReader<File>> {
+fn animated_snapshot_path() -> PathBuf {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let snapshot_path = manifest_dir.join("../../examples/animated.svg");
-    File::open(&snapshot_path).map(BufReader::new)
+    manifest_dir.join("../../examples/animated.svg")
 }
 
-fn read_aliased_snapshot() -> io::Result<BufReader<File>> {
+fn aliased_snapshot_path() -> PathBuf {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let snapshot_path = manifest_dir.join("aliased.svg");
-    File::open(&snapshot_path).map(BufReader::new)
+    manifest_dir.join("aliased.svg")
 }
 
-fn read_repl_snapshot() -> io::Result<BufReader<File>> {
+fn repl_snapshot_path() -> PathBuf {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let snapshot_path = manifest_dir.join("repl.svg");
-    File::open(&snapshot_path).map(BufReader::new)
+    manifest_dir.join("repl.svg")
 }
 
 #[test]
@@ -95,60 +94,59 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
 }
 
 #[test]
-fn snapshot_testing() -> anyhow::Result<()> {
+fn snapshot_testing_low_level() -> anyhow::Result<()> {
     let transcript = Transcript::from_svg(read_main_snapshot()?)?;
     let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options).test_transcript(&transcript);
     Ok(())
+}
+
+#[test]
+fn snapshot_testing() {
+    let shell_options = ShellOptions::default().with_cargo_path();
+    TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
 }
 
 #[cfg(feature = "portable-pty")]
 #[test]
-fn snapshot_testing_with_pty() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_main_snapshot()?)?;
+fn snapshot_testing_with_pty() {
     let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
-    TestConfig::new(shell_options).test_transcript(&transcript);
-    Ok(())
+    TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
 }
 
 #[test]
-fn animated_snapshot_testing() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_animated_snapshot()?)?;
+fn animated_snapshot_testing() {
     let shell_options = ShellOptions::default().with_cargo_path();
-    TestConfig::new(shell_options).test_transcript(&transcript);
-    Ok(())
+    TestConfig::new(shell_options).test(
+        animated_snapshot_path(),
+        ["rainbow", "rainbow --long-lines"],
+    );
 }
 
 #[test]
-fn snapshot_testing_with_custom_settings() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_main_snapshot()?)?;
+fn snapshot_testing_with_custom_settings() {
     let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test_transcript(&transcript);
-
-    Ok(())
+        .test(main_snapshot_path(), ["rainbow"]);
 }
 
 #[cfg(unix)]
 #[test]
-fn sh_shell_example() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_aliased_snapshot()?)?;
+fn sh_shell_example() {
     let shell_options = ShellOptions::sh().with_alias("colored-output", PATH_TO_BIN);
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test_transcript(&transcript);
-
-    Ok(())
+        .test(aliased_snapshot_path(), ["colored-output"]);
 }
 
 #[cfg(unix)]
 // Although `bash` can be present on Windows, `with_alias` will most probably work
 // improperly because of Windows-style paths.
 #[test]
-fn bash_shell_example() -> anyhow::Result<()> {
+fn bash_shell_example() {
     fn bash_exists() -> bool {
         let exit_status = Command::new("bash")
             .arg("--version")
@@ -161,21 +159,18 @@ fn bash_shell_example() -> anyhow::Result<()> {
 
     if !bash_exists() {
         println!("bash not found; skipping");
-        return Ok(());
+        return;
     }
 
-    let transcript = Transcript::from_svg(read_aliased_snapshot()?)?;
     let shell_options = ShellOptions::bash().with_alias("colored-output", PATH_TO_BIN);
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test_transcript(&transcript);
-
-    Ok(())
+        .test(aliased_snapshot_path(), ["colored-output"]);
 }
 
 #[test]
-fn powershell_example() -> anyhow::Result<()> {
+fn powershell_example() {
     fn powershell_exists() -> bool {
         let exit_status = Command::new("powershell")
             .arg("-Help")
@@ -188,26 +183,27 @@ fn powershell_example() -> anyhow::Result<()> {
 
     if !powershell_exists() {
         println!("powershell not found; exiting");
-        return Ok(());
+        return;
     }
 
-    let transcript = Transcript::from_svg(read_aliased_snapshot()?)?;
     let shell_options = ShellOptions::powershell().with_alias("colored-output", PATH_TO_BIN);
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test_transcript(&transcript);
-
-    Ok(())
+        .test(aliased_snapshot_path(), ["colored-output"]);
 }
 
 #[test]
-fn repl_snapshot_testing() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_repl_snapshot()?)?;
+fn repl_snapshot_testing() {
     let shell_options = ShellOptions::from(Command::new(PATH_TO_REPL_BIN));
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .test_transcript(&transcript);
-
-    Ok(())
+        .test(
+            repl_snapshot_path(),
+            [
+                "yellow intense bold green cucumber",
+                "neutral #fa4 underline #c0ffee",
+                "#9f4010 (brown) italic",
+            ],
+        );
 }

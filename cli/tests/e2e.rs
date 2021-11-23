@@ -1,66 +1,80 @@
 #![cfg(unix)]
 
-use std::{fs::File, io, path::Path, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use term_transcript::{
     test::{MatchKind, TestConfig},
-    ShellOptions, Transcript,
+    ShellOptions,
 };
 
-fn read_svg_snapshot(name: &str) -> io::Result<io::BufReader<File>> {
+fn svg_snapshot(name: &str) -> PathBuf {
     let mut snapshot_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/snapshots")
         .join(name);
     snapshot_path.set_extension("svg");
+    snapshot_path
+}
 
-    File::open(snapshot_path).map(io::BufReader::new)
+fn test_config() -> TestConfig {
+    let shell_options = ShellOptions::default()
+        .with_env("COLOR", "always")
+        .with_io_timeout(Duration::from_millis(500))
+        .with_cargo_path();
+    let mut config = TestConfig::new(shell_options);
+    config.with_match_kind(MatchKind::Precise);
+    config
 }
 
 #[cfg(feature = "portable-pty")]
 #[test]
-fn help_example() -> anyhow::Result<()> {
+fn help_example() {
     use term_transcript::PtyCommand;
 
-    let transcript = Transcript::from_svg(read_svg_snapshot("help")?)?;
     let shell_options = ShellOptions::new(PtyCommand::default())
         .with_io_timeout(Duration::from_millis(100))
         .with_cargo_path();
-    TestConfig::new(shell_options).test_transcript(&transcript);
-    Ok(())
+    TestConfig::new(shell_options).test(svg_snapshot("help"), ["term-transcript --help"]);
 }
 
 #[test]
-fn testing_example() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_svg_snapshot("test")?)?;
-    let shell_options = ShellOptions::default()
-        .with_io_timeout(Duration::from_millis(500))
-        .with_cargo_path();
-    TestConfig::new(shell_options).test_transcript(&transcript);
-    Ok(())
+fn testing_example() {
+    test_config().test(
+        svg_snapshot("test"),
+        [
+            "term-transcript exec -T 100 'rainbow' > /tmp/rainbow.svg\n\
+         # `-T` option defines the I/O timeout for the shell",
+            "term-transcript test -T 100 -v /tmp/rainbow.svg\n\
+         # `-v` switches on verbose output",
+        ],
+    );
 }
 
 #[test]
-fn test_failure_example() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_svg_snapshot("test-fail")?)?;
-    let shell_options = ShellOptions::default()
-        .with_io_timeout(Duration::from_millis(500))
-        .with_env("COLOR", "always")
-        .with_cargo_path();
-    TestConfig::new(shell_options)
-        .with_match_kind(MatchKind::Precise)
-        .test_transcript(&transcript);
-    Ok(())
+fn test_failure_example() {
+    test_config().test(
+        svg_snapshot("test-fail"),
+        [
+            "term-transcript exec -T 100 --shell rainbow-repl \\\n  \
+         \"test italic #c0ffee\" > /tmp/bogus.svg",
+            "sed -i -E -e 's/class=\"italic\"//g' /tmp/bogus.svg\n\
+         # Mutate the captured output, removing one of the styles",
+            "term-transcript test -T 100 --precise \\\n  \
+         --shell rainbow-repl /tmp/bogus.svg\n\
+         # --precise / -p flag enables comparison by style",
+        ],
+    );
 }
 
 #[test]
-fn print_example() -> anyhow::Result<()> {
-    let transcript = Transcript::from_svg(read_svg_snapshot("print")?)?;
-    let shell_options = ShellOptions::default()
-        .with_io_timeout(Duration::from_millis(500))
-        .with_env("COLOR", "always")
-        .with_cargo_path();
-    TestConfig::new(shell_options)
-        .with_match_kind(MatchKind::Precise)
-        .test_transcript(&transcript);
-    Ok(())
+fn print_example() {
+    test_config().test(
+        svg_snapshot("print"),
+        [
+            "term-transcript exec -T 100 \"rainbow --short\" > /tmp/rainbow-short.svg",
+            "term-transcript print /tmp/rainbow-short.svg",
+        ],
+    );
 }
