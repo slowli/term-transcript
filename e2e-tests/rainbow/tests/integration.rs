@@ -3,6 +3,7 @@ use std::{
     io::{self, BufReader, Read},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    time::Duration,
 };
 
 #[cfg(feature = "portable-pty")]
@@ -186,7 +187,9 @@ fn powershell_example() {
         return;
     }
 
-    let shell_options = ShellOptions::powershell().with_alias("colored-output", PATH_TO_BIN);
+    let shell_options = ShellOptions::powershell()
+        .with_init_timeout(Duration::from_secs(2))
+        .with_alias("colored-output", PATH_TO_BIN);
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)

@@ -5,6 +5,7 @@ use std::{
     ffi::OsStr,
     fmt,
     io::{self, BufRead, BufReader, LineWriter, Read},
+    iter,
     path::{Path, PathBuf},
     process::{ChildStdin, Command, Stdio},
     sync::mpsc,
@@ -27,6 +28,7 @@ use crate::{
 pub struct ShellOptions<Cmd = Command> {
     command: Cmd,
     io_timeout: Duration,
+    init_timeout: Duration,
     init_commands: Vec<String>,
     line_mapper: Box<dyn FnMut(String) -> Option<String>>,
 }
@@ -37,6 +39,7 @@ impl<Cmd: fmt::Debug> fmt::Debug for ShellOptions<Cmd> {
             .debug_struct("ShellOptions")
             .field("command", &self.command)
             .field("io_timeout", &self.io_timeout)
+            .field("init_timeout", &self.init_timeout)
             .field("init_commands", &self.init_commands)
             .finish()
     }
@@ -74,6 +77,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         Self {
             command,
             io_timeout: Duration::from_secs(1),
+            init_timeout: Duration::ZERO,
             init_commands: vec![],
             line_mapper: Box::new(Some),
         }
@@ -89,8 +93,19 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// [`Transcript::from_inputs()`] wait
     /// for output of a command before proceeding to the next command. Longer values
     /// allow to capture output more accurately, but result in longer execution.
+    ///
+    /// By default, the I/O timeout is 1 second.
     pub fn with_io_timeout(mut self, io_timeout: Duration) -> Self {
         self.io_timeout = io_timeout;
+        self
+    }
+
+    /// Sets an additional initialization timeout (relative to the one set by
+    /// [`Self::with_io_timeout()`]) before reading the output of the first command.
+    ///
+    /// By default, the initialization timeout is zero.
+    pub fn with_init_timeout(mut self, init_timeout: Duration) -> Self {
+        self.init_timeout = init_timeout;
         self
     }
 
@@ -275,6 +290,24 @@ impl SpawnShell for StdShell {
     }
 }
 
+#[derive(Debug)]
+struct Timeouts {
+    inner: iter::Chain<iter::Once<Duration>, iter::Repeat<Duration>>,
+}
+
+impl Timeouts {
+    fn new<Cmd: SpawnShell>(options: &ShellOptions<Cmd>) -> Self {
+        Self {
+            inner: iter::once(options.init_timeout + options.io_timeout)
+                .chain(iter::repeat(options.io_timeout)),
+        }
+    }
+
+    fn next(&mut self) -> Duration {
+        self.inner.next().unwrap() // safe by construction; the iterator is indefinite
+    }
+}
+
 impl Transcript {
     #[cfg(not(windows))]
     fn write_line(writer: &mut impl io::Write, line: &str) -> io::Result<()> {
@@ -335,15 +368,16 @@ impl Transcript {
         });
 
         let mut stdin = LineWriter::new(writer);
+        let mut timeouts = Timeouts::new(options);
 
         // Push initialization commands.
         if shell.is_echoing() {
             for cmd in &options.init_commands {
                 Self::write_line(&mut stdin, cmd)?;
-                Self::read_echo(cmd, &out_lines_recv, options.io_timeout)?;
+                Self::read_echo(cmd, &out_lines_recv, timeouts.next())?;
 
                 // Drain all other output as well.
-                while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
+                while out_lines_recv.recv_timeout(timeouts.next()).is_ok() {
                     // Intentionally empty.
                 }
             }
@@ -356,9 +390,11 @@ impl Transcript {
         }
 
         // Drain all output left after commands and let the shell get fully initialized.
-        while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
+        while out_lines_recv.recv_timeout(timeouts.next()).is_ok() {
             // Intentionally empty.
         }
+        // At this point, at least one item was requested from `timeout_iter`, so the further code
+        // may safely use `options.io_timeout`.
 
         let mut transcript = Self::new();
         for input in inputs {
