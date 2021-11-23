@@ -23,9 +23,7 @@ fn test_config() -> TestConfig {
         .with_env("COLOR", "always")
         .with_io_timeout(Duration::from_millis(500))
         .with_cargo_path();
-    let mut config = TestConfig::new(shell_options);
-    config.with_match_kind(MatchKind::Precise);
-    config
+    TestConfig::new(shell_options).with_match_kind(MatchKind::Precise)
 }
 
 #[cfg(feature = "portable-pty")]

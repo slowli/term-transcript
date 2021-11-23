@@ -15,11 +15,9 @@
 //! // Test configuration that can be shared across tests.
 //! fn config() -> TestConfig {
 //!     let shell_options = ShellOptions::default().with_cargo_path();
-//!     let mut config = TestConfig::new(shell_options);
-//!     config
+//!     TestConfig::new(shell_options)
 //!         .with_match_kind(MatchKind::Precise)
-//!         .with_output(TestOutputConfig::Verbose);
-//!     config
+//!         .with_output(TestOutputConfig::Verbose)
 //! }
 //!
 //! // Usage in tests:
@@ -96,26 +94,26 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     }
 
     /// Sets the matching kind applied.
-    pub fn with_match_kind(&mut self, kind: MatchKind) -> &mut Self {
+    pub fn with_match_kind(mut self, kind: MatchKind) -> Self {
         self.match_kind = kind;
         self
     }
 
     /// Sets coloring of the output.
-    pub fn with_color_choice(&mut self, color_choice: ColorChoice) -> &mut Self {
+    pub fn with_color_choice(mut self, color_choice: ColorChoice) -> Self {
         self.color_choice = color_choice;
         self
     }
 
     /// Configures test output.
-    pub fn with_output(&mut self, output: TestOutputConfig) -> &mut Self {
+    pub fn with_output(mut self, output: TestOutputConfig) -> Self {
         self.output = output;
         self
     }
 
     /// Sets the template for rendering new snapshots.
     #[cfg(feature = "svg")]
-    pub fn with_template(&mut self, template: Template) -> &mut Self {
+    pub fn with_template(mut self, template: Template) -> Self {
         self.template = template;
         self
     }
@@ -536,7 +534,7 @@ mod tests {
 
     #[test]
     fn snapshot_testing_with_exact_match() -> anyhow::Result<()> {
-        let mut test_config = TestConfig::new(ShellOptions::default());
+        let test_config = TestConfig::new(ShellOptions::default());
         test_snapshot_testing(&mut test_config.with_match_kind(MatchKind::Precise))
     }
 
@@ -562,8 +560,8 @@ mod tests {
     #[test]
     fn negative_snapshot_testing_with_default_output() {
         let mut out = vec![];
-        let mut test_config = TestConfig::new(ShellOptions::default());
-        test_config.with_color_choice(ColorChoice::Never);
+        let mut test_config =
+            TestConfig::new(ShellOptions::default()).with_color_choice(ColorChoice::Never);
         test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();
 
         let out = String::from_utf8(out).unwrap();
@@ -577,8 +575,7 @@ mod tests {
     #[test]
     fn negative_snapshot_testing_with_verbose_output() {
         let mut out = vec![];
-        let mut test_config = TestConfig::new(ShellOptions::default());
-        test_config
+        let mut test_config = TestConfig::new(ShellOptions::default())
             .with_output(TestOutputConfig::Verbose)
             .with_color_choice(ColorChoice::Never);
         test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();

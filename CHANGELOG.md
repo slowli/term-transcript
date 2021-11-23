@@ -19,6 +19,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 - Update `handlebars` and `pretty_assertions` dependencies.
 - Generalize `TermError::NonCsiSequence` variant to `UnrecognizedSequence`.
+- Make `TestConfig` modifiers take `self` by value for the sake of fluency.
 
 ### Fixed
 

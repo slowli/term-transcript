@@ -300,8 +300,7 @@ impl Args {
                 };
                 let options = shell.into_std_options();
 
-                let mut test_config = TestConfig::new(options);
-                test_config
+                let mut test_config = TestConfig::new(options)
                     .with_output(if verbose {
                         TestOutputConfig::Verbose
                     } else {
