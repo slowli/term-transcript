@@ -344,6 +344,7 @@ impl Args {
         let transcript = Transcript::from_svg(svg)?;
         test_config
             .test_transcript_for_stats(&transcript)
+            .map(|(stats, _)| stats)
             .map_err(From::from)
     }
 

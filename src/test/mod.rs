@@ -38,7 +38,9 @@
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
-    io::{self, Write},
+    fs::File,
+    io::{self, BufReader, BufWriter, Write},
+    path::{Path, PathBuf},
     process::Command,
     str,
 };
@@ -50,7 +52,9 @@ mod parser;
 
 use self::color_diff::ColorSpan;
 pub use self::parser::{ParseError, Parsed};
-use crate::test::color_diff::ColorDiff;
+#[cfg(feature = "svg")]
+use crate::svg::Template;
+use crate::{test::color_diff::ColorDiff, UserInput};
 
 /// Configuration of output produced during testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -81,6 +85,8 @@ pub struct TestConfig<Cmd = Command> {
     match_kind: MatchKind,
     output: TestOutputConfig,
     color_choice: ColorChoice,
+    #[cfg(feature = "svg")]
+    template: Template,
 }
 
 impl<Cmd: SpawnShell> TestConfig<Cmd> {
@@ -91,6 +97,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             match_kind: MatchKind::TextOnly,
             output: TestOutputConfig::Normal,
             color_choice: ColorChoice::Auto,
+            #[cfg(feature = "svg")]
+            template: Template::default(),
         }
     }
 
@@ -112,6 +120,121 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         self
     }
 
+    /// Sets the template for rendering new snapshots.
+    #[cfg(feature = "svg")]
+    pub fn with_template(&mut self, template: Template) -> &mut Self {
+        self.template = template;
+        self
+    }
+
+    /// Tests a snapshot at the specified path with the provided inputs.
+    ///
+    /// # Panics
+    ///
+    /// - Panics if there is no snapshot at the specified path.
+    /// - Panics if an error occurs during reproducing the transcript or processing
+    ///   its output.
+    /// - Panics if there are mismatches between outputs in the original and reproduced
+    ///   transcripts.
+    #[cfg(feature = "svg")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
+    pub fn test<I: Into<UserInput>>(
+        &mut self,
+        snapshot_path: impl AsRef<Path>,
+        inputs: impl IntoIterator<Item = I>,
+    ) {
+        let inputs = inputs.into_iter().map(Into::into);
+        let snapshot_path = snapshot_path.as_ref();
+
+        if snapshot_path.is_file() {
+            let snapshot = File::open(snapshot_path).unwrap_or_else(|err| {
+                panic!("Cannot open `{:?}`: {}", snapshot_path, err);
+            });
+            let snapshot = BufReader::new(snapshot);
+            let transcript = Transcript::from_svg(snapshot).unwrap_or_else(|err| {
+                panic!("Cannot parse snapshot from `{:?}`: {}", snapshot_path, err);
+            });
+            self.compare_and_test_transcript(
+                snapshot_path,
+                &transcript,
+                &inputs.collect::<Vec<_>>(),
+            );
+        } else if snapshot_path.exists() {
+            panic!(
+                "Snapshot path `{:?}` exists, but is not a file",
+                snapshot_path
+            );
+        } else {
+            let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)
+                .unwrap_or_else(|err| {
+                    panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
+                });
+            let new_path = self.write_new_snapshot(snapshot_path, &reproduced);
+            panic!(
+                "Snapshot `{:?}` is missing; a new snapshot was saved to `{:?}`",
+                snapshot_path, new_path
+            );
+        }
+    }
+
+    fn compare_and_test_transcript(
+        &mut self,
+        snapshot_path: &Path,
+        transcript: &Transcript<Parsed>,
+        expected_inputs: &[UserInput],
+    ) {
+        let actual_inputs: Vec<_> = transcript
+            .interactions()
+            .iter()
+            .map(Interaction::input)
+            .collect();
+
+        if !actual_inputs.iter().copied().eq(expected_inputs) {
+            let reproduced =
+                Transcript::from_inputs(&mut self.shell_options, expected_inputs.iter().cloned());
+            let reproduced = reproduced.unwrap_or_else(|err| {
+                panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
+            });
+            let new_path = self.write_new_snapshot(snapshot_path, &reproduced);
+
+            panic!(
+                "Unexpected user inputs in parsed snapshot: expected {exp:?}, got {act:?}. \
+                 Snapshot with expected inputs was saved to `{path:?}`",
+                exp = expected_inputs,
+                act = actual_inputs,
+                path = new_path
+            );
+        }
+
+        let (stats, reproduced) = self
+            .test_transcript_for_stats(transcript)
+            .unwrap_or_else(|err| panic!("{}", err));
+        if stats.errors(self.match_kind) > 0 {
+            let new_path = self.write_new_snapshot(snapshot_path, &reproduced);
+            panic!(
+                "There were test failures; a new snapshot was saved to {:?}",
+                new_path
+            );
+        }
+    }
+
+    fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> PathBuf {
+        let mut new_path = path.to_owned();
+        new_path.set_extension("new.svg");
+        let new_snapshot = File::create(&new_path).unwrap_or_else(|err| {
+            panic!(
+                "Cannot create file for new snapshot `{:?}`: {}",
+                new_path, err
+            );
+        });
+        self.template
+            .render(transcript, &mut BufWriter::new(new_snapshot))
+            .unwrap_or_else(|err| {
+                panic!("Cannot render snapshot `{:?}`: {}", new_path, err);
+            });
+        new_path
+    }
+
     /// Tests the `transcript`.
     ///
     /// # Panics
@@ -121,9 +244,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// - Panics if there are mismatches between outputs in the original and reproduced
     ///   transcripts.
     pub fn test_transcript(&mut self, transcript: &Transcript<Parsed>) {
-        self.test_transcript_for_stats(transcript)
-            .unwrap_or_else(|err| panic!("{}", err))
-            .assert_no_errors(self.match_kind);
+        let (stats, _) = self
+            .test_transcript_for_stats(transcript)
+            .unwrap_or_else(|err| panic!("{}", err));
+        stats.assert_no_errors(self.match_kind);
     }
 
     /// Tests the `transcript` and returns testing results.
@@ -135,7 +259,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     pub fn test_transcript_for_stats(
         &mut self,
         transcript: &Transcript<Parsed>,
-    ) -> io::Result<TestStats> {
+    ) -> io::Result<(TestStats, Transcript)> {
         if self.output == TestOutputConfig::Quiet {
             let mut out = NoColor::new(io::sink());
             self.test_transcript_inner(&mut out, transcript)
@@ -150,14 +274,15 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         &mut self,
         out: &mut impl WriteColor,
         transcript: &Transcript<Parsed>,
-    ) -> io::Result<TestStats> {
+    ) -> io::Result<(TestStats, Transcript)> {
         let inputs = transcript
             .interactions()
             .iter()
             .map(|interaction| interaction.input().clone());
         let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
 
-        self.compare_transcripts(out, transcript, &reproduced)
+        let stats = self.compare_transcripts(out, transcript, &reproduced)?;
+        Ok((stats, reproduced))
     }
 
     fn compare_transcripts(
@@ -428,7 +553,7 @@ mod tests {
         Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
 
         let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
-        let stats = test_config.test_transcript_inner(&mut NoColor::new(out), &parsed)?;
+        let (stats, _) = test_config.test_transcript_inner(&mut NoColor::new(out), &parsed)?;
         assert_eq!(stats.errors(MatchKind::TextOnly), 1);
         Ok(())
     }

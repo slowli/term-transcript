@@ -311,5 +311,11 @@ impl AsRef<str> for UserInput {
     }
 }
 
+impl From<&str> for UserInput {
+    fn from(command: &str) -> Self {
+        Self::command(command)
+    }
+}
+
 #[cfg(doctest)]
 doc_comment::doctest!("../README.md");
