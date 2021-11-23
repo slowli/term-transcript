@@ -21,9 +21,36 @@
 //! }
 //!
 //! // Usage in tests:
-//! fn test_basics() {
-//!     config().test("snapshots/help.svg", ["my-command --help"]);
+//! #[test]
+//! fn help_command() {
+//!     config().test("tests/__snapshots__/help.svg", ["my-command --help"]);
 //! }
+//! ```
+//!
+//! Use [`TestConfig::test_transcript()`] for more complex scenarios or increased control:
+//!
+//! ```
+//! use term_transcript::{test::TestConfig, ShellOptions, Transcript, UserInput};
+//! # use term_transcript::svg::{Template, TemplateOptions};
+//! use std::io;
+//!
+//! fn read_svg_file() -> anyhow::Result<impl io::BufRead> {
+//!     // snipped...
+//! #   let transcript = Transcript::from_inputs(
+//! #        &mut ShellOptions::default(),
+//! #        vec![UserInput::command(r#"echo "Hello world!""#)],
+//! #   )?;
+//! #   let mut writer = vec![];
+//! #   Template::new(TemplateOptions::default()).render(&transcript, &mut writer)?;
+//! #   Ok(io::Cursor::new(writer))
+//! }
+//!
+//! # fn main() -> anyhow::Result<()> {
+//! let reader = read_svg_file()?;
+//! let transcript = Transcript::from_svg(reader)?;
+//! TestConfig::new(ShellOptions::default()).test_transcript(&transcript);
+//! # Ok(())
+//! # }
 //! ```
 
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
@@ -120,6 +147,11 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
 
     /// Tests a snapshot at the specified path with the provided inputs.
     ///
+    /// If the path is relative, it is resolved relative to the current working dir,
+    /// which in the case of tests is the root directory of the including crate (i.e., the dir
+    /// where the crate manifest is located). Alternatively, you may specify an absolute path
+    /// using env vars that Cargo sets during build, such as [`env!("CARGO_MANIFEST_DIR")`].
+    ///
     /// Similar to other kinds of snapshot testing, a new snapshot will be generated if
     /// there is no existing snapshot or there are mismatches between inputs or outputs
     /// in the original and reproduced transcripts. This new snapshot will have the same path
@@ -135,6 +167,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ///   its output.
     /// - Panics if there are mismatches between inputs or outputs in the original and reproduced
     ///   transcripts.
+    ///
+    /// [`env!("CARGO_MANIFEST_DIR")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
     #[cfg(feature = "svg")]
     #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
     pub fn test<I: Into<UserInput>>(
@@ -249,7 +283,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         stats.assert_no_errors(self.match_kind);
     }
 
-    /// Tests the `transcript` and returns testing results.
+    /// Tests the `transcript` and returns testing stats together with
+    /// the reproduced [`Transcript`]. This is a lower-level alternative to [`Self::test()`].
     ///
     /// # Errors
     ///

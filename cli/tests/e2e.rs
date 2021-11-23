@@ -11,9 +11,7 @@ use term_transcript::{
 };
 
 fn svg_snapshot(name: &str) -> PathBuf {
-    let mut snapshot_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/snapshots")
-        .join(name);
+    let mut snapshot_path = Path::new("tests/snapshots").join(name);
     snapshot_path.set_extension("svg");
     snapshot_path
 }
@@ -43,9 +41,9 @@ fn testing_example() {
         svg_snapshot("test"),
         [
             "term-transcript exec -T 100 'rainbow' > /tmp/rainbow.svg\n\
-         # `-T` option defines the I/O timeout for the shell",
+             # `-T` option defines the I/O timeout for the shell",
             "term-transcript test -T 100 -v /tmp/rainbow.svg\n\
-         # `-v` switches on verbose output",
+             # `-v` switches on verbose output",
         ],
     );
 }
@@ -56,12 +54,12 @@ fn test_failure_example() {
         svg_snapshot("test-fail"),
         [
             "term-transcript exec -T 100 --shell rainbow-repl \\\n  \
-         \"test italic #c0ffee\" > /tmp/bogus.svg",
+             \"test italic #c0ffee\" > /tmp/bogus.svg",
             "sed -i -E -e 's/class=\"italic\"//g' /tmp/bogus.svg\n\
-         # Mutate the captured output, removing one of the styles",
+             # Mutate the captured output, removing one of the styles",
             "term-transcript test -T 100 --precise \\\n  \
-         --shell rainbow-repl /tmp/bogus.svg\n\
-         # --precise / -p flag enables comparison by style",
+             --shell rainbow-repl /tmp/bogus.svg\n\
+             # --precise / -p flag enables comparison by style",
         ],
     );
 }

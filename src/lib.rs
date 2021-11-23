@@ -33,7 +33,7 @@
 //! - Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
 //!   are supported even on Windows nowadays, this shouldn't be a significant problem.)
 //! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI]
-//!   and OSC sequences), or lead to [`TermError::NonCsiSequence`].
+//!   and OSC sequences), or lead to [`TermError::UnrecognizedSequence`].
 //! - By default, the crate exposes APIs to perform capture via OS pipes.
 //!   Since the terminal is not emulated in this case, programs dependent on [`isatty`] checks
 //!   or getting term size can produce different output than if launched in an actual shell
@@ -98,30 +98,18 @@
 //! # }
 //! ```
 //!
-//! Loading a `Transcript` and testing it. See the [`test` module](crate::test) for more examples.
+//! Snapshot testing. See the [`test` module](crate::test) for more examples.
 //!
 //! ```
-//! use term_transcript::{test::TestConfig, ShellOptions, Transcript, UserInput};
-//! # use term_transcript::svg::{Template, TemplateOptions};
-//! use std::io;
+//! use term_transcript::{test::TestConfig, ShellOptions};
 //!
-//! fn read_svg_file() -> anyhow::Result<impl io::BufRead> {
-//!     // snipped...
-//! #   let transcript = Transcript::from_inputs(
-//! #        &mut ShellOptions::default(),
-//! #        vec![UserInput::command(r#"echo "Hello world!""#)],
-//! #   )?;
-//! #   let mut writer = vec![];
-//! #   Template::new(TemplateOptions::default()).render(&transcript, &mut writer)?;
-//! #   Ok(io::Cursor::new(writer))
+//! #[test]
+//! fn echo_works() {
+//!     TestConfig::new(ShellOptions::default()).test(
+//!         "tests/__snapshots__/echo.svg",
+//!         ["echo \"Hello world!\""],
+//!     );
 //! }
-//!
-//! # fn main() -> anyhow::Result<()> {
-//! let reader = read_svg_file()?;
-//! let transcript = Transcript::from_svg(reader)?;
-//! TestConfig::new(ShellOptions::default()).test_transcript(&transcript);
-//! # Ok(())
-//! # }
 //! ```
 
 // Documentation settings.

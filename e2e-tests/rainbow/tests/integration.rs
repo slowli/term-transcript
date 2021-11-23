@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::{self, BufReader, Read},
-    path::{Path, PathBuf},
+    path::Path,
     process::{Command, Stdio},
     time::Duration,
 };
@@ -17,27 +17,24 @@ use term_transcript::{
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
 
-fn main_snapshot_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/rainbow.svg")
+fn main_snapshot_path() -> &'static Path {
+    Path::new("../../examples/rainbow.svg")
 }
 
 fn read_main_snapshot() -> io::Result<BufReader<File>> {
     File::open(main_snapshot_path()).map(BufReader::new)
 }
 
-fn animated_snapshot_path() -> PathBuf {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir.join("../../examples/animated.svg")
+fn animated_snapshot_path() -> &'static Path {
+    Path::new("../../examples/animated.svg")
 }
 
-fn aliased_snapshot_path() -> PathBuf {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir.join("aliased.svg")
+fn aliased_snapshot_path() -> &'static Path {
+    Path::new("aliased.svg")
 }
 
-fn repl_snapshot_path() -> PathBuf {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir.join("repl.svg")
+fn repl_snapshot_path() -> &'static Path {
+    Path::new("repl.svg")
 }
 
 #[test]
