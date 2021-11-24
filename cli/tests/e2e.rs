@@ -32,14 +32,14 @@ fn help_example() {
     let shell_options = ShellOptions::new(PtyCommand::default())
         .with_io_timeout(Duration::from_millis(100))
         .with_cargo_path();
-    TestConfig::new(shell_options).test(svg_snapshot("help"), ["term-transcript --help"]);
+    TestConfig::new(shell_options).test(svg_snapshot("help"), &["term-transcript --help"]);
 }
 
 #[test]
 fn testing_example() {
     test_config().test(
         svg_snapshot("test"),
-        [
+        &[
             "term-transcript exec -T 100 'rainbow' > /tmp/rainbow.svg\n\
              # `-T` option defines the I/O timeout for the shell",
             "term-transcript test -T 100 -v /tmp/rainbow.svg\n\
@@ -52,7 +52,7 @@ fn testing_example() {
 fn test_failure_example() {
     test_config().test(
         svg_snapshot("test-fail"),
-        [
+        &[
             "term-transcript exec -T 100 --shell rainbow-repl \\\n  \
              \"test italic #c0ffee\" > /tmp/bogus.svg",
             "sed -i -E -e 's/class=\"italic\"//g' /tmp/bogus.svg\n\
@@ -68,7 +68,7 @@ fn test_failure_example() {
 fn print_example() {
     test_config().test(
         svg_snapshot("print"),
-        [
+        &[
             "term-transcript exec -T 100 \"rainbow --short\" > /tmp/rainbow-short.svg",
             "term-transcript print /tmp/rainbow-short.svg",
         ],

@@ -22,7 +22,7 @@
 //! // Usage in tests:
 //! #[test]
 //! fn help_command() {
-//!     config().test("tests/__snapshots__/help.svg", ["my-command --help"]);
+//!     config().test("tests/__snapshots__/help.svg", &["my-command --help"]);
 //! }
 //! ```
 //!

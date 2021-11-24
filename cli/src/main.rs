@@ -192,7 +192,7 @@ impl FromStr for PtySize {
                 Ok(Self { rows, cols })
             }
             _ => Err(anyhow::anyhow!(
-                "Invalid PTY config, expected a `{rows}x{cols}` string"
+                "Invalid PTY config, expected a `{{rows}}x{{cols}}` string"
             )),
         }
     }

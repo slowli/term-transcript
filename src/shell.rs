@@ -77,7 +77,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         Self {
             command,
             io_timeout: Duration::from_secs(1),
-            init_timeout: Duration::ZERO,
+            init_timeout: Duration::from_nanos(0),
             init_commands: vec![],
             line_mapper: Box::new(Some),
         }

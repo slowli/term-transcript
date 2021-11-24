@@ -107,7 +107,7 @@
 //! fn echo_works() {
 //!     TestConfig::new(ShellOptions::default()).test(
 //!         "tests/__snapshots__/echo.svg",
-//!         ["echo \"Hello world!\""],
+//!         &["echo \"Hello world!\""],
 //!     );
 //! }
 //! ```
@@ -302,6 +302,13 @@ impl AsRef<str> for UserInput {
 impl From<&str> for UserInput {
     fn from(command: &str) -> Self {
         Self::command(command)
+    }
+}
+
+// Necessary to make it possible to call `TestConfig::test()` with a &[&str].
+impl From<&&str> for UserInput {
+    fn from(command: &&str) -> Self {
+        Self::command(*command)
     }
 }
 

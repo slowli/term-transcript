@@ -1,3 +1,5 @@
+// TODO: test new snapshot creation (missing, input mismatch, output mismatch)
+
 use std::{
     fs::File,
     io::{self, BufReader, Read},
@@ -102,14 +104,14 @@ fn snapshot_testing_low_level() -> anyhow::Result<()> {
 #[test]
 fn snapshot_testing() {
     let shell_options = ShellOptions::default().with_cargo_path();
-    TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
+    TestConfig::new(shell_options).test(main_snapshot_path(), &["rainbow"]);
 }
 
 #[cfg(feature = "portable-pty")]
 #[test]
 fn snapshot_testing_with_pty() {
     let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
-    TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
+    TestConfig::new(shell_options).test(main_snapshot_path(), &["rainbow"]);
 }
 
 #[test]
@@ -117,7 +119,7 @@ fn animated_snapshot_testing() {
     let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options).test(
         animated_snapshot_path(),
-        ["rainbow", "rainbow --long-lines"],
+        &["rainbow", "rainbow --long-lines"],
     );
 }
 
@@ -127,7 +129,7 @@ fn snapshot_testing_with_custom_settings() {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test(main_snapshot_path(), ["rainbow"]);
+        .test(main_snapshot_path(), &["rainbow"]);
 }
 
 #[cfg(unix)]
@@ -137,7 +139,7 @@ fn sh_shell_example() {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test(aliased_snapshot_path(), ["colored-output"]);
+        .test(aliased_snapshot_path(), &["colored-output"]);
 }
 
 #[cfg(unix)]
@@ -164,7 +166,7 @@ fn bash_shell_example() {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test(aliased_snapshot_path(), ["colored-output"]);
+        .test(aliased_snapshot_path(), &["colored-output"]);
 }
 
 #[test]
@@ -190,7 +192,7 @@ fn powershell_example() {
     TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose)
-        .test(aliased_snapshot_path(), ["colored-output"]);
+        .test(aliased_snapshot_path(), &["colored-output"]);
 }
 
 #[test]
@@ -200,7 +202,7 @@ fn repl_snapshot_testing() {
         .with_match_kind(MatchKind::Precise)
         .test(
             repl_snapshot_path(),
-            [
+            &[
                 "yellow intense bold green cucumber",
                 "neutral #fa4 underline #c0ffee",
                 "#9f4010 (brown) italic",
