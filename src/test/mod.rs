@@ -10,7 +10,6 @@
 //!     ShellOptions, Transcript,
 //!     test::{MatchKind, TestConfig, TestOutputConfig},
 //! };
-//! use std::io;
 //!
 //! // Test configuration that can be shared across tests.
 //! fn config() -> TestConfig {
@@ -57,8 +56,8 @@ use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteCol
 
 use std::{
     fs::File,
-    io::{self, BufReader, BufWriter, Write},
-    path::{Path, PathBuf},
+    io::{self, BufReader, Write},
+    path::Path,
     process::Command,
     str,
 };
@@ -140,6 +139,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
 
     /// Sets the template for rendering new snapshots.
     #[cfg(feature = "svg")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
     pub fn with_template(mut self, template: Template) -> Self {
         self.template = template;
         self
@@ -159,6 +159,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// if the snapshot at `snapshots/help.svg` is tested, the new snapshot will be saved at
     /// `snapshots/help.new.svg`.
     ///
+    /// Generation of new snapshots will only happen if the `svg` crate feature is enabled
+    /// (which it is by default). The snapshot template can be customized via
+    /// [`Self::with_template()`].
+    ///
     /// # Panics
     ///
     /// - Panics if there is no snapshot at the specified path, or if the path points
@@ -169,8 +173,6 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ///   transcripts.
     ///
     /// [`env!("CARGO_MANIFEST_DIR")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
-    #[cfg(feature = "svg")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
     pub fn test<I: Into<UserInput>>(
         &mut self,
         snapshot_path: impl AsRef<Path>,
@@ -202,10 +204,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 .unwrap_or_else(|err| {
                     panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
                 });
-            let new_path = self.write_new_snapshot(snapshot_path, &reproduced);
+            let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
             panic!(
-                "Snapshot `{:?}` is missing; a new snapshot was saved to `{:?}`",
-                snapshot_path, new_path
+                "Snapshot `{:?}` is missing\n{}",
+                snapshot_path, new_snapshot_message
             );
         }
     }
@@ -228,14 +230,13 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             let reproduced = reproduced.unwrap_or_else(|err| {
                 panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
             });
-            let new_path = self.write_new_snapshot(snapshot_path, &reproduced);
 
+            let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
             panic!(
-                "Unexpected user inputs in parsed snapshot: expected {exp:?}, got {act:?}. \
-                 Snapshot with expected inputs was saved to `{path:?}`",
+                "Unexpected user inputs in parsed snapshot: expected {exp:?}, got {act:?}\n{msg}",
                 exp = expected_inputs,
                 act = actual_inputs,
-                path = new_path
+                msg = new_snapshot_message
             );
         }
 
@@ -243,15 +244,14 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             .test_transcript_for_stats(transcript)
             .unwrap_or_else(|err| panic!("{}", err));
         if stats.errors(self.match_kind) > 0 {
-            let new_path = self.write_new_snapshot(snapshot_path, &reproduced);
-            panic!(
-                "There were test failures; a new snapshot was saved to {:?}",
-                new_path
-            );
+            let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
+            panic!("There were test failures\n{}", new_snapshot_message);
         }
     }
 
-    fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> PathBuf {
+    /// Returns message to be appended to the panic message
+    #[cfg(feature = "svg")]
+    fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> String {
         let mut new_path = path.to_owned();
         new_path.set_extension("new.svg");
         let new_snapshot = File::create(&new_path).unwrap_or_else(|err| {
@@ -261,11 +261,20 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             );
         });
         self.template
-            .render(transcript, &mut BufWriter::new(new_snapshot))
+            .render(transcript, &mut io::BufWriter::new(new_snapshot))
             .unwrap_or_else(|err| {
                 panic!("Cannot render snapshot `{:?}`: {}", new_path, err);
             });
-        new_path
+        format!("A new snapshot was saved to `{:?}`", new_path)
+    }
+
+    #[cfg(not(feature = "svg"))]
+    #[allow(clippy::unused_self)] // necessary for uniformity
+    fn write_new_snapshot(&self, _: &Path, _: &Transcript) -> String {
+        format!(
+            "Not writing a new snapshot since `{}/svg` feature is not enabled",
+            env!("CARGO_CRATE_NAME")
+        )
     }
 
     /// Tests the `transcript`. This is a lower-level alternative to [`Self::test()`].
