@@ -105,16 +105,24 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --workspace --all-features --all-targets -- -D warnings
-      - name: Build (no features)
-        uses: actions-rs/cargo@v1
+      - name: Clippy (no features)
+        uses: actions-rs/clippy-check@v1
         with:
-          command: build
+          token: ${{ secrets.GITHUB_TOKEN }}
           args: -p term-transcript --no-default-features --lib
-      - name: Build (features = svg)
-        uses: actions-rs/cargo@v1
+          name: Clippy (no features)
+      - name: Clippy (features = svg)
+        uses: actions-rs/clippy-check@v1
         with:
-          command: build
+          token: ${{ secrets.GITHUB_TOKEN }}
           args: -p term-transcript --no-default-features --features svg --lib
+          name: Clippy (features = svg)
+      - name: Clippy (features = test)
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p term-transcript --no-default-features --features test --lib
+          name: Clippy (features = test)
 
       - name: Run tests
         uses: actions-rs/cargo@v1
