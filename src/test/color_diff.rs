@@ -42,34 +42,28 @@ impl ColorSpan {
     /// Writes a single plaintext `line` to `out` using styles from `styles_iter`.
     /// `first_span_len` can be used to overwrite the effective length of the first span;
     /// this is used when calling this method multiple times in succession.
-    fn write_line<'a, I: Iterator<Item = &'a Self>>(
+    fn write_line<'a, I: Iterator<Item = (usize, &'a Self)>>(
         spans_iter: &mut Peekable<I>,
         out: &mut impl WriteColor,
+        line_start: usize,
         line: &str,
-        first_span_len: usize,
-    ) -> io::Result<usize> {
+    ) -> io::Result<()> {
         let mut pos = 0;
-        let mut is_first_span = true;
         while pos < line.len() {
-            let span = spans_iter.peek().expect("spans ended before lines");
-            let span_len = if is_first_span {
-                first_span_len
-            } else {
-                span.len
-            };
+            let &(span_start, span) = spans_iter.peek().expect("spans ended before lines");
+            let span_len = span.len - line_start.saturating_sub(span_start);
+
             let span_end = cmp::min(pos + span_len, line.len());
             out.set_color(&span.color_spec)?;
             write!(out, "{}", &line[pos..span_end])?;
             if span_end == pos + span_len {
                 // The span has ended, can proceed to the next one.
-                is_first_span = false;
                 spans_iter.next();
             }
             pos += span_len;
         }
         out.reset()?;
-        writeln!(out)?;
-        Ok(pos - line.len())
+        writeln!(out)
     }
 }
 
@@ -260,31 +254,38 @@ impl ColorDiff {
 
         let highlights = HighlightedSpan::new(&self.differing_spans);
         let mut highlights = highlights.iter().copied().peekable();
-        let mut first_span_len = color_spans.first().map_or(0, |span| span.len);
-        let mut color_spans = color_spans.iter().peekable();
-        let mut pos = 0;
+        let mut line_start = 0;
+
+        // Spans together with their starting index
+        let mut span_start = 0;
+        let mut color_spans = color_spans
+            .iter()
+            .map(move |span| {
+                let prev_start = span_start;
+                span_start += span.len;
+                (prev_start, span)
+            })
+            .peekable();
 
         for line in text.split('\n') {
             let line_contains_spans = highlights
                 .peek()
-                .map_or(false, |span| span.start <= pos + line.len());
+                .map_or(false, |span| span.start <= line_start + line.len());
 
             if line_contains_spans {
                 out.set_color(&sideline_hl)?;
                 write!(out, "> ")?;
                 out.reset()?;
-                first_span_len =
-                    ColorSpan::write_line(&mut color_spans, out, line, first_span_len)?;
+                ColorSpan::write_line(&mut color_spans, out, line_start, line)?;
                 out.set_color(&sideline_hl)?;
                 write!(out, "> ")?;
                 out.reset()?;
-                Self::highlight_line(out, &mut highlights, pos, line.len())?;
+                Self::highlight_line(out, &mut highlights, line_start, line.len())?;
             } else {
                 write!(out, "= ")?;
-                first_span_len =
-                    ColorSpan::write_line(&mut color_spans, out, line, first_span_len)?;
+                ColorSpan::write_line(&mut color_spans, out, line_start, line)?;
             }
-            pos += line.len() + 1;
+            line_start += line.len() + 1;
         }
         Ok(())
     }
@@ -692,6 +693,76 @@ mod tests {
              <span class=\"fg1\">&gt; </span><span class=\"fg7 bg1\">^^</span>\
              <span class=\"fg0 bg3\">!!</span><span class=\"fg7 bg1\">^</span>     \
              <span class=\"fg7 bg1\">^</span>\n"
+        );
+    }
+
+    #[test]
+    fn spans_on_multiple_lines() {
+        let mut green = ColorSpec::default();
+        green.set_fg(Some(Color::Green));
+        let color_spans = [
+            ColorSpan {
+                len: 9,
+                color_spec: green,
+            },
+            ColorSpan {
+                len: 4,
+                color_spec: ColorSpec::default(),
+            },
+        ];
+
+        let color_diff = ColorDiff {
+            differing_spans: vec![diff_span(9, 3)],
+        };
+
+        let mut buffer = String::new();
+        let mut out = HtmlWriter::new(&mut buffer, None);
+        color_diff
+            .highlight_text(&mut out, "Hello,\nworld!", &color_spans)
+            .unwrap();
+        assert_eq!(
+            buffer,
+            "= <span class=\"fg2\">Hello,</span>\n\
+             <span class=\"fg1\">&gt; </span><span class=\"fg2\">wo</span>rld!\n\
+             <span class=\"fg1\">&gt; </span>  <span class=\"fg7 bg1\">^^^</span>\n"
+        );
+    }
+
+    #[test]
+    fn spans_with_multiple_sequential_line_breaks() {
+        let mut green = ColorSpec::default();
+        green.set_fg(Some(Color::Green));
+        let color_spans = [
+            ColorSpan {
+                len: 6,
+                color_spec: green.clone(),
+            },
+            ColorSpan {
+                len: 4,
+                color_spec: ColorSpec::default(),
+            },
+            ColorSpan {
+                len: 4,
+                color_spec: green,
+            },
+        ];
+
+        let color_diff = ColorDiff {
+            differing_spans: vec![diff_span(10, 3)],
+        };
+
+        let mut buffer = String::new();
+        let mut out = HtmlWriter::new(&mut buffer, None);
+        color_diff
+            .highlight_text(&mut out, "Hello,\n\nworld!", &color_spans)
+            .unwrap();
+
+        assert_eq!(
+            buffer,
+            "= <span class=\"fg2\">Hello,</span>\n\
+             = \n\
+             <span class=\"fg1\">&gt; </span>wo<span class=\"fg2\">rld!</span>\n\
+             <span class=\"fg1\">&gt; </span>  <span class=\"fg7 bg1\">^^^</span>\n"
         );
     }
 
