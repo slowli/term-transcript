@@ -1,5 +1,7 @@
 #![cfg(unix)]
 
+// TODO: use temporary dirs instead of just `/tmp`
+
 use std::{
     path::{Path, PathBuf},
     time::Duration,
@@ -40,7 +42,7 @@ fn testing_example() {
     test_config().test(
         svg_snapshot("test"),
         &[
-            "term-transcript exec -T 100 'rainbow' > /tmp/rainbow.svg\n\
+            "term-transcript exec -T 100 ./rainbow.sh > /tmp/rainbow.svg\n\
              # `-T` option defines the I/O timeout for the shell",
             "term-transcript test -T 100 -v /tmp/rainbow.svg\n\
              # `-v` switches on verbose output",
@@ -53,12 +55,10 @@ fn test_failure_example() {
     test_config().test(
         svg_snapshot("test-fail"),
         &[
-            "term-transcript exec -T 100 --shell rainbow-repl \\\n  \
-             \"test italic #c0ffee\" > /tmp/bogus.svg",
-            "sed -i -E -e 's/class=\"italic\"//g' /tmp/bogus.svg\n\
+            "term-transcript exec -T 100 './rainbow.sh --short' > /tmp/bogus.svg",
+            "sed -i -E -e 's/(fg4|bg13)//g' /tmp/bogus.svg\n\
              # Mutate the captured output, removing one of the styles",
-            "term-transcript test -T 100 --precise \\\n  \
-             --shell rainbow-repl /tmp/bogus.svg\n\
+            "term-transcript test -T 100 --precise /tmp/bogus.svg\n\
              # --precise / -p flag enables comparison by style",
         ],
     );
@@ -69,7 +69,7 @@ fn print_example() {
     test_config().test(
         svg_snapshot("print"),
         &[
-            "term-transcript exec -T 100 \"rainbow --short\" > /tmp/rainbow-short.svg",
+            "term-transcript exec -T 100 './rainbow.sh --short' > /tmp/rainbow-short.svg",
             "term-transcript print /tmp/rainbow-short.svg",
         ],
     );
