@@ -690,6 +690,6 @@ mod tests {
 
         assert_eq!(stats.matches(), [Some(MatchKind::TextOnly)]);
         assert!(out.contains("[#] Input: test"), "{}", out);
-        assert!(out.contains("13..14 ____   yellow/(none)   ____     blue/(none)"));
+        assert!(out.contains("13..14 ----   yellow/(none)   ----     blue/(none)"));
     }
 }

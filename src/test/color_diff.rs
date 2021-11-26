@@ -383,10 +383,10 @@ impl ColorDiff {
         const COLOR_WIDTH: usize = 8; // `magenta*` is the widest color output
 
         out.set_color(color_spec)?;
-        out.write_all(if color_spec.bold() { b"b" } else { b"_" })?;
-        out.write_all(if color_spec.italic() { b"i" } else { b"_" })?;
-        out.write_all(if color_spec.underline() { b"u" } else { b"_" })?;
-        out.write_all(if color_spec.dimmed() { b"d" } else { b"_" })?;
+        out.write_all(if color_spec.bold() { b"b" } else { b"-" })?;
+        out.write_all(if color_spec.italic() { b"i" } else { b"-" })?;
+        out.write_all(if color_spec.underline() { b"u" } else { b"-" })?;
+        out.write_all(if color_spec.dimmed() { b"d" } else { b"-" })?;
 
         write!(
             out,
@@ -605,18 +605,18 @@ mod tests {
         spec.set_bold(true);
         spec.set_fg(Some(Color::Cyan));
         let spec_string = color_spec_to_string(&spec);
-        assert_eq!(spec_string, "b___     cyan/(none)  ");
+        assert_eq!(spec_string, "b---     cyan/(none)  ");
 
         spec.set_underline(true);
         spec.set_bg(Some(Color::Ansi256(11)));
         let spec_string = color_spec_to_string(&spec);
-        assert_eq!(spec_string, "b_u_     cyan/yellow* ");
+        assert_eq!(spec_string, "b-u-     cyan/yellow* ");
 
         spec.set_italic(true);
         spec.set_bold(false);
         spec.set_fg(Some(Color::Rgb(0xc0, 0xff, 0xee)));
         let spec_string = color_spec_to_string(&spec);
-        assert_eq!(spec_string, "_iu_  #c0ffee/yellow* ");
+        assert_eq!(spec_string, "-iu-  #c0ffee/yellow* ");
     }
 
     #[test]
@@ -624,7 +624,7 @@ mod tests {
         const EXPECTED_TABLE_LINES: &[&str] = &[
             "Positions      Expected style          Actual style     ",
             "========== ====================== ======================",
-            "      0..2 ____   (none)/(none)   b___      red/white   ",
+            "      0..2 ----   (none)/(none)   b---      red/white   ",
         ];
 
         let mut red = ColorSpec::new();

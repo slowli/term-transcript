@@ -86,8 +86,8 @@
 <span class="fg1">&gt; </span>                            <span class="fg7 bg1">^^^^^^^</span>
 <span class="bold">Positions      Expected style          Actual style     
 ========== ====================== ======================
-</span>    36..40 <span class="underline">__u_   (none)/(none)  </span> <span class="underline fg4">__u_     blue/(none)  </span>
-  203..210 ____   (none)/(none)   <span class="bg13">____   (none)/magenta*</span>
+</span>    36..40 <span class="underline">--u-   (none)/(none)  </span> <span class="underline fg4">--u-     blue/(none)  </span>
+  203..210 ----   (none)/(none)   <span class="bg13">----   (none)/magenta*</span>
 Totals: passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></pre></div>
       </div>
     </foreignObject>
