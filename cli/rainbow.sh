@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# Shell script to output various text styles
+# Standalone shell script to output various text styles
 
 BASE_COLORS="black red green yellow blue magenta cyan white"
 RGB_COLOR_NAMES="pink orange brown teal"

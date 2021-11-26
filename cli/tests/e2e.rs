@@ -31,6 +31,15 @@ fn test_config() -> (TestConfig<StdShell>, TempDir) {
     (config, temp_dir)
 }
 
+fn scrolled_template() -> Template {
+    let template_options = TemplateOptions {
+        window_frame: true,
+        scroll: Some(ScrollOptions::default()),
+        ..TemplateOptions::default()
+    };
+    Template::new(template_options)
+}
+
 #[cfg(feature = "portable-pty")]
 #[test]
 fn help_example() {
@@ -43,11 +52,7 @@ fn help_example() {
 #[test]
 fn testing_example() {
     let (config, _dir) = test_config();
-    let template_options = TemplateOptions {
-        scroll: Some(ScrollOptions::default()),
-        ..TemplateOptions::default()
-    };
-    config.with_template(Template::new(template_options)).test(
+    config.with_template(scrolled_template()).test(
         svg_snapshot("test"),
         &[
             "term-transcript exec -T 100 rainbow.sh > rainbow.svg\n\
@@ -81,6 +86,18 @@ fn print_example() {
         &[
             "term-transcript exec -T 100 'rainbow.sh --short' > short.svg",
             "term-transcript print short.svg",
+        ],
+    );
+}
+
+#[test]
+fn capture_example() {
+    let (config, _dir) = test_config();
+    config.with_template(scrolled_template()).test(
+        svg_snapshot("capture"),
+        &[
+            "rainbow.sh | term-transcript capture 'rainbow.sh' > captured.svg",
+            "term-transcript print captured.svg",
         ],
     );
 }
