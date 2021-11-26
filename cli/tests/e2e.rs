@@ -1,15 +1,13 @@
 #![cfg(unix)]
 
-// TODO: use temporary dirs instead of just `/tmp`
+use tempfile::{tempdir, TempDir};
 
-use std::{
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::path::{Path, PathBuf};
 
 use term_transcript::{
+    svg::{ScrollOptions, Template, TemplateOptions},
     test::{MatchKind, TestConfig},
-    ShellOptions,
+    ShellOptions, StdShell,
 };
 
 fn svg_snapshot(name: &str) -> PathBuf {
@@ -18,12 +16,19 @@ fn svg_snapshot(name: &str) -> PathBuf {
     snapshot_path
 }
 
-fn test_config() -> TestConfig {
-    let shell_options = ShellOptions::default()
+// Executes commands in a temporary dir, with paths to the `term-transcript` binary and
+// the `rainbow.sh` example added to PATH.
+fn test_config() -> (TestConfig<StdShell>, TempDir) {
+    let temp_dir = tempdir().expect("cannot create temporary directory");
+    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    let shell_options = ShellOptions::sh()
         .with_env("COLOR", "always")
-        .with_io_timeout(Duration::from_millis(500))
-        .with_cargo_path();
-    TestConfig::new(shell_options).with_match_kind(MatchKind::Precise)
+        .with_current_dir(temp_dir.path())
+        .with_cargo_path()
+        .with_additional_path(rainbow_dir);
+    let config = TestConfig::new(shell_options).with_match_kind(MatchKind::Precise);
+    (config, temp_dir)
 }
 
 #[cfg(feature = "portable-pty")]
@@ -31,20 +36,23 @@ fn test_config() -> TestConfig {
 fn help_example() {
     use term_transcript::PtyCommand;
 
-    let shell_options = ShellOptions::new(PtyCommand::default())
-        .with_io_timeout(Duration::from_millis(100))
-        .with_cargo_path();
+    let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
     TestConfig::new(shell_options).test(svg_snapshot("help"), &["term-transcript --help"]);
 }
 
 #[test]
 fn testing_example() {
-    test_config().test(
+    let (config, _dir) = test_config();
+    let template_options = TemplateOptions {
+        scroll: Some(ScrollOptions::default()),
+        ..TemplateOptions::default()
+    };
+    config.with_template(Template::new(template_options)).test(
         svg_snapshot("test"),
         &[
-            "term-transcript exec -T 100 ./rainbow.sh > /tmp/rainbow.svg\n\
+            "term-transcript exec -T 100 rainbow.sh > rainbow.svg\n\
              # `-T` option defines the I/O timeout for the shell",
-            "term-transcript test -T 100 -v /tmp/rainbow.svg\n\
+            "term-transcript test -T 100 -v rainbow.svg\n\
              # `-v` switches on verbose output",
         ],
     );
@@ -52,13 +60,14 @@ fn testing_example() {
 
 #[test]
 fn test_failure_example() {
-    test_config().test(
+    let (mut config, _dir) = test_config();
+    config.test(
         svg_snapshot("test-fail"),
         &[
-            "term-transcript exec -T 100 './rainbow.sh --short' > /tmp/bogus.svg",
-            "sed -i -E -e 's/(fg4|bg13)//g' /tmp/bogus.svg\n\
-             # Mutate the captured output, removing one of the styles",
-            "term-transcript test -T 100 --precise /tmp/bogus.svg\n\
+            "term-transcript exec -T 100 'rainbow.sh --short' > bogus.svg && \\\n  \
+             sed -i -E -e 's/(fg4|bg13)//g' bogus.svg\n\
+             # Mutate the captured output, removing some styles",
+            "term-transcript test -T 100 --precise bogus.svg\n\
              # --precise / -p flag enables comparison by style",
         ],
     );
@@ -66,11 +75,12 @@ fn test_failure_example() {
 
 #[test]
 fn print_example() {
-    test_config().test(
+    let (mut config, _dir) = test_config();
+    config.test(
         svg_snapshot("print"),
         &[
-            "term-transcript exec -T 100 './rainbow.sh --short' > /tmp/rainbow-short.svg",
-            "term-transcript print /tmp/rainbow-short.svg",
+            "term-transcript exec -T 100 'rainbow.sh --short' > short.svg",
+            "term-transcript print short.svg",
         ],
     );
 }

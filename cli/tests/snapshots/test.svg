@@ -1,15 +1,15 @@
 <!-- Created with term-transcript v0.1.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 494" width="720" height="494" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 720 362" width="720" height="362" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
-      --black: #000000; --i-black: #7f7f7f;
-      --blue: #0000ee; --i-blue: #5c5cff;
-      --cyan: #00cdcd; --i-cyan: #00ffff;
-      --green: #00cd00; --i-green: #00ff00;
-      --magenta: #cd00cd; --i-magenta: #ff00ff;
-      --red: #cd0000; --i-red: #ff0000;
-      --white: #e5e5e5; --i-white: #ffffff;
-      --yellow: #cdcd00; --i-yellow: #ffff00;
+      --black: #1c1c1c; --i-black: #666666;
+      --blue: #048ac7; --i-blue: #48c6ff;
+      --cyan: #0ac1cd; --i-cyan: #63e7f0;
+      --green: #cee318; --i-green: #ccff00;
+      --magenta: #833c9f; --i-magenta: #be67e1;
+      --red: #ff005b; --i-red: #ff00a0;
+      --white: #e5e5e5; --i-white: #f3f3f3;
+      --yellow: #ffe755; --i-yellow: #ff9f00;
       --hl-black: rgba(255, 255, 255, 0.1);
     }
     .container {
@@ -30,11 +30,11 @@
       padding: 2px 10px;
     }
     .term-output { margin-bottom: 6px; }
+    .scrollbar { fill: rgba(255, 255, 255, 0.35); }
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { opacity: 0.7; }
-    .hl { text-decoration: underline #3af; } /* Custom addition. */
     .hard-br {
       position: relative;
       margin-left: 5px;
@@ -65,27 +65,24 @@
     .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
     .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
-  <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: var(--black);" />
-  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: var(--hl-black);"/>
-  <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
-  <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
-  <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
-  <svg x="0" y="10" width="720" height="452" viewBox="0 0 720 452">
+  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
+  <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
+    <animate attributeName="viewBox" values="0 0 720 342;0 72 720 342;0 144 720 342" dur="8s" repeatCount="indefinite" calcMode="discrete" />
     <foreignObject width="720" height="452">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <!-- Note that a second line was added manually for both inputs. -->
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec <span class="hl">-T 100</span> 'rainbow' &gt; /tmp/rainbow.svg
-<span style="color: #808080"># `-T` option defines the I/O timeout for the shell</span></pre></div>
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 <span class="hl">-v</span> /tmp/rainbow.svg
-<span style="color: #808080"># `-v` switches on verbose output</span></pre></div>
-        <div class="term-output"><pre>Testing file <span class="underline">/tmp/rainbow.svg</span>...
-  [<span class="fg2">+</span>] Input: rainbow
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 100 rainbow.sh &gt; rainbow.svg
+# &#x60;-T&#x60; option defines the I/O timeout for the shell</pre></div>
+        <div class="term-output"><pre></pre></div>
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 -v rainbow.svg
+# &#x60;-v&#x60; switches on verbose output</pre></div>
+        <div class="term-output"><pre>Testing file <span class="underline">rainbow.svg</span>...
+  [<span class="fg2">+</span>] Input: rainbow.sh
 <span style="color: #808080;">    Base colors:
-    black blue green red cyan magenta yellow 
-    black blue green red cyan magenta yellow 
+    black red green yellow blue magenta cyan white 
+    black red green yellow blue magenta cyan white 
     Base colors (bg):
-    black blue green red cyan magenta yellow 
-    black blue green red cyan magenta yellow 
+    black red green yellow blue magenta cyan white 
+    black red green yellow blue magenta cyan white 
     ANSI color palette:
     !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
     !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?
@@ -101,4 +98,7 @@
       </div>
     </foreignObject>
   </svg>
+  <rect class="scrollbar" x="713" y="10" width="5" height="40">
+    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 151;0 302" dur="8s" repeatCount="indefinite" calcMode="discrete" />
+  </rect>
 </svg>

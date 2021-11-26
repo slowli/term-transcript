@@ -68,19 +68,19 @@
   <svg x="0" y="10" width="720" height="236" viewBox="0 0 720 236">
     <foreignObject width="720" height="236">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 100 &quot;rainbow --short&quot; &gt; /tmp/rainbow-short.svg</pre></div>
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 100 &#x27;rainbow.sh --short&#x27; &gt; short.svg</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript print /tmp/rainbow-short.svg</pre></div>
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript print short.svg</pre></div>
         <div class="term-output"><pre><span class="bold">----------  Input #1 ----------
-</span>$ rainbow --short
+</span>$ rainbow.sh --short
 <span class="bold">
 ---------- Output #1 ----------
 </span>Base colors:
-<span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
-<span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 
+<span class="underline fg0">black</span> <span class="fg1">red</span> <span class="underline fg2">green</span> <span class="fg3">yellow</span> <span class="underline fg4">blue</span> <span class="fg5">magenta</span> <span class="underline fg6">cyan</span> <span class="fg7">white</span> 
+<span class="fg8">black</span> <span class="underline fg9">red</span> <span class="fg10">green</span> <span class="underline fg11">yellow</span> <span class="fg12">blue</span> <span class="underline fg13">magenta</span> <span class="fg14">cyan</span> <span class="underline fg15">white</span> 
 Base colors (bg):
-<span class="fg7 bg0">black</span> <span class="fg7 bg4">blue</span> <span class="fg7 bg2">green</span> <span class="fg7 bg1">red</span> <span class="fg7 bg6">cyan</span> <span class="fg7 bg5">magenta</span> <span class="fg7 bg3">yellow</span> 
-<span class="fg15 bg8">black</span> <span class="fg15 bg12">blue</span> <span class="fg15 bg10">green</span> <span class="fg15 bg9">red</span> <span class="fg15 bg14">cyan</span> <span class="fg15 bg13">magenta</span> <span class="fg15 bg11">yellow</span> </pre></div>
+<span class="bg0">black</span> <span class="bg1">red</span> <span class="bg2">green</span> <span class="bg3">yellow</span> <span class="bg4">blue</span> <span class="bg5">magenta</span> <span class="bg6">cyan</span> <span class="bg7">white</span> 
+<span class="bg8">black</span> <span class="bg9">red</span> <span class="bg10">green</span> <span class="bg11">yellow</span> <span class="bg12">blue</span> <span class="bg13">magenta</span> <span class="bg14">cyan</span> <span class="bg15">white</span> </pre></div>
       </div>
     </foreignObject>
   </svg>
