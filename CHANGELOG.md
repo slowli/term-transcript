@@ -14,6 +14,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Allow specifying initialization timeout for `ShellOptions`. This timeout
   is added to the I/O timeout to wait for output for the first command.
 - Add `TestConfig::test()` to perform more high-level / fluent snapshot testing.
+- Allow adding generic paths to the `PATH` env var for the spawned shell
+  via `ShellOptions::with_additional_path()`.
 
 ### Changed
 

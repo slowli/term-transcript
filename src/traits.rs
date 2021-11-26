@@ -47,7 +47,7 @@ impl ConfigureCommand for Command {
 /// the application in the same process.
 ///
 /// [WASI]: https://wasi.dev/
-pub trait SpawnShell {
+pub trait SpawnShell: ConfigureCommand {
     /// Spawned shell process.
     type ShellProcess: ShellProcess;
     /// Reader of the shell output.

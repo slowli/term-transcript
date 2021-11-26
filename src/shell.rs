@@ -27,6 +27,7 @@ use crate::{
 /// [`TestConfig`]: crate::test::TestConfig
 pub struct ShellOptions<Cmd = Command> {
     command: Cmd,
+    path_additions: Vec<PathBuf>,
     io_timeout: Duration,
     init_timeout: Duration,
     init_commands: Vec<String>,
@@ -38,6 +39,7 @@ impl<Cmd: fmt::Debug> fmt::Debug for ShellOptions<Cmd> {
         formatter
             .debug_struct("ShellOptions")
             .field("command", &self.command)
+            .field("path_additions", &self.path_additions)
             .field("io_timeout", &self.io_timeout)
             .field("init_timeout", &self.init_timeout)
             .field("init_commands", &self.init_commands)
@@ -76,6 +78,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     pub fn new(command: Cmd) -> Self {
         Self {
             command,
+            path_additions: vec![],
             io_timeout: Duration::from_secs(1),
             init_timeout: Duration::from_nanos(0),
             init_commands: vec![],
@@ -143,32 +146,52 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         path
     }
 
-    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable.
+    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable
+    /// for the shell described by these options.
     /// This allows to call them by the corresponding filename, without specifying a path
     /// or doing complex preparations (e.g., calling `cargo install`).
     ///
     /// # Limitations
     ///
     /// - The caller must be a unit or integration test; the method will work improperly otherwise.
-    #[cfg(any(unix, windows))]
-    #[cfg_attr(docsrs, doc(cfg(any(unix, windows))))]
     pub fn with_cargo_path(mut self) -> Self {
+        let target_path = Self::target_path();
+        self.path_additions.push(target_path.join("examples"));
+        self.path_additions.push(target_path);
+        self
+    }
+
+    /// Adds a specified path to the `PATH` env variable for the shell described by these options.
+    /// This method can be called multiple times to add multiple paths and is composable
+    /// with [`Self::with_cargo_path()`].
+    pub fn with_additional_path(mut self, path: impl Into<PathBuf>) -> Self {
+        let path = path.into();
+        self.path_additions.push(path);
+        self
+    }
+}
+
+impl<Cmd: SpawnShell> ShellOptions<Cmd> {
+    fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Cmd>> {
         #[cfg(unix)]
         const PATH_SEPARATOR: &str = ":";
         #[cfg(windows)]
         const PATH_SEPARATOR: &str = ";";
 
-        let mut path_var = env::var_os("PATH").unwrap_or_default();
-        let target_path = Self::target_path();
-        if !path_var.is_empty() {
-            path_var.push(PATH_SEPARATOR);
+        if !self.path_additions.is_empty() {
+            let mut path_var = env::var_os("PATH").unwrap_or_default();
+            if !path_var.is_empty() {
+                path_var.push(PATH_SEPARATOR);
+            }
+            for (i, addition) in self.path_additions.iter().enumerate() {
+                path_var.push(addition);
+                if i + 1 < self.path_additions.len() {
+                    path_var.push(PATH_SEPARATOR);
+                }
+            }
+            self.command.env("PATH", &path_var);
         }
-        path_var.push(target_path.join("examples"));
-        path_var.push(PATH_SEPARATOR);
-        path_var.push(target_path);
-
-        self.command.env("PATH", &path_var);
-        self
+        self.command.spawn_shell()
     }
 }
 
@@ -354,7 +377,7 @@ impl Transcript {
             mut shell,
             reader,
             writer,
-        } = options.command.spawn_shell()?;
+        } = options.spawn_shell()?;
 
         let stdout = BufReader::new(reader);
         let (out_lines_send, out_lines_recv) = mpsc::channel();
