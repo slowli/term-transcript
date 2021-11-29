@@ -249,7 +249,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         }
     }
 
-    /// Returns message to be appended to the panic message
+    /// Returns a message to be appended to the panic message.
     #[cfg(feature = "svg")]
     fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> String {
         let mut new_path = path.to_owned();
