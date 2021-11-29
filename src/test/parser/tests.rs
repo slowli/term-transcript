@@ -6,19 +6,19 @@ use quick_xml::events::{BytesEnd, BytesStart, BytesText};
 use std::io::{Cursor, Read};
 
 const SVG: &[u8] = br#"
-        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
-          <foreignObject x="0" y="0" width="652" height="344">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-              <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
-              <div class="term-output"><pre>total 28
+    <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+      <foreignObject x="0" y="0" width="652" height="344">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+          <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
+          <div class="term-output"><pre>total 28
 drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg4">.</span>
 drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
 -rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
-              </div>
-            </div>
-          </foreignObject>
-        </svg>
-    "#;
+          </div>
+        </div>
+      </foreignObject>
+    </svg>
+"#;
 
 #[test]
 fn reading_file() {
@@ -63,20 +63,20 @@ fn reading_file_with_extra_info() {
 #[test]
 fn reading_file_with_no_output() {
     const SVG: &[u8] = br#"
-            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
-              <foreignObject x="0" y="0" width="652" height="344">
-                <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-                  <div class="user-input"><pre><span class="prompt">$</span> ls &gt; /dev/null</pre></div>
-                  <div class="user-input"><pre><span class="prompt">$</span> ls</pre></div>
-                  <div class="term-output"><pre>total 28
-    drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg-blue">.</span>
-    drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span>
-    -rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
-                  </div>
-                </div>
-              </foreignObject>
-            </svg>
-        "#;
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+          <foreignObject x="0" y="0" width="652" height="344">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+              <div class="user-input"><pre><span class="prompt">$</span> ls &gt; /dev/null</pre></div>
+              <div class="user-input"><pre><span class="prompt">$</span> ls</pre></div>
+              <div class="term-output"><pre>total 28
+drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg-blue">.</span>
+drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span>
+-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
+              </div>
+            </div>
+          </foreignObject>
+        </svg>
+    "#;
 
     let transcript = Transcript::from_svg(SVG).unwrap();
     assert_eq!(transcript.interactions.len(), 2);
@@ -101,10 +101,10 @@ fn reading_file_without_svg_tag() {
 #[test]
 fn reading_file_without_container() {
     let bogus_data: &[u8] = br#"
-            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
-              <style>.container { color: #eee; }</style>
-            </svg>
-        "#;
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+          <style>.container { color: #eee; }</style>
+        </svg>
+    "#;
     let err = Transcript::from_svg(bogus_data).unwrap_err();
 
     assert_matches!(err, ParseError::UnexpectedEof);
@@ -127,12 +127,12 @@ fn reading_file_with_invalid_container() {
     for &attrs in INVALID_ATTRS {
         let bogus_data = format!(
             r#"
-                <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
-                  <foreignObject x="0" y="0" width="652" height="344">
-                    <div {}>Test</div>
-                  </foreignObject>
-                </svg>
-                "#,
+            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+              <foreignObject x="0" y="0" width="652" height="344">
+                <div {}>Test</div>
+              </foreignObject>
+            </svg>
+            "#,
             attrs
         );
         let err = Transcript::from_svg(bogus_data.as_bytes()).unwrap_err();
@@ -144,13 +144,13 @@ fn reading_file_with_invalid_container() {
 #[test]
 fn reading_file_without_term_output() {
     let bogus_data: &[u8] = br#"
-            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
-              <foreignObject x="0" y="0" width="652" height="344">
-                <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-                  <div class="user-input"><pre>$ ls -al --color=always</pre></div>
-                </div>
-              </foreignObject>
-            </svg>
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+          <foreignObject x="0" y="0" width="652" height="344">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+              <div class="user-input"><pre>$ ls -al --color=always</pre></div>
+            </div>
+          </foreignObject>
+        </svg>
         "#;
     let err = Transcript::from_svg(bogus_data).unwrap_err();
 
@@ -268,12 +268,19 @@ fn reading_user_input_with_bogus_prompt_location() {
 #[test]
 fn reading_user_input_with_multiple_prompts() {
     let user_input = read_user_input(
-        b"<pre><span class=\"prompt\">&gt;&gt;&gt;</span>  \
-                    echo foo <span class=\"prompt\">&gt;</span> output.log</pre>",
+        b"<pre><span class=\"prompt\">&gt;&gt;&gt;</span> \
+          echo foo <span class=\"prompt\">&gt;</span> output.log</pre>",
     );
 
     assert_eq!(user_input.prompt.as_deref(), Some(">>>"));
     assert_eq!(user_input.text, "echo foo > output.log");
+}
+
+#[test]
+fn reading_user_input_with_leading_spaces() {
+    let user_input =
+        read_user_input(b"<pre><span class=\"prompt\">&gt;</span>   ls &gt; /dev/null</pre>");
+    assert_eq!(user_input.text, "  ls > /dev/null");
 }
 
 #[test]

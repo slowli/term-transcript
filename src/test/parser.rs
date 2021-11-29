@@ -50,6 +50,17 @@ impl Parsed {
     pub fn html(&self) -> &str {
         &self.html
     }
+
+    /// Converts this parsed fragment into text for `UserInput`. This takes into account
+    /// that while the first space after prompt is inserted automatically, the further whitespace
+    /// may be significant.
+    fn into_input_text(self) -> String {
+        if self.plaintext.starts_with(' ') {
+            self.plaintext[1..].to_owned()
+        } else {
+            self.plaintext
+        }
+    }
 }
 
 impl TermOutput for Parsed {}
@@ -363,7 +374,7 @@ impl UserInputState {
         }
 
         Ok(maybe_parsed.map(|parsed| UserInput {
-            text: parsed.plaintext.trim_start().to_owned(),
+            text: parsed.into_input_text(),
             prompt: self.prompt.take(),
         }))
     }
