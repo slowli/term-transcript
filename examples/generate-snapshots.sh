@@ -11,19 +11,20 @@ EXTENSION=new.svg
 ROOT_DIR=$(dirname "$0")
 ROOT_DIR=$(realpath -L "$ROOT_DIR/..")
 TARGET_DIR="$ROOT_DIR/target/debug"
+CLI_TARGET_DIR="$ROOT_DIR/cli/target/debug"
 
 (
   cd "$ROOT_DIR"
   cargo build -p term-transcript-rainbow
-  cargo build -p term-transcript-cli --all-features
+  cargo build --manifest-path=cli/Cargo.toml --all-features
 )
 
-if [[ ! -x "$TARGET_DIR/term-transcript" ]]; then
-  echo "Executable term-transcript not found in expected location $TARGET_DIR"
+if [[ ! -x "$CLI_TARGET_DIR/term-transcript" ]]; then
+  echo "Executable term-transcript not found in expected location $CLI_TARGET_DIR"
   exit 1
 fi
 
-export PATH=$PATH:$TARGET_DIR
+export PATH=$PATH:$TARGET_DIR:$CLI_TARGET_DIR
 
 echo "Creating rainbow snapshot..."
 term-transcript exec -T 100 --palette gjm8 rainbow \
@@ -44,32 +45,3 @@ term-transcript exec -T 100 --shell rainbow-repl \
   'neutral #fa4 underline #c0ffee' \
   '#9f4010 (brown) italic' \
   > "$ROOT_DIR/e2e-tests/rainbow/repl.$EXTENSION"
-
-echo "Creating CLI help snapshot..."
-term-transcript exec -T 100 --palette xterm --pty --window \
-  'term-transcript --help' \
-  > "$ROOT_DIR/cli/tests/snapshots/help.$EXTENSION"
-
-echo "Creating CLI test snapshot..."
-export COLOR=always
-term-transcript exec -T 500 --palette xterm --window \
-  'term-transcript exec -T 100 rainbow > /tmp/rainbow.svg' \
-  'term-transcript test -T 100 -v /tmp/rainbow.svg' \
-  > "$ROOT_DIR/cli/tests/snapshots/test.$EXTENSION"
-
-echo "Creating failed CLI test snapshot..."
-term-transcript exec -T 500 --palette gjm8 \
-  'term-transcript exec -T 100 --shell rainbow-repl \
-  "test italic #c0ffee" > /tmp/bogus.svg' \
-  'sed -i -E -e '\''s/class="italic"//g'\'' /tmp/bogus.svg
-# Mutate the captured output, removing one of the styles' \
-  'term-transcript test -T 100 --precise \
-  --shell rainbow-repl /tmp/bogus.svg
-# --precise / -p flag enables comparison by style' \
-  > "$ROOT_DIR/cli/tests/snapshots/test-fail.$EXTENSION"
-
-echo "Creating CLI print snapshot..."
-term-transcript exec -T 500 --palette gjm8 \
-  'term-transcript exec -T 100 "rainbow --short" > /tmp/rainbow-short.svg' \
-  'term-transcript print /tmp/rainbow-short.svg' \
-  > "$ROOT_DIR/cli/tests/snapshots/print.$EXTENSION"

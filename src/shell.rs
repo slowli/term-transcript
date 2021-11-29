@@ -5,6 +5,7 @@ use std::{
     ffi::OsStr,
     fmt,
     io::{self, BufRead, BufReader, LineWriter, Read},
+    iter,
     path::{Path, PathBuf},
     process::{ChildStdin, Command, Stdio},
     sync::mpsc,
@@ -26,7 +27,9 @@ use crate::{
 /// [`TestConfig`]: crate::test::TestConfig
 pub struct ShellOptions<Cmd = Command> {
     command: Cmd,
+    path_additions: Vec<PathBuf>,
     io_timeout: Duration,
+    init_timeout: Duration,
     init_commands: Vec<String>,
     line_mapper: Box<dyn FnMut(String) -> Option<String>>,
 }
@@ -36,7 +39,9 @@ impl<Cmd: fmt::Debug> fmt::Debug for ShellOptions<Cmd> {
         formatter
             .debug_struct("ShellOptions")
             .field("command", &self.command)
+            .field("path_additions", &self.path_additions)
             .field("io_timeout", &self.io_timeout)
+            .field("init_timeout", &self.init_timeout)
             .field("init_commands", &self.init_commands)
             .finish()
     }
@@ -73,7 +78,9 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     pub fn new(command: Cmd) -> Self {
         Self {
             command,
+            path_additions: vec![],
             io_timeout: Duration::from_secs(1),
+            init_timeout: Duration::from_nanos(0),
             init_commands: vec![],
             line_mapper: Box::new(Some),
         }
@@ -89,8 +96,19 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// [`Transcript::from_inputs()`] wait
     /// for output of a command before proceeding to the next command. Longer values
     /// allow to capture output more accurately, but result in longer execution.
+    ///
+    /// By default, the I/O timeout is 1 second.
     pub fn with_io_timeout(mut self, io_timeout: Duration) -> Self {
         self.io_timeout = io_timeout;
+        self
+    }
+
+    /// Sets an additional initialization timeout (relative to the one set by
+    /// [`Self::with_io_timeout()`]) before reading the output of the first command.
+    ///
+    /// By default, the initialization timeout is zero.
+    pub fn with_init_timeout(mut self, init_timeout: Duration) -> Self {
+        self.init_timeout = init_timeout;
         self
     }
 
@@ -128,32 +146,52 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         path
     }
 
-    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable.
+    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable
+    /// for the shell described by these options.
     /// This allows to call them by the corresponding filename, without specifying a path
     /// or doing complex preparations (e.g., calling `cargo install`).
     ///
     /// # Limitations
     ///
     /// - The caller must be a unit or integration test; the method will work improperly otherwise.
-    #[cfg(any(unix, windows))]
-    #[cfg_attr(docsrs, doc(cfg(any(unix, windows))))]
     pub fn with_cargo_path(mut self) -> Self {
+        let target_path = Self::target_path();
+        self.path_additions.push(target_path.join("examples"));
+        self.path_additions.push(target_path);
+        self
+    }
+
+    /// Adds a specified path to the `PATH` env variable for the shell described by these options.
+    /// This method can be called multiple times to add multiple paths and is composable
+    /// with [`Self::with_cargo_path()`].
+    pub fn with_additional_path(mut self, path: impl Into<PathBuf>) -> Self {
+        let path = path.into();
+        self.path_additions.push(path);
+        self
+    }
+}
+
+impl<Cmd: SpawnShell> ShellOptions<Cmd> {
+    fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Cmd>> {
         #[cfg(unix)]
         const PATH_SEPARATOR: &str = ":";
         #[cfg(windows)]
         const PATH_SEPARATOR: &str = ";";
 
-        let mut path_var = env::var_os("PATH").unwrap_or_default();
-        let target_path = Self::target_path();
-        if !path_var.is_empty() {
-            path_var.push(PATH_SEPARATOR);
+        if !self.path_additions.is_empty() {
+            let mut path_var = env::var_os("PATH").unwrap_or_default();
+            if !path_var.is_empty() {
+                path_var.push(PATH_SEPARATOR);
+            }
+            for (i, addition) in self.path_additions.iter().enumerate() {
+                path_var.push(addition);
+                if i + 1 < self.path_additions.len() {
+                    path_var.push(PATH_SEPARATOR);
+                }
+            }
+            self.command.env("PATH", &path_var);
         }
-        path_var.push(target_path.join("examples"));
-        path_var.push(PATH_SEPARATOR);
-        path_var.push(target_path);
-
-        self.command.env("PATH", &path_var);
-        self
+        self.command.spawn_shell()
     }
 }
 
@@ -275,6 +313,24 @@ impl SpawnShell for StdShell {
     }
 }
 
+#[derive(Debug)]
+struct Timeouts {
+    inner: iter::Chain<iter::Once<Duration>, iter::Repeat<Duration>>,
+}
+
+impl Timeouts {
+    fn new<Cmd: SpawnShell>(options: &ShellOptions<Cmd>) -> Self {
+        Self {
+            inner: iter::once(options.init_timeout + options.io_timeout)
+                .chain(iter::repeat(options.io_timeout)),
+        }
+    }
+
+    fn next(&mut self) -> Duration {
+        self.inner.next().unwrap() // safe by construction; the iterator is indefinite
+    }
+}
+
 impl Transcript {
     #[cfg(not(windows))]
     fn write_line(writer: &mut impl io::Write, line: &str) -> io::Result<()> {
@@ -321,7 +377,7 @@ impl Transcript {
             mut shell,
             reader,
             writer,
-        } = options.command.spawn_shell()?;
+        } = options.spawn_shell()?;
 
         let stdout = BufReader::new(reader);
         let (out_lines_send, out_lines_recv) = mpsc::channel();
@@ -335,15 +391,16 @@ impl Transcript {
         });
 
         let mut stdin = LineWriter::new(writer);
+        let mut timeouts = Timeouts::new(options);
 
         // Push initialization commands.
         if shell.is_echoing() {
             for cmd in &options.init_commands {
                 Self::write_line(&mut stdin, cmd)?;
-                Self::read_echo(cmd, &out_lines_recv, options.io_timeout)?;
+                Self::read_echo(cmd, &out_lines_recv, timeouts.next())?;
 
                 // Drain all other output as well.
-                while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
+                while out_lines_recv.recv_timeout(timeouts.next()).is_ok() {
                     // Intentionally empty.
                 }
             }
@@ -356,9 +413,11 @@ impl Transcript {
         }
 
         // Drain all output left after commands and let the shell get fully initialized.
-        while out_lines_recv.recv_timeout(options.io_timeout).is_ok() {
+        while out_lines_recv.recv_timeout(timeouts.next()).is_ok() {
             // Intentionally empty.
         }
+        // At this point, at least one item was requested from `timeout_iter`, so the further code
+        // may safely use `options.io_timeout`.
 
         let mut transcript = Self::new();
         for input in inputs {

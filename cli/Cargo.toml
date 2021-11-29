@@ -23,6 +23,12 @@ termcolor = "1.1.2"
 
 term-transcript = { version = "0.1.0", path = ".." }
 
+[dev-dependencies]
+tempfile = "3.2.0"
+
 [features]
 # Enables capturing output via pseudo-terminal (PTY).
 portable-pty = ["term-transcript/portable-pty"]
+
+[workspace]
+# Separate workspace since we need a lockfile

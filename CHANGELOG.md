@@ -11,11 +11,17 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   crate.
 - Add `ShellOptions::with_env()` to set environment variables for the shell.
 - Make style / color comparisons more detailed and human-readable.
+- Allow specifying initialization timeout for `ShellOptions`. This timeout
+  is added to the I/O timeout to wait for output for the first command.
+- Add `TestConfig::test()` to perform more high-level / fluent snapshot testing.
+- Allow adding generic paths to the `PATH` env var for the spawned shell
+  via `ShellOptions::with_additional_path()`.
 
 ### Changed
 
 - Update `handlebars` and `pretty_assertions` dependencies.
 - Generalize `TermError::NonCsiSequence` variant to `UnrecognizedSequence`.
+- Make `TestConfig` modifiers take `self` by value for the sake of fluency.
 
 ### Fixed
 
@@ -31,6 +37,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   was dropped in certain cases.
 - Fix waiting for echoed initialization commands.
 - Add `height` attribute to top-level SVG to fix its rendering.
+- Remove an obsolete lifetime parameter from `svg::Template` and change `Template::render`
+  to receive `self` by shared reference.
 
 ## 0.1.0 - 2021-06-01
 

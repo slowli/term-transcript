@@ -41,6 +41,11 @@ jobs:
         with:
           command: test
           args: --workspace --all-targets
+      - name: Run CLI tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=cli/Cargo.toml --all-targets
       - name: Run doc tests
         uses: actions-rs/cargo@v1
         with:
@@ -70,6 +75,11 @@ jobs:
         with:
           command: test
           args: --workspace --all-features --all-targets
+      - name: Run CLI tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=cli/Cargo.toml --all-features --all-targets
       - name: Run doc tests
         uses: actions-rs/cargo@v1
         with:
@@ -105,22 +115,41 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --workspace --all-features --all-targets -- -D warnings
-      - name: Build (no features)
-        uses: actions-rs/cargo@v1
+      - name: Clippy CLI
+        uses: actions-rs/clippy-check@v1
         with:
-          command: build
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --manifest-path=cli/Cargo.toml --all-features --all-targets -- -D warnings
+          name: clippy (CLI)
+      - name: Clippy (no features)
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           args: -p term-transcript --no-default-features --lib
-      - name: Build (features = svg)
-        uses: actions-rs/cargo@v1
+          name: clippy (no features)
+      - name: Clippy (features = svg)
+        uses: actions-rs/clippy-check@v1
         with:
-          command: build
+          token: ${{ secrets.GITHUB_TOKEN }}
           args: -p term-transcript --no-default-features --features svg --lib
+          name: clippy (features = svg)
+      - name: Clippy (features = test)
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -p term-transcript --no-default-features --features test --lib
+          name: clippy (features = test)
 
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --workspace --all-features --all-targets
+      - name: Run CLI tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=cli/Cargo.toml --all-features --all-targets
       - name: Run doc tests
         uses: actions-rs/cargo@v1
         with:

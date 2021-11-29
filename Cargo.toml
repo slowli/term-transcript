@@ -43,4 +43,5 @@ svg = ["handlebars", "serde"]
 test = ["quick-xml"]
 
 [workspace]
-members = [".", "cli", "e2e-tests/rainbow"]
+members = [".", "e2e-tests/rainbow"]
+exclude = ["cli"]

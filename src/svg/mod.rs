@@ -379,18 +379,18 @@ impl Default for WrapOptions {
 /// # }
 /// ```
 #[derive(Debug)]
-pub struct Template<'a> {
+pub struct Template {
     options: TemplateOptions,
-    handlebars: Handlebars<'a>,
+    handlebars: Handlebars<'static>,
 }
 
-impl Default for Template<'_> {
+impl Default for Template {
     fn default() -> Self {
         Self::new(TemplateOptions::default())
     }
 }
 
-impl<'a> Template<'a> {
+impl Template {
     /// Bottom margin for each input or output block.
     const BLOCK_MARGIN: usize = 6;
     /// Additional padding for each user input block.
@@ -429,8 +429,8 @@ impl<'a> Template<'a> {
     /// Returns a Handlebars rendering error, if any. Normally, the only errors could be
     /// related to I/O (e.g., the image cannot be written to a file).
     pub fn render<W: Write>(
-        &mut self,
-        transcript: &'a Transcript,
+        &self,
+        transcript: &Transcript,
         destination: W,
     ) -> Result<(), RenderError> {
         let rendered_outputs = self
