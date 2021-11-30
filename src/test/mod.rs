@@ -55,6 +55,8 @@
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
+    env,
+    ffi::OsStr,
     fs::File,
     io::{self, BufReader, Write},
     path::Path,
@@ -91,6 +93,71 @@ impl Default for TestOutputConfig {
     }
 }
 
+/// Strategy for saving a new snapshot on test failure.
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
+#[non_exhaustive]
+#[cfg(feature = "svg")]
+#[cfg_attr(docsrs, docs(cfg(feature = "svg")))]
+pub enum UpdateMode {
+    /// Never create a new snapshot on test failure.
+    Never,
+    /// Always create a new snapshot on test failure.
+    Always,
+}
+
+#[cfg(feature = "svg")]
+impl UpdateMode {
+    /// Reads the update mode from the `TERM_TRANSCRIPT_UPDATE` env variable.
+    ///
+    /// If the `TERM_TRANSCRIPT_UPDATE` variable is not set, the output depends on whether
+    /// the executable is running in CI (which is detected by the presence of
+    /// the `CI` env variable):
+    ///
+    /// - In CI, the method returns [`Self::Never`].
+    /// - Otherwise, the method returns [`Self::Always`].
+    ///
+    /// # Panics
+    ///
+    /// If the `TERM_TRANSCRIPT_UPDATE` env variable is set to an unrecognized value
+    /// (something other than `never` or `always`), this method will panic.
+    pub fn from_env() -> Self {
+        const ENV_VAR: &str = "TERM_TRANSCRIPT_UPDATE";
+
+        match env::var_os(ENV_VAR) {
+            Some(s) => Self::from_os_str(&s).unwrap_or_else(|| {
+                panic!(
+                    "Cannot read update mode from env variable {}: `{}` is not a valid value \
+                     (use one of `never` or `always`)",
+                    ENV_VAR,
+                    s.to_string_lossy()
+                );
+            }),
+            None => {
+                if env::var_os("CI").is_some() {
+                    Self::Never
+                } else {
+                    Self::Always
+                }
+            }
+        }
+    }
+
+    fn from_os_str(s: &OsStr) -> Option<Self> {
+        match s {
+            s if s == "never" => Some(Self::Never),
+            s if s == "always" => Some(Self::Always),
+            _ => None,
+        }
+    }
+
+    fn should_create_snapshot(self) -> bool {
+        match self {
+            Self::Always => true,
+            Self::Never => false,
+        }
+    }
+}
+
 /// Testing configuration.
 ///
 /// # Examples
@@ -103,17 +170,26 @@ pub struct TestConfig<Cmd = Command> {
     output: TestOutputConfig,
     color_choice: ColorChoice,
     #[cfg(feature = "svg")]
+    update_mode: UpdateMode,
+    #[cfg(feature = "svg")]
     template: Template,
 }
 
 impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// Creates a new config.
+    ///
+    /// # Panics
+    ///
+    /// - Panics if the `TERM_TRANSCRIPT_UPDATE` variable is set to an incorrect value.
+    ///   See [`UpdateMode::from_env()`] for more details.
     pub fn new(shell_options: ShellOptions<Cmd>) -> Self {
         Self {
             shell_options,
             match_kind: MatchKind::TextOnly,
             output: TestOutputConfig::Normal,
             color_choice: ColorChoice::Auto,
+            #[cfg(feature = "svg")]
+            update_mode: UpdateMode::from_env(),
             #[cfg(feature = "svg")]
             template: Template::default(),
         }
@@ -142,6 +218,17 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
     pub fn with_template(mut self, template: Template) -> Self {
         self.template = template;
+        self
+    }
+
+    /// Overrides the strategy for saving new snapshots for failed tests.
+    ///
+    /// By default, the strategy is determined from the execution environment
+    /// using [`UpdateMode::from_env()`].
+    #[cfg(feature = "svg")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
+    pub fn with_update_mode(mut self, update_mode: UpdateMode) -> Self {
+        self.update_mode = update_mode;
         self
     }
 
@@ -199,7 +286,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 "Snapshot path `{:?}` exists, but is not a file",
                 snapshot_path
             );
-        } else {
+        } else if self.update_mode.should_create_snapshot() {
             let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)
                 .unwrap_or_else(|err| {
                     panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
@@ -209,6 +296,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 "Snapshot `{:?}` is missing\n{}",
                 snapshot_path, new_snapshot_message
             );
+        } else {
+            panic!("Snapshot `{:?}` is missing", snapshot_path);
         }
     }
 
@@ -252,6 +341,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// Returns a message to be appended to the panic message.
     #[cfg(feature = "svg")]
     fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> String {
+        if !self.update_mode.should_create_snapshot() {
+            return format!("Skipped writing new snapshot `{:?}` per test config", path);
+        }
+
         let mut new_path = path.to_owned();
         new_path.set_extension("new.svg");
         let new_snapshot = File::create(&new_path).unwrap_or_else(|err| {
