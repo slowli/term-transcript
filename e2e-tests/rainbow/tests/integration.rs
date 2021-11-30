@@ -1,8 +1,9 @@
-// TODO: test new snapshot creation (missing, input mismatch, output mismatch)
+use tempfile::tempdir;
 
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{self, BufReader, Read},
+    panic,
     path::Path,
     process::{Command, Stdio},
     time::Duration,
@@ -12,7 +13,7 @@ use std::{
 use term_transcript::PtyCommand;
 use term_transcript::{
     svg::{NamedPalette, Template, TemplateOptions},
-    test::{MatchKind, TestConfig, TestOutputConfig},
+    test::{MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ShellOptions, Transcript, UserInput,
 };
 
@@ -208,4 +209,143 @@ fn repl_snapshot_testing() {
                 "#9f4010 (brown) italic",
             ],
         );
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ErrorType {
+    MissingSnapshot,
+    InputMismatch,
+    OutputMismatch,
+}
+
+impl ErrorType {
+    fn create_snapshot(self, snapshot_path: &Path) -> io::Result<()> {
+        match self {
+            Self::MissingSnapshot => {
+                Ok(()) // Do nothing.
+            }
+            Self::InputMismatch => {
+                let mut buffer = String::new();
+                read_main_snapshot()?.read_to_string(&mut buffer)?;
+                let buffer = buffer.replace(" rainbow", " ????");
+                fs::write(snapshot_path, &buffer)
+            }
+            Self::OutputMismatch => {
+                let mut buffer = String::new();
+                read_main_snapshot()?.read_to_string(&mut buffer)?;
+                let buffer = buffer.replace("pink", "???");
+                fs::write(snapshot_path, &buffer)
+            }
+        }
+    }
+
+    fn expected_error_message(self) -> &'static str {
+        match self {
+            Self::MissingSnapshot => "is missing",
+            Self::InputMismatch => "Unexpected user inputs",
+            Self::OutputMismatch => "There were test failures",
+        }
+    }
+}
+
+fn test_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
+    let temp_dir = tempdir()?;
+    let snapshot_path = temp_dir.path().join("rainbow.svg");
+    error_type.create_snapshot(&snapshot_path)?;
+
+    let test_result = panic::catch_unwind(|| {
+        let shell_options = ShellOptions::default().with_cargo_path();
+        TestConfig::new(shell_options)
+            .with_update_mode(UpdateMode::Always)
+            .test(&snapshot_path, &["rainbow"]);
+    });
+
+    let err = *test_result.unwrap_err().downcast::<String>().unwrap();
+    assert!(
+        err.contains(error_type.expected_error_message()),
+        "Unexpected error message: {}",
+        err
+    );
+    assert!(
+        err.contains("rainbow.new.svg"),
+        "Unexpected error message: {}",
+        err
+    );
+
+    let new_snapshot_path = temp_dir.path().join("rainbow.new.svg");
+    let new_snapshot_file = BufReader::new(File::open(new_snapshot_path)?);
+    let new_transcript = Transcript::from_svg(new_snapshot_file)?;
+
+    let interactions = new_transcript.interactions();
+    assert_eq!(interactions.len(), 1);
+    let output_plaintext = interactions[0].output().plaintext();
+    assert!(
+        output_plaintext.contains("pink"),
+        "Unexpected output: {}",
+        output_plaintext
+    );
+
+    Ok(())
+}
+
+#[test]
+fn new_snapshot_is_created_if_original_is_missing() -> anyhow::Result<()> {
+    test_new_snapshot(ErrorType::MissingSnapshot)
+}
+
+#[test]
+fn new_snapshot_is_created_on_input_mismatch() -> anyhow::Result<()> {
+    test_new_snapshot(ErrorType::InputMismatch)
+}
+
+#[test]
+fn new_snapshot_is_created_on_output_mismatch() -> anyhow::Result<()> {
+    test_new_snapshot(ErrorType::OutputMismatch)
+}
+
+fn test_no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
+    let temp_dir = tempdir()?;
+    let snapshot_path = temp_dir.path().join("rainbow.svg");
+    error_type.create_snapshot(&snapshot_path)?;
+
+    let test_result = panic::catch_unwind(|| {
+        let shell_options = ShellOptions::default().with_cargo_path();
+        TestConfig::new(shell_options)
+            .with_update_mode(UpdateMode::Never)
+            .test(&snapshot_path, &["rainbow"]);
+    });
+
+    let err = *test_result.unwrap_err().downcast::<String>().unwrap();
+    assert!(
+        err.contains(error_type.expected_error_message()),
+        "Unexpected error message: {}",
+        err
+    );
+    if error_type != ErrorType::MissingSnapshot {
+        assert!(
+            err.contains("Skipped writing new snapshot"),
+            "Unexpected error message: {}",
+            err
+        );
+    }
+
+    let new_snapshot_path = temp_dir.path().join("rainbow.new.svg");
+    assert!(!new_snapshot_path.exists());
+
+    Ok(())
+}
+
+#[test]
+fn new_snapshot_is_not_created_with_config_if_original_is_missing() -> anyhow::Result<()> {
+    test_no_new_snapshot(ErrorType::MissingSnapshot)
+}
+
+#[test]
+fn new_snapshot_is_not_created_with_config_on_input_mismatch() -> anyhow::Result<()> {
+    test_no_new_snapshot(ErrorType::InputMismatch)
+}
+
+#[test]
+fn new_snapshot_is_not_created_with_config_on_output_mismatch() -> anyhow::Result<()> {
+    test_no_new_snapshot(ErrorType::OutputMismatch)
 }
