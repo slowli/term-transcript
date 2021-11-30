@@ -1,4 +1,5 @@
 use termcolor::{Color, ColorSpec, WriteColor};
+use unicode_width::UnicodeWidthStr;
 
 use std::{
     cmp::{self, Ordering},
@@ -39,9 +40,7 @@ impl ColorSpan {
         Ok(())
     }
 
-    /// Writes a single plaintext `line` to `out` using styles from `styles_iter`.
-    /// `first_span_len` can be used to overwrite the effective length of the first span;
-    /// this is used when calling this method multiple times in succession.
+    /// Writes a single plaintext `line` to `out` using styles from `spans_iter`.
     fn write_line<'a, I: Iterator<Item = (usize, &'a Self)>>(
         spans_iter: &mut Peekable<I>,
         out: &mut impl WriteColor,
@@ -280,7 +279,7 @@ impl ColorDiff {
                 out.set_color(&sideline_hl)?;
                 write!(out, "> ")?;
                 out.reset()?;
-                Self::highlight_line(out, &mut highlights, line_start, line.len())?;
+                Self::highlight_line(out, &mut highlights, line_start, line)?;
             } else {
                 write!(out, "= ")?;
                 ColorSpan::write_line(&mut color_spans, out, line_start, line)?;
@@ -294,9 +293,11 @@ impl ColorDiff {
         out: &mut impl WriteColor,
         spans_iter: &mut Peekable<I>,
         line_offset: usize,
-        line_len: usize,
+        line: &str,
     ) -> io::Result<()> {
+        let line_len = line.len();
         let mut line_pos = 0;
+
         while line_pos < line_len {
             let span = if let Some(span) = spans_iter.peek() {
                 span
@@ -310,12 +311,14 @@ impl ColorDiff {
             let span_end = cmp::min(span.start + span.len - line_offset, line_len);
 
             if span_start > line_pos {
-                let spaces: String = " ".repeat(span_start - line_pos);
+                let spaces = " ".repeat(line[line_pos..span_start].width());
                 write!(out, "{}", spaces)?;
             }
 
             let ch = span.kind.underline_char();
-            let underline: String = iter::repeat(ch).take(span_end - span_start).collect();
+            let underline: String = iter::repeat(ch)
+                .take(line[span_start..span_end].width())
+                .collect();
             out.set_color(&span.kind.highlight_spec())?;
             write!(out, "{}", underline)?;
             out.reset()?;
@@ -496,6 +499,7 @@ impl HighlightedSpan {
 }
 
 #[cfg(test)]
+#[allow(clippy::non_ascii_literal)]
 mod tests {
     use super::*;
 
@@ -829,6 +833,53 @@ mod tests {
              = text\n\
              > here\n\
              >   ^^\n";
+        assert_eq!(buffer, expected_buffer);
+    }
+
+    #[test]
+    fn highlighting_works_with_non_ascii_text() {
+        let mut buffer = vec![];
+        let line = "  ┌─ Snippet #1:1:1";
+        let spans = vec![HighlightedSpan {
+            start: 2,
+            len: 6,
+            kind: SpanHighlightKind::Main,
+        }];
+        let mut spans = spans.into_iter().peekable();
+        ColorDiff::highlight_line(&mut NoColor::new(&mut buffer), &mut spans, 0, line).unwrap();
+
+        let highlight_line = String::from_utf8(buffer).unwrap();
+        assert_eq!(highlight_line, "  ^^\n");
+    }
+
+    #[test]
+    fn plaintext_highlight_with_non_ascii_text() {
+        let text = "error[EVAL]: Variable `foo` is not defined\n  \
+          ┌─ Snippet #1:1:1\n  \
+          │\n\
+        1 │ foo(3)\n  \
+          │ ^^^ Undefined variable occurrence";
+
+        let color_diff = ColorDiff {
+            differing_spans: vec![
+                diff_span(45, 6),
+                diff_span(69, 3),
+                diff_span(73, 1),
+                diff_span(75, 3),
+                diff_span(88, 3),
+            ],
+        };
+
+        let buffer = test_highlight(&color_diff, text);
+        let expected_buffer = "= error[EVAL]: Variable `foo` is not defined\n\
+        >   ┌─ Snippet #1:1:1\n\
+        >   ^^\n\
+        >   │\n\
+        >   ^\n\
+        > 1 │ foo(3)\n\
+        > ^ ^\n\
+        >   │ ^^^ Undefined variable occurrence\n\
+        >   ^\n";
         assert_eq!(buffer, expected_buffer);
     }
 }
