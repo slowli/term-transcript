@@ -68,7 +68,7 @@
   <svg x="0" y="10" width="720" height="236" viewBox="0 0 720 236">
     <foreignObject width="720" height="236">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 100 &#x27;rainbow.sh --short&#x27; &gt; short.svg</pre></div>
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 200 &#x27;rainbow.sh --short&#x27; &gt; short.svg</pre></div>
         <div class="term-output"><pre></pre></div>
         <div class="user-input"><pre><span class="prompt">$</span> term-transcript print short.svg</pre></div>
         <div class="term-output"><pre><span class="bold">----------  Input #1 ----------
