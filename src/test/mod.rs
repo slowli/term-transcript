@@ -97,11 +97,12 @@ impl Default for TestOutputConfig {
     }
 }
 
-/// Strategy for saving a new snapshot on test failure.
+/// Strategy for saving a new snapshot on a test failure within [`TestConfig::test()`] and
+/// related methods.
 #[derive(Debug, Clone, Copy, PartialEq, Hash)]
 #[non_exhaustive]
 #[cfg(feature = "svg")]
-#[cfg_attr(docsrs, docs(cfg(feature = "svg")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub enum UpdateMode {
     /// Never create a new snapshot on test failure.
     Never,
@@ -184,8 +185,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ///
     /// # Panics
     ///
-    /// - Panics if the `TERM_TRANSCRIPT_UPDATE` variable is set to an incorrect value.
-    ///   See [`UpdateMode::from_env()`] for more details.
+    /// - Panics if the `svg` crate feature is enabled and the `TERM_TRANSCRIPT_UPDATE` variable
+    ///   is set to an incorrect value. See [`UpdateMode::from_env()`] for more details.
     pub fn new(shell_options: ShellOptions<Cmd>) -> Self {
         Self {
             shell_options,
@@ -206,6 +207,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     }
 
     /// Sets coloring of the output.
+    ///
+    /// On Windows, `color_choice` has slightly different semantics than its usage
+    /// in the `termcolor` crate. Namely, if colors can be used (stdout is a tty with
+    /// color support), ANSI escape sequences will always be used.
     pub fn with_color_choice(mut self, color_choice: ColorChoice) -> Self {
         self.color_choice = color_choice;
         self
@@ -240,7 +245,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ///
     /// If the path is relative, it is resolved relative to the current working dir,
     /// which in the case of tests is the root directory of the including crate (i.e., the dir
-    /// where the crate manifest is located). Alternatively, you may specify an absolute path
+    /// where the crate manifest is located). You may specify an absolute path
     /// using env vars that Cargo sets during build, such as [`env!("CARGO_MANIFEST_DIR")`].
     ///
     /// Similar to other kinds of snapshot testing, a new snapshot will be generated if
@@ -251,8 +256,11 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// `snapshots/help.new.svg`.
     ///
     /// Generation of new snapshots will only happen if the `svg` crate feature is enabled
-    /// (which it is by default). The snapshot template can be customized via
-    /// [`Self::with_template()`].
+    /// (which it is by default), and if the [update mode](Self::with_update_mode())
+    /// is not [`UpdateMode::Never`], either because it was set explicitly or
+    /// [inferred](UpdateMode::from_env()) from the execution environment.
+    ///
+    /// The snapshot template can be customized via [`Self::with_template()`].
     ///
     /// # Panics
     ///
