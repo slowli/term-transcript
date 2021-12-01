@@ -55,9 +55,9 @@ fn testing_example() {
     config.with_template(scrolled_template()).test(
         svg_snapshot("test"),
         &[
-            "term-transcript exec -T 100 rainbow.sh > rainbow.svg\n\
+            "term-transcript exec -T 200 rainbow.sh > rainbow.svg\n\
              # `-T` option defines the I/O timeout for the shell",
-            "term-transcript test -T 100 -v rainbow.svg\n\
+            "term-transcript test -T 200 -v rainbow.svg\n\
              # `-v` switches on verbose output",
         ],
     );
@@ -69,10 +69,10 @@ fn test_failure_example() {
     config.test(
         svg_snapshot("test-fail"),
         &[
-            "term-transcript exec -T 100 'rainbow.sh --short' > bogus.svg && \\\n  \
+            "term-transcript exec -T 200 'rainbow.sh --short' > bogus.svg && \\\n  \
              sed -i -E -e 's/(fg4|bg13)//g' bogus.svg\n\
              # Mutate the captured output, removing some styles",
-            "term-transcript test -T 100 --precise bogus.svg\n\
+            "term-transcript test -T 200 --precise bogus.svg\n\
              # --precise / -p flag enables comparison by style",
         ],
     );
@@ -84,7 +84,7 @@ fn print_example() {
     config.test(
         svg_snapshot("print"),
         &[
-            "term-transcript exec -T 100 'rainbow.sh --short' > short.svg",
+            "term-transcript exec -T 200 'rainbow.sh --short' > short.svg",
             "term-transcript print short.svg",
         ],
     );

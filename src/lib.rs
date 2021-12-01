@@ -287,6 +287,22 @@ impl UserInput {
         }
     }
 
+    /// Creates a standalone / starting REPL command with the `>>>` prompt.
+    pub fn repl(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            prompt: Some(Cow::Borrowed(">>>")),
+        }
+    }
+
+    /// Creates a REPL command continuation with the `...` prompt.
+    pub fn repl_continuation(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            prompt: Some(Cow::Borrowed("...")),
+        }
+    }
+
     /// Gets the kind of this input.
     pub fn prompt(&self) -> Option<&str> {
         self.prompt.as_deref()

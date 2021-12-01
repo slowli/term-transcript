@@ -22,6 +22,7 @@ handlebars = { version = "4.0.0", optional = true }
 portable-pty = { version = "0.6.0", optional = true }
 
 # Private dependencies (not exposed in the public API).
+atty = { version = "0.2.14", optional = true }
 bytecount = "0.6.2"
 os_pipe = "1.0.0"
 serde = { version = "1.0", optional = true, features = ["derive"] }
@@ -40,7 +41,7 @@ default = ["pretty_assertions", "svg", "test"]
 # Rendering terminal transcripts into SVG snapshots
 svg = ["handlebars", "serde"]
 # Allows parsing transcripts from SVG snapshots and testing them
-test = ["quick-xml"]
+test = ["quick-xml", "atty"]
 
 [workspace]
 members = [".", "e2e-tests/rainbow"]

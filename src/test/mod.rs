@@ -52,9 +52,12 @@
 //! # }
 //! ```
 
-use termcolor::{Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
+use termcolor::{Color, ColorChoice, ColorSpec, NoColor, WriteColor};
 
+#[cfg(feature = "svg")]
+use std::ffi::OsStr;
 use std::{
+    env,
     fs::File,
     io::{self, BufReader, Write},
     path::Path,
@@ -66,9 +69,13 @@ use crate::{traits::SpawnShell, Interaction, ShellOptions, TermError, Transcript
 
 mod color_diff;
 mod parser;
+mod utils;
 
-use self::color_diff::ColorSpan;
-pub use self::parser::{ParseError, Parsed};
+use self::{
+    color_diff::ColorSpan,
+    parser::Parsed,
+    utils::{ColorPrintlnWriter, IndentingWriter},
+};
 #[cfg(feature = "svg")]
 use crate::svg::Template;
 use crate::{test::color_diff::ColorDiff, UserInput};
@@ -91,6 +98,72 @@ impl Default for TestOutputConfig {
     }
 }
 
+/// Strategy for saving a new snapshot on a test failure within [`TestConfig::test()`] and
+/// related methods.
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
+#[non_exhaustive]
+#[cfg(feature = "svg")]
+#[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
+pub enum UpdateMode {
+    /// Never create a new snapshot on test failure.
+    Never,
+    /// Always create a new snapshot on test failure.
+    Always,
+}
+
+#[cfg(feature = "svg")]
+impl UpdateMode {
+    /// Reads the update mode from the `TERM_TRANSCRIPT_UPDATE` env variable.
+    ///
+    /// If the `TERM_TRANSCRIPT_UPDATE` variable is not set, the output depends on whether
+    /// the executable is running in CI (which is detected by the presence of
+    /// the `CI` env variable):
+    ///
+    /// - In CI, the method returns [`Self::Never`].
+    /// - Otherwise, the method returns [`Self::Always`].
+    ///
+    /// # Panics
+    ///
+    /// If the `TERM_TRANSCRIPT_UPDATE` env variable is set to an unrecognized value
+    /// (something other than `never` or `always`), this method will panic.
+    pub fn from_env() -> Self {
+        const ENV_VAR: &str = "TERM_TRANSCRIPT_UPDATE";
+
+        match env::var_os(ENV_VAR) {
+            Some(s) => Self::from_os_str(&s).unwrap_or_else(|| {
+                panic!(
+                    "Cannot read update mode from env variable {}: `{}` is not a valid value \
+                     (use one of `never` or `always`)",
+                    ENV_VAR,
+                    s.to_string_lossy()
+                );
+            }),
+            None => {
+                if env::var_os("CI").is_some() {
+                    Self::Never
+                } else {
+                    Self::Always
+                }
+            }
+        }
+    }
+
+    fn from_os_str(s: &OsStr) -> Option<Self> {
+        match s {
+            s if s == "never" => Some(Self::Never),
+            s if s == "always" => Some(Self::Always),
+            _ => None,
+        }
+    }
+
+    fn should_create_snapshot(self) -> bool {
+        match self {
+            Self::Always => true,
+            Self::Never => false,
+        }
+    }
+}
+
 /// Testing configuration.
 ///
 /// # Examples
@@ -103,17 +176,26 @@ pub struct TestConfig<Cmd = Command> {
     output: TestOutputConfig,
     color_choice: ColorChoice,
     #[cfg(feature = "svg")]
+    update_mode: UpdateMode,
+    #[cfg(feature = "svg")]
     template: Template,
 }
 
 impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// Creates a new config.
+    ///
+    /// # Panics
+    ///
+    /// - Panics if the `svg` crate feature is enabled and the `TERM_TRANSCRIPT_UPDATE` variable
+    ///   is set to an incorrect value. See [`UpdateMode::from_env()`] for more details.
     pub fn new(shell_options: ShellOptions<Cmd>) -> Self {
         Self {
             shell_options,
             match_kind: MatchKind::TextOnly,
             output: TestOutputConfig::Normal,
             color_choice: ColorChoice::Auto,
+            #[cfg(feature = "svg")]
+            update_mode: UpdateMode::from_env(),
             #[cfg(feature = "svg")]
             template: Template::default(),
         }
@@ -126,6 +208,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     }
 
     /// Sets coloring of the output.
+    ///
+    /// On Windows, `color_choice` has slightly different semantics than its usage
+    /// in the `termcolor` crate. Namely, if colors can be used (stdout is a tty with
+    /// color support), ANSI escape sequences will always be used.
     pub fn with_color_choice(mut self, color_choice: ColorChoice) -> Self {
         self.color_choice = color_choice;
         self
@@ -145,11 +231,22 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         self
     }
 
+    /// Overrides the strategy for saving new snapshots for failed tests.
+    ///
+    /// By default, the strategy is determined from the execution environment
+    /// using [`UpdateMode::from_env()`].
+    #[cfg(feature = "svg")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
+    pub fn with_update_mode(mut self, update_mode: UpdateMode) -> Self {
+        self.update_mode = update_mode;
+        self
+    }
+
     /// Tests a snapshot at the specified path with the provided inputs.
     ///
     /// If the path is relative, it is resolved relative to the current working dir,
     /// which in the case of tests is the root directory of the including crate (i.e., the dir
-    /// where the crate manifest is located). Alternatively, you may specify an absolute path
+    /// where the crate manifest is located). You may specify an absolute path
     /// using env vars that Cargo sets during build, such as [`env!("CARGO_MANIFEST_DIR")`].
     ///
     /// Similar to other kinds of snapshot testing, a new snapshot will be generated if
@@ -160,8 +257,11 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// `snapshots/help.new.svg`.
     ///
     /// Generation of new snapshots will only happen if the `svg` crate feature is enabled
-    /// (which it is by default). The snapshot template can be customized via
-    /// [`Self::with_template()`].
+    /// (which it is by default), and if the [update mode](Self::with_update_mode())
+    /// is not [`UpdateMode::Never`], either because it was set explicitly or
+    /// [inferred](UpdateMode::from_env()) from the execution environment.
+    ///
+    /// The snapshot template can be customized via [`Self::with_template()`].
     ///
     /// # Panics
     ///
@@ -200,11 +300,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 snapshot_path
             );
         } else {
-            let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)
-                .unwrap_or_else(|err| {
-                    panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
-                });
-            let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
+            let new_snapshot_message = self.create_and_write_new_snapshot(snapshot_path, inputs);
             panic!(
                 "Snapshot `{:?}` is missing\n{}",
                 snapshot_path, new_snapshot_message
@@ -225,13 +321,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             .collect();
 
         if !actual_inputs.iter().copied().eq(expected_inputs) {
-            let reproduced =
-                Transcript::from_inputs(&mut self.shell_options, expected_inputs.iter().cloned());
-            let reproduced = reproduced.unwrap_or_else(|err| {
-                panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
-            });
-
-            let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
+            let new_snapshot_message =
+                self.create_and_write_new_snapshot(snapshot_path, expected_inputs.iter().cloned());
             panic!(
                 "Unexpected user inputs in parsed snapshot: expected {exp:?}, got {act:?}\n{msg}",
                 exp = expected_inputs,
@@ -249,9 +340,26 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         }
     }
 
-    /// Returns message to be appended to the panic message
+    #[cfg(feature = "svg")]
+    fn create_and_write_new_snapshot(
+        &mut self,
+        path: &Path,
+        inputs: impl Iterator<Item = UserInput>,
+    ) -> String {
+        let reproduced =
+            Transcript::from_inputs(&mut self.shell_options, inputs).unwrap_or_else(|err| {
+                panic!("Cannot create a snapshot `{:?}`: {}", path, err);
+            });
+        self.write_new_snapshot(path, &reproduced)
+    }
+
+    /// Returns a message to be appended to the panic message.
     #[cfg(feature = "svg")]
     fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> String {
+        if !self.update_mode.should_create_snapshot() {
+            return format!("Skipped writing new snapshot `{:?}` per test config", path);
+        }
+
         let mut new_path = path.to_owned();
         new_path.set_extension("new.svg");
         let new_snapshot = File::create(&new_path).unwrap_or_else(|err| {
@@ -271,6 +379,19 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     #[cfg(not(feature = "svg"))]
     #[allow(clippy::unused_self)] // necessary for uniformity
     fn write_new_snapshot(&self, _: &Path, _: &Transcript) -> String {
+        format!(
+            "Not writing a new snapshot since `{}/svg` feature is not enabled",
+            env!("CARGO_CRATE_NAME")
+        )
+    }
+
+    #[cfg(not(feature = "svg"))]
+    #[allow(clippy::unused_self)] // necessary for uniformity
+    fn create_and_write_new_snapshot(
+        &mut self,
+        _: &Path,
+        _: impl Iterator<Item = UserInput>,
+    ) -> String {
         format!(
             "Not writing a new snapshot since `{}/svg` feature is not enabled",
             env!("CARGO_CRATE_NAME")
@@ -307,8 +428,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             let mut out = NoColor::new(io::sink());
             self.test_transcript_inner(&mut out, transcript)
         } else {
-            let out = StandardStream::stdout(self.color_choice);
-            let mut out = out.lock();
+            let mut out = ColorPrintlnWriter::new(self.color_choice);
             self.test_transcript_inner(&mut out, transcript)
         }
     }
@@ -499,43 +619,6 @@ impl TestStats {
     }
 }
 
-#[derive(Debug)]
-struct IndentingWriter<W> {
-    inner: W,
-    padding: &'static [u8],
-    new_line: bool,
-}
-
-impl<W: Write> IndentingWriter<W> {
-    pub fn new(writer: W, padding: &'static [u8]) -> Self {
-        Self {
-            inner: writer,
-            padding,
-            new_line: true,
-        }
-    }
-}
-
-impl<W: Write> Write for IndentingWriter<W> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        for (i, line) in buf.split(|&c| c == b'\n').enumerate() {
-            if i > 0 {
-                self.inner.write_all(b"\n")?;
-            }
-            if !line.is_empty() && (i > 0 || self.new_line) {
-                self.inner.write_all(self.padding)?;
-            }
-            self.inner.write_all(line)?;
-        }
-        self.new_line = buf.ends_with(b"\n");
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -543,18 +626,6 @@ mod tests {
         svg::{Template, TemplateOptions},
         Captured, UserInput,
     };
-
-    #[test]
-    fn indenting_writer_basics() -> io::Result<()> {
-        let mut buffer = vec![];
-        let mut writer = IndentingWriter::new(&mut buffer, b"  ");
-        write!(writer, "Hello, ")?;
-        writeln!(writer, "world!")?;
-        writeln!(writer, "many\n  lines!")?;
-
-        assert_eq!(buffer, b"  Hello, world!\n  many\n    lines!\n" as &[u8]);
-        Ok(())
-    }
 
     fn test_snapshot_testing(test_config: &mut TestConfig) -> anyhow::Result<()> {
         let transcript = Transcript::from_inputs(

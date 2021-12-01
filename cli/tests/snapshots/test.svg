@@ -70,10 +70,10 @@
     <animate attributeName="viewBox" values="0 0 720 342;0 72 720 342;0 144 720 342" dur="8s" repeatCount="indefinite" calcMode="discrete" />
     <foreignObject width="720" height="452">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 100 rainbow.sh &gt; rainbow.svg
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 200 rainbow.sh &gt; rainbow.svg
 # &#x60;-T&#x60; option defines the I/O timeout for the shell</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 100 -v rainbow.svg
+        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 200 -v rainbow.svg
 # &#x60;-v&#x60; switches on verbose output</pre></div>
         <div class="term-output"><pre>Testing file <span class="underline">rainbow.svg</span>...
   [<span class="fg2">+</span>] Input: rainbow.sh
