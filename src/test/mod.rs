@@ -54,9 +54,10 @@
 
 use termcolor::{Color, ColorChoice, ColorSpec, NoColor, WriteColor};
 
+#[cfg(feature = "svg")]
+use std::ffi::OsStr;
 use std::{
     env,
-    ffi::OsStr,
     fs::File,
     io::{self, BufReader, Write},
     path::Path,
@@ -298,18 +299,12 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 "Snapshot path `{:?}` exists, but is not a file",
                 snapshot_path
             );
-        } else if self.update_mode.should_create_snapshot() {
-            let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)
-                .unwrap_or_else(|err| {
-                    panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
-                });
-            let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
+        } else {
+            let new_snapshot_message = self.create_and_write_new_snapshot(snapshot_path, inputs);
             panic!(
                 "Snapshot `{:?}` is missing\n{}",
                 snapshot_path, new_snapshot_message
             );
-        } else {
-            panic!("Snapshot `{:?}` is missing", snapshot_path);
         }
     }
 
@@ -326,13 +321,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             .collect();
 
         if !actual_inputs.iter().copied().eq(expected_inputs) {
-            let reproduced =
-                Transcript::from_inputs(&mut self.shell_options, expected_inputs.iter().cloned());
-            let reproduced = reproduced.unwrap_or_else(|err| {
-                panic!("Cannot create a snapshot `{:?}`: {}", snapshot_path, err);
-            });
-
-            let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
+            let new_snapshot_message =
+                self.create_and_write_new_snapshot(snapshot_path, expected_inputs.iter().cloned());
             panic!(
                 "Unexpected user inputs in parsed snapshot: expected {exp:?}, got {act:?}\n{msg}",
                 exp = expected_inputs,
@@ -348,6 +338,19 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
             panic!("There were test failures\n{}", new_snapshot_message);
         }
+    }
+
+    #[cfg(feature = "svg")]
+    fn create_and_write_new_snapshot(
+        &mut self,
+        path: &Path,
+        inputs: impl Iterator<Item = UserInput>,
+    ) -> String {
+        let reproduced =
+            Transcript::from_inputs(&mut self.shell_options, inputs).unwrap_or_else(|err| {
+                panic!("Cannot create a snapshot `{:?}`: {}", path, err);
+            });
+        self.write_new_snapshot(path, &reproduced)
     }
 
     /// Returns a message to be appended to the panic message.
@@ -376,6 +379,19 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     #[cfg(not(feature = "svg"))]
     #[allow(clippy::unused_self)] // necessary for uniformity
     fn write_new_snapshot(&self, _: &Path, _: &Transcript) -> String {
+        format!(
+            "Not writing a new snapshot since `{}/svg` feature is not enabled",
+            env!("CARGO_CRATE_NAME")
+        )
+    }
+
+    #[cfg(not(feature = "svg"))]
+    #[allow(clippy::unused_self)] // necessary for uniformity
+    fn create_and_write_new_snapshot(
+        &mut self,
+        _: &Path,
+        _: impl Iterator<Item = UserInput>,
+    ) -> String {
         format!(
             "Not writing a new snapshot since `{}/svg` feature is not enabled",
             env!("CARGO_CRATE_NAME")
