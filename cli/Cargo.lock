@@ -631,6 +631,7 @@ dependencies = [
 name = "term-transcript"
 version = "0.1.0"
 dependencies = [
+ "atty",
  "bytecount",
  "handlebars",
  "os_pipe",

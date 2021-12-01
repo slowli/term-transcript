@@ -39,6 +39,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Add `height` attribute to top-level SVG to fix its rendering.
 - Remove an obsolete lifetime parameter from `svg::Template` and change `Template::render`
   to receive `self` by shared reference.
+- Fix `TestConfig` output not being captured during tests.
 
 ## 0.1.0 - 2021-06-01
 
