@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.2.0-beta.1 - 2022-01-06
+
 ### Added
 
 - Add `print` command to parse the specified SVG snapshot and print it to the shell.
