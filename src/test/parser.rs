@@ -42,6 +42,7 @@ impl Parsed {
     /// # Errors
     ///
     /// - Returns an I/O error should it occur when writing to `out`.
+    #[doc(hidden)] // makes `termcolor` dependency public, which we want to avoid so far
     pub fn write_colorized(&self, out: &mut impl WriteColor) -> io::Result<()> {
         ColorSpan::write_colorized(&self.color_spans, out, &self.plaintext)
     }

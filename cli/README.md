@@ -50,11 +50,10 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in `term-transcript` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions. 
 
-<!-- FIXME: change links similarly to `test-snapshot-link` -->
 <!-- TODO: use relative links once https://github.com/rust-lang/crates.io/issues/3484 is resolved -->
 [`term-transcript`]: https://crates.io/crates/term-transcript
-[rainbow-script-link]: rainbow.sh
+[rainbow-script-link]: https://github.com/slowli/term-transcript/blob/HEAD/cli/rainbow.sh
 [test-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test.svg?sanitize=true
-[test-color-snapshot-link]: tests/snapshots/test-fail.svg
+[test-color-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test-fail.svg?sanitize=true
 [test-link]: https://github.com/slowli/term-transcript/blob/HEAD/cli/tests/e2e.rs
-[help-snapshot-link]: tests/snapshots/help.svg
+[help-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/help.svg?sanitize=true

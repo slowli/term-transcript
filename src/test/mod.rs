@@ -71,9 +71,9 @@ mod color_diff;
 mod parser;
 mod utils;
 
+pub use self::parser::Parsed;
 use self::{
     color_diff::ColorSpan,
-    parser::Parsed,
     utils::{ColorPrintlnWriter, IndentingWriter},
 };
 #[cfg(feature = "svg")]
