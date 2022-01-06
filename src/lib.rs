@@ -107,7 +107,7 @@
 //! fn echo_works() {
 //!     TestConfig::new(ShellOptions::default()).test(
 //!         "tests/__snapshots__/echo.svg",
-//!         &["echo \"Hello world!\""],
+//!         &[r#"echo "Hello world!""#],
 //!     );
 //! }
 //! ```

@@ -367,7 +367,8 @@ impl Transcript {
     /// # Errors
     ///
     /// - Returns an error if spawning the shell or any operations with it fail (such as reading
-    ///   stdout / stderr, or writing commands to stdin).
+    ///   stdout / stderr, or writing commands to stdin), or if the shell exits before all commands
+    ///   are executed.
     #[allow(clippy::missing_panics_doc)] // false positive
     pub fn from_inputs<Cmd: SpawnShell>(
         options: &mut ShellOptions<Cmd>,
@@ -471,7 +472,7 @@ impl Transcript {
     /// Captures stdout / stderr of the provided `command` and adds it to [`Self::interactions()`].
     ///
     /// The `command` is spawned with closed stdin. This method blocks until the command exits.
-    /// The method succeeds regardless of the exit status.
+    /// The method succeeds regardless of the exit status of the `command`.
     ///
     /// # Errors
     ///
