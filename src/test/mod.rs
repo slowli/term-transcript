@@ -202,6 +202,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     }
 
     /// Sets the matching kind applied.
+    #[must_use]
     pub fn with_match_kind(mut self, kind: MatchKind) -> Self {
         self.match_kind = kind;
         self
@@ -212,12 +213,14 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// On Windows, `color_choice` has slightly different semantics than its usage
     /// in the `termcolor` crate. Namely, if colors can be used (stdout is a tty with
     /// color support), ANSI escape sequences will always be used.
+    #[must_use]
     pub fn with_color_choice(mut self, color_choice: ColorChoice) -> Self {
         self.color_choice = color_choice;
         self
     }
 
     /// Configures test output.
+    #[must_use]
     pub fn with_output(mut self, output: TestOutputConfig) -> Self {
         self.output = output;
         self
@@ -226,6 +229,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// Sets the template for rendering new snapshots.
     #[cfg(feature = "svg")]
     #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
+    #[must_use]
     pub fn with_template(mut self, template: Template) -> Self {
         self.template = template;
         self
@@ -237,6 +241,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// using [`UpdateMode::from_env()`].
     #[cfg(feature = "svg")]
     #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
+    #[must_use]
     pub fn with_update_mode(mut self, update_mode: UpdateMode) -> Self {
         self.update_mode = update_mode;
         self
