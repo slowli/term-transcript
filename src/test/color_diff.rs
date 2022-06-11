@@ -365,12 +365,8 @@ impl ColorDiff {
         for differing_span in &self.differing_spans {
             let start = differing_span.start;
             let end = start + differing_span.len;
-            write!(
-                out,
-                "{pos:>pos_width$} ",
-                pos_width = POS_WIDTH,
-                pos = format!("{}..{}", start, end),
-            )?;
+            let pos = format!("{}..{}", start, end);
+            write!(out, "{pos:>pos_width$} ", pos_width = POS_WIDTH, pos = pos)?;
 
             Self::write_color_spec(out, &differing_span.lhs_color_spec)?;
             out.write_all(b" ")?;

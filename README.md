@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/slowli/term-transcript/workflows/Rust/badge.svg?branch=master)](https://github.com/slowli/term-transcript/actions)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
-![rust 1.46.0+ required](https://img.shields.io/badge/rust-1.46.0+-blue.svg?label=Required%20Rust)
+![rust 1.57+ required](https://img.shields.io/badge/rust-1.57+-blue.svg?label=Required%20Rust)
 
 **Documentation:** [![Docs.rs](https://docs.rs/term-transcript/badge.svg)](https://docs.rs/term-transcript/)
 [![crate docs (master)](https://img.shields.io/badge/master-yellow.svg?label=docs)](https://slowli.github.io/term-transcript/term_transcript/)

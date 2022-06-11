@@ -2,7 +2,8 @@
 name = "term-transcript-cli"
 version = "0.2.0-beta.1"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.57"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 keywords = ["snapshot", "terminal", "SVG"]

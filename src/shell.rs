@@ -87,6 +87,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     }
 
     /// Changes the current directory of the command.
+    #[must_use]
     pub fn with_current_dir(mut self, current_dir: impl AsRef<Path>) -> Self {
         self.command.current_dir(current_dir.as_ref());
         self
@@ -98,6 +99,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// allow to capture output more accurately, but result in longer execution.
     ///
     /// By default, the I/O timeout is 1 second.
+    #[must_use]
     pub fn with_io_timeout(mut self, io_timeout: Duration) -> Self {
         self.io_timeout = io_timeout;
         self
@@ -107,6 +109,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// [`Self::with_io_timeout()`]) before reading the output of the first command.
     ///
     /// By default, the initialization timeout is zero.
+    #[must_use]
     pub fn with_init_timeout(mut self, init_timeout: Duration) -> Self {
         self.init_timeout = init_timeout;
         self
@@ -114,18 +117,21 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
 
     /// Adds an initialization command. Such commands are sent to the shell before executing
     /// any user input. The corresponding output from the shell is not captured.
+    #[must_use]
     pub fn with_init_command(mut self, command: impl Into<String>) -> Self {
         self.init_commands.push(command.into());
         self
     }
 
     /// Sets the `value` of an environment variable with the specified `name`.
+    #[must_use]
     pub fn with_env(mut self, name: impl AsRef<str>, value: impl AsRef<OsStr>) -> Self {
         self.command.env(name.as_ref(), value.as_ref());
         self
     }
 
     /// Sets the line mapper for the shell. This allows to filter and/or map terminal outputs.
+    #[must_use]
     pub fn with_line_mapper<F>(mut self, mapper: F) -> Self
     where
         F: FnMut(String) -> Option<String> + 'static,
@@ -154,6 +160,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// # Limitations
     ///
     /// - The caller must be a unit or integration test; the method will work improperly otherwise.
+    #[must_use]
     pub fn with_cargo_path(mut self) -> Self {
         let target_path = Self::target_path();
         self.path_additions.push(target_path.join("examples"));
@@ -164,6 +171,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// Adds a specified path to the `PATH` env variable for the shell described by these options.
     /// This method can be called multiple times to add multiple paths and is composable
     /// with [`Self::with_cargo_path()`].
+    #[must_use]
     pub fn with_additional_path(mut self, path: impl Into<PathBuf>) -> Self {
         let path = path.into();
         self.path_additions.push(path);
@@ -268,6 +276,7 @@ impl ShellOptions<StdShell> {
     ///
     /// [`env!("CARGO_BIN_EXE_<name>")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
     #[allow(clippy::doc_markdown)] // false positive
+    #[must_use]
     pub fn with_alias(self, name: &str, path_to_bin: &str) -> Self {
         let alias_command = match self.command.shell_type {
             StdShellType::Sh => {
