@@ -8,16 +8,19 @@ on:
 
 env:
   # Minimum supported Rust version.
-  msrv: 1.46.0
-  msrv-pty: 1.51.0
+  msrv: 1.57.0
   # Nightly Rust necessary for building docs.
-  nightly: nightly-2021-04-15
+  nightly: nightly-2021-12-03
 
 jobs:
   build-msrv:
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        include:
+          - os: windows-latest
+            features: ""
+          - os: ubuntu-latest
+            features: --all-features
 
     runs-on: ${{ matrix.os }}
 
@@ -28,7 +31,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: target
-          key: ${{ runner.os }}-msrv-cargo-build-target
+          key: ${{ runner.os }}${{ matrix.features }}-msrv-cargo-build-target
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -40,51 +43,17 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --all-targets
+          args: --workspace ${{ matrix.features }} --all-targets
       - name: Run CLI tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=cli/Cargo.toml --all-targets
+          args: --manifest-path=cli/Cargo.toml ${{ matrix.features }} --all-targets
       - name: Run doc tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --doc
-
-  build-msrv-pty:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Cache cargo build
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-msrv-pty-cargo-build-target
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.msrv-pty }}
-          override: true
-
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace --all-features --all-targets
-      - name: Run CLI tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=cli/Cargo.toml --all-features --all-targets
-      - name: Run doc tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace --all-features --doc
+          args: --workspace ${{ matrix.features }} --doc
 
   build:
     runs-on: ubuntu-latest
@@ -163,7 +132,6 @@ jobs:
     needs:
       - build
       - build-msrv
-      - build-msrv-pty
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
