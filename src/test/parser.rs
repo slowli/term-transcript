@@ -221,7 +221,7 @@ impl TextReadingState {
 
         let mut style = Cow::Borrowed(&[] as &[u8]);
         for attr in span_tag.attributes() {
-            let attr = attr?;
+            let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
             if attr.key == b"style" {
                 style = attr.value;
             }
@@ -463,7 +463,7 @@ impl ParserState {
         let mut has_class_attribute = false;
 
         for attr in attributes {
-            let attr = attr?;
+            let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
             match attr.key {
                 b"xmlns" => {
                     if attr.value.as_ref() != HTML_NS {
@@ -491,7 +491,7 @@ impl ParserState {
     fn get_class(attributes: Attributes<'_>) -> Result<Cow<'_, [u8]>, ParseError> {
         let mut class = None;
         for attr in attributes {
-            let attr = attr?;
+            let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
             if attr.key == b"class" {
                 class = Some(attr.value);
             }
