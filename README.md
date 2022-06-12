@@ -74,13 +74,8 @@ Here's a snapshot of the same example with the scrolling animation and window fr
 - It is possible to capture output from a pseudo-terminal (PTY) using the `portable-pty`
   crate feature. However, since most escape sequences are dropped, this is still not a good
   option to capture complex outputs (e.g., ones moving cursor).
-- PTY support for Windows is somewhat shaky. It requires recent Windows version (Windows 10
-  from October 2018 or newer), and may not work properly.
-
-## Minimum supported Rust version
-
-Rust 1.46+ is supported for the default crate features. The `portable-pty` feature requires
-Rust 1.51+.
+- PTY support for Windows is shaky. It requires a somewhat recent Windows version 
+  (Windows 10 from October 2018 or newer), and may work incorrectly even for the recent versions.
 
 ## Alternatives / similar tools
 
