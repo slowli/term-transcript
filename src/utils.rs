@@ -76,6 +76,8 @@ mod rgb_color {
     #[derive(Debug)]
     #[non_exhaustive]
     pub enum RgbColorParseError {
+        /// Color string contains non-ASCII chars.
+        NotAscii,
         /// The color does not have a `#` prefix.
         NoHashPrefix,
         /// The color has incorrect string length (not 1 or 2 chars per color channel).
@@ -89,13 +91,14 @@ mod rgb_color {
     impl fmt::Display for RgbColorParseError {
         fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
-                Self::NoHashPrefix => formatter.write_str("Missing '#' prefix"),
+                Self::NotAscii => formatter.write_str("color string contains non-ASCII chars"),
+                Self::NoHashPrefix => formatter.write_str("missing '#' prefix"),
                 Self::IncorrectLen(len) => write!(
                     formatter,
-                    "Unexpected color length {}, expected 4 or 7",
+                    "unexpected byte length {} of color string, expected 4 or 7",
                     len
                 ),
-                Self::IncorrectDigit(err) => write!(formatter, "Error parsing hex digit: {}", err),
+                Self::IncorrectDigit(err) => write!(formatter, "error parsing hex digit: {}", err),
             }
         }
     }
@@ -116,6 +119,10 @@ mod rgb_color {
             if s.is_empty() || s.as_bytes()[0] != b'#' {
                 Err(RgbColorParseError::NoHashPrefix)
             } else if s.len() == 4 {
+                if !s.is_ascii() {
+                    return Err(RgbColorParseError::NotAscii);
+                }
+
                 let r =
                     u8::from_str_radix(&s[1..2], 16).map_err(RgbColorParseError::IncorrectDigit)?;
                 let g =
@@ -124,6 +131,10 @@ mod rgb_color {
                     u8::from_str_radix(&s[3..], 16).map_err(RgbColorParseError::IncorrectDigit)?;
                 Ok(Self(r * 17, g * 17, b * 17))
             } else if s.len() == 7 {
+                if !s.is_ascii() {
+                    return Err(RgbColorParseError::NotAscii);
+                }
+
                 let r =
                     u8::from_str_radix(&s[1..3], 16).map_err(RgbColorParseError::IncorrectDigit)?;
                 let g =
@@ -135,5 +146,32 @@ mod rgb_color {
                 Err(RgbColorParseError::IncorrectLen(s.len()))
             }
         }
+    }
+}
+
+#[cfg(all(test, any(feature = "svg", feature = "test")))]
+mod tests {
+    use super::*;
+
+    use assert_matches::assert_matches;
+
+    #[test]
+    fn parsing_color() {
+        let RgbColor(r, g, b) = "#fed".parse().unwrap();
+        assert_eq!((r, g, b), (0xff, 0xee, 0xdd));
+        let RgbColor(r, g, b) = "#c0ffee".parse().unwrap();
+        assert_eq!((r, g, b), (0xc0, 0xff, 0xee));
+    }
+
+    #[test]
+    fn errors_parsing_color() {
+        let err = "123".parse::<RgbColor>().unwrap_err();
+        assert_matches!(err, RgbColorParseError::NoHashPrefix);
+        let err = "#12".parse::<RgbColor>().unwrap_err();
+        assert_matches!(err, RgbColorParseError::IncorrectLen(3));
+        let err = "#тэг".parse::<RgbColor>().unwrap_err();
+        assert_matches!(err, RgbColorParseError::NotAscii);
+        let err = "#coffee".parse::<RgbColor>().unwrap_err();
+        assert_matches!(err, RgbColorParseError::IncorrectDigit(_));
     }
 }
