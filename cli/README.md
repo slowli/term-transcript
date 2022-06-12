@@ -7,6 +7,25 @@
 This crate provides command-line interface for [`term-transcript`]. It allows capturing
 terminal output to SVG and testing the captured snapshots.
 
+## Installation
+
+Install with
+
+```shell
+cargo install --locked term-transcript-cli
+# This will install `term-transcript` executable, which can be checked
+# as follows:
+term-transcript --help
+```
+
+Specify `--features portable-pty` in the installation command 
+to enable the pseudo-terminal (PTY) support (note that PTY capturing still needs
+to be explicitly switched on when running `term-transcript` commands).
+Without this feature, console app output is captured via OS pipes,
+which means that programs dependent on [`isatty`] checks
+or getting term size can produce different output than if launched in an actual shell
+(no coloring, no line wrapping etc.).
+
 ## Usage
 
 - The `capture` subcommand captures output from stdin, renders it to SVG and
@@ -50,10 +69,10 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in `term-transcript` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions. 
 
-<!-- TODO: use relative links once https://github.com/rust-lang/crates.io/issues/3484 is resolved -->
 [`term-transcript`]: https://crates.io/crates/term-transcript
 [rainbow-script-link]: https://github.com/slowli/term-transcript/blob/HEAD/cli/rainbow.sh
 [test-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test.svg?sanitize=true
 [test-color-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test-fail.svg?sanitize=true
 [test-link]: https://github.com/slowli/term-transcript/blob/HEAD/cli/tests/e2e.rs
 [help-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/help.svg?sanitize=true
+[`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
