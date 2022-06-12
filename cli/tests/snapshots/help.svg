@@ -1,4 +1,4 @@
-<!-- Created with term-transcript v0.2.0-beta.1 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 0 720 390" width="720" height="390" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
@@ -69,7 +69,7 @@
     <foreignObject width="720" height="370">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         <div class="user-input"><pre><span class="prompt">$</span> term-transcript --help</pre></div>
-        <div class="term-output"><pre><span class="fg2">term-transcript-cli</span> 0.2.0-beta.1
+        <div class="term-output"><pre><span class="fg2">term-transcript-cli</span> 0.2.0
 CLI for capturing and snapshot-testing terminal output
 <span class="fg3">
 USAGE:</span>
