@@ -30,7 +30,7 @@ pub struct Parsed {
 }
 
 impl Parsed {
-    /// Gets the parsed plaintext.
+    /// Returns the parsed plaintext.
     pub fn plaintext(&self) -> &str {
         &self.plaintext
     }
@@ -45,7 +45,7 @@ impl Parsed {
         ColorSpan::write_colorized(&self.color_spans, out, &self.plaintext)
     }
 
-    /// Gets the parsed HTML.
+    /// Returns the parsed HTML.
     pub fn html(&self) -> &str {
         &self.html
     }

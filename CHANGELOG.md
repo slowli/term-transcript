@@ -18,6 +18,12 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 - Properly handle non-ASCII input when parsing `RgbColor`.
 
+### Removed
+
+- Remove `From<&&str>` implementation for `UserInput`. This implementation was previously used
+  to make `Transcript::from_inputs()` and `TestConfig::test()` accept user inputs as `&[&str]`.
+  In Rust 2021 edition, it is possible to use arrays (`[&str; _]`) instead.
+
 ## 0.2.0-beta.1 - 2022-01-06
 
 ### Added

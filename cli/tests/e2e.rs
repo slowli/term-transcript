@@ -46,7 +46,7 @@ fn help_example() {
     use term_transcript::PtyCommand;
 
     let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
-    TestConfig::new(shell_options).test(svg_snapshot("help"), &["term-transcript --help"]);
+    TestConfig::new(shell_options).test(svg_snapshot("help"), ["term-transcript --help"]);
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn testing_example() {
     let (config, _dir) = test_config();
     config.with_template(scrolled_template()).test(
         svg_snapshot("test"),
-        &[
+        [
             "term-transcript exec -T 200 rainbow.sh > rainbow.svg\n\
              # `-T` option defines the I/O timeout for the shell",
             "term-transcript test -T 200 -v rainbow.svg\n\
@@ -68,7 +68,7 @@ fn test_failure_example() {
     let (mut config, _dir) = test_config();
     config.test(
         svg_snapshot("test-fail"),
-        &[
+        [
             "term-transcript exec -T 200 'rainbow.sh --short' > bogus.svg && \\\n  \
              sed -i -E -e 's/(fg4|bg13)//g' bogus.svg\n\
              # Mutate the captured output, removing some styles",
@@ -83,7 +83,7 @@ fn print_example() {
     let (mut config, _dir) = test_config();
     config.test(
         svg_snapshot("print"),
-        &[
+        [
             "term-transcript exec -T 200 'rainbow.sh --short' > short.svg",
             "term-transcript print short.svg",
         ],
@@ -95,7 +95,7 @@ fn capture_example() {
     let (config, _dir) = test_config();
     config.with_template(scrolled_template()).test(
         svg_snapshot("capture"),
-        &[
+        [
             "rainbow.sh | term-transcript capture 'rainbow.sh' > captured.svg",
             "term-transcript print captured.svg",
         ],

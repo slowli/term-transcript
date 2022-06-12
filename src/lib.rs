@@ -231,7 +231,12 @@ impl<Out: TermOutput> Transcript<Out> {
 }
 
 impl Transcript {
-    /// Adds a new interaction into the transcript.
+    /// Manually adds a new interaction to the end of this transcript.
+    ///
+    /// This method allows capturing interactions that are difficult or impossible to capture
+    /// using more high-level methods: [`Self::from_inputs()`] or [`Self::capture_output()`].
+    /// The resulting transcript will [render](crate::svg) just fine, but there could be issues
+    /// with [testing](crate::test) it.
     pub fn add_interaction(&mut self, input: UserInput, output: impl Into<String>) -> &mut Self {
         self.interactions.push(Interaction {
             input,
@@ -279,7 +284,7 @@ impl UserInput {
         }
     }
 
-    /// Creates a command.
+    /// Creates a command input.
     pub fn command(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -287,7 +292,7 @@ impl UserInput {
         }
     }
 
-    /// Creates a standalone / starting REPL command with the `>>>` prompt.
+    /// Creates a standalone / starting REPL command input with the `>>>` prompt.
     pub fn repl(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -295,7 +300,7 @@ impl UserInput {
         }
     }
 
-    /// Creates a REPL command continuation with the `...` prompt.
+    /// Creates a REPL command continuation input with the `...` prompt.
     pub fn repl_continuation(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -303,28 +308,23 @@ impl UserInput {
         }
     }
 
-    /// Gets the kind of this input.
+    /// Returns the prompt part of this input.
     pub fn prompt(&self) -> Option<&str> {
         self.prompt.as_deref()
     }
 }
 
+/// Returns the command part of the input without the prompt.
 impl AsRef<str> for UserInput {
     fn as_ref(&self) -> &str {
         &self.text
     }
 }
 
+/// Calls [`Self::command()`] on the provided string reference.
 impl From<&str> for UserInput {
     fn from(command: &str) -> Self {
         Self::command(command)
-    }
-}
-
-// Necessary to make it possible to call `TestConfig::test()` with a &[&str].
-impl From<&&str> for UserInput {
-    fn from(command: &&str) -> Self {
-        Self::command(*command)
     }
 }
 
