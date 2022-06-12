@@ -9,6 +9,9 @@ use crate::{
 };
 
 mod parser;
+#[cfg(test)]
+mod tests;
+
 pub(crate) use self::parser::TermOutputParser;
 
 /// Marker trait for supported types of terminal output.
@@ -90,51 +93,3 @@ impl Captured {
 }
 
 impl TermOutput for Captured {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::io::Write;
-    use termcolor::{Ansi, Color, ColorSpec, WriteColor};
-
-    fn prepare_term_output() -> anyhow::Result<String> {
-        let mut writer = Ansi::new(vec![]);
-        writer.set_color(
-            ColorSpec::new()
-                .set_fg(Some(Color::Cyan))
-                .set_underline(true),
-        )?;
-        write!(writer, "Hello")?;
-        writer.reset()?;
-        write!(writer, ", ")?;
-        writer.set_color(
-            ColorSpec::new()
-                .set_fg(Some(Color::White))
-                .set_bg(Some(Color::Green))
-                .set_intense(true),
-        )?;
-        write!(writer, "world")?;
-        writer.reset()?;
-        write!(writer, "!")?;
-
-        String::from_utf8(writer.into_inner()).map_err(From::from)
-    }
-
-    const EXPECTED_HTML: &str = "<span class=\"underline fg6\">Hello</span>, \
-         <span class=\"fg15 bg10\">world</span>!";
-
-    #[test]
-    fn converting_captured_output_to_text() -> anyhow::Result<()> {
-        let output = Captured(prepare_term_output()?);
-        assert_eq!(output.to_plaintext()?, "Hello, world!");
-        Ok(())
-    }
-
-    #[test]
-    fn converting_captured_output_to_html() -> anyhow::Result<()> {
-        let output = Captured(prepare_term_output()?);
-        assert_eq!(output.to_html()?, EXPECTED_HTML);
-        Ok(())
-    }
-}
