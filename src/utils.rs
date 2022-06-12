@@ -76,9 +76,11 @@ mod rgb_color {
     #[derive(Debug)]
     #[non_exhaustive]
     pub enum RgbColorParseError {
-        /// The color does not have `#` prefix.
+        /// The color does not have a `#` prefix.
         NoHashPrefix,
         /// The color has incorrect string length (not 1 or 2 chars per color channel).
+        /// The byte length of the string (including 1 char for the `#` prefix)
+        /// is provided within this variant.
         IncorrectLen(usize),
         /// Error parsing color channel value.
         IncorrectDigit(ParseIntError),

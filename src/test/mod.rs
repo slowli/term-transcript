@@ -1,4 +1,4 @@
-//! Snapshot testing tools for [`Transcript`]s.
+//! Snapshot testing tools for [`Transcript`](crate::Transcript)s.
 //!
 //! # Examples
 //!
@@ -274,6 +274,8 @@ impl TestStats {
 
     /// Returns match kinds per each user input of the tested [`Transcript`]. `None` values
     /// mean no match.
+    ///
+    /// [`Transcript`]: crate::Transcript
     pub fn matches(&self) -> &[Option<MatchKind>] {
         &self.matches
     }

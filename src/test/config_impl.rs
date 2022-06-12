@@ -35,7 +35,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// Generation of new snapshots will only happen if the `svg` crate feature is enabled
     /// (which it is by default), and if the [update mode](Self::with_update_mode())
     /// is not [`UpdateMode::Never`], either because it was set explicitly or
-    /// [inferred](UpdateMode::from_env()) from the execution environment.
+    /// [inferred] from the execution environment.
     ///
     /// The snapshot template can be customized via [`Self::with_template()`].
     ///
@@ -49,6 +49,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ///   transcripts.
     ///
     /// [`env!("CARGO_MANIFEST_DIR")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
+    /// [`UpdateMode::Never`]: crate::test::UpdateMode::Never
+    /// [inferred]: crate::test::UpdateMode::from_env()
     pub fn test<I: Into<UserInput>>(
         &mut self,
         snapshot_path: impl AsRef<Path>,

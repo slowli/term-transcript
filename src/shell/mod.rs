@@ -23,6 +23,7 @@ use crate::traits::{ConfigureCommand, SpawnShell, SpawnedShell};
 /// extension allows to specify custom aliases for the executed commands.
 ///
 /// [`TestConfig`]: crate::test::TestConfig
+/// [`Transcript::from_inputs()`]: crate::Transcript::from_inputs()
 pub struct ShellOptions<Cmd = Command> {
     command: Cmd,
     path_additions: Vec<PathBuf>,
@@ -97,6 +98,8 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// allow to capture output more accurately, but result in longer execution.
     ///
     /// By default, the I/O timeout is 1 second.
+    ///
+    /// [`Transcript::from_inputs()`]: crate::Transcript::from_inputs()
     #[must_use]
     pub fn with_io_timeout(mut self, io_timeout: Duration) -> Self {
         self.io_timeout = io_timeout;

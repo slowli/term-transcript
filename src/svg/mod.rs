@@ -11,7 +11,7 @@ use std::{fmt::Write as _, io::Write};
 
 mod palette;
 
-pub use self::palette::{NamedPalette, NamedPaletteParseError, Palette};
+pub use self::palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors};
 pub use crate::utils::{RgbColor, RgbColorParseError};
 use crate::{TermError, Transcript, UserInput};
 
