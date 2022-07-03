@@ -5,6 +5,12 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Support custom rendering templates via `Template::custom()`. 
+  This allows customizing rendering logic, including changing the output format
+  entirely (e.g., to HTML).
+
 ## 0.2.0 - 2022-06-12
 
 *(All changes are relative compared to [the 0.2.0-beta.1 release](#020-beta1---2022-01-06))*
