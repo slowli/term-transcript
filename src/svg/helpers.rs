@@ -326,14 +326,14 @@ impl HelperDef for RangeHelper {
 }
 
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
-    reg.register_helper("scope", Box::new(ScopeHelper));
-    reg.register_helper("eval", Box::new(EvalHelper));
     reg.register_helper("add", Box::new(OpsHelper::Add));
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
     reg.register_helper("count_lines", Box::new(LineCounter));
     reg.register_helper("range", Box::new(RangeHelper));
+    reg.register_helper("scope", Box::new(ScopeHelper));
+    reg.register_helper("eval", Box::new(EvalHelper));
 }
 
 #[cfg(test)]

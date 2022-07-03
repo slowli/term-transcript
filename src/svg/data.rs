@@ -105,11 +105,34 @@ impl Default for CreatorData {
 }
 
 /// Serializable version of [`Interaction`](crate::Interaction).
+///
+/// # HTML output
+///
+/// An interaction contains rendered HTML for the output with styles applied
+/// to the relevant segments as `<span>`s. The styles are signalled using `class`es
+/// and inline `style`s:
+///
+/// - `fg0`–`fg15` classes specify the foreground color being
+///   0th–15th [base terminal color][colors]. `fg0`–`fg7` are ordinary colors,
+///   and `fg8`–`fg15` are intense variations.
+/// - Likewise, `bg0`–`bg15` classes specify the background color as one of the base terminal
+///   colors.
+/// - Remaining indexed colors and 24-bit colors have a definite value, and thus are signalled
+///   via an inline `style` (e.g., `color: #c0ffee` or `background: #c0ffee`).
+/// - `bold`, `italic`, `underline`, `dimmed` classes correspond to the corresponding text styles.
+/// - [Hard breaks], if they are enabled, are represented by `<b class="hard-br"><br/></b>`.
+///
+/// The rendered HTML is assumed to be included into a container that preserves whitespace,
+/// i.e., has [`white-space`] CSS property set to `pre`. An example of such container is `<pre>`.
+///
+/// [colors]: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
+/// [`white-space`]: https://developer.mozilla.org/en-US/docs/Web/CSS/white-space
+/// [Hard breaks]: crate::svg::WrapOptions::HardBreakAt
 #[derive(Debug, Serialize)]
 #[non_exhaustive]
 pub struct SerializedInteraction<'a> {
     /// User's input.
     pub input: &'a UserInput,
-    /// Terminal output in HTML format.
+    /// Terminal output in the [HTML format](#html-output).
     pub output_html: String,
 }
