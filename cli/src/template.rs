@@ -38,6 +38,7 @@ pub(crate) struct TemplateArgs {
     no_wrap: bool,
     /// Path to a custom Handlebars template to use. `-` means not use a template at all,
     /// and instead output JSON data that would be fed to a template.
+    // TODO: add link to template docs
     #[structopt(long = "tpl")]
     template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.

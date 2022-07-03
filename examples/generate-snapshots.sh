@@ -45,3 +45,9 @@ term-transcript exec -T 100 --shell rainbow-repl \
   'neutral #fa4 underline #c0ffee' \
   '#9f4010 (brown) italic' \
   > "$ROOT_DIR/e2e-tests/rainbow/repl.$EXTENSION"
+
+echo "Creating snapshot with custom template..."
+term-transcript exec -T 100 --palette xterm \
+  --tpl "$ROOT_DIR/examples/custom.html.handlebars" \
+  rainbow 'rainbow --short' \
+  > "$ROOT_DIR/examples/rainbow.new.html"

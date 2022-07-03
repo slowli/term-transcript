@@ -23,6 +23,7 @@ version = "0.2.0"
 path = "../.."
 
 [dev-dependencies]
+handlebars = "4.3.1"
 pretty_assertions = "1.0.0"
 tempfile = "3.2.0"
 

@@ -1,3 +1,4 @@
+use handlebars::Template as HandlebarsTemplate;
 use tempfile::tempdir;
 
 use std::{
@@ -26,6 +27,11 @@ fn main_snapshot_path() -> &'static Path {
 
 fn read_main_snapshot() -> io::Result<BufReader<File>> {
     File::open(main_snapshot_path()).map(BufReader::new)
+}
+
+fn read_custom_template() -> anyhow::Result<HandlebarsTemplate> {
+    let template_string = fs::read_to_string(Path::new("../../examples/custom.html.handlebars"))?;
+    HandlebarsTemplate::compile(&template_string).map_err(Into::into)
 }
 
 fn animated_snapshot_path() -> &'static Path {
@@ -60,6 +66,24 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
     let rendered = rendered.replace("\r\n", "\n");
     let snapshot = snapshot.replace("\r\n", "\n");
     pretty_assertions::assert_eq!(rendered, snapshot);
+    Ok(())
+}
+
+#[test]
+fn snapshot_with_custom_template() -> anyhow::Result<()> {
+    let mut shell_options = ShellOptions::default().with_cargo_path();
+    let transcript =
+        Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+    let template = read_custom_template()?;
+
+    let template_options = TemplateOptions {
+        palette: NamedPalette::Gjm8.into(),
+        ..TemplateOptions::default()
+    };
+    let mut buffer = vec![];
+    Template::custom(template, template_options).render(&transcript, &mut buffer)?;
+    let buffer = String::from_utf8(buffer)?;
+    assert!(buffer.starts_with("<!DOCTYPE html>"), "{}", buffer);
     Ok(())
 }
 

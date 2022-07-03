@@ -166,7 +166,7 @@ impl Default for WrapOptions {
 /// Besides [built-in Handlebars helpers][rust-helpers] (a superset of [standard helpers]),
 /// custom templates have access to the following additional helpers. All the helpers are
 /// extensively used by the [default template]; thus, studying it may be a good place to start
-/// customizing.
+/// customizing. Another example is an [HTML template] from the crate examples.
 ///
 /// ## Arithmetic helpers: `add`, `sub`, `mul`, `div`
 ///
@@ -243,6 +243,7 @@ impl Default for WrapOptions {
 /// [rust-helpers]: https://docs.rs/handlebars/latest/handlebars/index.html#built-in-helpers
 /// [standard helpers]: https://handlebarsjs.com/guide/builtin-helpers.html
 /// [default template]: https://github.com/slowli/term-transcript/blob/master/src/svg/default.svg.handlebars
+/// [HTML template]: https://github.com/slowli/term-transcript/blob/master/examples/custom.html.handlebars
 ///
 /// # Examples
 ///
