@@ -27,6 +27,7 @@ atty = { version = "0.2.14", optional = true }
 bytecount = "0.6.2"
 os_pipe = "1.0.0"
 serde = { version = "1.0", optional = true, features = ["derive"] }
+serde_json = { version = "1.0", optional = true }
 pretty_assertions = { version = "1.0.0", optional = true }
 termcolor = "1.1.2"
 unicode-width = "0.1.8"
@@ -35,13 +36,12 @@ unicode-width = "0.1.8"
 anyhow = "1.0.40"
 assert_matches = "1.5.0"
 doc-comment = "0.3.3"
-serde_json = "1.0"
 version-sync = "0.9.2"
 
 [features]
 default = ["pretty_assertions", "svg", "test"]
 # Rendering terminal transcripts into SVG snapshots
-svg = ["handlebars", "serde"]
+svg = ["handlebars", "serde", "serde_json"]
 # Allows parsing transcripts from SVG snapshots and testing them
 test = ["quick-xml", "atty"]
 

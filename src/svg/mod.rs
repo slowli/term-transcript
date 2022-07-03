@@ -4,24 +4,25 @@
 //!
 //! See [`Template`] for examples of usage.
 
-use handlebars::{Handlebars, RenderError, TemplateError};
+use handlebars::{Handlebars, RenderError, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
 
-use std::{io::Write};
+use std::io::Write;
 
 mod data;
+mod helpers;
 mod palette;
 
 pub use self::{
-    data::{
-        CreatorData, DefaultTemplate, DefaultTemplateData, HandlebarsData, SerializedInteraction,
-        TemplateLogic,
-    },
+    data::{CreatorData, HandlebarsData, SerializedInteraction},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
+
+use self::helpers::register_helpers;
 use crate::{TermError, Transcript};
 
+const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
 
 /// Configurable options of a [`Template`].
@@ -84,7 +85,6 @@ impl TemplateOptions {
             creator: CreatorData::default(),
             interactions,
             options: self,
-            custom: (),
         })
     }
 
@@ -123,8 +123,9 @@ pub struct ScrollOptions {
 
 impl Default for ScrollOptions {
     fn default() -> Self {
+        const DEFAULT_LINE_HEIGHT: usize = 18; // from the default template
         Self {
-            max_height: DefaultTemplateData::LINE_HEIGHT * 19,
+            max_height: DEFAULT_LINE_HEIGHT * 19,
             interval: 4.0,
         }
     }
@@ -183,8 +184,7 @@ impl Default for WrapOptions {
 /// # }
 /// ```
 #[derive(Debug)]
-pub struct Template<T = DefaultTemplate> {
-    logic: T,
+pub struct Template {
     options: TemplateOptions,
     handlebars: Handlebars<'static>,
 }
@@ -198,25 +198,25 @@ impl Default for Template {
 impl Template {
     /// Initializes the default template based on provided `options`.
     pub fn new(options: TemplateOptions) -> Self {
-        Self::custom(DefaultTemplate, options).expect("Default template should be valid")
+        let template = HandlebarsTemplate::compile(DEFAULT_TEMPLATE)
+            .expect("Default template should be valid");
+        Self::custom(template, options)
     }
-}
 
-impl<T: TemplateLogic> Template<T> {
     /// Initializes a custom template.
     ///
     /// # Errors
     ///
     /// Returns a Handlebars template error if the template is invalid.
-    pub fn custom(logic: T, options: TemplateOptions) -> Result<Self, TemplateError> {
+    pub fn custom(template: HandlebarsTemplate, options: TemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
-        handlebars.register_template_string(MAIN_TEMPLATE_NAME, logic.template_str())?;
-        Ok(Self {
-            logic,
+        register_helpers(&mut handlebars);
+        handlebars.register_template(MAIN_TEMPLATE_NAME, template);
+        Self {
             options,
             handlebars,
-        })
+        }
     }
 
     /// Renders the `transcript` using the template (usually as an SVG image, although templates
@@ -236,7 +236,6 @@ impl<T: TemplateLogic> Template<T> {
             .render_data(transcript)
             .map_err(|err| RenderError::from_error("content", err))?;
         let data = HandlebarsData {
-            custom: self.logic.custom_data(&data),
             creator: data.creator,
             options: data.options,
             interactions: data.interactions,
@@ -264,6 +263,8 @@ mod tests {
             .render(&transcript, &mut buffer)
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
+        assert!(buffer.starts_with("<!--"));
+        assert!(buffer.ends_with("</svg>\n"), "{}", buffer);
         assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
         assert!(!buffer.contains("<circle"));
     }
