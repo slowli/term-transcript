@@ -345,7 +345,12 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
         assert!(buffer.starts_with("<!--"));
-        assert!(buffer.ends_with("</svg>\n"), "{}", buffer);
+        assert!(
+            buffer.ends_with("</svg>\n") || buffer.ends_with("</svg>\r\n"),
+            // ^-- allows for different newline chars in Windows
+            "unexpected rendering result: {}",
+            buffer
+        );
         assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
         assert!(!buffer.contains("<circle"));
     }
