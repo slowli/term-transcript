@@ -585,6 +585,7 @@ dependencies = [
  "pretty_assertions",
  "quick-xml",
  "serde",
+ "serde_json",
  "termcolor",
  "unicode-width",
 ]
@@ -596,6 +597,8 @@ dependencies = [
  "anyhow",
  "atty",
  "clap",
+ "handlebars",
+ "serde_json",
  "structopt",
  "tempfile",
  "term-transcript",

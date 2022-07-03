@@ -1,5 +1,96 @@
+{{~#*inline "define_const"}}
+{
+  {{! Bottom margin for each input or output block }}
+  "BLOCK_MARGIN": 6,
+  {{! Additional padding for each user input block }}
+  "USER_INPUT_PADDING": 4,
+  {{! Padding within the rendered terminal window in pixels }}
+  "WINDOW_PADDING": 10,
+  {{! Line height in pixels }}
+  "LINE_HEIGHT": 18,
+  {{! Height of the window frame }}
+  "WINDOW_FRAME_HEIGHT": 22,
+  {{! Pixels scrolled vertically per each animation frame }}
+  "PIXELS_PER_SCROLL": 52,
+  {{! Right offset of the scrollbar relative to the right border of the frame }}
+  "SCROLLBAR_RIGHT_OFFSET": 7,
+  {{! Height of the scrollbar in pixels }}
+  "SCROLLBAR_HEIGHT": 40
+}
+{{/inline~}}
+
+{{!
+  Computes content height based on line count in interactions.
+  Expected hash inputs: `interactions`, `const`.
+}}
+{{~#*inline "compute_content_height"}}
+  {{#scope lines=0 margins=0}}
+    {{#each interactions}}
+      {{lines set=(add (lines) (count_lines input.text) (count_lines output_html format="html"))}}
+      {{#if (eq 0 (len output_html))}}
+        {{margins set=(add (margins) 1)}}
+      {{else}}
+        {{margins set=(add (margins) 2)}}
+      {{/if}}
+    {{/each}}
+    {{#if (gt (margins) 0)}}
+      {{! The last margin is not displayed. }}
+      {{margins set=(sub (margins) 1)}}
+    {{/if}}
+    {{add (mul (lines) const.LINE_HEIGHT)
+          (mul (margins) const.BLOCK_MARGIN)
+          (mul (len interactions) const.USER_INPUT_PADDING) }}
+  {{/scope}}
+{{/inline~}}
+
+{{!
+  Computes scroll animation parameters.
+  Expected hash inputs: `content_height`, `const`, `scroll`, `width`
+}}
+{{~#*inline "compute_scroll_animation"}}
+  {{#if (gte scroll.max_height content_height)}}
+  {{! No need for scroll animation }}
+    null
+  {{else}}
+    {{#scope
+      steps=(div (sub content_height scroll.max_height) const.PIXELS_PER_SCROLL round="up")
+      y_step=0
+      view_box=""
+      scrollbar_y=""
+      sep=""
+    }}
+      {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
+      {{#each (range 0 (add (steps) 1))}}
+        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
+        {{#view_box}}"{{view_box}}{{sep}}0 {{mul ../const.PIXELS_PER_SCROLL @index}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
+        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
+      {{/each}}
+
+      {
+        "duration": {{mul scroll.interval (steps)}},
+        "view_box": "{{view_box}}",
+        "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
+        "scrollbar_y": "{{scrollbar_y}}"
+      }
+    {{/scope}}
+  {{/if}}
+{{/inline~}}
+
+{{! Root template }}
+{{~#*inline "root"}}
 <!-- Created with {{{creator.name}}} v{{{creator.version}}} ({{{creator.repo}}}) -->
-<svg viewBox="0 {{#if window_frame}}-22{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" height="{{height}}" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 {{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" height="{{height}}" xmlns="http://www.w3.org/2000/svg">
+{{>styles}}
+{{>background}}
+{{>content}}
+{{~#if (scroll_animation)}}
+{{>scrollbar}}
+{{/if}}
+</svg>
+{{/inline~}}
+
+{{! CSS definitions }}
+{{~#*inline "styles"}}
   <style>
     :root {
       {{~#each palette.colors}}
@@ -10,24 +101,24 @@
       --hl-black: rgba(255, 255, 255, 0.1);
     }
     .container {
-      padding: 0 10px;
+      padding: 0 {{const.WINDOW_PADDING}}px;
       color: var(--white);
-      line-height: 18px;
+      line-height: {{const.LINE_HEIGHT}}px;
     }
     .container pre {
       padding: 0;
       margin: 0;
-      font: 14px {{ font_family }};
+      font: 14px {{font_family}};
       line-height: inherit;
     }
     .user-input {
-      margin: 0 -10px 6px;
+      margin: 0 -{{const.WINDOW_PADDING}}px {{const.BLOCK_MARGIN}}px;
       color: var(--white);
       background: var(--hl-black);
-      padding: 2px 10px;
+      padding: 2px {{const.WINDOW_PADDING}}px;
     }
-    .term-output { margin-bottom: 6px; }
-    {{~#if scroll_animation}}
+    .term-output { margin-bottom: {{const.BLOCK_MARGIN}}px; }
+    {{~#if (scroll_animation)}}
 
     .scrollbar { fill: rgba(255, 255, 255, 0.35); }
     {{~/if}}
@@ -70,7 +161,11 @@
     .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
     .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
-  <rect width="100%" height="100%" y="{{#if window_frame}}-22{{else}}0{{/if}}" rx="4.5" style="fill: var(--black);" />
+{{/inline~}}
+
+{{! Terminal background }}
+{{~#*inline "background"}}
+  <rect width="100%" height="100%" y="{{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}}" rx="4.5" style="fill: var(--black);" />
   {{~#if window_frame}}
 
   <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: var(--hl-black);"/>
@@ -79,10 +174,15 @@
   <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
   {{~/if}}
 
-  <svg x="0" y="10" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
-    {{~#if scroll_animation}}
+{{/inline~}}
 
-    <animate attributeName="viewBox" values="{{scroll_animation.view_box}}" dur="{{scroll_animation.duration}}s" repeatCount="indefinite" calcMode="discrete" />
+{{~#*inline "content"}}
+  <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
+    {{~#if (scroll_animation)}}
+    {{~#with (scroll_animation)}}
+
+    <animate attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+    {{~/with}}
     {{~/if}}
 
     <foreignObject width="{{width}}" height="{{content_height}}">
@@ -96,11 +196,45 @@
       </div>
     </foreignObject>
   </svg>
-  {{~#if scroll_animation}}
+{{/inline~}}
 
-  <rect class="scrollbar" x="{{scroll_animation.scrollbar_x}}" y="10" width="5" height="40">
-    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scroll_animation.scrollbar_y}}" dur="{{scroll_animation.duration}}s" repeatCount="indefinite" calcMode="discrete" />
+{{~#*inline "scrollbar"}}
+{{#with (scroll_animation)}}
+  <rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
+    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
   </rect>
-  {{~/if}}
+{{/with}}
+{{/inline~}}
 
-</svg>
+{{! Main logic }}
+{{#with this as |$|}}
+{{#with (eval "define_const") as |const|}}
+{{#with $}}
+{{#scope
+  content_height=(eval "compute_content_height" const=const interactions=interactions)
+  scroll_animation=null
+  screen_height=0
+  height=0
+}}
+  {{~#if scroll~}}
+    {{scroll_animation set=(eval "compute_scroll_animation"
+      const=const
+      scroll=scroll
+      width=width
+      content_height=(content_height)
+    )}}
+  {{~/if~}}
+  {{~#if (scroll_animation)~}}
+    {{screen_height set=scroll.max_height}}
+  {{~else~}}
+    {{screen_height set=(content_height)}}
+  {{~/if~}}
+  {{~height set=(add (screen_height) (mul const.WINDOW_PADDING 2))~}}
+  {{~#if window_frame~}}
+    {{height set=(add (height) const.WINDOW_FRAME_HEIGHT)}}
+  {{~/if~}}
+{{>root~}} {{! <-- All rendering happens here }}
+{{/scope}}
+{{/with}}
+{{/with}}
+{{/with}}

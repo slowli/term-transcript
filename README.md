@@ -12,8 +12,9 @@ This crate allows to:
 - Create transcripts of interacting with a terminal, capturing both the output text
   and [ANSI-compatible color info][SGR].
 - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
-  into HTML / Markdown documents
-- Parse transcripts from SVG
+  into HTML / Markdown documents. Rendering logic can be customized via [Handlebars] template engine;
+  thus, other output formats besides SVG (e.g., HTML) are possible.
+- Parse transcripts from SVG.
 - Test that a parsed transcript actually corresponds to the terminal output (either as text
   or text + colors).
 
@@ -61,6 +62,8 @@ Here's a snapshot of the same example with the scrolling animation and window fr
 
 ![Animated snapshot of rainbow example](examples/animated.svg)
 
+<!-- TODO: add a link to HTML template output -->
+
 ## Limitations
 
 - Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
@@ -100,6 +103,7 @@ for inclusion in `term-transcript` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions.
 
 [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
+[Handlebars]: https://handlebarsjs.com/
 [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
 [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
