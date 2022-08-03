@@ -100,13 +100,13 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p term-transcript --no-default-features --features svg --lib
+          args: -p term-transcript --no-default-features --features svg --lib -- -D warnings
           name: clippy (features = svg)
       - name: Clippy (features = test)
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p term-transcript --no-default-features --features test --lib
+          args: -p term-transcript --no-default-features --features test --lib -- -D warnings
           name: clippy (features = test)
 
       - name: Run tests
@@ -155,6 +155,11 @@ jobs:
         run: |
           cargo clean --doc && \
           cargo rustdoc -p term-transcript --all-features -- --cfg docsrs
+
+      - name: Copy examples
+        run: |
+          mkdir -p target/doc/examples && \
+          cp examples/rainbow.html target/doc/examples
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@releases/v3

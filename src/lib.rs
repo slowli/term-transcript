@@ -7,7 +7,8 @@
 //! - Create [`Transcript`]s of interacting with a terminal, capturing both the output text
 //!   and [ANSI-compatible color info][SGR].
 //! - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
-//!   into HTML / Markdown documents
+//!   into HTML / Markdown documents. (Output format customization
+//!   [is also supported](crate::svg::Template#customization) via [Handlebars] templates.)
 //! - Parse transcripts from SVG
 //! - Test that a parsed transcript actually corresponds to the terminal output (either as text
 //!   or text + colors).
@@ -54,11 +55,6 @@
 //!   This crate [intentionally chooses](#design-decisions) a simpler static format, which
 //!   makes snapshot testing easier.
 //!
-//! [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
-//! [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
-//! [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
-//! [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
-//!
 //! # Crate features
 //!
 //! - `portable-pty`. Allows using pseudo-terminal (PTY) to capture terminal output rather
@@ -72,6 +68,11 @@
 //!
 //! `svg`, `test` and `pretty_assertions` features are on by default.
 //!
+//! [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
+//! [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
+//! [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
+//! [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
+//! [Handlebars]: https://handlebarsjs.com/
 //! [`pretty_assertions`]: https://docs.rs/pretty_assertions/
 //! [`portable-pty`]: https://docs.rs/portable-pty/
 //!
