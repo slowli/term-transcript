@@ -12,8 +12,9 @@ This crate allows to:
 - Create transcripts of interacting with a terminal, capturing both the output text
   and [ANSI-compatible color info][SGR].
 - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
-  into HTML / Markdown documents
-- Parse transcripts from SVG
+  into HTML / Markdown documents. Rendering logic can be customized via [Handlebars] template engine;
+  thus, other output formats besides SVG (e.g., HTML) are possible.
+- Parse transcripts from SVG.
 - Test that a parsed transcript actually corresponds to the terminal output (either as text
   or text + colors).
 
@@ -52,14 +53,17 @@ See more examples in the crate docs.
 
 ### Snapshot examples
 
-Here's an SVG snapshot of [the `rainbow` example](e2e-tests/rainbow)
+An SVG snapshot of [the `rainbow` example](e2e-tests/rainbow)
 produced by this crate:
 
 ![Snapshot of rainbow example](examples/rainbow.svg)
 
-Here's a snapshot of the same example with the scrolling animation and window frame:
+A snapshot of the same example with the scrolling animation and window frame:
 
 ![Animated snapshot of rainbow example](examples/animated.svg)
+
+A snapshot of a similar example rendered to HTML using [a custom template](examples/custom.html.handlebars)
+is available [as a source file](examples/rainbow.html) and [in the rendered form][html-example].
 
 ## Limitations
 
@@ -100,6 +104,8 @@ for inclusion in `term-transcript` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions.
 
 [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
+[Handlebars]: https://handlebarsjs.com/
 [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
 [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
+[html-example]: https://slowli.github.io/term-transcript/examples/rainbow.html

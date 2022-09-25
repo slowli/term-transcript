@@ -5,6 +5,12 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Support custom rendering templates via `Template::custom()`. 
+  This allows customizing rendering logic, including changing the output format
+  entirely (e.g., to HTML).
+
 ### Changed
 
 - Update `quick-xml` dependency.

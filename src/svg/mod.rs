@@ -1,22 +1,35 @@
-//! Provides the SVG template for rendering terminal output in a visual format.
+//! Provides templating logic for rendering terminal output in a visual format.
+//!
+//! The included templating logic allows rendering SVG images. Templating is based on [Handlebars],
+//! and can be [customized](Template#customization) to support differing layout or even
+//! data formats (e.g., HTML).
+//!
+//! [Handlebars]: https://handlebarsjs.com/
 //!
 //! # Examples
 //!
 //! See [`Template`] for examples of usage.
 
-use handlebars::{Handlebars, RenderError};
+use handlebars::{Handlebars, RenderError, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
 
-use std::{fmt::Write as _, io::Write};
+use std::io::Write;
 
+mod data;
+mod helpers;
 mod palette;
 
-pub use self::palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors};
+pub use self::{
+    data::{CreatorData, HandlebarsData, SerializedInteraction},
+    palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
+};
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{TermError, Transcript, UserInput};
 
+use self::helpers::register_helpers;
+use crate::{TermError, Transcript};
+
+const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
-const TEMPLATE: &str = include_str!("default.svg.handlebars");
 
 /// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,8 +44,10 @@ pub struct TemplateOptions {
     pub window_frame: bool,
     /// Options for the scroll animation. If set to `None` (which is the default),
     /// no scrolling will be enabled, and the height of the generated image is not limited.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub scroll: Option<ScrollOptions>,
     /// Text wrapping options. The default value of [`WrapOptions`] is used by default.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub wrap: Option<WrapOptions>,
 }
 
@@ -49,6 +64,54 @@ impl Default for TemplateOptions {
     }
 }
 
+impl TemplateOptions {
+    /// Generates data for rendering.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if output cannot be rendered to HTML (e.g., it contains invalid
+    /// SGR sequences).
+    pub fn render_data<'s>(
+        &'s self,
+        transcript: &'s Transcript,
+    ) -> Result<HandlebarsData<'s>, TermError> {
+        let rendered_outputs = self.render_outputs(transcript)?;
+
+        let interactions: Vec<_> = transcript
+            .interactions()
+            .iter()
+            .zip(rendered_outputs)
+            .map(|(interaction, output_html)| SerializedInteraction {
+                input: interaction.input(),
+                output_html,
+            })
+            .collect();
+
+        Ok(HandlebarsData {
+            creator: CreatorData::default(),
+            interactions,
+            options: self,
+        })
+    }
+
+    fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<String>, TermError> {
+        let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
+            WrapOptions::HardBreakAt(width) => *width,
+        });
+
+        transcript
+            .interactions
+            .iter()
+            .map(|interaction| {
+                let output = interaction.output();
+                let mut buffer = String::with_capacity(output.as_ref().len());
+                output.write_as_html(&mut buffer, max_width)?;
+                Ok(buffer)
+            })
+            .collect()
+    }
+}
+
 /// Options that influence the scrolling animation.
 ///
 /// The animation is only displayed if the console exceeds [`Self::max_height`]. In this case,
@@ -57,8 +120,8 @@ impl Default for TemplateOptions {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScrollOptions {
     /// Maximum height of the console, in pixels. The default value allows to fit 19 lines
-    /// of text into the view (potentially, slightly less because of vertical margins around
-    /// user inputs).
+    /// of text into the view with the default template (potentially, slightly less because
+    /// of vertical margins around user inputs).
     pub max_height: usize,
     /// Interval between keyframes in seconds. The default value is `4`.
     pub interval: f32,
@@ -66,8 +129,9 @@ pub struct ScrollOptions {
 
 impl Default for ScrollOptions {
     fn default() -> Self {
+        const DEFAULT_LINE_HEIGHT: usize = 18; // from the default template
         Self {
-            max_height: Template::LINE_HEIGHT * 19,
+            max_height: DEFAULT_LINE_HEIGHT * 19,
             interval: 4.0,
         }
     }
@@ -76,6 +140,7 @@ impl Default for ScrollOptions {
 /// Text wrapping options.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[non_exhaustive]
+#[serde(rename_all = "snake_case")]
 pub enum WrapOptions {
     /// Perform a hard break at the specified width of output. The [`Default`] implementation
     /// returns this variant with width 80.
@@ -88,9 +153,97 @@ impl Default for WrapOptions {
     }
 }
 
-/// Template for rendering [`Transcript`]s into an [SVG] image.
+/// Template for rendering [`Transcript`]s, e.g. into an [SVG] image.
+///
+/// # Customization
+///
+/// A custom [Handlebars] template can be supplied via [`Self::custom()`]. This can be used
+/// to partially or completely change rendering logic, including the output format (e.g.,
+/// to render to HTML instead of SVG).
+///
+/// Data supplied to a template is [`HandlebarsData`].
+///
+/// Besides [built-in Handlebars helpers][rust-helpers] (a superset of [standard helpers]),
+/// custom templates have access to the following additional helpers. All the helpers are
+/// extensively used by the [default template]; thus, studying it may be a good place to start
+/// customizing. Another example is an [HTML template] from the crate examples.
+///
+/// ## Arithmetic helpers: `add`, `sub`, `mul`, `div`
+///
+/// Perform the specified arithmetic operation on the supplied args.
+/// `add` and `mul` support any number of numeric args; `sub` and `div` exactly 2 numeric args.
+/// `div` also supports rounding via `round` hash option. `round=true` rounds to the nearest
+/// integer; `round="up"` / `round="down"` perform rounding in the specified direction.
+///
+/// ```handlebars
+/// {{add 2 3 5}}
+/// {{div (len xs) 3 round="up"}}
+/// ```
+///
+/// ## Counting lines: `count_lines`
+///
+/// Counts the number of lines in the supplied string. If `format="html"` hash option is included,
+/// line breaks introduced by `<br/>` tags are also counted.
+///
+/// ```handlebars
+/// {{count_lines test}}
+/// {{count_lines test format="html"}}
+/// ```
+///
+/// ## Integer ranges: `range`
+///
+/// Creates an array with integers in the range specified by the 2 provided integer args.
+/// The "from" bound is inclusive, the "to" one is exclusive.
+///
+/// ```handlebars
+/// {{#each (range 0 3)}}{{@index}}, {{/each}}
+/// {{! Will output `0, 1, 2,` }}
+/// ```
+///
+/// ## Variable scope: `scope`
+///
+/// A block helper that creates a scope with variables specified in the options hash.
+/// In the block, each variable can be obtained or set using an eponymous helper:
+///
+/// - If the variable helper is called as a block helper, the variable is set to the contents
+///   of the block, which is treated as JSON.
+/// - If the variable helper is called as an inline helper with the `set` option, the variable
+///   is set to the value of the option.
+/// - Otherwise, the variable helper acts as a getter for the current value of the variable.
+///
+/// ```handlebars
+/// {{#scope test=""}}
+///   {{test set="Hello"}}
+///   {{test}} {{! Outputs `Hello` }}
+///   {{#test}}{{test}}, world!{{/test}}
+///   {{test}} {{! Outputs `Hello, world!` }}
+/// {{/scope}}
+/// ```
+///
+/// Since variable getters are helpers, not "real" variables, they should be enclosed
+/// in parentheses `()` if used as args / options for other helpers, e.g. `{{add (test) 2}}`.
+///
+/// ## Partial evaluation: `eval`
+///
+/// Evaluates a partial with the provided name and parses its output as JSON. This can be used
+/// to define "functions" for better code structuring. Function args can be supplied in options
+/// hash.
+///
+/// ```handlebars
+/// {{#*inline "some_function"}}
+///   {{add x y}}
+/// {{/inline}}
+/// {{#with (eval "some_function" x=3 y=5) as |sum|}}
+///   {{sum}} {{! Outputs 8 }}
+/// {{/with}}
+/// ```
 ///
 /// [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
+/// [Handlebars]: https://handlebarsjs.com/
+/// [rust-helpers]: https://docs.rs/handlebars/latest/handlebars/index.html#built-in-helpers
+/// [standard helpers]: https://handlebarsjs.com/guide/builtin-helpers.html
+/// [default template]: https://github.com/slowli/term-transcript/blob/master/src/svg/default.svg.handlebars
+/// [HTML template]: https://github.com/slowli/term-transcript/blob/master/examples/custom.html.handlebars
 ///
 /// # Examples
 ///
@@ -128,38 +281,27 @@ impl Default for Template {
 }
 
 impl Template {
-    /// Bottom margin for each input or output block.
-    const BLOCK_MARGIN: usize = 6;
-    /// Additional padding for each user input block.
-    const USER_INPUT_PADDING: usize = 4;
-    /// Padding within the rendered terminal window in pixels.
-    const WINDOW_PADDING: usize = 10;
-    /// Line height in pixels.
-    const LINE_HEIGHT: usize = 18;
-    /// Height of the window frame.
-    const WINDOW_FRAME_HEIGHT: usize = 22;
-    /// Pixels scrolled vertically per each animation frame.
-    const PIXELS_PER_SCROLL: usize = Self::LINE_HEIGHT * 4;
-    /// Right offset of the scrollbar relative to the right border of the frame.
-    const SCROLLBAR_RIGHT_OFFSET: usize = 7;
-    /// Height of the scrollbar in pixels.
-    const SCROLLBAR_HEIGHT: usize = 40;
-
-    /// Initializes the template based on provided `options`.
+    /// Initializes the default template based on provided `options`.
     pub fn new(options: TemplateOptions) -> Self {
+        let template = HandlebarsTemplate::compile(DEFAULT_TEMPLATE)
+            .expect("Default template should be valid");
+        Self::custom(template, options)
+    }
+
+    /// Initializes a custom template.
+    pub fn custom(template: HandlebarsTemplate, options: TemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
-        handlebars
-            .register_template_string(MAIN_TEMPLATE_NAME, TEMPLATE)
-            .expect("Default template should be valid");
-
+        register_helpers(&mut handlebars);
+        handlebars.register_template(MAIN_TEMPLATE_NAME, template);
         Self {
             options,
             handlebars,
         }
     }
 
-    /// Renders the `transcript` as an SVG image.
+    /// Renders the `transcript` using the template (usually as an SVG image, although templates
+    /// may use different formats).
     ///
     /// # Errors
     ///
@@ -170,204 +312,24 @@ impl Template {
         transcript: &Transcript,
         destination: W,
     ) -> Result<(), RenderError> {
-        let rendered_outputs = self
-            .render_outputs(transcript)
+        let data = self
+            .options
+            .render_data(transcript)
             .map_err(|err| RenderError::from_error("content", err))?;
-
-        let content_height = Self::compute_content_height(transcript, &rendered_outputs);
-        let scroll_animation = self.scroll_animation(content_height);
-        let screen_height = if scroll_animation.is_some() {
-            self.options
-                .scroll
-                .as_ref()
-                .map_or(content_height, |scroll| scroll.max_height)
-        } else {
-            content_height
-        };
-
-        let mut height = screen_height + 2 * Self::WINDOW_PADDING;
-        if self.options.window_frame {
-            height += Self::WINDOW_FRAME_HEIGHT;
-        }
-
         let data = HandlebarsData {
-            creator: CreatorData::default(),
-            height,
-            content_height,
-            screen_height,
-            interactions: transcript
-                .interactions()
-                .iter()
-                .zip(rendered_outputs)
-                .map(|(interaction, output_html)| SerializedInteraction {
-                    input: interaction.input(),
-                    output_html,
-                })
-                .collect(),
-            options: &self.options,
-            scroll_animation,
+            creator: data.creator,
+            options: data.options,
+            interactions: data.interactions,
         };
-
         self.handlebars
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
-
-    fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<String>, TermError> {
-        let max_width = self
-            .options
-            .wrap
-            .as_ref()
-            .map(|wrap_options| match wrap_options {
-                WrapOptions::HardBreakAt(width) => *width,
-            });
-
-        transcript
-            .interactions
-            .iter()
-            .map(|interaction| {
-                let output = interaction.output();
-                let mut buffer = String::with_capacity(output.as_ref().len());
-                output.write_as_html(&mut buffer, max_width)?;
-                Ok(buffer)
-            })
-            .collect()
-    }
-
-    fn compute_content_height(transcript: &Transcript, rendered_outputs: &[String]) -> usize {
-        let line_count: usize = transcript
-            .interactions
-            .iter()
-            .zip(rendered_outputs)
-            .map(|(interaction, output_html)| {
-                Self::count_lines_in_input(interaction.input().as_ref())
-                    + Self::count_lines_in_output(output_html)
-            })
-            .sum();
-        let margin_count = transcript
-            .interactions
-            .iter()
-            .map(|interaction| {
-                if interaction.output().as_ref().is_empty() {
-                    1
-                } else {
-                    2
-                }
-            })
-            .sum::<usize>()
-            .saturating_sub(1); // The last margin is not displayed.
-        line_count * Self::LINE_HEIGHT
-            + margin_count * Self::BLOCK_MARGIN
-            + transcript.interactions.len() * Self::USER_INPUT_PADDING
-    }
-
-    fn count_lines_in_input(input_str: &str) -> usize {
-        let mut input_lines = bytecount::count(input_str.as_bytes(), b'\n');
-        if !input_str.is_empty() && !input_str.ends_with('\n') {
-            input_lines += 1;
-        }
-        input_lines
-    }
-
-    fn count_lines_in_output(output_html: &str) -> usize {
-        let mut output_lines =
-            bytecount::count(output_html.as_bytes(), b'\n') + output_html.matches("<br/>").count();
-
-        if !output_html.is_empty() && !output_html.ends_with('\n') {
-            output_lines += 1;
-        }
-        output_lines
-    }
-
-    #[allow(clippy::cast_precision_loss)] // no loss with sane amount of `steps`
-    fn scroll_animation(&self, content_height: usize) -> Option<ScrollAnimationConfig> {
-        fn div_ceil(x: usize, y: usize) -> usize {
-            (x + y - 1) / y
-        }
-
-        let scroll_options = self.options.scroll.as_ref()?;
-        let max_height = scroll_options.max_height;
-        let max_offset = content_height.checked_sub(max_height)?;
-        let steps = div_ceil(max_offset, Self::PIXELS_PER_SCROLL);
-        debug_assert!(steps > 0);
-
-        let mut view_box = (0..=steps).fold(String::new(), |mut acc, i| {
-            let y = (Self::PIXELS_PER_SCROLL as f32 * i as f32).round();
-            write!(
-                &mut acc,
-                "0 {y} {width} {height};",
-                y = y,
-                width = self.options.width,
-                height = max_height
-            )
-            .unwrap(); // safe; writing to a string is infallible
-            acc
-        });
-        view_box.pop(); // trim the last ';'
-
-        let y_step = (max_height - Self::SCROLLBAR_HEIGHT) as f32 / steps as f32;
-        let mut scrollbar_y = (0..=steps).fold(String::new(), |mut acc, i| {
-            let y = (y_step * i as f32).round();
-            write!(&mut acc, "0 {};", y).unwrap();
-            acc
-        });
-        scrollbar_y.pop(); // trim the last ';'
-
-        Some(ScrollAnimationConfig {
-            duration: scroll_options.interval * steps as f32,
-            view_box,
-            scrollbar_x: self.options.width - Self::SCROLLBAR_RIGHT_OFFSET,
-            scrollbar_y,
-        })
-    }
-}
-
-/// Root data structure sent to the Handlebars template.
-#[derive(Debug, Serialize)]
-struct HandlebarsData<'r> {
-    creator: CreatorData,
-    height: usize,
-    screen_height: usize,
-    content_height: usize,
-    interactions: Vec<SerializedInteraction<'r>>,
-    #[serde(flatten)]
-    options: &'r TemplateOptions,
-    scroll_animation: Option<ScrollAnimationConfig>,
-}
-
-#[derive(Debug, Serialize)]
-struct CreatorData {
-    name: &'static str,
-    version: &'static str,
-    repo: &'static str,
-}
-
-impl Default for CreatorData {
-    fn default() -> Self {
-        Self {
-            name: env!("CARGO_PKG_NAME"),
-            version: env!("CARGO_PKG_VERSION"),
-            repo: env!("CARGO_PKG_REPOSITORY"),
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-struct SerializedInteraction<'a> {
-    input: &'a UserInput,
-    output_html: String,
-}
-
-#[derive(Debug, Serialize)]
-struct ScrollAnimationConfig {
-    duration: f32,
-    view_box: String,
-    scrollbar_x: usize,
-    scrollbar_y: String,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::UserInput;
 
     #[test]
     fn rendering_simple_transcript() {
@@ -382,6 +344,13 @@ mod tests {
             .render(&transcript, &mut buffer)
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
+        assert!(buffer.starts_with("<!--"));
+        assert!(
+            buffer.ends_with("</svg>\n") || buffer.ends_with("</svg>\r\n"),
+            // ^-- allows for different newline chars in Windows
+            "unexpected rendering result: {}",
+            buffer
+        );
         assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
         assert!(!buffer.contains("<circle"));
     }

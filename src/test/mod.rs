@@ -54,9 +54,9 @@
 
 use termcolor::ColorChoice;
 
+use std::process::Command;
 #[cfg(feature = "svg")]
-use std::ffi::OsStr;
-use std::{env, process::Command, str};
+use std::{env, ffi::OsStr};
 
 mod color_diff;
 mod config_impl;
