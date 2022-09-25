@@ -3,7 +3,7 @@ name = "term-transcript"
 version = "0.2.0"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 edition = "2021"
-rust-version = "1.57"
+rust-version = "1.61"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 keywords = ["snapshot", "terminal", "SVG"]
@@ -18,7 +18,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 # Public dependencies (present in the public API).
-quick-xml = { version = "0.23.0", optional = true }
+quick-xml = { version = "0.25.0", optional = true }
 handlebars = { version = "4.0.0", optional = true }
 portable-pty = { version = "0.7.0", optional = true }
 

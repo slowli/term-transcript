@@ -248,7 +248,7 @@ impl HelperDef for EvalHelper {
         render_ctx.push_block(block_ctx);
 
         let mut output = StringOutput::new();
-        partial.render(&*reg, ctx, &mut render_ctx, &mut output)?;
+        partial.render(reg, ctx, &mut render_ctx, &mut output)?;
         let json_string = output.into_string()?;
         let json: Json = serde_json::from_str(&json_string).map_err(|err| {
             let message = format!("Cannot parse JSON value: {}", err);

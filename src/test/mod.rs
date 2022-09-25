@@ -91,7 +91,7 @@ impl Default for TestOutputConfig {
 
 /// Strategy for saving a new snapshot on a test failure within [`TestConfig::test()`] and
 /// related methods.
-#[derive(Debug, Clone, Copy, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]

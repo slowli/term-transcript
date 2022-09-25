@@ -267,7 +267,7 @@ impl<Out: TermOutput> Interaction<Out> {
 }
 
 /// User input during interaction with a terminal.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "svg", derive(serde::Serialize))]
 pub struct UserInput {
     text: String,
