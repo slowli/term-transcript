@@ -43,9 +43,8 @@ impl TextReadingState {
     pub fn process(&mut self, event: Event<'_>) -> Result<Option<Parsed>, ParseError> {
         match event {
             Event::Text(text) => {
-                let unescaped = text.unescaped()?;
-                let unescaped_str = str::from_utf8(&unescaped).map_err(quick_xml::Error::Utf8)?;
-                let unescaped_str = normalize_newlines(unescaped_str);
+                let unescaped_str = text.unescape()?;
+                let unescaped_str = normalize_newlines(&unescaped_str);
 
                 self.html_buffer.push_str(&unescaped_str);
                 self.plaintext_buffer.push_str(&unescaped_str);
@@ -55,9 +54,9 @@ impl TextReadingState {
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
-                if tag.name() == b"span" {
+                if tag.name().as_ref() == b"span" {
                     self.html_buffer.push('<');
-                    let tag_str = str::from_utf8(&tag).map_err(quick_xml::Error::Utf8)?;
+                    let tag_str = str::from_utf8(&tag).map_err(quick_xml::Error::from)?;
                     self.html_buffer.push_str(tag_str);
                     self.html_buffer.push('>');
 
@@ -72,7 +71,7 @@ impl TextReadingState {
             Event::End(tag) => {
                 self.open_tags -= 1;
 
-                if tag.name() == b"span" {
+                if tag.name().as_ref() == b"span" {
                     self.html_buffer.push_str("</span>");
 
                     // FIXME: check embedded color specs (should never be produced).
@@ -108,7 +107,7 @@ impl TextReadingState {
         let mut style = Cow::Borrowed(&[] as &[u8]);
         for attr in span_tag.attributes() {
             let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
-            if attr.key == b"style" {
+            if attr.key.as_ref() == b"style" {
                 style = attr.value;
             }
         }
@@ -164,10 +163,10 @@ impl TextReadingState {
             };
 
             let property_name = str::from_utf8(property_name)
-                .map_err(quick_xml::Error::Utf8)?
+                .map_err(quick_xml::Error::from)?
                 .trim();
             let property_value = str::from_utf8(property_value)
-                .map_err(quick_xml::Error::Utf8)?
+                .map_err(quick_xml::Error::from)?
                 .trim();
 
             match property_name {

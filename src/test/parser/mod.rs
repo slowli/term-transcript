@@ -82,7 +82,7 @@ impl Transcript<Parsed> {
         let mut open_tags = 0;
 
         loop {
-            let event = reader.read_event(&mut buffer)?;
+            let event = reader.read_event_into(&mut buffer)?;
             match &event {
                 Event::Start(_) => {
                     open_tags += 1;
@@ -114,7 +114,7 @@ fn parse_class(attributes: Attributes<'_>) -> Result<Cow<'_, [u8]>, ParseError> 
     let mut class = None;
     for attr in attributes {
         let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
-        if attr.key == b"class" {
+        if attr.key.as_ref() == b"class" {
             class = Some(attr.value);
         }
     }
@@ -251,10 +251,10 @@ impl ParserState {
         match self {
             Self::Initialized => {
                 if let Event::Start(tag) = event {
-                    if tag.name() == b"svg" {
+                    if tag.name().as_ref() == b"svg" {
                         *self = Self::EncounteredSvgTag;
                     } else {
-                        let tag_name = String::from_utf8_lossy(tag.name()).into_owned();
+                        let tag_name = String::from_utf8_lossy(tag.name().as_ref()).into_owned();
                         return Err(ParseError::UnexpectedRoot(tag_name));
                     }
                 }
@@ -262,7 +262,7 @@ impl ParserState {
 
             Self::EncounteredSvgTag => {
                 if let Event::Start(tag) = event {
-                    if tag.name() == b"div" {
+                    if tag.name().as_ref() == b"div" {
                         Self::verify_container_attrs(tag.attributes())?;
                         *self = Self::EncounteredContainer;
                     }
@@ -324,7 +324,7 @@ impl ParserState {
 
         for attr in attributes {
             let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
-            match attr.key {
+            match attr.key.as_ref() {
                 b"xmlns" => {
                     if attr.value.as_ref() != HTML_NS {
                         return Err(ParseError::InvalidContainer);
