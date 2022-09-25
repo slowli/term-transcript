@@ -5,6 +5,11 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Update `quick-xml` dependency.
+- Bump minimum supported Rust version to 1.61.
+
 ## 0.2.0 - 2022-06-12
 
 *(All changes are relative compared to [the 0.2.0-beta.1 release](#020-beta1---2022-01-06))*
@@ -12,7 +17,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 ### Changed
 
 - Update `quick-xml` dependency.
-- Bump minimum supported Rust version and switch to 2021 Rust edition.
+- Bump minimum supported Rust version to 1.57 and switch to 2021 Rust edition.
 
 ### Fixed
 

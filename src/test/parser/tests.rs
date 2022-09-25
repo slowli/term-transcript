@@ -161,37 +161,37 @@ fn reading_file_without_term_output() {
 fn reading_user_input_with_manual_events() {
     let mut state = UserInputState::default();
     {
-        let event = Event::Start(BytesStart::borrowed_name(b"pre"));
+        let event = Event::Start(BytesStart::new("pre"));
         assert!(state.process(event).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, None);
         assert!(state.text.plaintext_buffer.is_empty());
     }
     {
-        let event = Event::Start(BytesStart::borrowed(br#"span class="prompt""#, 4));
+        let event = Event::Start(BytesStart::from_content(r#"span class="prompt""#, 4));
         assert!(state.process(event).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, Some(2));
         assert!(state.text.plaintext_buffer.is_empty());
     }
     {
-        let event = Event::Text(BytesText::from_escaped(b"$" as &[u8]));
+        let event = Event::Text(BytesText::from_escaped("$"));
         assert!(state.process(event).unwrap().is_none());
         assert_eq!(state.text.plaintext_buffer, "$");
     }
     {
-        let event = Event::End(BytesEnd::borrowed(b"span"));
+        let event = Event::End(BytesEnd::new("span"));
         assert!(state.process(event).unwrap().is_none());
         assert_eq!(state.prompt.as_deref(), Some("$"));
         assert!(state.text.plaintext_buffer.is_empty());
     }
     {
-        let event = Event::Text(BytesText::from_escaped(b" rainbow" as &[u8]));
+        let event = Event::Text(BytesText::from_escaped(" rainbow"));
         assert!(state.process(event).unwrap().is_none());
     }
 
-    let event = Event::End(BytesEnd::borrowed(b"pre"));
+    let event = Event::End(BytesEnd::new("pre"));
     assert!(state.process(event).unwrap().is_none());
 
-    let event = Event::End(BytesEnd::borrowed(b"div"));
+    let event = Event::End(BytesEnd::new("div"));
     let user_input = state.process(event).unwrap().unwrap();
     assert_eq!(user_input.prompt(), Some("$"));
     assert_eq!(user_input.text, "rainbow");
@@ -204,16 +204,15 @@ fn read_user_input(input: &[u8]) -> UserInput {
     wrapped_input.extend_from_slice(b"</div>");
 
     let mut reader = XmlReader::from_reader(wrapped_input.as_slice());
-    let mut buffer = vec![];
     let mut state = UserInputState::default();
 
     // Skip the `<div>` start event.
-    while !matches!(reader.read_event(&mut buffer).unwrap(), Event::Start(_)) {
+    while !matches!(reader.read_event().unwrap(), Event::Start(_)) {
         // Drop the event.
     }
 
     loop {
-        let event = reader.read_event(&mut buffer).unwrap();
+        let event = reader.read_event().unwrap();
         if let Event::Eof = &event {
             panic!("Reached EOF without creating `UserInput`");
         }
@@ -286,7 +285,7 @@ fn reading_user_input_with_leading_spaces() {
 #[test]
 fn newline_breaks_are_normalized() {
     let mut state = TextReadingState::default();
-    let text = BytesText::from_escaped(b"some\ntext\r\nand more text" as &[u8]);
+    let text = BytesText::from_escaped("some\ntext\r\nand more text");
     state.process(Event::Text(text)).unwrap();
     assert_eq!(state.plaintext_buffer, "some\ntext\nand more text");
 }
