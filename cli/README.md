@@ -35,7 +35,7 @@ or getting term size can produce different output than if launched in an actual 
 - The `test` subcommand allows testing snapshots from the command line.
 - The `print` subcommand parses an SVG snapshot and outputs it to the command line.
 
-Launch the CLI with the `--help` option for more details about arguments
+Launch the CLI app with the `--help` option for more details about arguments
 for each subcommand.
 
 ### Examples
@@ -60,6 +60,9 @@ Another snapshot created by capturing help output from a pseudo-terminal
 Using PTY enables coloring output by default and formatting dependent
 on the terminal size.
 
+See also [a shell script][generate-snapshots] used in the "parent" `term-transcript`
+crate to render examples; it uses all major commands and options of the CLI app.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
@@ -76,3 +79,4 @@ shall be dual licensed as above, without any additional terms or conditions.
 [test-link]: https://github.com/slowli/term-transcript/blob/HEAD/cli/tests/e2e.rs
 [help-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/help.svg?sanitize=true
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
+[generate-snapshots]: https://github.com/slowli/term-transcript/blob/HEAD/examples/generate-snapshots.sh
