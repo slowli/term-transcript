@@ -312,7 +312,7 @@ impl ColorDiff {
 
             if span_start > line_pos {
                 let spaces = " ".repeat(line[line_pos..span_start].width());
-                write!(out, "{}", spaces)?;
+                write!(out, "{spaces}")?;
             }
 
             let ch = span.kind.underline_char();
@@ -320,7 +320,7 @@ impl ColorDiff {
                 .take(line[span_start..span_end].width())
                 .collect();
             out.set_color(&span.kind.highlight_spec())?;
-            write!(out, "{}", underline)?;
+            write!(out, "{underline}")?;
             out.reset()?;
 
             line_pos = span_end;
@@ -343,18 +343,14 @@ impl ColorDiff {
         out.set_color(&table_header_spec)?;
         writeln!(
             out,
-            "{pos:^pos_width$} {lhs:^style_width$} {rhs:^style_width$}",
-            pos_width = POS_WIDTH,
-            style_width = STYLE_WIDTH,
+            "{pos:^POS_WIDTH$} {lhs:^STYLE_WIDTH$} {rhs:^STYLE_WIDTH$}",
             pos = "Positions",
             lhs = "Expected style",
             rhs = "Actual style"
         )?;
         writeln!(
             out,
-            "{pos:=>pos_width$} {lhs:=>style_width$} {rhs:=>style_width$}",
-            pos_width = POS_WIDTH,
-            style_width = STYLE_WIDTH,
+            "{pos:=>POS_WIDTH$} {lhs:=>STYLE_WIDTH$} {rhs:=>STYLE_WIDTH$}",
             pos = "",
             lhs = "",
             rhs = ""
@@ -365,8 +361,8 @@ impl ColorDiff {
         for differing_span in &self.differing_spans {
             let start = differing_span.start;
             let end = start + differing_span.len;
-            let pos = format!("{}..{}", start, end);
-            write!(out, "{pos:>pos_width$} ", pos_width = POS_WIDTH, pos = pos)?;
+            let pos = format!("{start}..{end}");
+            write!(out, "{pos:>POS_WIDTH$} ")?;
 
             Self::write_color_spec(out, &differing_span.lhs_color_spec)?;
             out.write_all(b" ")?;
@@ -389,8 +385,7 @@ impl ColorDiff {
 
         write!(
             out,
-            " {fg:>color_width$}/{bg:<color_width$}",
-            color_width = COLOR_WIDTH,
+            " {fg:>COLOR_WIDTH$}/{bg:<COLOR_WIDTH$}",
             fg = color_spec
                 .fg()
                 .map_or_else(|| "(none)".to_owned(), |&fg| Self::color_to_string(fg)),
@@ -421,7 +416,7 @@ impl ColorDiff {
             Color::Ansi256(14) => "cyan*".to_owned(),
             Color::Ansi256(15) => "white*".to_owned(),
 
-            Color::Rgb(r, g, b) => format!("#{:02x}{:02x}{:02x}", r, g, b),
+            Color::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
 
             _ => unreachable!(), // must be transformed during color normalization
         }

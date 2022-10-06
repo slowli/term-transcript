@@ -36,13 +36,13 @@ impl Timeouts {
 impl Transcript {
     #[cfg(not(windows))]
     fn write_line(writer: &mut impl io::Write, line: &str) -> io::Result<()> {
-        writeln!(writer, "{}", line)
+        writeln!(writer, "{line}")
     }
 
     // Lines need to end with `\r\n` to be properly processed, at least when writing to a PTY.
     #[cfg(windows)]
     fn write_line(writer: &mut impl io::Write, line: &str) -> io::Result<()> {
-        writeln!(writer, "{}\r", line)
+        writeln!(writer, "{line}\r")
     }
 
     fn read_echo(
@@ -53,10 +53,8 @@ impl Transcript {
         if lines_recv.recv_timeout(io_timeout).is_ok() {
             Ok(())
         } else {
-            let err = format!(
-                "could not read all input `{}` back from an echoing terminal",
-                input_line
-            );
+            let err =
+                format!("could not read all input `{input_line}` back from an echoing terminal");
             Err(io::Error::new(io::ErrorKind::BrokenPipe, err))
         }
     }

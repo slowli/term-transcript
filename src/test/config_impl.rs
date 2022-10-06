@@ -135,23 +135,20 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     #[cfg(feature = "svg")]
     fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> String {
         if !self.update_mode.should_create_snapshot() {
-            return format!("Skipped writing new snapshot `{:?}` per test config", path);
+            return format!("Skipped writing new snapshot `{path:?}` per test config");
         }
 
         let mut new_path = path.to_owned();
         new_path.set_extension("new.svg");
         let new_snapshot = File::create(&new_path).unwrap_or_else(|err| {
-            panic!(
-                "Cannot create file for new snapshot `{:?}`: {}",
-                new_path, err
-            );
+            panic!("Cannot create file for new snapshot `{new_path:?}`: {err}");
         });
         self.template
             .render(transcript, &mut io::BufWriter::new(new_snapshot))
             .unwrap_or_else(|err| {
-                panic!("Cannot render snapshot `{:?}`: {}", new_path, err);
+                panic!("Cannot render snapshot `{new_path:?}`: {err}");
             });
-        format!("A new snapshot was saved to `{:?}`", new_path)
+        format!("A new snapshot was saved to `{new_path:?}`")
     }
 
     #[cfg(not(feature = "svg"))]
@@ -324,7 +321,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 // Align output with verbose term output. Since `Comparison` adds one space,
                 // we need to add 3 spaces instead of 4.
                 for line in self.0.lines() {
-                    writeln!(formatter, "   {}", line)?;
+                    writeln!(formatter, "   {line}")?;
                 }
                 Ok(())
             }
@@ -341,11 +338,11 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
         writeln!(out, "  Original:")?;
         for line in original.lines() {
-            writeln!(out, "    {}", line)?;
+            writeln!(out, "    {line}")?;
         }
         writeln!(out, "  Reproduced:")?;
         for line in reproduced.lines() {
-            writeln!(out, "    {}", line)?;
+            writeln!(out, "    {line}")?;
         }
         Ok(())
     }

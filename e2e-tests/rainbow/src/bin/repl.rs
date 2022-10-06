@@ -59,7 +59,7 @@ fn process_line(writer: &mut impl WriteColor, line: &str) -> io::Result<()> {
         }
 
         writer.set_color(&color_spec)?;
-        write!(writer, "{}", part)?;
+        write!(writer, "{part}")?;
         writer.reset()?;
         if i + 1 < parts.len() {
             write!(writer, " ")?;

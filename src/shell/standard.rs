@@ -87,18 +87,10 @@ impl ShellOptions<StdShell> {
     pub fn with_alias(self, name: &str, path_to_bin: &str) -> Self {
         let alias_command = match self.command.shell_type {
             StdShellType::Sh => {
-                format!("alias {name}=\"'{path}'\"", name = name, path = path_to_bin)
+                format!("alias {name}=\"'{path_to_bin}'\"")
             }
-            StdShellType::Bash => format!(
-                "{name}() {{ '{path}' \"$@\"; }}",
-                name = name,
-                path = path_to_bin
-            ),
-            StdShellType::PowerShell => format!(
-                "function {name} {{ & '{path}' @Args }}",
-                name = name,
-                path = path_to_bin
-            ),
+            StdShellType::Bash => format!("{name}() {{ '{path_to_bin}' \"$@\"; }}"),
+            StdShellType::PowerShell => format!("function {name} {{ & '{path_to_bin}' @Args }}"),
         };
 
         self.with_init_command(alias_command)

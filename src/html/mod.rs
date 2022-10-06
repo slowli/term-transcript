@@ -90,12 +90,12 @@ impl<'a> HtmlWriter<'a> {
         match fore_color {
             Some(IndexOrRgb::Index(idx)) => {
                 let final_idx = if spec.intense() { idx | 8 } else { idx };
-                write!(&mut fore_color_class, "{}", final_idx).unwrap();
+                write!(&mut fore_color_class, "{final_idx}").unwrap();
                 // ^-- `unwrap` is safe; writing to a string never fails.
                 classes.push(&fore_color_class);
             }
             Some(IndexOrRgb::Rgb(r, g, b)) => {
-                styles.push(format!("color: #{:02x}{:02x}{:02x}", r, g, b));
+                styles.push(format!("color: #{r:02x}{g:02x}{b:02x}"));
             }
             None => { /* Do nothing. */ }
         }
@@ -106,12 +106,12 @@ impl<'a> HtmlWriter<'a> {
         match back_color {
             Some(IndexOrRgb::Index(idx)) => {
                 let final_idx = if spec.intense() { idx | 8 } else { idx };
-                write!(&mut back_color_class, "{}", final_idx).unwrap();
+                write!(&mut back_color_class, "{final_idx}").unwrap();
                 // ^-- `unwrap` is safe; writing to a string never fails.
                 classes.push(&back_color_class);
             }
             Some(IndexOrRgb::Rgb(r, g, b)) => {
-                styles.push(format!("background: #{:02x}{:02x}{:02x}", r, g, b));
+                styles.push(format!("background: #{r:02x}{g:02x}{b:02x}"));
             }
             None => { /* Do nothing. */ }
         }

@@ -185,12 +185,12 @@ impl fmt::Display for TermError {
             }
             Self::UnfinishedColor => formatter.write_str("Unfinished color spec"),
             Self::InvalidColorType(ty) => {
-                write!(formatter, "Invalid type of a color spec: {}", ty)
+                write!(formatter, "Invalid type of a color spec: {ty}")
             }
             Self::InvalidColorIndex(err) => {
-                write!(formatter, "Failed parsing color index: {}", err)
+                write!(formatter, "Failed parsing color index: {err}")
             }
-            Self::Io(err) => write!(formatter, "I/O error: {}", err),
+            Self::Io(err) => write!(formatter, "I/O error: {err}"),
         }
     }
 }

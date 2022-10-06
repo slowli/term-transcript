@@ -151,7 +151,7 @@ impl ShellProcess for ChildShell {
 
     fn check_is_alive(&mut self) -> io::Result<()> {
         if let Some(exit_status) = self.child.try_wait()? {
-            let message = format!("Shell process has prematurely exited: {}", exit_status);
+            let message = format!("Shell process has prematurely exited: {exit_status}");
             Err(io::Error::new(io::ErrorKind::BrokenPipe, message))
         } else {
             Ok(())

@@ -152,12 +152,11 @@ impl fmt::Display for ParseError {
         match self {
             Self::UnexpectedRoot(tag_name) => write!(
                 formatter,
-                "Unexpected root XML tag: <{}>; expected <svg>",
-                tag_name
+                "Unexpected root XML tag: <{tag_name}>; expected <svg>"
             ),
             Self::InvalidContainer => formatter.write_str("Invalid transcript container"),
             Self::UnexpectedEof => formatter.write_str("Unexpected EOF"),
-            Self::Xml(err) => write!(formatter, "Error parsing XML: {}", err),
+            Self::Xml(err) => write!(formatter, "Error parsing XML: {err}"),
         }
     }
 }

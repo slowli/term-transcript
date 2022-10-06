@@ -176,7 +176,7 @@ pub struct TermColors {
 
 impl Serialize for RgbColor {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&format!("{:x}", self))
+        serializer.serialize_str(&format!("{self:x}"))
     }
 }
 
