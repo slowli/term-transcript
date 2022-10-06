@@ -1,4 +1,4 @@
-name: Rust
+name: CI
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
   # Minimum supported Rust version.
   msrv: 1.61.0
   # Nightly Rust necessary for building docs.
-  nightly: nightly-2022-05-21
+  nightly: nightly-2022-09-22
 
 jobs:
   build-msrv:
