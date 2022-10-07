@@ -10,7 +10,7 @@ mod tests;
 ///
 /// **NB.** The implementation relies on `ColorSpec`s supplied to `set_color` always having
 /// `reset()` flag set. This is true for `TermOutputParser`.
-pub struct HtmlWriter<'a> {
+pub(crate) struct HtmlWriter<'a> {
     output: &'a mut dyn WriteStr,
     is_colored: bool,
     line_splitter: Option<LineSplitter>,

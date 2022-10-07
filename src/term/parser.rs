@@ -9,7 +9,7 @@ use crate::TermError;
 
 /// Parses terminal output and issues corresponding commands to the `writer`.
 #[derive(Debug)]
-pub struct TermOutputParser<'a, W> {
+pub(crate) struct TermOutputParser<'a, W> {
     writer: &'a mut W,
     color_spec: ColorSpec,
 }
