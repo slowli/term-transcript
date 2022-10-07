@@ -162,14 +162,13 @@ impl ShellProcess for PtyShell {
 
     fn check_is_alive(&mut self) -> io::Result<()> {
         if let Some(exit_status) = self.child.try_wait()? {
-            let message = format!(
-                "Shell process has prematurely exited with {} exit status",
-                if exit_status.success() {
-                    "zero"
-                } else {
-                    "non-zero"
-                }
-            );
+            let status_str = if exit_status.success() {
+                "zero"
+            } else {
+                "non-zero"
+            };
+            let message =
+                format!("Shell process has prematurely exited with {status_str} exit status");
             Err(io::Error::new(io::ErrorKind::BrokenPipe, message))
         } else {
             Ok(())

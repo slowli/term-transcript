@@ -36,7 +36,7 @@ fn write_base_colors(
             color_spec.set_underline(true);
         }
         writer.set_color(&color_spec)?;
-        write!(writer, "{}", name)?;
+        write!(writer, "{name}")?;
         writer.reset()?;
         write!(writer, " ")?;
 
@@ -45,7 +45,7 @@ fn write_base_colors(
                 .set_underline(!color_spec.underline())
                 .set_italic(true);
             writer.set_color(&color_spec)?;
-            write!(writer, "{}/italic", name)?;
+            write!(writer, "{name}/italic")?;
             writer.reset()?;
             write!(writer, " ")?;
         }
@@ -62,7 +62,7 @@ fn write_base_colors_bg(writer: &mut impl WriteColor, intense: bool) -> anyhow::
             .set_bg(Some(color))
             .set_intense(intense);
         writer.set_color(&color_spec)?;
-        write!(writer, "{}", name)?;
+        write!(writer, "{name}")?;
         writer.reset()?;
         write!(writer, " ")?;
     }
@@ -136,7 +136,7 @@ fn main() -> anyhow::Result<()> {
     writeln!(writer, "24-bit colors:")?;
     for &(name, color) in RGB_COLORS {
         writer.set_color(ColorSpec::new().set_fg(Some(color)))?;
-        write!(writer, "{}", name)?;
+        write!(writer, "{name}")?;
         writer.reset()?;
         write!(writer, " ")?;
     }

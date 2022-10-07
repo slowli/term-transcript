@@ -300,13 +300,13 @@ impl Template {
         }
     }
 
-    /// Renders the `transcript` using the template (usually as an SVG image, although templates
-    /// may use different formats).
+    /// Renders the `transcript` using the template (usually as an SVG image, although
+    /// custom templates may use a different output format).
     ///
     /// # Errors
     ///
     /// Returns a Handlebars rendering error, if any. Normally, the only errors could be
-    /// related to I/O (e.g., the image cannot be written to a file).
+    /// related to I/O (e.g., the output cannot be written to a file).
     pub fn render<W: Write>(
         &self,
         transcript: &Transcript,

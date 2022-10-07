@@ -85,7 +85,7 @@ impl HelperDef for VarHelper {
                 template.render(reg, ctx, render_ctx, &mut output)?;
                 let json_string = output.into_string()?;
                 serde_json::from_str(&json_string).map_err(|err| {
-                    let message = format!("Cannot parse JSON value: {}", err);
+                    let message = format!("Cannot parse JSON value: {err}");
                     RenderError::new(message)
                 })?
             } else {
@@ -229,7 +229,7 @@ impl HelperDef for EvalHelper {
             .ok_or_else(|| RenderError::new(MESSAGE))?;
 
         let partial = render_ctx.get_partial(partial_name).ok_or_else(|| {
-            let message = format!("partial `{}` not found", partial_name);
+            let message = format!("partial `{partial_name}` not found");
             RenderError::new(message)
         })?;
 
@@ -251,7 +251,7 @@ impl HelperDef for EvalHelper {
         partial.render(reg, ctx, &mut render_ctx, &mut output)?;
         let json_string = output.into_string()?;
         let json: Json = serde_json::from_str(&json_string).map_err(|err| {
-            let message = format!("Cannot parse JSON value: {}", err);
+            let message = format!("Cannot parse JSON value: {err}");
             RenderError::new(message)
         })?;
         Ok(ScopedJson::Derived(json))
@@ -289,7 +289,7 @@ impl HelperDef for LineCounter {
         }
 
         let lines = u64::try_from(lines)
-            .map_err(|err| RenderError::new(format!("cannot convert length: {}", err)))?;
+            .map_err(|err| RenderError::new(format!("cannot convert length: {err}")))?;
         Ok(ScopedJson::Derived(lines.into()))
     }
 }

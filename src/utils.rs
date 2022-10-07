@@ -95,10 +95,9 @@ mod rgb_color {
                 Self::NoHashPrefix => formatter.write_str("missing '#' prefix"),
                 Self::IncorrectLen(len) => write!(
                     formatter,
-                    "unexpected byte length {} of color string, expected 4 or 7",
-                    len
+                    "unexpected byte length {len} of color string, expected 4 or 7"
                 ),
-                Self::IncorrectDigit(err) => write!(formatter, "error parsing hex digit: {}", err),
+                Self::IncorrectDigit(err) => write!(formatter, "error parsing hex digit: {err}"),
             }
         }
     }

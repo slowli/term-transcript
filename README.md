@@ -1,6 +1,6 @@
 # Snapshot Testing for CLI / REPL Applications
 
-[![Build Status](https://github.com/slowli/term-transcript/workflows/Rust/badge.svg?branch=master)](https://github.com/slowli/term-transcript/actions)
+[![Build Status](https://github.com/slowli/term-transcript/workflows/CI/badge.svg?branch=master)](https://github.com/slowli/term-transcript/actions)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
 ![rust 1.61+ required](https://img.shields.io/badge/rust-1.61+-blue.svg?label=Required%20Rust)
 
@@ -14,6 +14,7 @@ This crate allows to:
 - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
   into HTML / Markdown documents. Rendering logic can be customized via [Handlebars] template engine;
   thus, other output formats besides SVG (e.g., HTML) are possible.
+  See [crate docs][custom-templates] for an intro to custom templates.
 - Parse transcripts from SVG.
 - Test that a parsed transcript actually corresponds to the terminal output (either as text
   or text + colors).
@@ -50,6 +51,12 @@ Ok::<_, anyhow::Error>(())
 ```
 
 See more examples in the crate docs.
+
+### CLI app
+
+Most of the library functionality is packaged into [a CLI binary][term-transcript-cli],
+which allows using the library without Rust knowledge. See the binary docs
+for the installation and usage guides.
 
 ### Snapshot examples
 
@@ -109,3 +116,5 @@ shall be dual licensed as above, without any additional terms or conditions.
 [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 [html-example]: https://slowli.github.io/term-transcript/examples/rainbow.html
+[custom-templates]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.Template.html#customization
+[term-transcript-cli]: https://crates.io/crates/term-transcript-cli

@@ -66,7 +66,7 @@ fn test_transcript_with_empty_output(mute_outputs: &[bool]) -> anyhow::Result<()
 
     let inputs = mute_outputs.iter().map(|&mute| {
         if mute {
-            UserInput::command(format!("echo \"Hello, world!\" > {}", NULL_FILE))
+            UserInput::command(format!("echo \"Hello, world!\" > {NULL_FILE}"))
         } else {
             UserInput::command("echo \"Hello, world!\"")
         }
@@ -180,8 +180,7 @@ fn non_utf8_shell_output() {
         .join("tests")
         .join("non-utf8.txt");
     let input = UserInput::command(format!(
-        "{} \"{}\"",
-        CAT_COMMAND,
+        "{CAT_COMMAND} \"{}\"",
         non_utf8_file.to_string_lossy()
     ));
     let err = Transcript::from_inputs(&mut ShellOptions::default(), vec![input]).unwrap_err();

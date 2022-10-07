@@ -129,11 +129,10 @@ fn reading_file_with_invalid_container() {
             r#"
             <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
               <foreignObject x="0" y="0" width="652" height="344">
-                <div {}>Test</div>
+                <div {attrs}>Test</div>
               </foreignObject>
             </svg>
-            "#,
-            attrs
+            "#
         );
         let err = Transcript::from_svg(bogus_data.as_bytes()).unwrap_err();
 

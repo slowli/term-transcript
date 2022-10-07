@@ -199,7 +199,7 @@ impl Args {
         )?;
         write!(out, "{}", svg_path.to_string_lossy())?;
         out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-        writeln!(out, ": {}", err)?;
+        writeln!(out, ": {err}")?;
         out.reset()
     }
 
