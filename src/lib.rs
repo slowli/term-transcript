@@ -8,7 +8,7 @@
 //!   and [ANSI-compatible color info][SGR].
 //! - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
 //!   into HTML / Markdown documents. (Output format customization
-//!   [is also supported](crate::svg::Template#customization) via [Handlebars] templates.)
+//!   [is also supported](svg::Template#customization) via [Handlebars] templates.)
 //! - Parse transcripts from SVG
 //! - Test that a parsed transcript actually corresponds to the terminal output (either as text
 //!   or text + colors).
@@ -59,7 +59,7 @@
 //!
 //! - `portable-pty`. Allows using pseudo-terminal (PTY) to capture terminal output rather
 //!   than pipes. Uses [the eponymous crate][`portable-pty`] under the hood.
-//! - `svg`. Exposes [the eponymous module](crate::svg) that allows rendering [`Transcript`]s
+//! - `svg`. Exposes [the eponymous module](svg) that allows rendering [`Transcript`]s
 //!   into the SVG format.
 //! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
 //!   from SVG files and testing them.
@@ -234,14 +234,33 @@ impl Transcript {
     ///
     /// This method allows capturing interactions that are difficult or impossible to capture
     /// using more high-level methods: [`Self::from_inputs()`] or [`Self::capture_output()`].
-    /// The resulting transcript will [render](crate::svg) just fine, but there could be issues
+    /// The resulting transcript will [render](svg) just fine, but there could be issues
     /// with [testing](crate::test) it.
-    pub fn add_interaction(&mut self, input: UserInput, output: impl Into<String>) -> &mut Self {
-        self.interactions.push(Interaction {
-            input,
-            output: Captured::new(output.into()),
-        });
+    pub fn add_existing_interaction(&mut self, interaction: Interaction) -> &mut Self {
+        self.interactions.push(interaction);
         self
+    }
+
+    /// Manually adds a new interaction to the end of this transcript.
+    ///
+    /// This is a shortcut for calling [`Self::add_existing_interaction(_)`].
+    pub fn add_interaction(
+        &mut self,
+        input: impl Into<UserInput>,
+        output: impl Into<String>,
+    ) -> &mut Self {
+        self.add_existing_interaction(Interaction::new(input, output))
+    }
+}
+
+/// Portable, platform-independent version of [`ExitStatus`] from the standard library.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ExitStatus(pub i32);
+
+impl ExitStatus {
+    /// Checks if this is the successful status.
+    pub fn is_success(&self) -> bool {
+        self.0 == 0
     }
 }
 
@@ -250,6 +269,25 @@ impl Transcript {
 pub struct Interaction<Out: TermOutput = Captured> {
     input: UserInput,
     output: Out,
+    exit_status: Option<ExitStatus>,
+}
+
+impl Interaction {
+    /// Creates a new interaction.
+    pub fn new(input: impl Into<UserInput>, output: impl Into<String>) -> Self {
+        Self {
+            input: input.into(),
+            output: Captured::new(output.into()),
+            exit_status: None,
+        }
+    }
+
+    /// Assigns an exit status to this interaction.
+    #[must_use]
+    pub fn with_exit_status(mut self, exit_status: ExitStatus) -> Self {
+        self.exit_status = Some(exit_status);
+        self
+    }
 }
 
 impl<Out: TermOutput> Interaction<Out> {
@@ -261,6 +299,11 @@ impl<Out: TermOutput> Interaction<Out> {
     /// Output to the terminal.
     pub fn output(&self) -> &Out {
         &self.output
+    }
+
+    /// Returns exit status of the interaction, if available.
+    pub fn exit_status(&self) -> Option<ExitStatus> {
+        self.exit_status
     }
 }
 

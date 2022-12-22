@@ -295,6 +295,7 @@ impl ParserState {
                         return Ok(Some(Interaction {
                             input: user_input,
                             output: Parsed::default(),
+                            exit_status: None, // FIXME
                         }));
                     }
                 }
@@ -308,6 +309,7 @@ impl ParserState {
                     return Ok(Some(Interaction {
                         input: user_input,
                         output: term_output,
+                        exit_status: None, // FIXME
                     }));
                 }
             }

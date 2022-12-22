@@ -12,7 +12,7 @@ use std::{
 use super::ShellOptions;
 use crate::{
     traits::{ShellProcess, SpawnShell, SpawnedShell},
-    Captured, Interaction, Transcript, UserInput,
+    Interaction, Transcript, UserInput,
 };
 
 #[derive(Debug)]
@@ -57,6 +57,29 @@ impl Transcript {
                 format!("could not read all input `{input_line}` back from an echoing terminal");
             Err(io::Error::new(io::ErrorKind::BrokenPipe, err))
         }
+    }
+
+    fn read_output(
+        lines_recv: &mpsc::Receiver<Vec<u8>>,
+        io_timeout: Duration,
+        line_decoder: &mut impl FnMut(Vec<u8>) -> io::Result<String>,
+    ) -> io::Result<String> {
+        let mut output = String::new();
+        while let Ok(mut line) = lines_recv.recv_timeout(io_timeout) {
+            if line.last() == Some(&b'\r') {
+                // Normalize `\r\n` line ending to `\n`.
+                line.pop();
+            }
+
+            let mapped_line = line_decoder(line)?;
+            output.push_str(&mapped_line);
+            output.push('\n');
+        }
+
+        if output.ends_with('\n') {
+            output.truncate(output.len() - 1);
+        }
+        Ok(output)
     }
 
     /// Constructs a transcript from the sequence of given user `input`s.
@@ -122,41 +145,9 @@ impl Transcript {
 
         let mut transcript = Self::new();
         for input in inputs {
-            // Check if the shell is still alive. It seems that older Rust versions allow
-            // to write to `stdin` even after the shell exits.
-            shell.check_is_alive()?;
-
-            let input_lines = input.text.split('\n');
-            for input_line in input_lines {
-                Self::write_line(&mut stdin, input_line)?;
-                if shell.is_echoing() {
-                    Self::read_echo(input_line, &out_lines_recv, options.io_timeout)?;
-                }
-            }
-
-            let mut output = String::new();
-            while let Ok(mut line) = out_lines_recv.recv_timeout(options.io_timeout) {
-                if line.last() == Some(&b'\r') {
-                    // Normalize `\r\n` line ending to `\n`.
-                    line.pop();
-                }
-                let line = String::from_utf8(line)
-                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))?;
-
-                if let Some(mapped_line) = (options.line_mapper)(line) {
-                    output.push_str(&mapped_line);
-                    output.push('\n');
-                }
-            }
-
-            if output.ends_with('\n') {
-                output.truncate(output.len() - 1);
-            }
-
-            transcript.interactions.push(Interaction {
-                input,
-                output: Captured::new(output),
-            });
+            let interaction =
+                Self::record_interaction(options, input, &out_lines_recv, &mut shell, &mut stdin)?;
+            transcript.interactions.push(interaction);
         }
 
         drop(stdin); // signals to shell that we're done
@@ -167,6 +158,45 @@ impl Transcript {
         shell.terminate()?;
         io_handle.join().ok(); // the I/O thread should not panic, so we ignore errors here
         Ok(transcript)
+    }
+
+    fn record_interaction<Cmd: SpawnShell>(
+        options: &mut ShellOptions<Cmd>,
+        input: UserInput,
+        lines_recv: &mpsc::Receiver<Vec<u8>>,
+        shell: &mut Cmd::ShellProcess,
+        stdin: &mut impl io::Write,
+    ) -> io::Result<Interaction> {
+        // Check if the shell is still alive. It seems that older Rust versions allow
+        // to write to `stdin` even after the shell exits.
+        shell.check_is_alive()?;
+
+        let input_lines = input.text.split('\n');
+        for input_line in input_lines {
+            Self::write_line(stdin, input_line)?;
+            if shell.is_echoing() {
+                Self::read_echo(input_line, lines_recv, options.io_timeout)?;
+            }
+        }
+
+        let output = Self::read_output(lines_recv, options.io_timeout, &mut options.line_decoder)?;
+
+        let exit_status = if let Some(status_check) = &options.status_check {
+            let command = status_check.command();
+            Self::write_line(stdin, command)?;
+            if shell.is_echoing() {
+                Self::read_echo(command, lines_recv, options.io_timeout)?;
+            }
+            let response =
+                Self::read_output(lines_recv, options.io_timeout, &mut options.line_decoder)?;
+            status_check.check(&response)
+        } else {
+            None
+        };
+
+        let mut interaction = Interaction::new(input, output);
+        interaction.exit_status = exit_status;
+        Ok(interaction)
     }
 
     /// Captures stdout / stderr of the provided `command` and adds it to [`Self::interactions()`].
@@ -200,10 +230,7 @@ impl Transcript {
         let output = String::from_utf8(output)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))?;
 
-        self.interactions.push(Interaction {
-            input,
-            output: Captured::new(output),
-        });
+        self.interactions.push(Interaction::new(input, output));
         Ok(self)
     }
 }

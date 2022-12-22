@@ -67,6 +67,7 @@ pub trait SpawnShell: ConfigureCommand {
 pub trait ShellProcess {
     /// Returns `true` if the input commands are echoed back to the output.
     fn is_echoing(&self) -> bool;
+
     /// Checks if the process is alive.
     ///
     /// # Errors
@@ -74,6 +75,7 @@ pub trait ShellProcess {
     /// Returns an error if the process is not alive. Should include debug details if possible
     /// (e.g., the exit status of the process).
     fn check_is_alive(&mut self) -> io::Result<()>;
+
     /// Terminates the shell process. This can include killing it if necessary.
     ///
     /// # Errors

@@ -8,7 +8,10 @@ use std::{
 };
 
 use super::ShellOptions;
-use crate::traits::{ChildShell, ConfigureCommand, SpawnShell, SpawnedShell};
+use crate::{
+    traits::{ChildShell, ConfigureCommand, SpawnShell, SpawnedShell},
+    ExitStatus,
+};
 
 #[derive(Debug, Clone, Copy)]
 enum StdShellType {
@@ -37,21 +40,35 @@ impl ConfigureCommand for StdShell {
     }
 }
 
+fn check_sh_exit_code(response: &str) -> Option<ExitStatus> {
+    response.trim().parse().ok().map(ExitStatus)
+}
+
+fn check_ps_exit_code(response: &str) -> Option<ExitStatus> {
+    match response.trim() {
+        "True" => Some(ExitStatus(0)),
+        "False" => Some(ExitStatus(1)),
+        _ => None,
+    }
+}
+
 impl ShellOptions<StdShell> {
     /// Creates options for an `sh` shell.
     pub fn sh() -> Self {
-        Self::new(StdShell {
+        let this = Self::new(StdShell {
             shell_type: StdShellType::Sh,
             command: Command::new("sh"),
-        })
+        });
+        this.with_status_check("echo $?", check_sh_exit_code)
     }
 
     /// Creates options for a Bash shell.
     pub fn bash() -> Self {
-        Self::new(StdShell {
+        let this = Self::new(StdShell {
             shell_type: StdShellType::Bash,
             command: Command::new("bash"),
-        })
+        });
+        this.with_status_check("echo $?", check_sh_exit_code)
     }
 
     /// Creates options for PowerShell.
@@ -64,7 +81,9 @@ impl ShellOptions<StdShell> {
             shell_type: StdShellType::PowerShell,
             command,
         };
-        Self::new(command).with_init_command("function prompt { }")
+        Self::new(command)
+            .with_init_command("function prompt { }")
+            .with_status_check("$?", check_ps_exit_code)
     }
 
     /// Creates an alias for the binary at `path_to_bin`, which should be an absolute path.
