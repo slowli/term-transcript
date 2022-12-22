@@ -2,7 +2,13 @@
 
 use assert_matches::assert_matches;
 
-use std::{io, path::Path, process::Command, str::Utf8Error, time::Duration};
+use std::{
+    io,
+    path::Path,
+    process::{Command, Stdio},
+    str::Utf8Error,
+    time::Duration,
+};
 
 use term_transcript::{
     svg::{Template, TemplateOptions},
@@ -134,6 +140,58 @@ fn failed_shell_initialization() {
     // We should not be able to write all input to the process.
 }
 
+#[cfg(unix)]
+#[test]
+fn command_exit_status_in_sh() -> anyhow::Result<()> {
+    let mut options = ShellOptions::sh();
+    // ^ The error output is locale-specific and is not always UTF-8
+    let inputs = [
+        UserInput::command("echo \"Hello world!\""),
+        UserInput::command("some-command-that-should-never-exist"),
+    ];
+    let transcript = Transcript::from_inputs(&mut options, inputs)?;
+
+    let exit_status = transcript.interactions()[0].exit_status().unwrap();
+    assert!(exit_status.is_success(), "{exit_status:?}");
+    let exit_status = transcript.interactions()[1].exit_status().unwrap();
+    assert!(!exit_status.is_success(), "{exit_status:?}");
+    Ok(())
+}
+
+#[test]
+fn command_exit_status_in_powershell() -> anyhow::Result<()> {
+    fn powershell_exists() -> bool {
+        let exit_status = Command::new("powershell")
+            .arg("-Help")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        matches!(exit_status, Ok(status) if status.success())
+    }
+
+    if !powershell_exists() {
+        println!("powershell not found; exiting");
+        return Ok(());
+    }
+
+    let mut options = ShellOptions::powershell()
+        .with_init_timeout(Duration::from_secs(2))
+        .with_lossy_utf8_decoder();
+    // ^ The error output is locale-specific and is not always UTF-8
+    let inputs = [
+        UserInput::command("echo \"Hello world!\""),
+        UserInput::command("some-command-that-should-never-exist"),
+    ];
+    let transcript = Transcript::from_inputs(&mut options, inputs)?;
+
+    let exit_status = transcript.interactions()[0].exit_status().unwrap();
+    assert!(exit_status.is_success(), "{exit_status:?}");
+    let exit_status = transcript.interactions()[1].exit_status().unwrap();
+    assert!(!exit_status.is_success(), "{exit_status:?}");
+    Ok(())
+}
+
 /// The default `cmd` codepage can lead to non-UTF8 output for builtin commands
 /// (e.g., `dir` may output non-breakable space in file sizes as 0xff).
 /// Here, we test that the codepage is switched to UTF-8.
@@ -187,4 +245,26 @@ fn non_utf8_shell_output() {
 
     assert_matches!(err.kind(), io::ErrorKind::InvalidData);
     assert!(err.get_ref().unwrap().is::<Utf8Error>(), "{err:?}");
+}
+
+#[test]
+fn non_utf8_shell_output_with_lossy_decoder() -> anyhow::Result<()> {
+    #[cfg(unix)]
+    const CAT_COMMAND: &str = "cat";
+    #[cfg(windows)]
+    const CAT_COMMAND: &str = "type";
+
+    let non_utf8_file = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("non-utf8.txt");
+    let input = UserInput::command(format!(
+        "{CAT_COMMAND} \"{}\"",
+        non_utf8_file.to_string_lossy()
+    ));
+
+    let mut options = ShellOptions::default().with_lossy_utf8_decoder();
+    let transcript = Transcript::from_inputs(&mut options, vec![input])?;
+    let output = transcript.interactions()[0].output();
+    assert!(output.to_plaintext()?.contains(char::REPLACEMENT_CHARACTER));
+    Ok(())
 }
