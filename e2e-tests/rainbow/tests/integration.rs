@@ -83,7 +83,7 @@ fn snapshot_with_custom_template() -> anyhow::Result<()> {
     let mut buffer = vec![];
     Template::custom(template, template_options).render(&transcript, &mut buffer)?;
     let buffer = String::from_utf8(buffer)?;
-    assert!(buffer.starts_with("<!DOCTYPE html>"), "{}", buffer);
+    assert!(buffer.starts_with("<!DOCTYPE html>"), "{buffer}");
     Ok(())
 }
 
@@ -110,8 +110,7 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
     let output = interaction.output().to_plaintext()?;
     assert!(
         output.contains("\nblack blue green red cyan magenta yellow"),
-        "{}",
-        output
+        "{output}"
     );
 
     Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
@@ -252,13 +251,13 @@ impl ErrorType {
                 let mut buffer = String::new();
                 read_main_snapshot()?.read_to_string(&mut buffer)?;
                 let buffer = buffer.replace(" rainbow", " ????");
-                fs::write(snapshot_path, &buffer)
+                fs::write(snapshot_path, buffer)
             }
             Self::OutputMismatch => {
                 let mut buffer = String::new();
                 read_main_snapshot()?.read_to_string(&mut buffer)?;
                 let buffer = buffer.replace("pink", "???");
-                fs::write(snapshot_path, &buffer)
+                fs::write(snapshot_path, buffer)
             }
         }
     }
@@ -287,13 +286,11 @@ fn test_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let err = *test_result.unwrap_err().downcast::<String>().unwrap();
     assert!(
         err.contains(error_type.expected_error_message()),
-        "Unexpected error message: {}",
-        err
+        "Unexpected error message: {err}"
     );
     assert!(
         err.contains("rainbow.new.svg"),
-        "Unexpected error message: {}",
-        err
+        "Unexpected error message: {err}"
     );
 
     let new_snapshot_path = temp_dir.path().join("rainbow.new.svg");
@@ -305,8 +302,7 @@ fn test_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let output_plaintext = interactions[0].output().plaintext();
     assert!(
         output_plaintext.contains("pink"),
-        "Unexpected output: {}",
-        output_plaintext
+        "Unexpected output: {output_plaintext}"
     );
 
     Ok(())
@@ -342,14 +338,12 @@ fn test_no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let err = *test_result.unwrap_err().downcast::<String>().unwrap();
     assert!(
         err.contains(error_type.expected_error_message()),
-        "Unexpected error message: {}",
-        err
+        "Unexpected error message: {err}"
     );
     if error_type != ErrorType::MissingSnapshot {
         assert!(
             err.contains("Skipped writing new snapshot"),
-            "Unexpected error message: {}",
-            err
+            "Unexpected error message: {err}"
         );
     }
 

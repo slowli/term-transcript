@@ -348,8 +348,7 @@ mod tests {
         assert!(
             buffer.ends_with("</svg>\n") || buffer.ends_with("</svg>\r\n"),
             // ^-- allows for different newline chars in Windows
-            "unexpected rendering result: {}",
-            buffer
+            "unexpected rendering result: {buffer}"
         );
         assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
         assert!(!buffer.contains("<circle"));
@@ -396,8 +395,8 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
-        assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{}", buffer);
-        assert!(buffer.contains("<animateTransform"), "{}", buffer);
+        assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
+        assert!(buffer.contains("<animateTransform"), "{buffer}");
     }
 
     #[test]
@@ -418,7 +417,7 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
-        assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{}", buffer);
-        assert!(buffer.contains("<br/>"), "{}", buffer);
+        assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
+        assert!(buffer.contains("<br/>"), "{buffer}");
     }
 }

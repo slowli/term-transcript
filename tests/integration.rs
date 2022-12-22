@@ -186,5 +186,5 @@ fn non_utf8_shell_output() {
     let err = Transcript::from_inputs(&mut ShellOptions::default(), vec![input]).unwrap_err();
 
     assert_matches!(err.kind(), io::ErrorKind::InvalidData);
-    assert!(err.get_ref().unwrap().is::<Utf8Error>(), "{:?}", err);
+    assert!(err.get_ref().unwrap().is::<Utf8Error>(), "{err:?}");
 }

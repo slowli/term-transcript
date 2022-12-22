@@ -84,7 +84,7 @@ impl Write for PrintlnWriter {
                 // Output previously saved line and clear the line buffer.
                 let str = str::from_utf8(&self.line_buffer)
                     .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-                println!("{}", str);
+                println!("{str}");
                 self.line_buffer.clear();
             }
             self.line_buffer.extend_from_slice(line);
@@ -95,7 +95,7 @@ impl Write for PrintlnWriter {
     fn flush(&mut self) -> io::Result<()> {
         let str = str::from_utf8(&self.line_buffer)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-        print!("{}", str);
+        print!("{str}");
         self.line_buffer.clear();
         Ok(())
     }

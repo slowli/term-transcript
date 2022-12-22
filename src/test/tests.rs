@@ -59,11 +59,11 @@ fn negative_snapshot_testing_with_default_output() {
     test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();
 
     let out = String::from_utf8(out).unwrap();
-    assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{}", out);
-    assert_eq!(out.matches("Hello, world!").count(), 1, "{}", out);
+    assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{out}");
+    assert_eq!(out.matches("Hello, world!").count(), 1, "{out}");
     // ^ output for successful interactions should not be included
-    assert!(out.contains("[-] Input: echo \"Sup?\""), "{}", out);
-    assert!(out.contains("Nah"), "{}", out);
+    assert!(out.contains("[-] Input: echo \"Sup?\""), "{out}");
+    assert!(out.contains("Nah"), "{out}");
 }
 
 #[test]
@@ -75,11 +75,11 @@ fn negative_snapshot_testing_with_verbose_output() {
     test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();
 
     let out = String::from_utf8(out).unwrap();
-    assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{}", out);
-    assert_eq!(out.matches("Hello, world!").count(), 2, "{}", out);
+    assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{out}");
+    assert_eq!(out.matches("Hello, world!").count(), 2, "{out}");
     // ^ output for successful interactions should be included
-    assert!(out.contains("[-] Input: echo \"Sup?\""), "{}", out);
-    assert!(out.contains("Nah"), "{}", out);
+    assert!(out.contains("[-] Input: echo \"Sup?\""), "{out}");
+    assert!(out.contains("Nah"), "{out}");
 }
 
 fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (TestStats, String) {
@@ -114,7 +114,7 @@ fn snapshot_testing_with_color_diff() {
     );
 
     assert_eq!(stats.matches(), [Some(MatchKind::Precise)]);
-    assert!(out.contains("[+] Input: test"), "{}", out);
+    assert!(out.contains("[+] Input: test"), "{out}");
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn no_match_for_snapshot_testing_with_color_diff() {
     );
 
     assert_eq!(stats.matches(), [None]);
-    assert!(out.contains("[-] Input: test"), "{}", out);
+    assert!(out.contains("[-] Input: test"), "{out}");
 }
 
 #[test]
@@ -136,6 +136,6 @@ fn text_match_for_snapshot_testing_with_color_diff() {
     );
 
     assert_eq!(stats.matches(), [Some(MatchKind::TextOnly)]);
-    assert!(out.contains("[#] Input: test"), "{}", out);
+    assert!(out.contains("[#] Input: test"), "{out}");
     assert!(out.contains("13..14 ----   yellow/(none)   ----     blue/(none)"));
 }

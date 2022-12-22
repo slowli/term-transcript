@@ -172,15 +172,13 @@ impl fmt::Display for TermError {
             Self::UnrecognizedSequence(byte) => {
                 write!(
                     formatter,
-                    "Unrecognized escape sequence (first byte is {})",
-                    byte
+                    "Unrecognized escape sequence (first byte is {byte})"
                 )
             }
             Self::InvalidSgrFinalByte(byte) => {
                 write!(
                     formatter,
-                    "Invalid final byte for an SGR escape sequence: {}",
-                    byte
+                    "Invalid final byte for an SGR escape sequence: {byte}"
                 )
             }
             Self::UnfinishedColor => formatter.write_str("Unfinished color spec"),

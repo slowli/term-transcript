@@ -220,7 +220,7 @@ mod tests {
         let mut buffer = String::new();
         spawned.reader.read_to_string(&mut buffer)?;
 
-        assert!(buffer.contains("Hello"), "Unexpected buffer: {:?}", buffer);
+        assert!(buffer.contains("Hello"), "Unexpected buffer: {buffer:?}");
         Ok(())
     }
 

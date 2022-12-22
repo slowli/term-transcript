@@ -61,11 +61,11 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
 
         if snapshot_path.is_file() {
             let snapshot = File::open(snapshot_path).unwrap_or_else(|err| {
-                panic!("Cannot open `{:?}`: {}", snapshot_path, err);
+                panic!("Cannot open `{snapshot_path:?}`: {err}");
             });
             let snapshot = BufReader::new(snapshot);
             let transcript = Transcript::from_svg(snapshot).unwrap_or_else(|err| {
-                panic!("Cannot parse snapshot from `{:?}`: {}", snapshot_path, err);
+                panic!("Cannot parse snapshot from `{snapshot_path:?}`: {err}");
             });
             self.compare_and_test_transcript(
                 snapshot_path,
@@ -73,16 +73,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                 &inputs.collect::<Vec<_>>(),
             );
         } else if snapshot_path.exists() {
-            panic!(
-                "Snapshot path `{:?}` exists, but is not a file",
-                snapshot_path
-            );
+            panic!("Snapshot path `{snapshot_path:?}` exists, but is not a file");
         } else {
             let new_snapshot_message = self.create_and_write_new_snapshot(snapshot_path, inputs);
-            panic!(
-                "Snapshot `{:?}` is missing\n{}",
-                snapshot_path, new_snapshot_message
-            );
+            panic!("Snapshot `{snapshot_path:?}` is missing\n{new_snapshot_message}");
         }
     }
 
@@ -102,19 +96,17 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             let new_snapshot_message =
                 self.create_and_write_new_snapshot(snapshot_path, expected_inputs.iter().cloned());
             panic!(
-                "Unexpected user inputs in parsed snapshot: expected {exp:?}, got {act:?}\n{msg}",
-                exp = expected_inputs,
-                act = actual_inputs,
-                msg = new_snapshot_message
+                "Unexpected user inputs in parsed snapshot: expected {expected_inputs:?}, \
+                 got {actual_inputs:?}\n{new_snapshot_message}"
             );
         }
 
         let (stats, reproduced) = self
             .test_transcript_for_stats(transcript)
-            .unwrap_or_else(|err| panic!("{}", err));
+            .unwrap_or_else(|err| panic!("{err}"));
         if stats.errors(self.match_kind) > 0 {
             let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
-            panic!("There were test failures\n{}", new_snapshot_message);
+            panic!("There were test failures\n{new_snapshot_message}");
         }
     }
 
@@ -126,7 +118,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ) -> String {
         let reproduced =
             Transcript::from_inputs(&mut self.shell_options, inputs).unwrap_or_else(|err| {
-                panic!("Cannot create a snapshot `{:?}`: {}", path, err);
+                panic!("Cannot create a snapshot `{path:?}`: {err}");
             });
         self.write_new_snapshot(path, &reproduced)
     }
@@ -156,7 +148,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     fn write_new_snapshot(&self, _: &Path, _: &Transcript) -> String {
         format!(
             "Not writing a new snapshot since `{}/svg` feature is not enabled",
-            env!("CARGO_CRATE_NAME")
+            env!("CARGO_PKG_NAME")
         )
     }
 
@@ -169,7 +161,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ) -> String {
         format!(
             "Not writing a new snapshot since `{}/svg` feature is not enabled",
-            env!("CARGO_CRATE_NAME")
+            env!("CARGO_PKG_NAME")
         )
     }
 
@@ -184,7 +176,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     pub fn test_transcript(&mut self, transcript: &Transcript<Parsed>) {
         let (stats, _) = self
             .test_transcript_for_stats(transcript)
-            .unwrap_or_else(|err| panic!("{}", err));
+            .unwrap_or_else(|err| panic!("{err}"));
         stats.assert_no_errors(self.match_kind);
     }
 

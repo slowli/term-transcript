@@ -247,8 +247,8 @@ mod tests {
         let mut color_spec = ColorSpec::new();
         TextReadingState::parse_color_from_classes(&mut color_spec, b"bold fg3 underline bg11");
 
-        assert!(color_spec.bold(), "{:?}", color_spec);
-        assert!(color_spec.underline(), "{:?}", color_spec);
+        assert!(color_spec.bold(), "{color_spec:?}");
+        assert!(color_spec.underline(), "{color_spec:?}");
         assert_eq!(color_spec.fg(), Some(&Color::Yellow));
         assert_eq!(color_spec.bg(), Some(&Color::Ansi256(11)));
     }
