@@ -15,6 +15,7 @@ use std::{
 
 use term_transcript::{
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
+    traits::SpawnShell,
     Transcript, UserInput,
 };
 
@@ -169,7 +170,10 @@ impl Args {
         Ok(())
     }
 
-    fn process_file(svg_path: &Path, test_config: &mut TestConfig) -> anyhow::Result<TestStats> {
+    fn process_file<Cmd: SpawnShell>(
+        svg_path: &Path,
+        test_config: &mut TestConfig<Cmd>,
+    ) -> anyhow::Result<TestStats> {
         let svg = BufReader::new(File::open(svg_path)?);
         let transcript = Transcript::from_svg(svg)?;
         test_config
