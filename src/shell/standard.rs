@@ -4,12 +4,12 @@ use std::{
     ffi::OsStr,
     io,
     path::Path,
-    process::{ChildStdin, Command},
+    process::{Child, ChildStdin, Command},
 };
 
 use super::ShellOptions;
 use crate::{
-    traits::{ChildShell, ConfigureCommand, SpawnShell, SpawnedShell},
+    traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
     ExitStatus,
 };
 
@@ -117,23 +117,20 @@ impl ShellOptions<StdShell> {
 }
 
 impl SpawnShell for StdShell {
-    type ShellProcess = ChildShell;
+    type ShellProcess = Echoing<Child>;
     type Reader = os_pipe::PipeReader;
     type Writer = ChildStdin;
 
     fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
         let SpawnedShell {
-            mut shell,
+            shell,
             reader,
             writer,
         } = self.command.spawn_shell()?;
 
-        if matches!(self.shell_type, StdShellType::PowerShell) {
-            shell.set_echoing();
-        }
-
+        let is_echoing = matches!(self.shell_type, StdShellType::PowerShell);
         Ok(SpawnedShell {
-            shell,
+            shell: Echoing::new(shell, is_echoing),
             reader,
             writer,
         })

@@ -16,7 +16,7 @@ mod transcript_impl;
 pub use self::standard::StdShell;
 
 use crate::{
-    traits::{ConfigureCommand, SpawnShell, SpawnedShell},
+    traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
     ExitStatus,
 };
 
@@ -85,8 +85,8 @@ impl Default for ShellOptions {
     }
 }
 
-impl From<Command> for ShellOptions {
-    fn from(command: Command) -> Self {
+impl<Cmd: ConfigureCommand> From<Cmd> for ShellOptions<Cmd> {
+    fn from(command: Cmd) -> Self {
         Self::new(command)
     }
 }
@@ -118,6 +118,20 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
                     .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))
             }),
             status_check: None,
+        }
+    }
+
+    /// Sets the echoing flag for the shell.
+    #[must_use]
+    pub fn echoing(self, is_echoing: bool) -> ShellOptions<Echoing<Cmd>> {
+        ShellOptions {
+            command: Echoing::new(self.command, is_echoing),
+            path_additions: self.path_additions,
+            io_timeout: self.io_timeout,
+            init_timeout: self.init_timeout,
+            init_commands: self.init_commands,
+            line_decoder: self.line_decoder,
+            status_check: self.status_check,
         }
     }
 

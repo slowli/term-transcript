@@ -259,7 +259,7 @@ pub struct ExitStatus(pub i32);
 
 impl ExitStatus {
     /// Checks if this is the successful status.
-    pub fn is_success(&self) -> bool {
+    pub fn is_success(self) -> bool {
         self.0 == 0
     }
 }
