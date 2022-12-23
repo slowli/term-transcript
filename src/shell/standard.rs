@@ -73,10 +73,10 @@ impl ShellOptions<StdShell> {
         this.with_status_check("echo $?", check_sh_exit_code)
     }
 
-    /// Creates options for PowerShell.
+    /// Creates options for PowerShell 6+ (the one with the `pwsh` executable).
     #[allow(clippy::doc_markdown)] // false positive
-    pub fn powershell() -> Self {
-        let mut command = Command::new("powershell");
+    pub fn pwsh() -> Self {
+        let mut command = Command::new("pwsh");
         command.arg("-NoLogo").arg("-NoExit");
 
         let command = StdShell {
@@ -85,7 +85,7 @@ impl ShellOptions<StdShell> {
         };
         Self::new(command)
             .with_init_command("function prompt { }")
-            .with_status_check("$?", check_ps_exit_code)
+            .with_status_check("echo $?", check_ps_exit_code)
     }
 
     /// Creates an alias for the binary at `path_to_bin`, which should be an absolute path.

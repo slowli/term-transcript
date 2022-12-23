@@ -131,15 +131,6 @@ fn transcript_with_several_non_empty_outputs_in_succession() -> anyhow::Result<(
     test_transcript_with_empty_output(&[true, true, false, true])
 }
 
-#[test]
-#[ignore] // TODO: investigate this test fails in CI
-fn failed_shell_initialization() {
-    let inputs = vec![UserInput::command("sup")];
-    let err = Transcript::from_inputs(&mut echo_command().into(), inputs).unwrap_err();
-    assert_eq!(err.kind(), io::ErrorKind::BrokenPipe);
-    // We should not be able to write all input to the process.
-}
-
 #[cfg(unix)]
 #[test]
 fn command_exit_status_in_sh() -> anyhow::Result<()> {
@@ -161,7 +152,7 @@ fn command_exit_status_in_sh() -> anyhow::Result<()> {
 #[test]
 fn command_exit_status_in_powershell() -> anyhow::Result<()> {
     fn powershell_exists() -> bool {
-        let exit_status = Command::new("powershell")
+        let exit_status = Command::new("pwsh")
             .arg("-Help")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -171,11 +162,13 @@ fn command_exit_status_in_powershell() -> anyhow::Result<()> {
     }
 
     if !powershell_exists() {
-        println!("powershell not found; exiting");
+        println!("pwsh not found; exiting");
         return Ok(());
     }
 
-    let mut options = ShellOptions::powershell()
+    let mut options = ShellOptions::pwsh()
+        .with_init_command("echo \"Hello world!\"")
+        // ^ The first command executed by `pwsh` can take really long, so we warm up.
         .with_init_timeout(Duration::from_secs(2))
         .with_lossy_utf8_decoder();
     // ^ The error output is locale-specific and is not always UTF-8

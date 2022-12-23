@@ -196,7 +196,7 @@ fn bash_shell_example() {
 #[test]
 fn powershell_example() {
     fn powershell_exists() -> bool {
-        let exit_status = Command::new("powershell")
+        let exit_status = Command::new("pwsh")
             .arg("-Help")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -206,11 +206,11 @@ fn powershell_example() {
     }
 
     if !powershell_exists() {
-        println!("powershell not found; exiting");
+        println!("pwsh not found; exiting");
         return;
     }
 
-    let shell_options = ShellOptions::powershell()
+    let shell_options = ShellOptions::pwsh()
         .with_init_timeout(Duration::from_secs(2))
         .with_alias("colored-output", PATH_TO_BIN);
     TestConfig::new(shell_options)
