@@ -72,18 +72,7 @@ A snapshot of the same example with the scrolling animation and window frame:
 A snapshot of a similar example rendered to HTML using [a custom template](examples/custom.html.handlebars)
 is available [as a source file](examples/rainbow.html) and [in the rendered form][html-example].
 
-### Failed inputs
-
-Some shells may allow detecting whether an input resulted in a failure
-(e.g., *nix shells allow doing this by comparing the output of `echo $?` to 0,
-while in PowerShell `$?` can be compared to `True`). Such failures are captured 
-and visually highlighted as seen on this capture of the `sh` shell:
-
-![Snapshot with failing `sh` commands](examples/failure-sh.svg)
-
-A similar snapshot for the `pwsh` shell:
-
-![Snapshot with failing `pwsh` command](examples/failure-pwsh.svg)
+See the [`examples` directory](examples) for more snapshot examples.
 
 ## Limitations
 

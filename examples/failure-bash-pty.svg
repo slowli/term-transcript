@@ -81,19 +81,19 @@
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
         <div class="term-output"><pre>-rw-r--r-- 1 alex alex 20765 Dec 22 20:55 Cargo.lock</pre></div>
-        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep serge Cargo.lock</pre></div>
+        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> grep serde Cargo.lock</pre></div>
-        <div class="term-output"><pre> "<span class="fg1">serde</span>",
- "<span class="fg1">serde</span>_json",
-name = "<span class="fg1">serde</span>"
- "<span class="fg1">serde</span>_derive",
-name = "<span class="fg1">serde</span>_derive"
-name = "<span class="fg1">serde</span>_json"
- "<span class="fg1">serde</span>",
- "<span class="fg1">serde</span>",
- "<span class="fg1">serde</span>_json",
- "<span class="fg1">serde</span>",</pre></div>
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> grep -n serde Cargo.lock</pre></div>
+        <div class="term-output"><pre><span class="fg2">154</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">155</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
+<span class="fg2">418</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
+<span class="fg2">423</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",
+<span class="fg2">427</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_derive"
+<span class="fg2">438</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_json"
+<span class="fg2">445</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">556</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">557</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
+<span class="fg2">634</span><span class="fg6">:</span> "<span class="fg1">serde</span>",</pre></div>
       </div>
     </foreignObject>
   </svg>

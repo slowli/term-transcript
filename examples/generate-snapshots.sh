@@ -61,6 +61,6 @@ echo "Creating PTY snapshot with failure..."
 (
   cd "$ROOT_DIR"
   term-transcript exec -T 100 --palette gjm8 --pty --window --shell bash \
-    'ls -l Cargo.lock' 'grep serge Cargo.lock' 'grep serde Cargo.lock' \
-    > "$ROOT_DIR/examples/failure-sh-pty.$EXTENSION"
+    'ls -l Cargo.lock' 'grep -n serge Cargo.lock' 'grep -n serde Cargo.lock' \
+    > "$ROOT_DIR/examples/failure-bash-pty.$EXTENSION"
 )
