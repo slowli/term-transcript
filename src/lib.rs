@@ -254,6 +254,47 @@ impl Transcript {
 }
 
 /// Portable, platform-independent version of [`ExitStatus`] from the standard library.
+///
+/// # Capturing `ExitStatus`
+///
+/// Some shells have means to check whether the input command was executed successfully.
+/// For example, in `sh`-like shells, one can compare the value of `$?` to 0, and
+/// in PowerShell to `True`. The exit status can be captured when creating a [`Transcript`]
+/// by setting a *checker* in [`ShellOptions::with_status_check()`]:
+///
+/// # Examples
+///
+/// ```
+/// # use term_transcript::{ExitStatus, ShellOptions, Transcript, UserInput};
+/// # fn test_wrapper() -> anyhow::Result<()> {
+/// let options = ShellOptions::default();
+/// let mut options = options.with_status_check("echo $?", |captured| {
+///     // Parse captured string to plain text. This transform
+///     // is especially important in transcripts captured from PTY
+///     // since they can contain a *wild* amount of escape sequences.
+///     let captured = captured.to_plaintext().ok()?;
+///     let code: i32 = captured.trim().parse().ok()?;
+///     Some(ExitStatus(code))
+/// });
+///
+/// let transcript = Transcript::from_inputs(&mut options, [
+///     UserInput::command("echo \"Hello world\""),
+///     UserInput::command("some-non-existing-command"),
+/// ])?;
+/// let status = transcript.interactions()[0].exit_status();
+/// assert!(status.unwrap().is_success());
+/// // The assertion above is equivalent to:
+/// assert_eq!(status, Some(ExitStatus(0)));
+///
+/// let status = transcript.interactions()[1].exit_status();
+/// assert!(!status.unwrap().is_success());
+/// # Ok(())
+/// # }
+/// # // We can compile test in any case, but it successfully executes only on *nix.
+/// # #[cfg(unix)] fn main() { test_wrapper().unwrap() }
+/// # #[cfg(not(unix))] fn main() { }
+/// ```
+#[allow(clippy::doc_markdown)] // false positive on "PowerShell"
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ExitStatus(pub i32);
 

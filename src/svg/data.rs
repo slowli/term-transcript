@@ -56,12 +56,15 @@ use crate::{svg::TemplateOptions, UserInput};
 ///     "wrap": {
 ///         "hard_break_at": 80
 ///     },
+///     "has_failures": false,
 ///     "interactions": [{
 ///         "input": {
 ///             "text": "rainbow",
 ///             "prompt": "$"
 ///         },
-///         "output_html": "Hello, <span class=\"fg2\">world</span>!"
+///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
+///         "failure": false,
+///         "exit_status": null,
 ///     }]
 /// });
 /// assert_eq!(serde_json::to_value(data).unwrap(), expected_json);

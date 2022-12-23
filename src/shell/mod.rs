@@ -207,16 +207,43 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         })
     }
 
-    /// Sets the exit status checker for the shell.
+    /// Sets the [`ExitStatus`] checker for the shell. See `ExitStatus` docs for the semantics
+    /// of exit statuses.
     ///
-    /// FIXME: more details
+    /// # Arguments
+    ///
+    /// - `command` is a command that will be executed to check the exit status of the latest
+    ///   executed command. E.g., in `sh`-like shells one can use `echo $?`.
+    /// - `checker` is a closure that transforms the output of `command` into an `ExitStatus`.
+    ///   The output is provided as a [`Captured`] string; it usually makes sense to use
+    ///   [`Captured::to_plaintext()`] to strip it of possible escape sequences (especially
+    ///   important if captured from PTY). If the exit status is inconclusive or not applicable,
+    ///   the closure should return `None`.
+    ///
+    /// The `command` will be executed after each [`UserInput`] is input into the shell and
+    /// the corresponding output is captured. After this, the [`Captured`]
+    /// output will be supplied to the `checker` closure and its output will be recorded as
+    /// [`Interaction::exit_status()`].
+    ///
+    /// [`UserInput`]: crate::UserInput
+    /// [`Interaction::exit_status()`]: crate::Interaction::exit_status()
+    ///
+    /// # Panics
+    ///
+    /// Panics if `command` contains newline chars (`'\n'` or `'\r'`).
     #[must_use]
     pub fn with_status_check<F>(mut self, command: impl Into<String>, checker: F) -> Self
     where
         F: Fn(&Captured) -> Option<ExitStatus> + 'static,
     {
+        let command = command.into();
+        assert!(
+            command.bytes().all(|ch| ch != b'\n' && ch != b'\r'),
+            "`command` contains a newline character ('\\n' or '\\r')"
+        );
+
         self.status_check = Some(StatusCheck {
-            command: command.into(),
+            command,
             response_checker: Box::new(checker),
         });
         self
