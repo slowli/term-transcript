@@ -2,11 +2,11 @@
 
 use structopt::StructOpt;
 
-use std::{ffi::OsString, io, process::Command, time::Duration};
+use std::{env, ffi::OsString, io, process::Command, time::Duration};
 
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
-use term_transcript::{traits::Echoing, ExitStatus, ShellOptions, Transcript, UserInput};
+use term_transcript::{traits::Echoing, Captured, ExitStatus, ShellOptions, Transcript, UserInput};
 
 #[cfg(feature = "portable-pty")]
 mod pty {
@@ -72,7 +72,8 @@ impl ExitCodeCheck {
         }
     }
 
-    fn check_exit_code(self, response: &str) -> Option<ExitStatus> {
+    fn check_exit_code(self, response: &Captured) -> Option<ExitStatus> {
+        let response = response.to_plaintext().ok()?;
         match self {
             Self::Sh => response.trim().parse().ok().map(ExitStatus),
             Self::PowerShell => match response.trim() {
@@ -130,6 +131,9 @@ impl ShellArgs {
 
         let is_echoing = self.echoing || matches!(exit_code_check, Some(ExitCodeCheck::PowerShell));
         let mut options = options.echoing(is_echoing);
+        if let Ok(dir) = env::current_dir() {
+            options = options.with_current_dir(dir);
+        }
         if let Some(check) = exit_code_check {
             options = options.with_status_check("echo $?", move |code| check.check_exit_code(code));
         }
@@ -153,8 +157,11 @@ impl ShellArgs {
             command.with_size(size.rows, size.cols);
         }
 
-        let options =
+        let mut options =
             ShellOptions::new(command).with_io_timeout(Duration::from_millis(self.io_timeout));
+        if let Ok(dir) = env::current_dir() {
+            options = options.with_current_dir(dir);
+        }
         if let Some(check) = exit_code_check {
             options.with_status_check("echo $?", move |code| check.check_exit_code(code))
         } else {

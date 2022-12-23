@@ -12,7 +12,7 @@ use std::{
 use super::ShellOptions;
 use crate::{
     traits::{ShellProcess, SpawnShell, SpawnedShell},
-    Interaction, Transcript, UserInput,
+    Captured, Interaction, Transcript, UserInput,
 };
 
 #[derive(Debug)]
@@ -189,7 +189,7 @@ impl Transcript {
             }
             let response =
                 Self::read_output(lines_recv, options.io_timeout, &mut options.line_decoder)?;
-            status_check.check(&response)
+            status_check.check(&Captured::new(response))
         } else {
             None
         };

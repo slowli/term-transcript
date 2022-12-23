@@ -17,10 +17,10 @@ pub use self::standard::StdShell;
 
 use crate::{
     traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
-    ExitStatus,
+    Captured, ExitStatus,
 };
 
-type StatusCheckerFn = dyn Fn(&str) -> Option<ExitStatus>;
+type StatusCheckerFn = dyn Fn(&Captured) -> Option<ExitStatus>;
 
 pub(crate) struct StatusCheck {
     command: String,
@@ -41,7 +41,7 @@ impl StatusCheck {
         &self.command
     }
 
-    pub fn check(&self, response: &str) -> Option<ExitStatus> {
+    pub fn check(&self, response: &Captured) -> Option<ExitStatus> {
         (self.response_checker)(response)
     }
 }
@@ -213,7 +213,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     #[must_use]
     pub fn with_status_check<F>(mut self, command: impl Into<String>, checker: F) -> Self
     where
-        F: Fn(&str) -> Option<ExitStatus> + 'static,
+        F: Fn(&Captured) -> Option<ExitStatus> + 'static,
     {
         self.status_check = Some(StatusCheck {
             command: command.into(),

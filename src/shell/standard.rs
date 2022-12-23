@@ -10,7 +10,7 @@ use std::{
 use super::ShellOptions;
 use crate::{
     traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
-    ExitStatus,
+    Captured, ExitStatus,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -40,11 +40,13 @@ impl ConfigureCommand for StdShell {
     }
 }
 
-fn check_sh_exit_code(response: &str) -> Option<ExitStatus> {
+fn check_sh_exit_code(response: &Captured) -> Option<ExitStatus> {
+    let response = response.to_plaintext().ok()?;
     response.trim().parse().ok().map(ExitStatus)
 }
 
-fn check_ps_exit_code(response: &str) -> Option<ExitStatus> {
+fn check_ps_exit_code(response: &Captured) -> Option<ExitStatus> {
+    let response = response.to_plaintext().ok()?;
     match response.trim() {
         "True" => Some(ExitStatus(0)),
         "False" => Some(ExitStatus(1)),
