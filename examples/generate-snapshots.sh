@@ -51,3 +51,16 @@ term-transcript exec -T 100 --palette xterm \
   --tpl "$ROOT_DIR/examples/custom.html.handlebars" \
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/rainbow.new.html"
+
+echo "Creating snapshot with failure..."
+term-transcript exec -T 100 --palette gjm8 --window \
+  './non-existing-command' '[ -x non-existing-file ]' '[ -x non-existing-file ] || echo "File is not there!"' \
+  > "$ROOT_DIR/examples/failure-sh.$EXTENSION"
+
+echo "Creating PTY snapshot with failure..."
+(
+  cd "$ROOT_DIR"
+  term-transcript exec -T 100 --palette gjm8 --pty --window --shell bash \
+    'ls -l Cargo.lock' 'grep serge Cargo.lock' 'grep serde Cargo.lock' \
+    > "$ROOT_DIR/examples/failure-sh-pty.$EXTENSION"
+)
