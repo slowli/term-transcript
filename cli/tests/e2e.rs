@@ -91,6 +91,19 @@ fn print_example() {
 }
 
 #[test]
+fn print_example_with_failures() {
+    let (mut config, _dir) = test_config();
+    config.test(
+        svg_snapshot("print-with-failures"),
+        [
+            "term-transcript exec -T 200 'some-non-existing-command' \\\n  \
+             '[ -x some-non-existing-file ]' > fail.svg",
+            "term-transcript print fail.svg",
+        ],
+    );
+}
+
+#[test]
 fn capture_example() {
     let (config, _dir) = test_config();
     config.with_template(scrolled_template()).test(

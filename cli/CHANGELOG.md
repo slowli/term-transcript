@@ -10,6 +10,11 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Add ability to customize the rendering template using `--tpl <path>` option.
   Additionally, `--tpl -` outputs JSON data that would be fed to a template
   (could be useful if complex data processing is required).
+- Add the `--echoing` flag to specify whether the shell is echoing.
+- Support exit status capturing if using the default shell or another supported shell
+  (`sh`, `bash`, `powershell` or `pwsh`). See the `term-transcript` crate docs
+  for more details on exit statuses.
+- Print captured exit statuses in the `print` subcommand.
 
 ### Changed
 

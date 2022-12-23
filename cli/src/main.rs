@@ -235,6 +235,19 @@ impl Args {
             let input = interaction.input();
             writeln!(out, "{} {}", input.prompt().unwrap_or("$"), input.as_ref())?;
 
+            if let Some(exit_status) = interaction.exit_status() {
+                if !exit_status.is_success() {
+                    out.set_color(ColorSpec::new().set_bold(true))?;
+                    write!(out, "Exit status:")?;
+                    out.reset()?;
+                    write!(out, " {} ", exit_status.0)?;
+
+                    out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
+                    writeln!(out, "(failure)")?;
+                    out.reset()?;
+                }
+            }
+
             out.set_color(ColorSpec::new().set_bold(true))?;
             writeln!(out, "\n---------- Output #{} ----------", i + 1)?;
             out.reset()?;
