@@ -76,14 +76,22 @@ impl TemplateOptions {
         transcript: &'s Transcript,
     ) -> Result<HandlebarsData<'s>, TermError> {
         let rendered_outputs = self.render_outputs(transcript)?;
+        let mut has_failures = false;
 
         let interactions: Vec<_> = transcript
             .interactions()
             .iter()
             .zip(rendered_outputs)
-            .map(|(interaction, output_html)| SerializedInteraction {
-                input: interaction.input(),
-                output_html,
+            .map(|(interaction, output_html)| {
+                let failure = interaction
+                    .exit_status()
+                    .map_or(false, |status| !status.is_success());
+                has_failures = has_failures || failure;
+                SerializedInteraction {
+                    input: interaction.input(),
+                    output_html,
+                    failure,
+                }
             })
             .collect();
 
@@ -91,6 +99,7 @@ impl TemplateOptions {
             creator: CreatorData::default(),
             interactions,
             options: self,
+            has_failures,
         })
     }
 
@@ -316,11 +325,6 @@ impl Template {
             .options
             .render_data(transcript)
             .map_err(|err| RenderError::from_error("content", err))?;
-        let data = HandlebarsData {
-            creator: data.creator,
-            options: data.options,
-            interactions: data.interactions,
-        };
         self.handlebars
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
@@ -329,7 +333,7 @@ impl Template {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::UserInput;
+    use crate::{ExitStatus, Interaction, UserInput};
 
     #[test]
     fn rendering_simple_transcript() {
@@ -344,6 +348,7 @@ mod tests {
             .render(&transcript, &mut buffer)
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
+
         assert!(buffer.starts_with("<!--"));
         assert!(
             buffer.ends_with("</svg>\n") || buffer.ends_with("</svg>\r\n"),
@@ -352,6 +357,43 @@ mod tests {
         );
         assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
         assert!(!buffer.contains("<circle"));
+
+        assert!(!buffer.contains("user-input-failure"));
+        assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
+    }
+
+    #[test]
+    fn rendering_transcript_with_explicit_success() {
+        let mut transcript = Transcript::new();
+        let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+            .with_exit_status(ExitStatus(0));
+        transcript.add_existing_interaction(interaction);
+
+        let mut buffer = vec![];
+        Template::new(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(!buffer.contains("user-input-failure"));
+        assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
+    }
+
+    #[test]
+    fn rendering_transcript_with_failure() {
+        let mut transcript = Transcript::new();
+        let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+            .with_exit_status(ExitStatus(1));
+        transcript.add_existing_interaction(interaction);
+
+        let mut buffer = vec![];
+        Template::new(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains("user-input-failure"));
+        assert!(buffer.contains("title=\"This command exited with non-zero code\""));
     }
 
     #[test]

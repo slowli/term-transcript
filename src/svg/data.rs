@@ -77,6 +77,8 @@ pub struct HandlebarsData<'r> {
     pub options: &'r TemplateOptions,
     /// Recorded terminal interactions.
     pub interactions: Vec<SerializedInteraction<'r>>,
+    /// Has any of terminal interactions failed?
+    pub has_failures: bool,
 }
 
 /// Information about software used for rendering (i.e., this crate).
@@ -135,4 +137,6 @@ pub struct SerializedInteraction<'a> {
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
     pub output_html: String,
+    /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?
+    pub failure: bool,
 }
