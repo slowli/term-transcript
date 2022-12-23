@@ -79,11 +79,11 @@
   <svg x="0" y="10" width="720" height="288" viewBox="0 0 720 288">
     <foreignObject width="720" height="288">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
         <div class="term-output"><pre>-rw-r--r-- 1 alex alex 20765 Dec 22 20:55 Cargo.lock</pre></div>
-        <div class="user-input user-input-failure" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep serge Cargo.lock</pre></div>
+        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep serge Cargo.lock</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input"><pre><span class="prompt">$</span> grep serde Cargo.lock</pre></div>
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> grep serde Cargo.lock</pre></div>
         <div class="term-output"><pre> "<span class="fg1">serde</span>",
  "<span class="fg1">serde</span>_json",
 name = "<span class="fg1">serde</span>"

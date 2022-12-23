@@ -11,7 +11,9 @@ use std::{
     error::Error as StdError,
     fmt,
     io::{self, BufRead},
-    mem, str,
+    mem,
+    num::ParseIntError,
+    str,
 };
 
 #[cfg(test)]
@@ -19,7 +21,9 @@ mod tests;
 mod text;
 
 use self::text::TextReadingState;
-use crate::{test::color_diff::ColorSpan, Interaction, TermOutput, Transcript, UserInput};
+use crate::{
+    test::color_diff::ColorSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput,
+};
 
 /// Parsed terminal output.
 #[derive(Debug, Clone, Default)]
@@ -30,6 +34,12 @@ pub struct Parsed {
 }
 
 impl Parsed {
+    const DEFAULT: Self = Self {
+        plaintext: String::new(),
+        color_spans: Vec::new(),
+        html: String::new(),
+    };
+
     /// Returns the parsed plaintext.
     pub fn plaintext(&self) -> &str {
         &self.plaintext
@@ -102,15 +112,18 @@ impl Transcript<Parsed> {
             }
         }
 
-        if let ParserState::EncounteredContainer = state {
-            Ok(transcript)
-        } else {
-            Err(ParseError::UnexpectedEof)
+        match state {
+            ParserState::EncounteredContainer => Ok(transcript),
+            ParserState::EncounteredUserInput(interaction) => {
+                transcript.interactions.push(interaction);
+                Ok(transcript)
+            }
+            _ => Err(ParseError::UnexpectedEof),
         }
     }
 }
 
-fn parse_class(attributes: Attributes<'_>) -> Result<Cow<'_, [u8]>, ParseError> {
+fn parse_classes(attributes: Attributes<'_>) -> Result<Cow<'_, [u8]>, ParseError> {
     let mut class = None;
     for attr in attributes {
         let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
@@ -121,6 +134,24 @@ fn parse_class(attributes: Attributes<'_>) -> Result<Cow<'_, [u8]>, ParseError> 
     Ok(class.unwrap_or(Cow::Borrowed(b"")))
 }
 
+fn extract_base_class(classes: &[u8]) -> &[u8] {
+    let space_idx = classes.iter().position(|&ch| ch == b' ');
+    space_idx.map_or(classes.as_ref(), |idx| &classes[..idx])
+}
+
+fn parse_exit_status(attributes: Attributes<'_>) -> Result<Option<ExitStatus>, ParseError> {
+    let mut exit_status = None;
+    for attr in attributes {
+        let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
+        if attr.key.as_ref() == b"data-exit-status" {
+            let status = str::from_utf8(&attr.value).map_err(|err| ParseError::Xml(err.into()))?;
+            let status = status.parse().map_err(ParseError::InvalidExitStatus)?;
+            exit_status = Some(ExitStatus(status));
+        }
+    }
+    Ok(exit_status)
+}
+
 /// Errors that can occur during parsing SVG transcripts.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -129,6 +160,8 @@ pub enum ParseError {
     UnexpectedRoot(String),
     /// Invalid transcript container.
     InvalidContainer,
+    /// Invalid recorded exit status of an executed command.
+    InvalidExitStatus(ParseIntError),
     /// Unexpected end of file.
     UnexpectedEof,
     /// Error parsing XML.
@@ -152,11 +185,12 @@ impl fmt::Display for ParseError {
         match self {
             Self::UnexpectedRoot(tag_name) => write!(
                 formatter,
-                "Unexpected root XML tag: <{tag_name}>; expected <svg>"
+                "unexpected root XML tag: <{tag_name}>; expected <svg>"
             ),
-            Self::InvalidContainer => formatter.write_str("Invalid transcript container"),
-            Self::UnexpectedEof => formatter.write_str("Unexpected EOF"),
-            Self::Xml(err) => write!(formatter, "Error parsing XML: {err}"),
+            Self::InvalidContainer => formatter.write_str("invalid transcript container"),
+            Self::InvalidExitStatus(err) => write!(formatter, "invalid exit status: {err}"),
+            Self::UnexpectedEof => formatter.write_str("unexpected EOF"),
+            Self::Xml(err) => write!(formatter, "error parsing XML: {err}"),
         }
     }
 }
@@ -165,16 +199,29 @@ impl StdError for ParseError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::Xml(err) => Some(err),
+            Self::InvalidExitStatus(err) => Some(err),
             _ => None,
         }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct UserInputState {
+    exit_status: Option<ExitStatus>,
     text: TextReadingState,
     prompt: Option<Cow<'static, str>>,
     prompt_open_tags: Option<usize>,
+}
+
+impl UserInputState {
+    fn new(exit_status: Option<ExitStatus>) -> Self {
+        Self {
+            exit_status,
+            text: TextReadingState::default(),
+            prompt: None,
+            prompt_open_tags: None,
+        }
+    }
 }
 
 impl UserInputState {
@@ -190,10 +237,10 @@ impl UserInputState {
                 .map_or(false, |tags| tags + 1 == self.text.open_tags())
     }
 
-    fn process(&mut self, event: Event<'_>) -> Result<Option<UserInput>, ParseError> {
+    fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {
         let mut is_prompt_end = false;
         if let Event::Start(tag) = &event {
-            if self.can_start_prompt() && parse_class(tag.attributes())?.as_ref() == b"prompt" {
+            if self.can_start_prompt() && parse_classes(tag.attributes())?.as_ref() == b"prompt" {
                 // Got prompt start.
                 self.prompt_open_tags = Some(self.text.open_tags());
             }
@@ -207,18 +254,30 @@ impl UserInputState {
         if is_prompt_end {
             if let Some(parsed) = maybe_parsed {
                 // Special case: user input consists of the prompt only.
-                return Ok(Some(UserInput {
+                let input = UserInput {
                     text: String::new(),
                     prompt: Some(UserInput::intern_prompt(parsed.plaintext)),
+                };
+                return Ok(Some(Interaction {
+                    input,
+                    output: Parsed::default(),
+                    exit_status: self.exit_status,
                 }));
             }
             let text = mem::take(&mut self.text.plaintext_buffer);
             self.prompt = Some(UserInput::intern_prompt(text));
         }
 
-        Ok(maybe_parsed.map(|parsed| UserInput {
-            text: parsed.into_input_text(),
-            prompt: self.prompt.take(),
+        Ok(maybe_parsed.map(|parsed| {
+            let input = UserInput {
+                text: parsed.into_input_text(),
+                prompt: self.prompt.take(),
+            };
+            Interaction {
+                input,
+                output: Parsed::default(),
+                exit_status: self.exit_status,
+            }
         }))
     }
 }
@@ -235,15 +294,19 @@ enum ParserState {
     /// Reading user input (`<div class="user-input">` contents).
     ReadingUserInput(UserInputState),
     /// Finished reading user input; searching for `<div class="term-output">`.
-    EncounteredUserInput(UserInput),
+    EncounteredUserInput(Interaction<Parsed>),
     /// Reading terminal output (`<div class="term-output">` contents).
-    ReadingTermOutput(UserInput, TextReadingState),
+    ReadingTermOutput(Interaction<Parsed>, TextReadingState),
 }
 
 impl ParserState {
-    const DUMMY_INPUT: UserInput = UserInput {
-        text: String::new(),
-        prompt: None,
+    const DUMMY_INTERACTION: Interaction<Parsed> = Interaction {
+        input: UserInput {
+            text: String::new(),
+            prompt: None,
+        },
+        output: Parsed::DEFAULT,
+        exit_status: None,
     };
 
     fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {
@@ -270,47 +333,43 @@ impl ParserState {
 
             Self::EncounteredContainer => {
                 if let Event::Start(tag) = event {
-                    if parse_class(tag.attributes())?.as_ref() == b"user-input" {
-                        *self = Self::ReadingUserInput(UserInputState::default());
+                    let classes = parse_classes(tag.attributes())?;
+                    if extract_base_class(&classes) == b"user-input" {
+                        let exit_status = parse_exit_status(tag.attributes())?;
+                        *self = Self::ReadingUserInput(UserInputState::new(exit_status));
                     }
                 }
             }
 
             Self::ReadingUserInput(state) => {
-                if let Some(user_input) = state.process(event)? {
-                    *self = Self::EncounteredUserInput(user_input);
+                if let Some(interaction) = state.process(event)? {
+                    *self = Self::EncounteredUserInput(interaction);
                 }
             }
 
-            Self::EncounteredUserInput(user_input) => {
+            Self::EncounteredUserInput(interaction) => {
                 if let Event::Start(tag) = event {
-                    let class = parse_class(tag.attributes())?;
-                    if class.as_ref() == b"term-output" {
-                        let user_input = mem::replace(user_input, Self::DUMMY_INPUT);
-                        *self = Self::ReadingTermOutput(user_input, TextReadingState::default());
-                    } else if class.as_ref() == b"user-input" {
-                        let user_input = mem::replace(user_input, Self::DUMMY_INPUT);
-                        *self = Self::ReadingUserInput(UserInputState::default());
+                    let classes = parse_classes(tag.attributes())?;
+                    let base_class = extract_base_class(&classes);
 
-                        return Ok(Some(Interaction {
-                            input: user_input,
-                            output: Parsed::default(),
-                            exit_status: None, // FIXME
-                        }));
+                    if base_class == b"term-output" {
+                        let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
+                        *self = Self::ReadingTermOutput(interaction, TextReadingState::default());
+                    } else if base_class == b"user-input" {
+                        let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
+                        let exit_status = parse_exit_status(tag.attributes())?;
+                        *self = Self::ReadingUserInput(UserInputState::new(exit_status));
+                        return Ok(Some(interaction));
                     }
                 }
             }
 
-            Self::ReadingTermOutput(user_input, text_state) => {
+            Self::ReadingTermOutput(interaction, text_state) => {
                 if let Some(term_output) = text_state.process(event)? {
-                    let user_input = mem::replace(user_input, Self::DUMMY_INPUT);
+                    let mut interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
+                    interaction.output = term_output;
                     *self = Self::EncounteredContainer;
-
-                    return Ok(Some(Interaction {
-                        input: user_input,
-                        output: term_output,
-                        exit_status: None, // FIXME
-                    }));
+                    return Ok(Some(interaction));
                 }
             }
         }

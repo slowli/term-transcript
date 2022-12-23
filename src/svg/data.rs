@@ -137,6 +137,8 @@ pub struct SerializedInteraction<'a> {
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
     pub output_html: String,
+    /// Exit status of the latest executed program, or `None` if it cannot be determined.
+    pub exit_status: Option<i32>,
     /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?
     pub failure: bool,
 }

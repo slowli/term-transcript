@@ -90,6 +90,7 @@ impl TemplateOptions {
                 SerializedInteraction {
                     input: interaction.input(),
                     output_html,
+                    exit_status: interaction.exit_status().map(|status| status.0),
                     failure,
                 }
             })
@@ -356,6 +357,7 @@ mod tests {
             "unexpected rendering result: {buffer}"
         );
         assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
+        assert!(!buffer.contains("data-exit-status"));
         assert!(!buffer.contains("<circle"));
 
         assert!(!buffer.contains("user-input-failure"));
@@ -377,6 +379,7 @@ mod tests {
 
         assert!(!buffer.contains("user-input-failure"));
         assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
+        assert!(buffer.contains(r#"data-exit-status="0""#));
     }
 
     #[test]
@@ -394,6 +397,7 @@ mod tests {
 
         assert!(buffer.contains("user-input-failure"));
         assert!(buffer.contains("title=\"This command exited with non-zero code\""));
+        assert!(buffer.contains(r#"data-exit-status="1""#));
     }
 
     #[test]

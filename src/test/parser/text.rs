@@ -5,7 +5,7 @@ use termcolor::{Color, ColorSpec, WriteColor};
 
 use std::{borrow::Cow, io::Write, mem, str};
 
-use super::{parse_class, ParseError, Parsed};
+use super::{parse_classes, ParseError, Parsed};
 use crate::{
     test::color_diff::ColorSpansWriter,
     utils::{normalize_newlines, RgbColor},
@@ -100,7 +100,7 @@ impl TextReadingState {
     ///
     /// **NB.** Must correspond to the span creation logic in the `html` module.
     fn parse_color_from_span(span_tag: &BytesStart) -> Result<ColorSpec, ParseError> {
-        let class_attr = parse_class(span_tag.attributes())?;
+        let class_attr = parse_classes(span_tag.attributes())?;
         let mut color_spec = ColorSpec::new();
         Self::parse_color_from_classes(&mut color_spec, &class_attr);
 

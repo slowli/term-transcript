@@ -79,7 +79,7 @@
   <svg x="0" y="10" width="720" height="100" viewBox="0 0 720 100">
     <foreignObject width="720" height="100">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input user-input-failure" title="This command exited with non-zero code"><pre><span class="prompt">$</span> ./non-existing-command</pre></div>
+        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> ./non-existing-command</pre></div>
         <div class="term-output"><pre><span class="bold fg1">./non-existing-command: The term './non-existing-command' is not recognized as a<b class="hard-br"><br/></b> name of a cmdlet, function, script file, or executable program.</span>
 <span class="bold fg1">Check the spelling of the name, or if a path was included, verify that the path <b class="hard-br"><br/></b>is correct and try again.</span></pre></div>
       </div>

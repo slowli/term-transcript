@@ -203,7 +203,9 @@
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         {{~#each interactions}}
 
-        <div class="user-input{{#if failure}} user-input-failure{{/if}}"{{#if failure}} title="This command exited with non-zero code"{{/if}}><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
+        <div class="user-input{{#if failure}} user-input-failure{{/if}}"
+          {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
+          {{~#if failure}} title="This command exited with non-zero code"{{/if}}><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
         <div class="term-output"><pre>{{{output_html}}}</pre></div>
         {{~/each}}
 
