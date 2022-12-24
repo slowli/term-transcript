@@ -57,16 +57,40 @@
 //!
 //! # Crate features
 //!
-//! - `portable-pty`. Allows using pseudo-terminal (PTY) to capture terminal output rather
-//!   than pipes. Uses [the eponymous crate][`portable-pty`] under the hood.
-//! - `svg`. Exposes [the eponymous module](svg) that allows rendering [`Transcript`]s
-//!   into the SVG format.
-//! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
-//!   from SVG files and testing them.
-//! - `pretty_assertions`. Uses [the eponymous crate][`pretty_assertions`] when testing SVG files.
-//!   Only really makes sense together with the `test` feature.
+//! ## `portable-pty`
 //!
-//! `svg`, `test` and `pretty_assertions` features are on by default.
+//! *(Off by default)*
+//!
+//! Allows using pseudo-terminal (PTY) to capture terminal output rather than pipes.
+//! Uses [the eponymous crate][`portable-pty`] under the hood.
+//!
+//! ## `svg`
+//!
+//! *(On by default)*
+//!
+//! Exposes [the eponymous module](svg) that allows rendering [`Transcript`]s
+//! into the SVG format.
+//!
+//! ## `test`
+//!
+//! *(On by default)*
+//!
+//! Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
+//! from SVG files and testing them.
+//!
+//! ## `pretty_assertions`
+//!
+//! *(On by default)*
+//!
+//! Uses [the eponymous crate][`pretty_assertions`] when testing SVG files.
+//! Only really makes sense together with the `test` feature.
+//!
+//! ## `tracing`
+//!
+//! *(Off by default)*
+//!
+//! Uses [the eponymous facade][`tracing`] to trace main operations, which could be useful
+//! for debugging. Tracing is mostly performed on the `DEBUG` level.
 //!
 //! [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
 //! [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
@@ -75,6 +99,7 @@
 //! [Handlebars]: https://handlebarsjs.com/
 //! [`pretty_assertions`]: https://docs.rs/pretty_assertions/
 //! [`portable-pty`]: https://docs.rs/portable-pty/
+//! [`tracing`]: https://docs.rs/tracing/
 //!
 //! # Examples
 //!
