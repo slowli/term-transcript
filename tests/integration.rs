@@ -12,7 +12,6 @@ use std::{
     path::Path,
     process::{Command, Stdio},
     str::Utf8Error,
-    sync::Once,
     time::Duration,
 };
 
@@ -30,12 +29,8 @@ fn create_fmt_subscriber() -> impl Subscriber + for<'a> LookupSpan<'a> {
         .finish()
 }
 
-fn enable_tracing() {
-    static TRACING: Once = Once::new();
-
-    TRACING.call_once(|| {
-        tracing::subscriber::set_global_default(create_fmt_subscriber()).ok();
-    });
+fn enable_tracing() -> DefaultGuard {
+    tracing::subscriber::set_default(create_fmt_subscriber())
 }
 
 fn enable_tracing_assertions() -> (DefaultGuard, SharedStorage) {
@@ -251,8 +246,7 @@ fn transcript_with_several_non_empty_outputs_in_succession() -> anyhow::Result<(
 #[cfg(unix)]
 #[test]
 fn command_exit_status_in_sh() -> anyhow::Result<()> {
-    enable_tracing();
-
+    let _guard = enable_tracing();
     let mut options = ShellOptions::sh();
     // ^ The error output is locale-specific and is not always UTF-8
     let inputs = [
@@ -335,7 +329,7 @@ fn assert_tracing_for_powershell(storage: &Storage) {
 #[cfg(windows)]
 #[test]
 fn cmd_shell_with_non_utf8_output() {
-    enable_tracing();
+    let _guard = enable_tracing();
     let input = UserInput::command(format!("dir {}", env!("CARGO_MANIFEST_DIR")));
     let transcript = Transcript::from_inputs(&mut ShellOptions::default(), vec![input]).unwrap();
 
@@ -350,7 +344,7 @@ fn cmd_shell_with_non_utf8_output() {
 fn cmd_shell_with_utf8_output_in_pty() {
     use term_transcript::PtyCommand;
 
-    enable_tracing();
+    let _guard = enable_tracing();
     let input = UserInput::command(format!("dir {}", env!("CARGO_MANIFEST_DIR")));
     let mut options = ShellOptions::new(PtyCommand::default());
     let transcript = Transcript::from_inputs(&mut options, vec![input]).unwrap();
@@ -373,7 +367,7 @@ fn non_utf8_shell_output() {
     #[cfg(windows)]
     const CAT_COMMAND: &str = "type";
 
-    enable_tracing();
+    let _guard = enable_tracing();
     let non_utf8_file = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("non-utf8.txt");
@@ -394,7 +388,7 @@ fn non_utf8_shell_output_with_lossy_decoder() -> anyhow::Result<()> {
     #[cfg(windows)]
     const CAT_COMMAND: &str = "type";
 
-    enable_tracing();
+    let _guard = enable_tracing();
     let non_utf8_file = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("non-utf8.txt");

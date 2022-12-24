@@ -3,6 +3,7 @@
 use termcolor::{Color, ColorSpec, NoColor, WriteColor};
 
 use std::{
+    fmt,
     fs::File,
     io::{self, BufReader, Write},
     path::Path,
@@ -17,7 +18,7 @@ use super::{
 };
 use crate::{traits::SpawnShell, Interaction, TermError, Transcript, UserInput};
 
-impl<Cmd: SpawnShell> TestConfig<Cmd> {
+impl<Cmd: SpawnShell + fmt::Debug> TestConfig<Cmd> {
     /// Tests a snapshot at the specified path with the provided inputs.
     ///
     /// If the path is relative, it is resolved relative to the current working dir,
@@ -51,15 +52,26 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     /// [`env!("CARGO_MANIFEST_DIR")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
     /// [`UpdateMode::Never`]: crate::test::UpdateMode::Never
     /// [inferred]: crate::test::UpdateMode::from_env()
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(skip(snapshot_path, inputs), fields(snapshot_path, inputs))
+    )]
     pub fn test<I: Into<UserInput>>(
         &mut self,
         snapshot_path: impl AsRef<Path>,
         inputs: impl IntoIterator<Item = I>,
     ) {
-        let inputs = inputs.into_iter().map(Into::into);
+        let inputs: Vec<_> = inputs.into_iter().map(Into::into).collect();
         let snapshot_path = snapshot_path.as_ref();
+        #[cfg(feature = "tracing")]
+        tracing::Span::current()
+            .record("snapshot_path", tracing::field::debug(snapshot_path))
+            .record("inputs", tracing::field::debug(&inputs));
 
         if snapshot_path.is_file() {
+            #[cfg(feature = "tracing")]
+            tracing::debug!(snapshot_path.is_file = true);
+
             let snapshot = File::open(snapshot_path).unwrap_or_else(|err| {
                 panic!("Cannot open `{snapshot_path:?}`: {err}");
             });
@@ -67,19 +79,23 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             let transcript = Transcript::from_svg(snapshot).unwrap_or_else(|err| {
                 panic!("Cannot parse snapshot from `{snapshot_path:?}`: {err}");
             });
-            self.compare_and_test_transcript(
-                snapshot_path,
-                &transcript,
-                &inputs.collect::<Vec<_>>(),
-            );
+            self.compare_and_test_transcript(snapshot_path, &transcript, &inputs);
         } else if snapshot_path.exists() {
             panic!("Snapshot path `{snapshot_path:?}` exists, but is not a file");
         } else {
-            let new_snapshot_message = self.create_and_write_new_snapshot(snapshot_path, inputs);
+            #[cfg(feature = "tracing")]
+            tracing::debug!(snapshot_path.is_file = false);
+
+            let new_snapshot_message =
+                self.create_and_write_new_snapshot(snapshot_path, inputs.into_iter());
             panic!("Snapshot `{snapshot_path:?}` is missing\n{new_snapshot_message}");
         }
     }
 
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip(self, transcript))
+    )]
     fn compare_and_test_transcript(
         &mut self,
         snapshot_path: &Path,
@@ -111,6 +127,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     }
 
     #[cfg(feature = "svg")]
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip(self, inputs))
+    )]
     fn create_and_write_new_snapshot(
         &mut self,
         path: &Path,
@@ -125,6 +145,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
 
     /// Returns a message to be appended to the panic message.
     #[cfg(feature = "svg")]
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip(self, transcript), ret)
+    )]
     fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> String {
         if !self.update_mode.should_create_snapshot() {
             return format!("Skipped writing new snapshot `{path:?}` per test config");
@@ -187,6 +211,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     ///
     /// - Returns an error if an error occurs during reproducing the transcript or processing
     ///   its output.
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(transcript), err))]
     pub fn test_transcript_for_stats(
         &mut self,
         transcript: &Transcript<Parsed>,
@@ -215,6 +240,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         Ok((stats, reproduced))
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, ret, err))]
     pub(super) fn compare_transcripts(
         &self,
         out: &mut impl WriteColor,
@@ -230,6 +256,10 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             matches: Vec::with_capacity(parsed.interactions().len()),
         };
         for (original, reproduced) in it {
+            #[cfg(feature = "tracing")]
+            let _entered =
+                tracing::debug_span!("compare_interaction", input = ?original.input).entered();
+
             write!(out, "  ")?;
             out.set_color(ColorSpec::new().set_intense(true))?;
             write!(out, "[")?;
@@ -244,6 +274,8 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             } else {
                 None
             };
+            #[cfg(feature = "tracing")]
+            tracing::debug!(?actual_match, "compared output texts");
 
             // If we do precise matching, check it as well.
             let color_diff = if self.match_kind == MatchKind::Precise && actual_match.is_some() {
@@ -255,6 +287,9 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
                     })?;
 
                 let diff = ColorDiff::new(original_spans, &reproduced_spans);
+                #[cfg(feature = "tracing")]
+                tracing::debug!(?diff, "compared output coloring");
+
                 if diff.is_empty() {
                     actual_match = Some(MatchKind::Precise);
                     None
@@ -302,7 +337,6 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     #[cfg(feature = "pretty_assertions")]
     fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
         use pretty_assertions::Comparison;
-        use std::fmt;
 
         // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
         // to switch to `fmt::Display`.

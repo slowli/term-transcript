@@ -1,5 +1,7 @@
 use handlebars::Template as HandlebarsTemplate;
 use tempfile::tempdir;
+use tracing::{subscriber::DefaultGuard, Subscriber};
+use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
 use std::{
     fs::{self, File},
@@ -20,6 +22,19 @@ use term_transcript::{
 
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
+
+fn create_fmt_subscriber() -> impl Subscriber {
+    FmtSubscriber::builder()
+        .pretty()
+        .with_span_events(FmtSpan::CLOSE)
+        .with_test_writer()
+        .with_env_filter("term_transcript=debug")
+        .finish()
+}
+
+fn enable_tracing() -> DefaultGuard {
+    tracing::subscriber::set_default(create_fmt_subscriber())
+}
 
 fn main_snapshot_path() -> &'static Path {
     Path::new("../../examples/rainbow.svg")
@@ -48,9 +63,11 @@ fn repl_snapshot_path() -> &'static Path {
 
 #[test]
 fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
+    let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_cargo_path();
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+
     let mut buffer = vec![];
     let template_options = TemplateOptions {
         palette: NamedPalette::Gjm8.into(),
@@ -71,6 +88,7 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
 
 #[test]
 fn snapshot_with_custom_template() -> anyhow::Result<()> {
+    let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_cargo_path();
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
@@ -127,6 +145,7 @@ fn snapshot_testing_low_level() -> anyhow::Result<()> {
 
 #[test]
 fn snapshot_testing() {
+    let _guard = enable_tracing();
     let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
 }

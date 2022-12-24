@@ -13,7 +13,7 @@
 use handlebars::{Handlebars, RenderError, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
 
-use std::io::Write;
+use std::{fmt, io::Write};
 
 mod data;
 mod helpers;
@@ -286,10 +286,18 @@ impl Default for WrapOptions {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug)]
 pub struct Template {
     options: TemplateOptions,
     handlebars: Handlebars<'static>,
+}
+
+impl fmt::Debug for Template {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Template")
+            .field("options", &self.options)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Default for Template {
