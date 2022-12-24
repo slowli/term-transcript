@@ -71,6 +71,10 @@ impl TemplateOptions {
     ///
     /// Returns an error if output cannot be rendered to HTML (e.g., it contains invalid
     /// SGR sequences).
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip(transcript), err)
+    )]
     pub fn render_data<'s>(
         &'s self,
         transcript: &'s Transcript,
@@ -104,6 +108,10 @@ impl TemplateOptions {
         })
     }
 
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip_all, err)
+    )]
     fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<String>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
             WrapOptions::HardBreakAt(width) => *width,
@@ -317,6 +325,10 @@ impl Template {
     ///
     /// Returns a Handlebars rendering error, if any. Normally, the only errors could be
     /// related to I/O (e.g., the output cannot be written to a file).
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(skip_all, err, fields(self.options = ?self.options))
+    )]
     pub fn render<W: Write>(
         &self,
         transcript: &Transcript,
@@ -326,6 +338,9 @@ impl Template {
             .options
             .render_data(transcript)
             .map_err(|err| RenderError::from_error("content", err))?;
+
+        #[cfg(feature = "tracing")]
+        let _entered = tracing::debug_span!("render_to_write").entered();
         self.handlebars
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
