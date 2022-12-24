@@ -40,11 +40,13 @@ impl ConfigureCommand for StdShell {
     }
 }
 
+#[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", ret))]
 fn check_sh_exit_code(response: &Captured) -> Option<ExitStatus> {
     let response = response.to_plaintext().ok()?;
     response.trim().parse().ok().map(ExitStatus)
 }
 
+#[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", ret))]
 fn check_ps_exit_code(response: &Captured) -> Option<ExitStatus> {
     let response = response.to_plaintext().ok()?;
     match response.trim() {
@@ -123,6 +125,7 @@ impl SpawnShell for StdShell {
     type Reader = os_pipe::PipeReader;
     type Writer = ChildStdin;
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
         let SpawnedShell {
             shell,

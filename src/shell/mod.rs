@@ -289,6 +289,15 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
 }
 
 impl<Cmd: SpawnShell> ShellOptions<Cmd> {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "debug",
+            skip(self),
+            err,
+            fields(self.path_additions = ?self.path_additions)
+        )
+    )]
     fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Cmd>> {
         #[cfg(unix)]
         const PATH_SEPARATOR: &str = ":";

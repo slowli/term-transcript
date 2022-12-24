@@ -84,6 +84,7 @@ impl Transcript<Parsed> {
     ///   by `Template::render()`.
     ///
     /// [`Template::render()`]: crate::svg::Template::render()
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, err))]
     pub fn from_svg<R: BufRead>(reader: R) -> Result<Self, ParseError> {
         let mut reader = XmlReader::from_reader(reader);
         let mut buffer = vec![];
@@ -108,6 +109,13 @@ impl Transcript<Parsed> {
             }
 
             if let Some(interaction) = state.process(event)? {
+                #[cfg(feature = "tracing")]
+                tracing::debug!(
+                    ?interaction.input,
+                    interaction.output = ?interaction.output.plaintext,
+                    ?interaction.exit_status,
+                    "parsed interaction"
+                );
                 transcript.interactions.push(interaction);
             }
         }
@@ -309,6 +317,12 @@ impl ParserState {
         exit_status: None,
     };
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug"))]
+    fn set_state(&mut self, new_state: Self) {
+        *self = new_state;
+    }
+
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace", err))]
     fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {
         match self {
             Self::Initialized => {
@@ -326,7 +340,7 @@ impl ParserState {
                 if let Event::Start(tag) = event {
                     if tag.name().as_ref() == b"div" {
                         Self::verify_container_attrs(tag.attributes())?;
-                        *self = Self::EncounteredContainer;
+                        self.set_state(Self::EncounteredContainer);
                     }
                 }
             }
@@ -336,14 +350,14 @@ impl ParserState {
                     let classes = parse_classes(tag.attributes())?;
                     if extract_base_class(&classes) == b"user-input" {
                         let exit_status = parse_exit_status(tag.attributes())?;
-                        *self = Self::ReadingUserInput(UserInputState::new(exit_status));
+                        self.set_state(Self::ReadingUserInput(UserInputState::new(exit_status)));
                     }
                 }
             }
 
             Self::ReadingUserInput(state) => {
                 if let Some(interaction) = state.process(event)? {
-                    *self = Self::EncounteredUserInput(interaction);
+                    self.set_state(Self::EncounteredUserInput(interaction));
                 }
             }
 
@@ -354,11 +368,14 @@ impl ParserState {
 
                     if base_class == b"term-output" {
                         let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
-                        *self = Self::ReadingTermOutput(interaction, TextReadingState::default());
+                        self.set_state(Self::ReadingTermOutput(
+                            interaction,
+                            TextReadingState::default(),
+                        ));
                     } else if base_class == b"user-input" {
                         let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
                         let exit_status = parse_exit_status(tag.attributes())?;
-                        *self = Self::ReadingUserInput(UserInputState::new(exit_status));
+                        self.set_state(Self::ReadingUserInput(UserInputState::new(exit_status)));
                         return Ok(Some(interaction));
                     }
                 }
@@ -368,7 +385,7 @@ impl ParserState {
                 if let Some(term_output) = text_state.process(event)? {
                     let mut interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
                     interaction.output = term_output;
-                    *self = Self::EncounteredContainer;
+                    self.set_state(Self::EncounteredContainer);
                     return Ok(Some(interaction));
                 }
             }
@@ -376,6 +393,10 @@ impl ParserState {
         Ok(None)
     }
 
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip_all, err)
+    )]
     fn verify_container_attrs(attributes: Attributes<'_>) -> Result<(), ParseError> {
         const HTML_NS: &[u8] = b"http://www.w3.org/1999/xhtml";
 

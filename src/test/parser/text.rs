@@ -3,7 +3,7 @@
 use quick_xml::events::{BytesStart, Event};
 use termcolor::{Color, ColorSpec, WriteColor};
 
-use std::{borrow::Cow, io::Write, mem, str};
+use std::{borrow::Cow, fmt, io::Write, mem, str};
 
 use super::{parse_classes, ParseError, Parsed};
 use crate::{
@@ -11,12 +11,20 @@ use crate::{
     utils::{normalize_newlines, RgbColor},
 };
 
-#[derive(Debug)]
 pub(super) struct TextReadingState {
     pub plaintext_buffer: String,
     html_buffer: String,
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
+}
+
+impl fmt::Debug for TextReadingState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TextReadingState")
+            .field("plaintext_buffer", &self.plaintext_buffer)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Default for TextReadingState {
