@@ -126,20 +126,24 @@ impl SpawnShell for PtyCommand {
     type Reader = Box<dyn io::Read + Send>;
     type Writer = Box<dyn MasterPty + Send>;
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
         let pty_system = native_pty_system();
         let PtyPair { master, slave } = pty_system
             .openpty(self.pty_size)
             .map_err(|err| into_io_error(err.into()))?;
+        #[cfg(feature = "tracing")]
+        tracing::debug!("created PTY pair");
 
         let child = slave
             .spawn_command(self.to_command_builder())
             .map_err(|err| into_io_error(err.into()))?;
+        #[cfg(feature = "tracing")]
+        tracing::debug!("spawned command into PTY");
 
         let reader = master
             .try_clone_reader()
             .map_err(|err| into_io_error(err.into()))?;
-
         Ok(SpawnedShell {
             shell: PtyShell { child },
             reader,
@@ -156,10 +160,7 @@ pub struct PtyShell {
 }
 
 impl ShellProcess for PtyShell {
-    fn is_echoing(&self) -> bool {
-        true
-    }
-
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn check_is_alive(&mut self) -> io::Result<()> {
         if let Some(exit_status) = self.child.try_wait()? {
             let status_str = if exit_status.success() {
@@ -175,6 +176,7 @@ impl ShellProcess for PtyShell {
         }
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn terminate(mut self) -> io::Result<()> {
         if self.child.try_wait()?.is_none() {
             self.child.kill().or_else(|err| {
@@ -187,6 +189,10 @@ impl ShellProcess for PtyShell {
             })?;
         }
         Ok(())
+    }
+
+    fn is_echoing(&self) -> bool {
+        true
     }
 }
 

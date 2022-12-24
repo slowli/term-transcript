@@ -287,6 +287,7 @@ impl Transcript {
         let (mut pipe_reader, pipe_writer) = os_pipe::pipe()?;
         #[cfg(feature = "tracing")]
         tracing::debug!("created OS pipe");
+
         let mut child = command
             .stdin(Stdio::null())
             .stdout(pipe_writer.try_clone()?)

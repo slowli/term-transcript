@@ -110,13 +110,19 @@ impl SpawnShell for Command {
     type Reader = os_pipe::PipeReader;
     type Writer = ChildStdin;
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
         let (pipe_reader, pipe_writer) = os_pipe::pipe()?;
+        #[cfg(feature = "tracing")]
+        tracing::debug!("created OS pipe");
+
         let mut shell = self
             .stdin(Stdio::piped())
             .stdout(pipe_writer.try_clone()?)
             .stderr(pipe_writer)
             .spawn()?;
+        #[cfg(feature = "tracing")]
+        tracing::debug!("created child");
 
         self.stdout(Stdio::null()).stderr(Stdio::null());
 
@@ -132,6 +138,7 @@ impl SpawnShell for Command {
 }
 
 impl ShellProcess for Child {
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn check_is_alive(&mut self) -> io::Result<()> {
         if let Some(exit_status) = self.try_wait()? {
             let message = format!("Shell process has prematurely exited: {exit_status}");
@@ -141,6 +148,7 @@ impl ShellProcess for Child {
         }
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn terminate(mut self) -> io::Result<()> {
         if self.try_wait()?.is_none() {
             self.kill().or_else(|err| {
