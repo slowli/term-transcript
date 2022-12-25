@@ -98,6 +98,8 @@ See the [`examples` directory](examples) for more snapshot examples.
   by scripting interactions with them in tests. It works in Unix only.
 - [`trybuild`](https://crates.io/crates/trybuild) snapshot-tests output
   of a particular program (the Rust compiler).
+- [`trycmd`](https://crates.io/crates/trycmd) snapshot-tests CLI apps using
+  a text-based format.
 - Tools like [`termtosvg`](https://github.com/nbedos/termtosvg) and
   [Asciinema](https://asciinema.org/) allow recording terminal sessions and save them to SVG.
   The output of these tools is inherently *dynamic* (which, e.g., results in animated SVGs).
