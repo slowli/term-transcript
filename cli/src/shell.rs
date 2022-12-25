@@ -1,6 +1,6 @@
 //! Shell-related command-line args.
 
-use structopt::StructOpt;
+use clap::Args;
 
 use std::{env, ffi::OsString, io, process::Command, time::Duration};
 
@@ -85,33 +85,32 @@ impl ExitCodeCheck {
     }
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Args)]
 pub(crate) struct ShellArgs {
     /// Execute shell in a pseudo-terminal (PTY), rather than connecting to it via pipes.
     /// PTY size can be specified by providing row and column count in a string like 19x80.
     #[cfg(feature = "portable-pty")]
-    #[structopt(long)]
+    #[arg(long)]
     pty: Option<Option<PtySize>>,
 
     /// Shell command without args (they are supplied separately). If omitted,
     /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
-    #[structopt(long, short = "s")]
+    #[arg(long, short = 's')]
     shell: Option<OsString>,
 
-    /// Is the shell echoing (i.e., echoes all inputs to the output)? By default,
-    /// shells are considered to be non-echoing.
-    #[structopt(long)]
+    /// Sets the shell as echoing (i.e., one that echoes all inputs to the output).
+    #[arg(long)]
     echoing: bool,
 
     /// Arguments to supply to the shell command.
-    #[structopt(name = "args", long, short = "a")]
+    #[arg(name = "args", long, short = 'a')]
     shell_args: Vec<OsString>,
 
     /// Timeout for I/O operations in milliseconds.
-    #[structopt(
+    #[arg(
         name = "io-timeout",
         long,
-        short = "T",
+        short = 'T',
         value_name = "millis",
         default_value = "1000"
     )]
