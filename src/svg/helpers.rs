@@ -25,6 +25,10 @@ fn to_i64(value: f64) -> Option<i64> {
 struct ScopeHelper;
 
 impl HelperDef for ScopeHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip_all, err, fields(helper.hash = ?helper.hash()))
+    )]
     fn call<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'reg, 'rc>,
@@ -64,9 +68,28 @@ impl VarHelper {
             value: Mutex::new(value),
         }
     }
+
+    fn set_value(&self, value: Json) {
+        #[cfg(feature = "tracing")]
+        tracing::debug!(?value, "overwritten var");
+        *self.value.lock().unwrap() = value;
+    }
 }
 
 impl HelperDef for VarHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "debug",
+            skip_all, err,
+            fields(
+                self = ?self,
+                helper.name = helper.name(),
+                helper.is_block = helper.is_block(),
+                helper.set = ?helper.hash_get("set")
+            )
+        )
+    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'reg, 'rc>,
@@ -92,7 +115,7 @@ impl HelperDef for VarHelper {
                 Json::Null
             };
 
-            *self.value.lock().unwrap() = value;
+            self.set_value(value);
             Ok(ScopedJson::Constant(&Json::Null))
         } else {
             if !helper.params().is_empty() {
@@ -102,7 +125,7 @@ impl HelperDef for VarHelper {
 
             if let Some(value) = helper.hash_get("set") {
                 // Variable setter.
-                *self.value.lock().unwrap() = value.value().clone();
+                self.set_value(value.value().clone());
                 Ok(ScopedJson::Constant(&Json::Null))
             } else {
                 // Variable getter.
@@ -153,6 +176,19 @@ impl OpsHelper {
 }
 
 impl HelperDef for OpsHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "debug",
+            skip_all, err,
+            fields(
+                self = ?self,
+                helper.name = helper.name(),
+                helper.params = ?helper.params(),
+                helper.round = ?helper.hash_get("round")
+            )
+        )
+    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'reg, 'rc>,
@@ -167,6 +203,9 @@ impl HelperDef for OpsHelper {
 
         if !matches!(self, Self::Div) {
             let all_ints = helper.params().iter().all(|param| param.value().is_i64());
+            #[cfg(feature = "tracing")]
+            tracing::debug!(all_ints, "checked if all numbers are ints");
+
             if all_ints {
                 let values = helper
                     .params()
@@ -213,6 +252,14 @@ impl HelperDef for OpsHelper {
 struct EvalHelper;
 
 impl HelperDef for EvalHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "debug",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'reg, 'rc>,
@@ -262,6 +309,14 @@ impl HelperDef for EvalHelper {
 struct LineCounter;
 
 impl HelperDef for LineCounter {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "debug",
+            skip_all, err,
+            fields(helper.params = ?helper.params(), helper.format = ?helper.hash_get("format"))
+        )
+    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'reg, 'rc>,
@@ -306,6 +361,14 @@ impl RangeHelper {
 }
 
 impl HelperDef for RangeHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "debug",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'reg, 'rc>,

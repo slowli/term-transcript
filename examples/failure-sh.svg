@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 400" width="720" height="400" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 168" width="720" height="168" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #1c1c1c; --i-black: #666666;
@@ -71,31 +71,20 @@
     .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
     .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
-  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
-  <svg x="0" y="10" width="720" height="380" viewBox="0 0 720 380">
-    <foreignObject width="720" height="380">
+  <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: var(--black);" />
+  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: var(--hl-black);"/>
+  <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
+  <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
+  <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
+  <svg x="0" y="10" width="720" height="126" viewBox="0 0 720 126">
+    <foreignObject width="720" height="126">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -T 300 &#x27;rainbow.sh --short&#x27; &gt; bogus.svg &amp;&amp; \
-  sed -i -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
-# Mutate the captured output, removing some styles</pre></div>
+        <div class="user-input user-input-failure" data-exit-status="127" title="This command exited with non-zero code"><pre><span class="prompt">$</span> ./non-existing-command</pre></div>
+        <div class="term-output"><pre>sh: 1: ./non-existing-command: not found</pre></div>
+        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> [ -x non-existing-file ]</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -T 300 --precise bogus.svg
-# --precise / -p flag enables comparison by style</pre></div>
-        <div class="term-output"><pre>Testing file <span class="underline">bogus.svg</span>...
-  [<span class="fg1">#</span>] Input: rainbow.sh --short
-= Base colors:
-<span class="fg1">&gt; </span><span class="underline fg0">black</span> <span class="fg1">red</span> <span class="underline fg2">green</span> <span class="fg3">yellow</span> <span class="underline">blue</span> <span class="fg5">magenta</span> <span class="underline fg6">cyan</span> <span class="fg7">white</span> 
-<span class="fg1">&gt; </span>                       <span class="fg7 bg1">^^^^</span>
-= <span class="fg8">black</span> <span class="underline fg9">red</span> <span class="fg10">green</span> <span class="underline fg11">yellow</span> <span class="fg12">blue</span> <span class="underline fg13">magenta</span> <span class="fg14">cyan</span> <span class="underline fg15">white</span> 
-= Base colors (bg):
-= <span class="bg0">black</span> <span class="bg1">red</span> <span class="bg2">green</span> <span class="bg3">yellow</span> <span class="bg4">blue</span> <span class="bg5">magenta</span> <span class="bg6">cyan</span> <span class="bg7">white</span> 
-<span class="fg1">&gt; </span><span class="bg8">black</span> <span class="bg9">red</span> <span class="bg10">green</span> <span class="bg11">yellow</span> <span class="bg12">blue</span> magenta <span class="bg14">cyan</span> <span class="bg15">white</span> 
-<span class="fg1">&gt; </span>                            <span class="fg7 bg1">^^^^^^^</span>
-<span class="bold">Positions      Expected style          Actual style     
-========== ====================== ======================
-</span>    36..40 <span class="underline">--u-   (none)/(none)  </span> <span class="underline fg4">--u-     blue/(none)  </span>
-  203..210 ----   (none)/(none)   <span class="bg13">----   (none)/magenta*</span>
-Totals: passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></pre></div>
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> [ -x non-existing-file ] || echo &quot;File is not there!&quot;</pre></div>
+        <div class="term-output"><pre>File is not there!</pre></div>
       </div>
     </foreignObject>
   </svg>

@@ -10,11 +10,16 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Support custom rendering templates via `Template::custom()`. 
   This allows customizing rendering logic, including changing the output format
   entirely (e.g., to HTML).
+- Allow capturing exit statuses of commands executed in the shell.
+- Trace major operations using the [`tracing`](https://docs.rs/tracing/) facade.
 
 ### Changed
 
 - Update `quick-xml` dependency.
 - Bump minimum supported Rust version to 1.61.
+- Replace a line mapper in `ShellOptions` to a more general line decoder that can handle
+  non-UTF-8 encodings besides input filtering.
+- Improve configuring echoing in `ShellOptions`.
 
 ## 0.2.0 - 2022-06-12
 

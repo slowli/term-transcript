@@ -1,11 +1,11 @@
 //! CLI for the `term-transcript` crate.
 
 use anyhow::Context;
-use clap::AppSettings;
-use structopt::StructOpt;
+use clap::{Parser, Subcommand, ValueEnum};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use std::{
+    fmt,
     fs::File,
     io::{self, BufReader, Read, Write},
     path::{Path, PathBuf},
@@ -15,6 +15,7 @@ use std::{
 
 use term_transcript::{
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
+    traits::SpawnShell,
     Transcript, UserInput,
 };
 
@@ -24,48 +25,48 @@ mod template;
 use crate::{shell::ShellArgs, template::TemplateArgs};
 
 /// CLI for capturing and snapshot-testing terminal output.
-#[derive(Debug, StructOpt)]
-#[structopt(global_setting = AppSettings::ColoredHelp)]
-enum Args {
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
     /// Captures output from stdin and renders it to SVG.
     Capture {
         /// Command to record as user input.
         command: String,
-        #[structopt(flatten)]
+        #[command(flatten)]
         template: TemplateArgs,
     },
 
     /// Executes one or more commands in a shell and renders the captured output to SVG.
     Exec {
-        #[structopt(flatten)]
+        #[command(flatten)]
         shell: ShellArgs,
         /// Inputs to supply to the shell.
         inputs: Vec<String>,
-        #[structopt(flatten)]
+        #[command(flatten)]
         template: TemplateArgs,
     },
 
     /// Tests previously captured SVG snapshots.
     Test {
-        #[structopt(flatten)]
+        #[command(flatten)]
         shell: ShellArgs,
         /// Paths to the SVG file(s) to test.
-        #[structopt(name = "svg")]
+        #[arg(name = "svg")]
         svg_paths: Vec<PathBuf>,
         /// Prints terminal output for passed user inputs.
-        #[structopt(long, short = "v")]
+        #[arg(long, short = 'v')]
         verbose: bool,
         /// Matches coloring of the terminal output, rather than matching only text.
-        #[structopt(long, short = "p")]
+        #[arg(long, short = 'p')]
         precise: bool,
         /// Controls coloring of the output.
-        #[structopt(
-            long,
-            short = "c",
-            default_value = "auto",
-            possible_values = &["always", "ansi", "never", "auto"],
-            env
-        )]
+        #[arg(long, short = 'c', default_value = "auto", value_enum, env)]
         color: ColorPreference,
     },
 
@@ -73,21 +74,15 @@ enum Args {
     /// the coloring of the output is switched off).
     Print {
         /// Path to the SVG file to output.
-        #[structopt(name = "svg")]
+        #[arg(name = "svg")]
         svg_path: PathBuf,
         /// Controls coloring of the output.
-        #[structopt(
-            long,
-            short = "c",
-            default_value = "auto",
-            possible_values = &["always", "ansi", "never", "auto"],
-            env
-        )]
+        #[arg(long, short = 'c', default_value = "auto", value_enum, env)]
         color: ColorPreference,
     },
 }
 
-impl Args {
+impl Command {
     fn run(self) -> anyhow::Result<()> {
         match self {
             Self::Capture { command, template } => {
@@ -169,7 +164,10 @@ impl Args {
         Ok(())
     }
 
-    fn process_file(svg_path: &Path, test_config: &mut TestConfig) -> anyhow::Result<TestStats> {
+    fn process_file<Cmd: SpawnShell + fmt::Debug>(
+        svg_path: &Path,
+        test_config: &mut TestConfig<Cmd>,
+    ) -> anyhow::Result<TestStats> {
         let svg = BufReader::new(File::open(svg_path)?);
         let transcript = Transcript::from_svg(svg)?;
         test_config
@@ -231,6 +229,19 @@ impl Args {
             let input = interaction.input();
             writeln!(out, "{} {}", input.prompt().unwrap_or("$"), input.as_ref())?;
 
+            if let Some(exit_status) = interaction.exit_status() {
+                if !exit_status.is_success() {
+                    out.set_color(ColorSpec::new().set_bold(true))?;
+                    write!(out, "Exit status:")?;
+                    out.reset()?;
+                    write!(out, " {} ", exit_status.0)?;
+
+                    out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
+                    writeln!(out, "(failure)")?;
+                    out.reset()?;
+                }
+            }
+
             out.set_color(ColorSpec::new().set_bold(true))?;
             writeln!(out, "\n---------- Output #{} ----------", i + 1)?;
             out.reset()?;
@@ -249,7 +260,7 @@ impl Args {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum ColorPreference {
     Always,
     Ansi,
@@ -319,5 +330,5 @@ impl FullTestStats {
 }
 
 fn main() -> anyhow::Result<()> {
-    Args::from_args().run()
+    Cli::parse().command.run()
 }

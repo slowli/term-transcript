@@ -1,5 +1,7 @@
 use handlebars::Template as HandlebarsTemplate;
 use tempfile::tempdir;
+use tracing::{subscriber::DefaultGuard, Subscriber};
+use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
 use std::{
     fs::{self, File},
@@ -20,6 +22,19 @@ use term_transcript::{
 
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
+
+fn create_fmt_subscriber() -> impl Subscriber {
+    FmtSubscriber::builder()
+        .pretty()
+        .with_span_events(FmtSpan::CLOSE)
+        .with_test_writer()
+        .with_env_filter("term_transcript=debug")
+        .finish()
+}
+
+fn enable_tracing() -> DefaultGuard {
+    tracing::subscriber::set_default(create_fmt_subscriber())
+}
 
 fn main_snapshot_path() -> &'static Path {
     Path::new("../../examples/rainbow.svg")
@@ -48,9 +63,11 @@ fn repl_snapshot_path() -> &'static Path {
 
 #[test]
 fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
+    let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_cargo_path();
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+
     let mut buffer = vec![];
     let template_options = TemplateOptions {
         palette: NamedPalette::Gjm8.into(),
@@ -71,6 +88,7 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
 
 #[test]
 fn snapshot_with_custom_template() -> anyhow::Result<()> {
+    let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_cargo_path();
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
@@ -83,7 +101,7 @@ fn snapshot_with_custom_template() -> anyhow::Result<()> {
     let mut buffer = vec![];
     Template::custom(template, template_options).render(&transcript, &mut buffer)?;
     let buffer = String::from_utf8(buffer)?;
-    assert!(buffer.starts_with("<!DOCTYPE html>"), "{}", buffer);
+    assert!(buffer.starts_with("<!DOCTYPE html>"), "{buffer}");
     Ok(())
 }
 
@@ -110,8 +128,7 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
     let output = interaction.output().to_plaintext()?;
     assert!(
         output.contains("\nblack blue green red cyan magenta yellow"),
-        "{}",
-        output
+        "{output}"
     );
 
     Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
@@ -128,6 +145,7 @@ fn snapshot_testing_low_level() -> anyhow::Result<()> {
 
 #[test]
 fn snapshot_testing() {
+    let _guard = enable_tracing();
     let shell_options = ShellOptions::default().with_cargo_path();
     TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
 }
@@ -197,7 +215,7 @@ fn bash_shell_example() {
 #[test]
 fn powershell_example() {
     fn powershell_exists() -> bool {
-        let exit_status = Command::new("powershell")
+        let exit_status = Command::new("pwsh")
             .arg("-Help")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -207,11 +225,11 @@ fn powershell_example() {
     }
 
     if !powershell_exists() {
-        println!("powershell not found; exiting");
+        println!("pwsh not found; exiting");
         return;
     }
 
-    let shell_options = ShellOptions::powershell()
+    let shell_options = ShellOptions::pwsh()
         .with_init_timeout(Duration::from_secs(2))
         .with_alias("colored-output", PATH_TO_BIN);
     TestConfig::new(shell_options)
@@ -252,13 +270,13 @@ impl ErrorType {
                 let mut buffer = String::new();
                 read_main_snapshot()?.read_to_string(&mut buffer)?;
                 let buffer = buffer.replace(" rainbow", " ????");
-                fs::write(snapshot_path, &buffer)
+                fs::write(snapshot_path, buffer)
             }
             Self::OutputMismatch => {
                 let mut buffer = String::new();
                 read_main_snapshot()?.read_to_string(&mut buffer)?;
                 let buffer = buffer.replace("pink", "???");
-                fs::write(snapshot_path, &buffer)
+                fs::write(snapshot_path, buffer)
             }
         }
     }
@@ -287,13 +305,11 @@ fn test_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let err = *test_result.unwrap_err().downcast::<String>().unwrap();
     assert!(
         err.contains(error_type.expected_error_message()),
-        "Unexpected error message: {}",
-        err
+        "Unexpected error message: {err}"
     );
     assert!(
         err.contains("rainbow.new.svg"),
-        "Unexpected error message: {}",
-        err
+        "Unexpected error message: {err}"
     );
 
     let new_snapshot_path = temp_dir.path().join("rainbow.new.svg");
@@ -305,8 +321,7 @@ fn test_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let output_plaintext = interactions[0].output().plaintext();
     assert!(
         output_plaintext.contains("pink"),
-        "Unexpected output: {}",
-        output_plaintext
+        "Unexpected output: {output_plaintext}"
     );
 
     Ok(())
@@ -342,14 +357,12 @@ fn test_no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let err = *test_result.unwrap_err().downcast::<String>().unwrap();
     assert!(
         err.contains(error_type.expected_error_message()),
-        "Unexpected error message: {}",
-        err
+        "Unexpected error message: {err}"
     );
     if error_type != ErrorType::MissingSnapshot {
         assert!(
             err.contains("Skipped writing new snapshot"),
-            "Unexpected error message: {}",
-            err
+            "Unexpected error message: {err}"
         );
     }
 

@@ -3,7 +3,7 @@ name = "term-transcript-rainbow"
 version = "0.0.0"
 publish = false
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [[bin]]
@@ -21,11 +21,14 @@ termcolor = "1.1.2"
 [dependencies.term-transcript]
 version = "0.2.0"
 path = "../.."
+features = ["tracing"]
 
 [dev-dependencies]
 handlebars = "4.3.1"
 pretty_assertions = "1.0.0"
 tempfile = "3.2.0"
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [features]
 portable-pty = ["term-transcript/portable-pty"]

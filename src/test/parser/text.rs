@@ -3,20 +3,28 @@
 use quick_xml::events::{BytesStart, Event};
 use termcolor::{Color, ColorSpec, WriteColor};
 
-use std::{borrow::Cow, io::Write, mem, str};
+use std::{borrow::Cow, fmt, io::Write, mem, str};
 
-use super::{parse_class, ParseError, Parsed};
+use super::{parse_classes, ParseError, Parsed};
 use crate::{
     test::color_diff::ColorSpansWriter,
     utils::{normalize_newlines, RgbColor},
 };
 
-#[derive(Debug)]
 pub(super) struct TextReadingState {
     pub plaintext_buffer: String,
     html_buffer: String,
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
+}
+
+impl fmt::Debug for TextReadingState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TextReadingState")
+            .field("plaintext_buffer", &self.plaintext_buffer)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Default for TextReadingState {
@@ -100,7 +108,7 @@ impl TextReadingState {
     ///
     /// **NB.** Must correspond to the span creation logic in the `html` module.
     fn parse_color_from_span(span_tag: &BytesStart) -> Result<ColorSpec, ParseError> {
-        let class_attr = parse_class(span_tag.attributes())?;
+        let class_attr = parse_classes(span_tag.attributes())?;
         let mut color_spec = ColorSpec::new();
         Self::parse_color_from_classes(&mut color_spec, &class_attr);
 
@@ -247,8 +255,8 @@ mod tests {
         let mut color_spec = ColorSpec::new();
         TextReadingState::parse_color_from_classes(&mut color_spec, b"bold fg3 underline bg11");
 
-        assert!(color_spec.bold(), "{:?}", color_spec);
-        assert!(color_spec.underline(), "{:?}", color_spec);
+        assert!(color_spec.bold(), "{color_spec:?}");
+        assert!(color_spec.underline(), "{color_spec:?}");
         assert_eq!(color_spec.fg(), Some(&Color::Yellow));
         assert_eq!(color_spec.bg(), Some(&Color::Ansi256(11)));
     }

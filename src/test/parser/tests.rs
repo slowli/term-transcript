@@ -1,9 +1,10 @@
-use super::*;
-
 use assert_matches::assert_matches;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText};
 
 use std::io::{Cursor, Read};
+
+use super::*;
+use crate::ExitStatus;
 
 const SVG: &[u8] = br#"
     <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
@@ -91,6 +92,42 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
 }
 
 #[test]
+fn reading_file_with_exit_code_info() {
+    const SVG: &[u8] = br#"
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+          <foreignObject x="0" y="0" width="652" height="344">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+              <div class="user-input user-input-invalid" data-exit-status="127"><pre><span class="prompt">$</span> what</pre></div>
+            </div>
+          </foreignObject>
+        </svg>
+    "#;
+
+    let transcript = Transcript::from_svg(SVG).unwrap();
+    assert_eq!(transcript.interactions.len(), 1);
+
+    let interaction = &transcript.interactions[0];
+    assert_eq!(interaction.input.text, "what");
+    assert_eq!(interaction.exit_status, Some(ExitStatus(127)));
+}
+
+#[test]
+fn invalid_exit_code_info() {
+    const SVG: &[u8] = br#"
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+          <foreignObject x="0" y="0" width="652" height="344">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+              <div class="user-input user-input-invalid" data-exit-status="??"><pre><span class="prompt">$</span> what</pre></div>
+            </div>
+          </foreignObject>
+        </svg>
+    "#;
+
+    let err = Transcript::from_svg(SVG).unwrap_err();
+    assert_matches!(err, ParseError::InvalidExitStatus(_));
+}
+
+#[test]
 fn reading_file_without_svg_tag() {
     let data: &[u8] = b"<div>Text</div>";
     let err = Transcript::from_svg(data).unwrap_err();
@@ -141,24 +178,8 @@ fn reading_file_with_invalid_container() {
 }
 
 #[test]
-fn reading_file_without_term_output() {
-    let bogus_data: &[u8] = br#"
-        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
-          <foreignObject x="0" y="0" width="652" height="344">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-              <div class="user-input"><pre>$ ls -al --color=always</pre></div>
-            </div>
-          </foreignObject>
-        </svg>
-        "#;
-    let err = Transcript::from_svg(bogus_data).unwrap_err();
-
-    assert_matches!(err, ParseError::UnexpectedEof);
-}
-
-#[test]
 fn reading_user_input_with_manual_events() {
-    let mut state = UserInputState::default();
+    let mut state = UserInputState::new(None);
     {
         let event = Event::Start(BytesStart::new("pre"));
         assert!(state.process(event).unwrap().is_none());
@@ -191,7 +212,7 @@ fn reading_user_input_with_manual_events() {
     assert!(state.process(event).unwrap().is_none());
 
     let event = Event::End(BytesEnd::new("div"));
-    let user_input = state.process(event).unwrap().unwrap();
+    let user_input = state.process(event).unwrap().unwrap().input;
     assert_eq!(user_input.prompt(), Some("$"));
     assert_eq!(user_input.text, "rainbow");
 }
@@ -203,7 +224,7 @@ fn read_user_input(input: &[u8]) -> UserInput {
     wrapped_input.extend_from_slice(b"</div>");
 
     let mut reader = XmlReader::from_reader(wrapped_input.as_slice());
-    let mut state = UserInputState::default();
+    let mut state = UserInputState::new(None);
 
     // Skip the `<div>` start event.
     while !matches!(reader.read_event().unwrap(), Event::Start(_)) {
@@ -216,8 +237,8 @@ fn read_user_input(input: &[u8]) -> UserInput {
             panic!("Reached EOF without creating `UserInput`");
         }
 
-        if let Some(user_input) = state.process(event).unwrap() {
-            break user_input;
+        if let Some(interaction) = state.process(event).unwrap() {
+            break interaction.input;
         }
     }
 }

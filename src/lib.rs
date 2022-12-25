@@ -8,7 +8,7 @@
 //!   and [ANSI-compatible color info][SGR].
 //! - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
 //!   into HTML / Markdown documents. (Output format customization
-//!   [is also supported](crate::svg::Template#customization) via [Handlebars] templates.)
+//!   [is also supported](svg::Template#customization) via [Handlebars] templates.)
 //! - Parse transcripts from SVG
 //! - Test that a parsed transcript actually corresponds to the terminal output (either as text
 //!   or text + colors).
@@ -47,8 +47,12 @@
 //!
 //! - [`insta`](https://crates.io/crates/insta) is a generic snapshot testing library, which
 //!   is amazing in general, but *kind of* too low-level for E2E CLI testing.
+//! - [`rexpect`](https://crates.io/crates/rexpect) allows testing CLI / REPL applications
+//!   by scripting interactions with them in tests. It works in Unix only.
 //! - [`trybuild`](https://crates.io/crates/trybuild) snapshot-tests output
 //!   of a particular program (the Rust compiler).
+//! - [`trycmd`](https://crates.io/crates/trycmd) snapshot-tests CLI apps using
+//!   a text-based format.
 //! - Tools like [`termtosvg`](https://github.com/nbedos/termtosvg) and
 //!   [Asciinema](https://asciinema.org/) allow recording terminal sessions and save them to SVG.
 //!   The output of these tools is inherently *dynamic* (which, e.g., results in animated SVGs).
@@ -57,16 +61,40 @@
 //!
 //! # Crate features
 //!
-//! - `portable-pty`. Allows using pseudo-terminal (PTY) to capture terminal output rather
-//!   than pipes. Uses [the eponymous crate][`portable-pty`] under the hood.
-//! - `svg`. Exposes [the eponymous module](crate::svg) that allows rendering [`Transcript`]s
-//!   into the SVG format.
-//! - `test`. Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
-//!   from SVG files and testing them.
-//! - `pretty_assertions`. Uses [the eponymous crate][`pretty_assertions`] when testing SVG files.
-//!   Only really makes sense together with the `test` feature.
+//! ## `portable-pty`
 //!
-//! `svg`, `test` and `pretty_assertions` features are on by default.
+//! *(Off by default)*
+//!
+//! Allows using pseudo-terminal (PTY) to capture terminal output rather than pipes.
+//! Uses [the eponymous crate][`portable-pty`] under the hood.
+//!
+//! ## `svg`
+//!
+//! *(On by default)*
+//!
+//! Exposes [the eponymous module](svg) that allows rendering [`Transcript`]s
+//! into the SVG format.
+//!
+//! ## `test`
+//!
+//! *(On by default)*
+//!
+//! Exposes [the eponymous module](crate::test) that allows parsing [`Transcript`]s
+//! from SVG files and testing them.
+//!
+//! ## `pretty_assertions`
+//!
+//! *(On by default)*
+//!
+//! Uses [the eponymous crate][`pretty_assertions`] when testing SVG files.
+//! Only really makes sense together with the `test` feature.
+//!
+//! ## `tracing`
+//!
+//! *(Off by default)*
+//!
+//! Uses [the eponymous facade][`tracing`] to trace main operations, which could be useful
+//! for debugging. Tracing is mostly performed on the `DEBUG` level.
 //!
 //! [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG
 //! [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
@@ -75,6 +103,7 @@
 //! [Handlebars]: https://handlebarsjs.com/
 //! [`pretty_assertions`]: https://docs.rs/pretty_assertions/
 //! [`portable-pty`]: https://docs.rs/portable-pty/
+//! [`tracing`]: https://docs.rs/tracing/
 //!
 //! # Examples
 //!
@@ -172,15 +201,13 @@ impl fmt::Display for TermError {
             Self::UnrecognizedSequence(byte) => {
                 write!(
                     formatter,
-                    "Unrecognized escape sequence (first byte is {})",
-                    byte
+                    "Unrecognized escape sequence (first byte is {byte})"
                 )
             }
             Self::InvalidSgrFinalByte(byte) => {
                 write!(
                     formatter,
-                    "Invalid final byte for an SGR escape sequence: {}",
-                    byte
+                    "Invalid final byte for an SGR escape sequence: {byte}"
                 )
             }
             Self::UnfinishedColor => formatter.write_str("Unfinished color spec"),
@@ -236,14 +263,74 @@ impl Transcript {
     ///
     /// This method allows capturing interactions that are difficult or impossible to capture
     /// using more high-level methods: [`Self::from_inputs()`] or [`Self::capture_output()`].
-    /// The resulting transcript will [render](crate::svg) just fine, but there could be issues
+    /// The resulting transcript will [render](svg) just fine, but there could be issues
     /// with [testing](crate::test) it.
-    pub fn add_interaction(&mut self, input: UserInput, output: impl Into<String>) -> &mut Self {
-        self.interactions.push(Interaction {
-            input,
-            output: Captured::new(output.into()),
-        });
+    pub fn add_existing_interaction(&mut self, interaction: Interaction) -> &mut Self {
+        self.interactions.push(interaction);
         self
+    }
+
+    /// Manually adds a new interaction to the end of this transcript.
+    ///
+    /// This is a shortcut for calling [`Self::add_existing_interaction(_)`].
+    pub fn add_interaction(
+        &mut self,
+        input: impl Into<UserInput>,
+        output: impl Into<String>,
+    ) -> &mut Self {
+        self.add_existing_interaction(Interaction::new(input, output))
+    }
+}
+
+/// Portable, platform-independent version of [`ExitStatus`] from the standard library.
+///
+/// # Capturing `ExitStatus`
+///
+/// Some shells have means to check whether the input command was executed successfully.
+/// For example, in `sh`-like shells, one can compare the value of `$?` to 0, and
+/// in PowerShell to `True`. The exit status can be captured when creating a [`Transcript`]
+/// by setting a *checker* in [`ShellOptions::with_status_check()`]:
+///
+/// # Examples
+///
+/// ```
+/// # use term_transcript::{ExitStatus, ShellOptions, Transcript, UserInput};
+/// # fn test_wrapper() -> anyhow::Result<()> {
+/// let options = ShellOptions::default();
+/// let mut options = options.with_status_check("echo $?", |captured| {
+///     // Parse captured string to plain text. This transform
+///     // is especially important in transcripts captured from PTY
+///     // since they can contain a *wild* amount of escape sequences.
+///     let captured = captured.to_plaintext().ok()?;
+///     let code: i32 = captured.trim().parse().ok()?;
+///     Some(ExitStatus(code))
+/// });
+///
+/// let transcript = Transcript::from_inputs(&mut options, [
+///     UserInput::command("echo \"Hello world\""),
+///     UserInput::command("some-non-existing-command"),
+/// ])?;
+/// let status = transcript.interactions()[0].exit_status();
+/// assert!(status.unwrap().is_success());
+/// // The assertion above is equivalent to:
+/// assert_eq!(status, Some(ExitStatus(0)));
+///
+/// let status = transcript.interactions()[1].exit_status();
+/// assert!(!status.unwrap().is_success());
+/// # Ok(())
+/// # }
+/// # // We can compile test in any case, but it successfully executes only on *nix.
+/// # #[cfg(unix)] fn main() { test_wrapper().unwrap() }
+/// # #[cfg(not(unix))] fn main() { }
+/// ```
+#[allow(clippy::doc_markdown)] // false positive on "PowerShell"
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ExitStatus(pub i32);
+
+impl ExitStatus {
+    /// Checks if this is the successful status.
+    pub fn is_success(self) -> bool {
+        self.0 == 0
     }
 }
 
@@ -252,6 +339,25 @@ impl Transcript {
 pub struct Interaction<Out: TermOutput = Captured> {
     input: UserInput,
     output: Out,
+    exit_status: Option<ExitStatus>,
+}
+
+impl Interaction {
+    /// Creates a new interaction.
+    pub fn new(input: impl Into<UserInput>, output: impl Into<String>) -> Self {
+        Self {
+            input: input.into(),
+            output: Captured::new(output.into()),
+            exit_status: None,
+        }
+    }
+
+    /// Assigns an exit status to this interaction.
+    #[must_use]
+    pub fn with_exit_status(mut self, exit_status: ExitStatus) -> Self {
+        self.exit_status = Some(exit_status);
+        self
+    }
 }
 
 impl<Out: TermOutput> Interaction<Out> {
@@ -263,6 +369,11 @@ impl<Out: TermOutput> Interaction<Out> {
     /// Output to the terminal.
     pub fn output(&self) -> &Out {
         &self.output
+    }
+
+    /// Returns exit status of the interaction, if available.
+    pub fn exit_status(&self) -> Option<ExitStatus> {
+        self.exit_status
     }
 }
 

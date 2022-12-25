@@ -4,11 +4,14 @@ use std::{
     ffi::OsStr,
     io,
     path::Path,
-    process::{ChildStdin, Command},
+    process::{Child, ChildStdin, Command},
 };
 
 use super::ShellOptions;
-use crate::traits::{ChildShell, ConfigureCommand, SpawnShell, SpawnedShell};
+use crate::{
+    traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
+    Captured, ExitStatus,
+};
 
 #[derive(Debug, Clone, Copy)]
 enum StdShellType {
@@ -37,34 +40,54 @@ impl ConfigureCommand for StdShell {
     }
 }
 
+#[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", ret))]
+fn check_sh_exit_code(response: &Captured) -> Option<ExitStatus> {
+    let response = response.to_plaintext().ok()?;
+    response.trim().parse().ok().map(ExitStatus)
+}
+
+#[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", ret))]
+fn check_ps_exit_code(response: &Captured) -> Option<ExitStatus> {
+    let response = response.to_plaintext().ok()?;
+    match response.trim() {
+        "True" => Some(ExitStatus(0)),
+        "False" => Some(ExitStatus(1)),
+        _ => None,
+    }
+}
+
 impl ShellOptions<StdShell> {
     /// Creates options for an `sh` shell.
     pub fn sh() -> Self {
-        Self::new(StdShell {
+        let this = Self::new(StdShell {
             shell_type: StdShellType::Sh,
             command: Command::new("sh"),
-        })
+        });
+        this.with_status_check("echo $?", check_sh_exit_code)
     }
 
     /// Creates options for a Bash shell.
     pub fn bash() -> Self {
-        Self::new(StdShell {
+        let this = Self::new(StdShell {
             shell_type: StdShellType::Bash,
             command: Command::new("bash"),
-        })
+        });
+        this.with_status_check("echo $?", check_sh_exit_code)
     }
 
-    /// Creates options for PowerShell.
+    /// Creates options for PowerShell 6+ (the one with the `pwsh` executable).
     #[allow(clippy::doc_markdown)] // false positive
-    pub fn powershell() -> Self {
-        let mut command = Command::new("powershell");
+    pub fn pwsh() -> Self {
+        let mut command = Command::new("pwsh");
         command.arg("-NoLogo").arg("-NoExit");
 
         let command = StdShell {
             shell_type: StdShellType::PowerShell,
             command,
         };
-        Self::new(command).with_init_command("function prompt { }")
+        Self::new(command)
+            .with_init_command("function prompt { }")
+            .with_status_check("echo $?", check_ps_exit_code)
     }
 
     /// Creates an alias for the binary at `path_to_bin`, which should be an absolute path.
@@ -98,23 +121,21 @@ impl ShellOptions<StdShell> {
 }
 
 impl SpawnShell for StdShell {
-    type ShellProcess = ChildShell;
+    type ShellProcess = Echoing<Child>;
     type Reader = os_pipe::PipeReader;
     type Writer = ChildStdin;
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
         let SpawnedShell {
-            mut shell,
+            shell,
             reader,
             writer,
         } = self.command.spawn_shell()?;
 
-        if matches!(self.shell_type, StdShellType::PowerShell) {
-            shell.set_echoing();
-        }
-
+        let is_echoing = matches!(self.shell_type, StdShellType::PowerShell);
         Ok(SpawnedShell {
-            shell,
+            shell: Echoing::new(shell, is_echoing),
             reader,
             writer,
         })

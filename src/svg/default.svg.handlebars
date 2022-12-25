@@ -99,6 +99,12 @@
       {{~/each}}
 
       --hl-black: rgba(255, 255, 255, 0.1);
+
+      {{~#if has_failures}}
+
+      --hl-red: rgba(255, 0, 65, 0.15);
+      {{~/if}}
+
     }
     .container {
       padding: 0 {{const.WINDOW_PADDING}}px;
@@ -118,6 +124,14 @@
       padding: 2px {{const.WINDOW_PADDING}}px;
     }
     .term-output { margin-bottom: {{const.BLOCK_MARGIN}}px; }
+    {{~#if has_failures}}
+
+    .user-input-failure {
+      border-left: 2px solid var(--red);
+      border-right: 2px solid var(--red);
+      background: var(--hl-red);
+    }
+    {{/if}}
     {{~#if (scroll_animation)}}
 
     .scrollbar { fill: rgba(255, 255, 255, 0.35); }
@@ -189,7 +203,9 @@
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         {{~#each interactions}}
 
-        <div class="user-input"><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
+        <div class="user-input{{#if failure}} user-input-failure{{/if}}"
+          {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
+          {{~#if failure}} title="This command exited with non-zero code"{{/if}}><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
         <div class="term-output"><pre>{{{output_html}}}</pre></div>
         {{~/each}}
 

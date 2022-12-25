@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 390" width="720" height="390" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 720 336" width="720" height="336" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #1c1c1c; --i-black: #666666;
@@ -65,29 +65,26 @@
     .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
   <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
-  <svg x="0" y="10" width="720" height="370" viewBox="0 0 720 370">
-    <foreignObject width="720" height="370">
+  <svg x="0" y="10" width="720" height="316" viewBox="0 0 720 316">
+    <foreignObject width="720" height="316">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
         <div class="user-input"><pre><span class="prompt">$</span> term-transcript --help</pre></div>
-        <div class="term-output"><pre><span class="fg2">term-transcript-cli</span> 0.2.0
-CLI for capturing and snapshot-testing terminal output
-<span class="fg3">
-USAGE:</span>
-    term-transcript &lt;SUBCOMMAND&gt;
+        <div class="term-output"><pre>CLI wrapper for term-transcript
 
-<span class="fg3">FLAGS:
-</span>    <span class="fg2">-h</span>, <span class="fg2">--help</span>       Prints help information
-    <span class="fg2">-V</span>, <span class="fg2">--version</span>    Prints version information
+<span class="bold underline">Usage:</span> <span class="bold">term-transcript</span> &lt;COMMAND&gt;
 
-<span class="fg3">SUBCOMMANDS:
-</span>    <span class="fg2">capture</span>    Captures output from stdin and renders it to SVG
-    <span class="fg2">exec</span>       Executes one or more commands in a shell and renders the
-               captured output to SVG
-    <span class="fg2">help</span>       Prints this message or the help of the given subcommand(s)
-    <span class="fg2">print</span>      Prints a previously saved SVG file to stdout with the
-               captured coloring (unless the coloring of the output is
-               switched off)
-    <span class="fg2">test</span>       Tests previously captured SVG snapshots</pre></div>
+<span class="bold underline">Commands</span><span class="bold underline">:
+</span>  <span class="bold">capture</span>  Captures output from stdin and renders it to SVG
+  <span class="bold">exec</span>     Executes one or more commands in a shell and renders the captured
+               output to SVG
+  <span class="bold">test</span>     Tests previously captured SVG snapshots
+  <span class="bold">print</span>    Prints a previously saved SVG file to stdout with the captured
+               coloring (unless the coloring of the output is switched off)
+  <span class="bold">help</span>     Print this message or the help of the given subcommand(s)
+
+<span class="bold underline">Options:
+</span>  <span class="bold">-h</span>, <span class="bold">--help</span>     Print help information
+  <span class="bold">-V</span>, <span class="bold">--version</span>  Print version information</pre></div>
       </div>
     </foreignObject>
   </svg>

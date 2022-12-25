@@ -56,12 +56,15 @@ use crate::{svg::TemplateOptions, UserInput};
 ///     "wrap": {
 ///         "hard_break_at": 80
 ///     },
+///     "has_failures": false,
 ///     "interactions": [{
 ///         "input": {
 ///             "text": "rainbow",
 ///             "prompt": "$"
 ///         },
-///         "output_html": "Hello, <span class=\"fg2\">world</span>!"
+///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
+///         "failure": false,
+///         "exit_status": null,
 ///     }]
 /// });
 /// assert_eq!(serde_json::to_value(data).unwrap(), expected_json);
@@ -77,6 +80,8 @@ pub struct HandlebarsData<'r> {
     pub options: &'r TemplateOptions,
     /// Recorded terminal interactions.
     pub interactions: Vec<SerializedInteraction<'r>>,
+    /// Has any of terminal interactions failed?
+    pub has_failures: bool,
 }
 
 /// Information about software used for rendering (i.e., this crate).
@@ -135,4 +140,8 @@ pub struct SerializedInteraction<'a> {
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
     pub output_html: String,
+    /// Exit status of the latest executed program, or `None` if it cannot be determined.
+    pub exit_status: Option<i32>,
+    /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?
+    pub failure: bool,
 }

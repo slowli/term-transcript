@@ -72,6 +72,8 @@ A snapshot of the same example with the scrolling animation and window frame:
 A snapshot of a similar example rendered to HTML using [a custom template](examples/custom.html.handlebars)
 is available [as a source file](examples/rainbow.html) and [in the rendered form][html-example].
 
+See the [`examples` directory](examples) for more snapshot examples.
+
 ## Limitations
 
 - Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
@@ -96,6 +98,8 @@ is available [as a source file](examples/rainbow.html) and [in the rendered form
   by scripting interactions with them in tests. It works in Unix only.
 - [`trybuild`](https://crates.io/crates/trybuild) snapshot-tests output
   of a particular program (the Rust compiler).
+- [`trycmd`](https://crates.io/crates/trycmd) snapshot-tests CLI apps using
+  a text-based format.
 - Tools like [`termtosvg`](https://github.com/nbedos/termtosvg) and
   [Asciinema](https://asciinema.org/) allow recording terminal sessions and save them to SVG.
   The output of these tools is inherently *dynamic* (which, e.g., results in animated SVGs).

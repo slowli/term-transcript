@@ -123,9 +123,8 @@ impl UpdateMode {
         match env::var_os(ENV_VAR) {
             Some(s) => Self::from_os_str(&s).unwrap_or_else(|| {
                 panic!(
-                    "Cannot read update mode from env variable {}: `{}` is not a valid value \
+                    "Cannot read update mode from env variable {ENV_VAR}: `{}` is not a valid value \
                      (use one of `never` or `always`)",
-                    ENV_VAR,
                     s.to_string_lossy()
                 );
             }),

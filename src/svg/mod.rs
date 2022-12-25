@@ -13,7 +13,7 @@
 use handlebars::{Handlebars, RenderError, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
 
-use std::io::Write;
+use std::{fmt, io::Write};
 
 mod data;
 mod helpers;
@@ -71,19 +71,32 @@ impl TemplateOptions {
     ///
     /// Returns an error if output cannot be rendered to HTML (e.g., it contains invalid
     /// SGR sequences).
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip(transcript), err)
+    )]
     pub fn render_data<'s>(
         &'s self,
         transcript: &'s Transcript,
     ) -> Result<HandlebarsData<'s>, TermError> {
         let rendered_outputs = self.render_outputs(transcript)?;
+        let mut has_failures = false;
 
         let interactions: Vec<_> = transcript
             .interactions()
             .iter()
             .zip(rendered_outputs)
-            .map(|(interaction, output_html)| SerializedInteraction {
-                input: interaction.input(),
-                output_html,
+            .map(|(interaction, output_html)| {
+                let failure = interaction
+                    .exit_status()
+                    .map_or(false, |status| !status.is_success());
+                has_failures = has_failures || failure;
+                SerializedInteraction {
+                    input: interaction.input(),
+                    output_html,
+                    exit_status: interaction.exit_status().map(|status| status.0),
+                    failure,
+                }
             })
             .collect();
 
@@ -91,9 +104,14 @@ impl TemplateOptions {
             creator: CreatorData::default(),
             interactions,
             options: self,
+            has_failures,
         })
     }
 
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "debug", skip_all, err)
+    )]
     fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<String>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
             WrapOptions::HardBreakAt(width) => *width,
@@ -268,10 +286,18 @@ impl Default for WrapOptions {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug)]
 pub struct Template {
     options: TemplateOptions,
     handlebars: Handlebars<'static>,
+}
+
+impl fmt::Debug for Template {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Template")
+            .field("options", &self.options)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Default for Template {
@@ -307,6 +333,10 @@ impl Template {
     ///
     /// Returns a Handlebars rendering error, if any. Normally, the only errors could be
     /// related to I/O (e.g., the output cannot be written to a file).
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(skip_all, err, fields(self.options = ?self.options))
+    )]
     pub fn render<W: Write>(
         &self,
         transcript: &Transcript,
@@ -316,11 +346,9 @@ impl Template {
             .options
             .render_data(transcript)
             .map_err(|err| RenderError::from_error("content", err))?;
-        let data = HandlebarsData {
-            creator: data.creator,
-            options: data.options,
-            interactions: data.interactions,
-        };
+
+        #[cfg(feature = "tracing")]
+        let _entered = tracing::debug_span!("render_to_write").entered();
         self.handlebars
             .render_to_write(MAIN_TEMPLATE_NAME, &data, destination)
     }
@@ -329,7 +357,7 @@ impl Template {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::UserInput;
+    use crate::{ExitStatus, Interaction, UserInput};
 
     #[test]
     fn rendering_simple_transcript() {
@@ -344,15 +372,55 @@ mod tests {
             .render(&transcript, &mut buffer)
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
+
         assert!(buffer.starts_with("<!--"));
         assert!(
             buffer.ends_with("</svg>\n") || buffer.ends_with("</svg>\r\n"),
             // ^-- allows for different newline chars in Windows
-            "unexpected rendering result: {}",
-            buffer
+            "unexpected rendering result: {buffer}"
         );
         assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
+        assert!(!buffer.contains("data-exit-status"));
         assert!(!buffer.contains("<circle"));
+
+        assert!(!buffer.contains("user-input-failure"));
+        assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
+    }
+
+    #[test]
+    fn rendering_transcript_with_explicit_success() {
+        let mut transcript = Transcript::new();
+        let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+            .with_exit_status(ExitStatus(0));
+        transcript.add_existing_interaction(interaction);
+
+        let mut buffer = vec![];
+        Template::new(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(!buffer.contains("user-input-failure"));
+        assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
+        assert!(buffer.contains(r#"data-exit-status="0""#));
+    }
+
+    #[test]
+    fn rendering_transcript_with_failure() {
+        let mut transcript = Transcript::new();
+        let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+            .with_exit_status(ExitStatus(1));
+        transcript.add_existing_interaction(interaction);
+
+        let mut buffer = vec![];
+        Template::new(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains("user-input-failure"));
+        assert!(buffer.contains("title=\"This command exited with non-zero code\""));
+        assert!(buffer.contains(r#"data-exit-status="1""#));
     }
 
     #[test]
@@ -396,8 +464,8 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
-        assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{}", buffer);
-        assert!(buffer.contains("<animateTransform"), "{}", buffer);
+        assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
+        assert!(buffer.contains("<animateTransform"), "{buffer}");
     }
 
     #[test]
@@ -418,7 +486,7 @@ mod tests {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
-        assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{}", buffer);
-        assert!(buffer.contains("<br/>"), "{}", buffer);
+        assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
+        assert!(buffer.contains("<br/>"), "{buffer}");
     }
 }

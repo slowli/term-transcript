@@ -182,9 +182,7 @@ impl ColorDiff {
         debug_assert_eq!(
             lhs.iter().map(|span| span.len).sum::<usize>(),
             rhs.iter().map(|span| span.len).sum::<usize>(),
-            "Spans {:?} and {:?} must have equal total covered length",
-            lhs,
-            rhs
+            "Spans {lhs:?} and {rhs:?} must have equal total covered length"
         );
 
         let mut diff = Self::default();
