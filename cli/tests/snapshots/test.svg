@@ -1,5 +1,5 @@
-<!-- Created with term-transcript v0.1.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 362" width="720" height="362" xmlns="http://www.w3.org/2000/svg">
+<!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 -22 720 384" width="720" height="384" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
       --black: #1c1c1c; --i-black: #666666;
@@ -65,15 +65,19 @@
     .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
     .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
   </style>
-  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
+  <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: var(--black);" />
+  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: var(--hl-black);"/>
+  <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
+  <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
+  <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
   <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-    <animate attributeName="viewBox" values="0 0 720 342;0 72 720 342;0 144 720 342" dur="8s" repeatCount="indefinite" calcMode="discrete" />
+    <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342" dur="12.0s" repeatCount="indefinite" calcMode="discrete" />
     <foreignObject width="720" height="452">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 200 rainbow.sh &gt; rainbow.svg
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -T 300 rainbow.sh &gt; rainbow.svg
 # &#x60;-T&#x60; option defines the I/O timeout for the shell</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 200 -v rainbow.svg
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript test -T 300 -v rainbow.svg
 # &#x60;-v&#x60; switches on verbose output</pre></div>
         <div class="term-output"><pre>Testing file <span class="underline">rainbow.svg</span>...
   [<span class="fg2">+</span>] Input: rainbow.sh
@@ -99,6 +103,6 @@
     </foreignObject>
   </svg>
   <rect class="scrollbar" x="713" y="10" width="5" height="40">
-    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 151;0 302" dur="8s" repeatCount="indefinite" calcMode="discrete" />
+    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 100;0 201;0 302" dur="12.0s" repeatCount="indefinite" calcMode="discrete" />
   </rect>
 </svg>

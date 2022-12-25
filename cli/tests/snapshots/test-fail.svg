@@ -1,4 +1,4 @@
-<!-- Created with term-transcript v0.1.0 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 0 720 400" width="720" height="400" xmlns="http://www.w3.org/2000/svg">
   <style>
     :root {
@@ -11,6 +11,7 @@
       --white: #e5e5e5; --i-white: #f3f3f3;
       --yellow: #ffe755; --i-yellow: #ff9f00;
       --hl-black: rgba(255, 255, 255, 0.1);
+      --hl-red: rgba(255, 0, 65, 0.15);
     }
     .container {
       padding: 0 10px;
@@ -30,6 +31,12 @@
       padding: 2px 10px;
     }
     .term-output { margin-bottom: 6px; }
+    .user-input-failure {
+      border-left: 2px solid var(--red);
+      border-right: 2px solid var(--red);
+      background: var(--hl-red);
+    }
+
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
@@ -68,11 +75,11 @@
   <svg x="0" y="10" width="720" height="380" viewBox="0 0 720 380">
     <foreignObject width="720" height="380">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript exec -T 200 &#x27;rainbow.sh --short&#x27; &gt; bogus.svg &amp;&amp; \
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -T 300 &#x27;rainbow.sh --short&#x27; &gt; bogus.svg &amp;&amp; \
   sed -i -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
 # Mutate the captured output, removing some styles</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input"><pre><span class="prompt">$</span> term-transcript test -T 200 --precise bogus.svg
+        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -T 300 --precise bogus.svg
 # --precise / -p flag enables comparison by style</pre></div>
         <div class="term-output"><pre>Testing file <span class="underline">bogus.svg</span>...
   [<span class="fg1">#</span>] Input: rainbow.sh --short
