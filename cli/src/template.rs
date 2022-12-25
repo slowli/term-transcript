@@ -18,7 +18,7 @@ use term_transcript::{
 #[derive(Debug, Clone, ValueEnum)]
 enum NamedPalette {
     Dracula,
-    PowerShell,
+    Powershell,
     Xterm,
     Ubuntu,
     Gjm8,
@@ -28,7 +28,7 @@ impl From<NamedPalette> for svg::NamedPalette {
     fn from(palette: NamedPalette) -> Self {
         match palette {
             NamedPalette::Dracula => Self::Dracula,
-            NamedPalette::PowerShell => Self::PowerShell,
+            NamedPalette::Powershell => Self::PowerShell,
             NamedPalette::Xterm => Self::Xterm,
             NamedPalette::Ubuntu => Self::Ubuntu,
             NamedPalette::Gjm8 => Self::Gjm8,
