@@ -16,6 +16,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   for more details on exit statuses.
 - Print captured exit statuses in the `print` subcommand.
 - Allow redefining the initialization timeout with the help of the `--init-timeout` / `-I` option.
+- Proxy tracing from the `term-transcript` crate if the `tracing` crate feature is on.
 
 ### Changed
 
