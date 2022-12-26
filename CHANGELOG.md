@@ -12,6 +12,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   entirely (e.g., to HTML).
 - Allow capturing exit statuses of commands executed in the shell.
 - Trace major operations using the [`tracing`](https://docs.rs/tracing/) facade.
+- Support line numbering for the default SVG template.
 
 ### Changed
 
