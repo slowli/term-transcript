@@ -110,8 +110,8 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         Self {
             command,
             path_additions: vec![],
-            io_timeout: Duration::from_secs(1),
-            init_timeout: Duration::from_nanos(0),
+            io_timeout: Duration::from_millis(500),
+            init_timeout: Duration::from_millis(1_500),
             init_commands: vec![],
             line_decoder: Box::new(|line| {
                 String::from_utf8(line)
@@ -147,7 +147,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// for output of a command before proceeding to the next command. Longer values
     /// allow to capture output more accurately, but result in longer execution.
     ///
-    /// By default, the I/O timeout is 1 second.
+    /// By default, the I/O timeout is 0.5 seconds.
     ///
     /// [`Transcript::from_inputs()`]: crate::Transcript::from_inputs()
     #[must_use]
@@ -157,9 +157,10 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     }
 
     /// Sets an additional initialization timeout (relative to the one set by
-    /// [`Self::with_io_timeout()`]) before reading the output of the first command.
+    /// [`Self::with_io_timeout()`]) before reading the output of the each command
+    /// input into the shell.
     ///
-    /// By default, the initialization timeout is zero.
+    /// By default, the initialization timeout is 1.5 seconds.
     #[must_use]
     pub fn with_init_timeout(mut self, init_timeout: Duration) -> Self {
         self.init_timeout = init_timeout;

@@ -77,15 +77,16 @@ impl Transcript {
 
     #[cfg_attr(
         feature = "tracing",
-        tracing::instrument(level = "debug", skip(lines_recv, line_decoder), ret, err)
+        tracing::instrument(level = "debug", skip_all, ret, err)
     )]
     fn read_output(
         lines_recv: &mpsc::Receiver<Vec<u8>>,
-        io_timeout: Duration,
+        mut timeouts: Timeouts,
         line_decoder: &mut impl FnMut(Vec<u8>) -> io::Result<String>,
     ) -> io::Result<String> {
         let mut output = String::new();
-        while let Ok(mut line) = lines_recv.recv_timeout(io_timeout) {
+
+        while let Ok(mut line) = lines_recv.recv_timeout(timeouts.next()) {
             if line.last() == Some(&b'\r') {
                 // Normalize `\r\n` line ending to `\n`.
                 line.pop();
@@ -193,33 +194,25 @@ impl Transcript {
         shell: &mut Cmd::ShellProcess,
         stdin: &mut impl io::Write,
     ) -> io::Result<()> {
-        let mut timeouts = Timeouts::new(options);
-
-        // Push initialization commands.
-        if shell.is_echoing() {
-            for cmd in &options.init_commands {
-                Self::write_line(stdin, cmd)?;
-                Self::read_echo(cmd, lines_recv, timeouts.next())?;
-
-                // Drain all other output as well.
-                while lines_recv.recv_timeout(timeouts.next()).is_ok() {
-                    // Intentionally empty.
-                }
-            }
-        } else {
-            // Since we don't care about getting all echoes back, we can push all lines at once and
-            // drain the output afterwards.
-            for cmd in &options.init_commands {
-                Self::write_line(stdin, cmd)?;
-            }
-        }
-
         // Drain all output left after commands and let the shell get fully initialized.
+        let mut timeouts = Timeouts::new(options);
         while lines_recv.recv_timeout(timeouts.next()).is_ok() {
             // Intentionally empty.
         }
-        // At this point, at least one item was requested from `timeout_iter`, so the further code
-        // may safely use `options.io_timeout`.
+
+        // Push initialization commands.
+        for cmd in &options.init_commands {
+            Self::write_line(stdin, cmd)?;
+            if shell.is_echoing() {
+                Self::read_echo(cmd, lines_recv, options.io_timeout)?;
+            }
+
+            // Drain all other output as well.
+            let mut timeouts = Timeouts::new(options);
+            while lines_recv.recv_timeout(timeouts.next()).is_ok() {
+                // Intentionally empty.
+            }
+        }
         Ok(())
     }
 
@@ -246,7 +239,11 @@ impl Transcript {
             }
         }
 
-        let output = Self::read_output(lines_recv, options.io_timeout, &mut options.line_decoder)?;
+        let output = Self::read_output(
+            lines_recv,
+            Timeouts::new(options),
+            &mut options.line_decoder,
+        )?;
 
         let exit_status = if let Some(status_check) = &options.status_check {
             let command = status_check.command();
@@ -254,8 +251,11 @@ impl Transcript {
             if shell.is_echoing() {
                 Self::read_echo(command, lines_recv, options.io_timeout)?;
             }
-            let response =
-                Self::read_output(lines_recv, options.io_timeout, &mut options.line_decoder)?;
+            let response = Self::read_output(
+                lines_recv,
+                Timeouts::new(options),
+                &mut options.line_decoder,
+            )?;
             status_check.check(&Captured::new(response))
         } else {
             None

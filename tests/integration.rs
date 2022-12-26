@@ -262,7 +262,6 @@ fn command_exit_status_in_sh() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg_attr(windows, ignore)] // FIXME: remove after fixing timeouts
 #[test]
 fn command_exit_status_in_powershell() -> anyhow::Result<()> {
     fn powershell_exists() -> bool {
@@ -284,12 +283,12 @@ fn command_exit_status_in_powershell() -> anyhow::Result<()> {
     let mut options = ShellOptions::pwsh()
         .with_init_command("echo \"Hello world!\"")
         // ^ The first command executed by `pwsh` can take really long, so we warm up.
-        .with_io_timeout(Duration::from_secs(2))
+        .with_init_timeout(Duration::from_secs(3))
         .with_lossy_utf8_decoder();
     // ^ The error output is locale-specific and is not always UTF-8
     let inputs = [
         UserInput::command("echo \"Hello world!\""),
-        UserInput::command("some-command-that-should-never-exist"),
+        UserInput::command("cargo what"),
     ];
     let transcript = Transcript::from_inputs(&mut options, inputs)?;
 
@@ -308,10 +307,9 @@ fn assert_tracing_for_powershell(storage: &Storage) {
         .filter(|span| span.metadata().name() == "read_echo")
         .collect();
 
-    let command = "some-command-that-should-never-exist";
     assert!(echo_spans
         .iter()
-        .any(|span| span["input_line"].as_str() == Some(command)));
+        .any(|span| span["input_line"].as_str() == Some("cargo what")));
 
     let received_line_events: Vec<_> = echo_spans
         .iter()
