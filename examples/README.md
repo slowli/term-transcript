@@ -12,7 +12,7 @@ Consult the [generating script](generate-snapshots.sh) for details on preparing 
 Generating command:
 
 ```shell
-term-transcript exec -T 100 --palette gjm8 rainbow
+term-transcript exec -T 250ms --palette gjm8 rainbow
 ```
 
 (`rainbow` is an executable for [end-to-end tests](../e2e-tests/rainbow).)
@@ -24,11 +24,64 @@ term-transcript exec -T 100 --palette gjm8 rainbow
 Generating command:
 
 ```shell
-term-transcript exec -T 100 --palette powershell \
+term-transcript exec -T 250ms --palette powershell \
   --pty --window --scroll rainbow 'rainbow --long-lines'
 ```
 
 Note the `--pty` flag to use a pseudo-terminal for capture instead of default pipes.
+
+## Line numbering
+
+### Separate numbering for each output
+
+![Separate numbering for outputs](numbers-each-output.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --scroll --palette xterm \
+  --line-numbers each-output \
+  rainbow 'rainbow --short'
+```
+
+### Continuous numbering for outputs
+
+![Continuous numbering for outputs](numbers-continuous-outputs.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --scroll --palette powershell \
+  --line-numbers continuous-outputs \
+  rainbow 'rainbow --short'
+```
+
+### Continuous numbering for inputs and outputs
+
+![Continuous numbering for inputs and outputs](numbers-continuous.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --scroll --palette gjm8 \
+  --line-numbers continuous \
+  rainbow 'rainbow --short'
+```
+
+### Numbering with line breaks
+
+As the example below shows, what is numbered are *displayed* lines
+obtained after potential line breaking.
+
+![Numbering with line breaks](numbers-long.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --palette gjm8 \
+  --line-numbers continuous \
+  rainbow 'rainbow --long-lines'
+```
 
 ## Failed inputs
 
@@ -44,7 +97,7 @@ and visually highlighted the default SVG template.
 Generating command:
 
 ```shell
-term-transcript exec -T 100 --palette gjm8 --window \
+term-transcript exec -T 250ms --palette gjm8 --window \
   './non-existing-command' \
   '[ -x non-existing-file ]' \
   '[ -x non-existing-file ] || echo "File is not there!"'
@@ -59,7 +112,7 @@ Captured using a pseudo-terminal, hence colorful `grep` output.
 Generating command:
 
 ```shell
-term-transcript exec -T 100 --palette gjm8 \
+term-transcript exec -T 250ms --palette gjm8 \
   --pty --window --shell bash \
   'ls -l Cargo.lock' \
   'grep -n serge Cargo.lock' \
