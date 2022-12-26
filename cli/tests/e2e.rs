@@ -59,9 +59,10 @@ fn testing_example() {
     config.with_template(scrolled_template()).test(
         svg_snapshot("test"),
         [
-            "term-transcript exec -T 300 rainbow.sh > rainbow.svg\n\
-             # `-T` option defines the I/O timeout for the shell",
-            "term-transcript test -T 300 -v rainbow.svg\n\
+            "term-transcript exec -I 300ms -T 100ms rainbow.sh > rainbow.svg\n\
+             # `-T` option defines the I/O timeout for the shell,\n\
+             # and `-I` specifies the additional initialization timeout",
+            "term-transcript test -I 300ms -T 100ms -v rainbow.svg\n\
              # `-v` switches on verbose output",
         ],
     );
@@ -73,10 +74,10 @@ fn test_failure_example() {
     config.test(
         svg_snapshot("test-fail"),
         [
-            "term-transcript exec -T 300 'rainbow.sh --short' > bogus.svg && \\\n  \
+            "term-transcript exec -I 300ms -T 100ms 'rainbow.sh --short' > bogus.svg && \\\n  \
              sed -i -E -e 's/(fg4|bg13)//g' bogus.svg\n\
              # Mutate the captured output, removing some styles",
-            "term-transcript test -T 300 --precise bogus.svg\n\
+            "term-transcript test -I 300ms -T 100ms --precise bogus.svg\n\
              # --precise / -p flag enables comparison by style",
         ],
     );
@@ -88,7 +89,7 @@ fn print_example() {
     config.test(
         svg_snapshot("print"),
         [
-            "term-transcript exec -T 300 'rainbow.sh --short' > short.svg",
+            "term-transcript exec -I 300ms -T 100ms 'rainbow.sh --short' > short.svg",
             "term-transcript print short.svg",
         ],
     );
@@ -100,7 +101,7 @@ fn print_example_with_failures() {
     config.test(
         svg_snapshot("print-with-failures"),
         [
-            "term-transcript exec -T 300 'some-non-existing-command' \\\n  \
+            "term-transcript exec -I 300ms -T 100ms 'some-non-existing-command' \\\n  \
              '[ -x some-non-existing-file ]' > fail.svg",
             "term-transcript print fail.svg",
         ],

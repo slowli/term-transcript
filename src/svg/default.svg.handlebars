@@ -118,12 +118,32 @@
       line-height: inherit;
     }
     .user-input {
+      {{#if (eq line_numbers "continuous")}}
+      display: flex;
+      {{/if}}
       margin: 0 -{{const.WINDOW_PADDING}}px {{const.BLOCK_MARGIN}}px;
       color: var(--white);
       background: var(--hl-black);
       padding: 2px {{const.WINDOW_PADDING}}px;
     }
-    .term-output { margin-bottom: {{const.BLOCK_MARGIN}}px; }
+    {{~#if (eq line_numbers "continuous")}}
+
+    .user-input > pre { flex-grow: 1; }
+    {{~/if}}
+
+    .term-output { {{#if line_numbers}}display: flex; {{/if}}margin-bottom: {{const.BLOCK_MARGIN}}px; }
+    {{~#if line_numbers}}
+
+    .term-output > pre { flex-grow: 1; }
+    pre.line-numbers {
+      flex-grow: 0;
+      width: 1.5rem;
+      text-align: right;
+      padding-right: .5rem;
+      opacity: 0.35;
+      user-select: none;
+    }
+    {{/if}}
     {{~#if has_failures}}
 
     .user-input-failure {
@@ -205,8 +225,10 @@
 
         <div class="user-input{{#if failure}} user-input-failure{{/if}}"
           {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
-          {{~#if failure}} title="This command exited with non-zero code"{{/if}}><pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-        <div class="term-output"><pre>{{{output_html}}}</pre></div>
+          {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
+          {{~#if (eq ../line_numbers "continuous")}}{{>number_input_lines}}{{/if~}}
+          <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
+        <div class="term-output">{{#if ../line_numbers}}{{>number_output_lines}}{{/if}}<pre>{{{output_html}}}</pre></div>
         {{~/each}}
 
       </div>
@@ -222,6 +244,26 @@
 {{/with}}
 {{/inline~}}
 
+{{~#*inline "number_input_lines"~}}
+  <pre class="line-numbers">
+    {{~#each (range 0 (count_lines input.text))~}}
+      {{add this (line_number)}}{{#if @last}}{{else}}<br/>{{/if}}
+    {{~/each~}}
+  </pre>
+  {{~line_number set=(add (line_number) (count_lines input.text))~}}
+{{~/inline~}}
+
+{{~#*inline "number_output_lines"}}
+<pre class="line-numbers">
+  {{~#each (range 0 (count_lines output_html format="html"))~}}
+    {{add this (line_number)}}{{#if @last}}{{else}}<br/>{{/if}}
+  {{~/each~}}
+</pre>
+{{~#if (ne ../line_numbers "each_output")~}}
+  {{line_number set=(add (line_number) (count_lines output_html format="html"))}}
+{{~/if~}}
+{{~/inline~}}
+
 {{! Main logic }}
 {{#with this as |$|}}
 {{#with (eval "define_const") as |const|}}
@@ -231,6 +273,7 @@
   scroll_animation=null
   screen_height=0
   height=0
+  line_number=1
 }}
   {{~#if scroll~}}
     {{scroll_animation set=(eval "compute_scroll_animation"

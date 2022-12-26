@@ -18,6 +18,8 @@ cargo install --locked term-transcript-cli
 term-transcript --help
 ```
 
+### Crate feature: `portable-pty`
+
 Specify `--features portable-pty` in the installation command 
 to enable the pseudo-terminal (PTY) support (note that PTY capturing still needs
 to be explicitly switched on when running `term-transcript` commands).
@@ -25,6 +27,15 @@ Without this feature, console app output is captured via OS pipes,
 which means that programs dependent on [`isatty`] checks
 or getting term size can produce different output than if launched in an actual shell
 (no coloring, no line wrapping etc.).
+
+### Crate feature: `tracing`
+
+Specify `--features tracing` in the installation command to enable tracing
+of the main performed operations. This could be useful for debugging purposes.
+Tracing is performed with the `term_transcript::*` targets, mostly on the `DEBUG` level.
+Tracing events are output to the stderr using [the standard subscriber][fmt-subscriber];
+its filtering can be configured using the `RUST_LOG` env variable
+(e.g., `RUST_LOG=term_transcript=debug`).
 
 ## Usage
 
@@ -73,6 +84,7 @@ for inclusion in `term-transcript` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions. 
 
 [`term-transcript`]: https://crates.io/crates/term-transcript
+[fmt-subscriber]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/index.html
 [rainbow-script-link]: https://github.com/slowli/term-transcript/blob/HEAD/cli/rainbow.sh
 [test-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test.svg?sanitize=true
 [test-color-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test-fail.svg?sanitize=true

@@ -12,6 +12,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   entirely (e.g., to HTML).
 - Allow capturing exit statuses of commands executed in the shell.
 - Trace major operations using the [`tracing`](https://docs.rs/tracing/) facade.
+- Support line numbering for the default SVG template.
 
 ### Changed
 
@@ -20,6 +21,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Replace a line mapper in `ShellOptions` to a more general line decoder that can handle
   non-UTF-8 encodings besides input filtering.
 - Improve configuring echoing in `ShellOptions`.
+- Use the initialization timeout from `ShellOptions` for each command, not only for
+  the first command. This allows reducing the I/O timeout and thus performing operations faster.
 
 ## 0.2.0 - 2022-06-12
 

@@ -127,6 +127,11 @@ jobs:
 
       - name: Generate snapshots
         run: ./examples/generate-snapshots.sh
+      - name: Test CLI tracing
+        run: |
+          RUST_LOG=term_transcript=debug \
+          cargo run --manifest-path=cli/Cargo.toml --all-features -- \
+          exec 'echo Hello' |& grep INFO
 
   document:
     needs:

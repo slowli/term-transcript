@@ -27,7 +27,7 @@ struct ScopeHelper;
 impl HelperDef for ScopeHelper {
     #[cfg_attr(
         feature = "tracing",
-        tracing::instrument(level = "debug", skip_all, err, fields(helper.hash = ?helper.hash()))
+        tracing::instrument(level = "trace", skip_all, err, fields(helper.hash = ?helper.hash()))
     )]
     fn call<'reg: 'rc, 'rc>(
         &self,
@@ -71,7 +71,7 @@ impl VarHelper {
 
     fn set_value(&self, value: Json) {
         #[cfg(feature = "tracing")]
-        tracing::debug!(?value, "overwritten var");
+        tracing::trace!(?value, "overwritten var");
         *self.value.lock().unwrap() = value;
     }
 }
@@ -80,7 +80,7 @@ impl HelperDef for VarHelper {
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(
-            level = "debug",
+            level = "trace",
             skip_all, err,
             fields(
                 self = ?self,
@@ -179,7 +179,7 @@ impl HelperDef for OpsHelper {
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(
-            level = "debug",
+            level = "trace",
             skip_all, err,
             fields(
                 self = ?self,
@@ -204,7 +204,7 @@ impl HelperDef for OpsHelper {
         if !matches!(self, Self::Div) {
             let all_ints = helper.params().iter().all(|param| param.value().is_i64());
             #[cfg(feature = "tracing")]
-            tracing::debug!(all_ints, "checked if all numbers are ints");
+            tracing::trace!(all_ints, "checked if all numbers are ints");
 
             if all_ints {
                 let values = helper
@@ -255,7 +255,7 @@ impl HelperDef for EvalHelper {
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(
-            level = "debug",
+            level = "trace",
             skip_all, err,
             fields(helper.params = ?helper.params())
         )
@@ -312,7 +312,7 @@ impl HelperDef for LineCounter {
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(
-            level = "debug",
+            level = "trace",
             skip_all, err,
             fields(helper.params = ?helper.params(), helper.format = ?helper.hash_get("format"))
         )
@@ -364,7 +364,7 @@ impl HelperDef for RangeHelper {
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(
-            level = "debug",
+            level = "trace",
             skip_all, err,
             fields(helper.params = ?helper.params())
         )

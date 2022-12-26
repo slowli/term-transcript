@@ -36,11 +36,31 @@ impl From<NamedPalette> for svg::NamedPalette {
     }
 }
 
+#[derive(Debug, Clone, ValueEnum)]
+enum LineNumbers {
+    EachOutput,
+    ContinuousOutputs,
+    Continuous,
+}
+
+impl From<LineNumbers> for svg::LineNumbers {
+    fn from(numbers: LineNumbers) -> Self {
+        match numbers {
+            LineNumbers::EachOutput => Self::EachOutput,
+            LineNumbers::ContinuousOutputs => Self::ContinuousOutputs,
+            LineNumbers::Continuous => Self::Continuous,
+        }
+    }
+}
+
 #[derive(Debug, Args)]
 pub(crate) struct TemplateArgs {
     /// Color palette to use.
     #[arg(long, short = 'p', default_value = "gjm8", value_enum)]
     palette: NamedPalette,
+    /// Line numbering strategy.
+    #[arg(long, short = 'n', value_enum)]
+    line_numbers: Option<LineNumbers>,
     /// Adds a window frame around the rendered console.
     #[arg(long = "window", short = 'w')]
     window_frame: bool,
@@ -67,6 +87,7 @@ impl From<TemplateArgs> for TemplateOptions {
     fn from(value: TemplateArgs) -> Self {
         Self {
             palette: svg::NamedPalette::from(value.palette).into(),
+            line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,
             scroll: if value.scroll {
                 Some(ScrollOptions::default())

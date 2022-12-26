@@ -31,6 +31,19 @@ use crate::{TermError, Transcript};
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
 
+/// Line numbering options.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum LineNumbers {
+    /// Number lines in each output separately. Inputs are not numbered.
+    EachOutput,
+    /// Use continuous numbering for the lines in all outputs. Inputs are not numbered.
+    ContinuousOutputs,
+    /// Use continuous numbering for the lines in all inputs and outputs.
+    Continuous,
+}
+
 /// Configurable options of a [`Template`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
@@ -49,6 +62,9 @@ pub struct TemplateOptions {
     /// Text wrapping options. The default value of [`WrapOptions`] is used by default.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub wrap: Option<WrapOptions>,
+    /// Line numbering options.
+    #[serde(default)]
+    pub line_numbers: Option<LineNumbers>,
 }
 
 impl Default for TemplateOptions {
@@ -60,6 +76,7 @@ impl Default for TemplateOptions {
             window_frame: false,
             scroll: None,
             wrap: Some(WrapOptions::default()),
+            line_numbers: None,
         }
     }
 }
@@ -488,5 +505,101 @@ mod tests {
 
         assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
         assert!(buffer.contains("<br/>"), "{buffer}");
+    }
+
+    #[test]
+    fn rendering_transcript_with_line_numbers() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+        transcript.add_interaction(
+            UserInput::command("another_test"),
+            "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            line_numbers: Some(LineNumbers::EachOutput),
+            ..TemplateOptions::default()
+        };
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(
+            buffer.contains(r#"<pre class="line-numbers">1</pre>"#),
+            "{buffer}"
+        );
+        assert!(
+            buffer.contains(r#"<pre class="line-numbers">1<br/>2</pre>"#),
+            "{buffer}"
+        );
+    }
+
+    #[test]
+    fn rendering_transcript_with_continuous_line_numbers() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+        transcript.add_interaction(
+            UserInput::command("another_test"),
+            "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            line_numbers: Some(LineNumbers::ContinuousOutputs),
+            ..TemplateOptions::default()
+        };
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(
+            buffer.contains(r#"<pre class="line-numbers">1</pre>"#),
+            "{buffer}"
+        );
+        assert!(
+            buffer.contains(r#"<pre class="line-numbers">2<br/>3</pre>"#),
+            "{buffer}"
+        );
+    }
+
+    #[test]
+    fn rendering_transcript_with_input_line_numbers() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+        transcript.add_interaction(
+            UserInput::command("another\ntest"),
+            "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            line_numbers: Some(LineNumbers::Continuous),
+            ..TemplateOptions::default()
+        };
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(
+            buffer.contains(r#"<div class="user-input"><pre class="line-numbers">"#),
+            "{buffer}"
+        );
+        assert!(
+            buffer.contains(r#"<pre class="line-numbers">5<br/>6</pre>"#),
+            "{buffer}"
+        );
     }
 }

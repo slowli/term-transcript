@@ -26,7 +26,7 @@ use crate::{svg::TemplateOptions, UserInput};
 ///     "creator": {
 ///         "name": "term-transcript",
 ///         "version": "0.2.0",
-///         "repo": "https://github.com/slowli/term-transcript"
+///         "repo": "https://github.com/slowli/term-transcript",
 ///     },
 ///     "width": 720,
 ///     "palette": {
@@ -38,7 +38,7 @@ use crate::{svg::TemplateOptions, UserInput};
 ///             "blue": "#62d6e8",
 ///             "magenta": "#b45bcf",
 ///             "cyan": "#a1efe4",
-///             "white": "#e9e9f4"
+///             "white": "#e9e9f4",
 ///         },
 ///         "intense_colors": {
 ///             "black": "#626483",
@@ -48,19 +48,20 @@ use crate::{svg::TemplateOptions, UserInput};
 ///             "blue": "#62d6e8",
 ///             "magenta": "#f1f2f8",
 ///             "cyan": "#00f769",
-///             "white": "#f7f7fb"
-///         }
+///             "white": "#f7f7fb",
+///         },
 ///     },
 ///     "font_family": "Consolas, Menlo, monospace",
 ///     "window_frame": false,
 ///     "wrap": {
-///         "hard_break_at": 80
+///         "hard_break_at": 80,
 ///     },
+///     "line_numbers": null,
 ///     "has_failures": false,
 ///     "interactions": [{
 ///         "input": {
 ///             "text": "rainbow",
-///             "prompt": "$"
+///             "prompt": "$",
 ///         },
 ///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
 ///         "failure": false,
