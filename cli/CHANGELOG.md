@@ -15,11 +15,14 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   (`sh`, `bash`, `powershell` or `pwsh`). See the `term-transcript` crate docs
   for more details on exit statuses.
 - Print captured exit statuses in the `print` subcommand.
+- Allow redefining the initialization timeout with the help of the `--init-timeout` / `-I` option.
 
 ### Changed
 
 - Change working directory to the working directory of the parent process
   for the `exec` subcommand.
+- Use [`humantime`](https://docs.rs/humantime/) for UX-friendly timeout values
+  (`--io-timeout` / `-T` and `--init-timeout` / `-I` options).
 
 ## 0.2.0 - 2022-06-12
 

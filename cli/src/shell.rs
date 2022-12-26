@@ -1,8 +1,9 @@
 //! Shell-related command-line args.
 
 use clap::Args;
+use humantime::Duration;
 
-use std::{env, ffi::OsString, io, process::Command, time::Duration};
+use std::{env, ffi::OsString, io, process::Command};
 
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
@@ -107,14 +108,13 @@ pub(crate) struct ShellArgs {
     shell_args: Vec<OsString>,
 
     /// Timeout for I/O operations in milliseconds.
-    #[arg(
-        name = "io-timeout",
-        long,
-        short = 'T',
-        value_name = "millis",
-        default_value = "1000"
-    )]
-    io_timeout: u64,
+    #[arg(name = "io-timeout", long, short = 'T', default_value = "500ms")]
+    io_timeout: Duration,
+
+    /// Additional timeout waiting for the first output line after inputting a new command
+    /// in milliseconds.
+    #[arg(name = "init-timeout", long, short = 'I', default_value = "0ms")]
+    init_timeout: Duration,
 }
 
 impl ShellArgs {
@@ -136,7 +136,9 @@ impl ShellArgs {
         if let Some(check) = exit_code_check {
             options = options.with_status_check("echo $?", move |code| check.check_exit_code(code));
         }
-        options.with_io_timeout(Duration::from_millis(self.io_timeout))
+        options
+            .with_io_timeout(self.io_timeout.into())
+            .with_init_timeout(self.init_timeout.into())
     }
 
     #[cfg(feature = "portable-pty")]
@@ -156,8 +158,9 @@ impl ShellArgs {
             command.with_size(size.rows, size.cols);
         }
 
-        let mut options =
-            ShellOptions::new(command).with_io_timeout(Duration::from_millis(self.io_timeout));
+        let mut options = ShellOptions::new(command)
+            .with_io_timeout(self.io_timeout.into())
+            .with_init_timeout(self.init_timeout.into());
         if let Ok(dir) = env::current_dir() {
             options = options.with_current_dir(dir);
         }

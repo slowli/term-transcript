@@ -72,12 +72,13 @@
   <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
   <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
     <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342" dur="12.0s" repeatCount="indefinite" calcMode="discrete" />
-    <foreignObject width="720" height="452">
+    <foreignObject width="720" height="470">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -T 300 rainbow.sh &gt; rainbow.svg
-# &#x60;-T&#x60; option defines the I/O timeout for the shell</pre></div>
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms rainbow.sh &gt; rainbow.svg
+# &#x60;-T&#x60; option defines the I/O timeout for the shell,
+# and &#x60;-I&#x60; specifies the additional initialization timeout</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript test -T 300 -v rainbow.svg
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript test -I 300ms -T 100ms -v rainbow.svg
 # &#x60;-v&#x60; switches on verbose output</pre></div>
         <div class="term-output"><pre>Testing file <span class="underline">rainbow.svg</span>...
   [<span class="fg2">+</span>] Input: rainbow.sh

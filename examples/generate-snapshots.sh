@@ -27,11 +27,11 @@ fi
 export PATH=$PATH:$TARGET_DIR:$CLI_TARGET_DIR
 
 echo "Creating rainbow snapshot..."
-term-transcript exec -T 100 --palette gjm8 rainbow \
+term-transcript exec -T 100ms --palette gjm8 rainbow \
   > "$ROOT_DIR/examples/rainbow.$EXTENSION"
 
 echo "Creating animated rainbow snapshot..."
-term-transcript exec -T 100 --palette powershell --pty --window --scroll \
+term-transcript exec -T 100ms --palette powershell --pty --window --scroll \
   rainbow 'rainbow --long-lines' \
   > "$ROOT_DIR/examples/animated.$EXTENSION"
 
@@ -40,27 +40,27 @@ rainbow | term-transcript capture 'colored-output' \
   > "$ROOT_DIR/e2e-tests/rainbow/aliased.$EXTENSION"
 
 echo "Creating REPL snapshot..."
-term-transcript exec -T 100 --shell rainbow-repl \
+term-transcript exec -T 100ms --shell rainbow-repl \
   'yellow intense bold green cucumber' \
   'neutral #fa4 underline #c0ffee' \
   '#9f4010 (brown) italic' \
   > "$ROOT_DIR/e2e-tests/rainbow/repl.$EXTENSION"
 
 echo "Creating snapshot with custom template..."
-term-transcript exec -T 100 --palette xterm \
+term-transcript exec -T 100ms --palette xterm \
   --tpl "$ROOT_DIR/examples/custom.html.handlebars" \
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/rainbow.new.html"
 
 echo "Creating snapshot with failure..."
-term-transcript exec -T 100 --palette gjm8 --window \
+term-transcript exec -T 100ms --palette gjm8 --window \
   './non-existing-command' '[ -x non-existing-file ]' '[ -x non-existing-file ] || echo "File is not there!"' \
   > "$ROOT_DIR/examples/failure-sh.$EXTENSION"
 
 echo "Creating PTY snapshot with failure..."
 (
   cd "$ROOT_DIR"
-  term-transcript exec -T 100 --palette gjm8 --pty --window --shell bash \
+  term-transcript exec -T 100ms --palette gjm8 --pty --window --shell bash \
     'ls -l Cargo.lock' 'grep -n serge Cargo.lock' 'grep -n serde Cargo.lock' \
     > "$ROOT_DIR/examples/failure-bash-pty.$EXTENSION"
 )

@@ -75,11 +75,11 @@
   <svg x="0" y="10" width="720" height="380" viewBox="0 0 720 380">
     <foreignObject width="720" height="380">
       <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -T 300 &#x27;rainbow.sh --short&#x27; &gt; bogus.svg &amp;&amp; \
+        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms &#x27;rainbow.sh --short&#x27; &gt; bogus.svg &amp;&amp; \
   sed -i -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
 # Mutate the captured output, removing some styles</pre></div>
         <div class="term-output"><pre></pre></div>
-        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -T 300 --precise bogus.svg
+        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -I 300ms -T 100ms --precise bogus.svg
 # --precise / -p flag enables comparison by style</pre></div>
         <div class="term-output"><pre>Testing file <span class="underline">bogus.svg</span>...
   [<span class="fg1">#</span>] Input: rainbow.sh --short
