@@ -184,7 +184,7 @@ impl From<quick_xml::Error> for ParseError {
 
 impl From<io::Error> for ParseError {
     fn from(err: io::Error) -> Self {
-        Self::Xml(quick_xml::Error::Io(err))
+        Self::Xml(err.into())
     }
 }
 
