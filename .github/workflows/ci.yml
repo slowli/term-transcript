@@ -30,7 +30,9 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
-          path: target
+          path: |
+            target
+            cli/target
           key: ${{ runner.os }}${{ matrix.features }}-msrv-cargo-build-target
 
       - name: Install Rust
@@ -64,7 +66,9 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
-          path: target
+          path: |
+            target
+            cli/target
           key: ${{ runner.os }}-cargo-build-target
 
       - name: Install Rust
@@ -132,6 +136,85 @@ jobs:
           RUST_LOG=term_transcript=debug \
           cargo run --manifest-path=cli/Cargo.toml --all-features -- \
           exec 'echo Hello' |& grep INFO
+
+  build-docker:
+    needs:
+      - build
+      - build-msrv
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install `socat`
+        run: |
+          sudo apt-get update && \
+          sudo apt-get install -y --no-install-suggests --no-install-recommends socat
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      - name: Log in to Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: cli/Dockerfile
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Test image (--help)
+        run: docker run --rm "$IMAGE_TAG" --help
+        env:
+          IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+      - name: Test image (print)
+        run: |
+          cat examples/rainbow.svg | docker run -i --rm --env COLOR=always "$IMAGE_TAG" print -
+        env:
+          IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+      - name: Test image (exec, nc host)
+        run: |
+          mkfifo /tmp/shell.fifo
+          cat /tmp/shell.fifo | bash -i 2>&1 | nc -lU /tmp/shell.sock > /tmp/shell.fifo &
+          docker run --rm -v /tmp/shell.sock:/tmp/shell.sock "$IMAGE_TAG" \
+            exec --shell nc --echoing --args=-U --args=/tmp/shell.sock 'ls -al' \
+            > test.svg
+          cat test.svg | docker run -i --rm --env COLOR=always "$IMAGE_TAG" print -
+        env:
+          IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+      - name: Test image (exec, socat host)
+        run: |
+          rm -f /tmp/shell.sock
+          socat UNIX-LISTEN:/tmp/shell.sock,fork EXEC:"bash -i",pty,setsid,ctty,stderr &
+          docker run --rm -v /tmp/shell.sock:/tmp/shell.sock "$IMAGE_TAG" \
+            exec --shell nc --echoing --args=-U --args=/tmp/shell.sock 'ls -al' \
+            > test-pty.svg
+          cat test-pty.svg | docker run -i --rm --env COLOR=always "$IMAGE_TAG" print -
+        env:
+          IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+
+      - name: Publish image
+        if: github.event_name == 'push'
+        run: docker push "$IMAGE_TAG"
+        env:
+          IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
 
   document:
     needs:
