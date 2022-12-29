@@ -73,7 +73,7 @@ enum Command {
     /// Prints a previously saved SVG file to stdout with the captured coloring (unless
     /// the coloring of the output is switched off).
     Print {
-        /// Path to the SVG file to output.
+        /// Path to the SVG file to output. If set to `-`, the SVG will be read from stdin.
         #[arg(name = "svg")]
         svg_path: PathBuf,
         /// Controls coloring of the output.
@@ -211,8 +211,13 @@ impl Command {
     }
 
     fn print_file(svg_path: &Path, color: ColorPreference) -> anyhow::Result<()> {
-        let svg = BufReader::new(File::open(svg_path)?);
-        let transcript = Transcript::from_svg(svg)?;
+        let transcript = if svg_path.as_os_str() == "-" {
+            let svg = BufReader::new(io::stdin());
+            Transcript::from_svg(svg)?
+        } else {
+            let svg = BufReader::new(File::open(svg_path)?);
+            Transcript::from_svg(svg)?
+        };
 
         let color = ColorChoice::from(color);
         let out = StandardStream::stdout(color);

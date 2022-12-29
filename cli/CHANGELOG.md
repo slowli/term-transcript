@@ -18,6 +18,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Allow redefining the initialization timeout with the help of the `--init-timeout` / `-I` option.
 - Proxy tracing from the `term-transcript` crate if the `tracing` crate feature is on.
 - Support line numbering with the help of the `--line-numbers` / `-n` option.
+- Add a Docker image for the CLI app
+  on the [GitHub Container registry](https://github.com/slowli/term-transcript/pkgs/container/term-transcript).
 
 ### Changed
 
