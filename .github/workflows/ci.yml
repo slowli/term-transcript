@@ -27,19 +27,24 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.msrv }}
+          override: true
+      - name: Generate lockfile
+        uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
           path: |
             target
             cli/target
-          key: ${{ runner.os }}${{ matrix.features }}-msrv-cargo-build-target
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.msrv }}
-          override: true
+          key: ${{ runner.os }}${{ matrix.features }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}${{ matrix.features }}-msrv-cargo
 
       - name: Run tests
         uses: actions-rs/cargo@v1
@@ -63,20 +68,25 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Cache cargo build
-        uses: actions/cache@v3
-        with:
-          path: |
-            target
-            cli/target
-          key: ${{ runner.os }}-cargo-build-target
-
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           components: rustfmt, clippy
+      - name: Generate lockfile
+        uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: |
+            target
+            cli/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo
 
       - name: Format
         uses: actions-rs/cargo@v1
@@ -149,6 +159,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Cache Docker build
+        uses: actions/cache@v3
+        with:
+          path: target/docker
+          key: ${{ runner.os }}-docker-buildkit-${{ hashFiles('cli/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-docker-buildkit
+
       - name: Install `socat`
         run: |
           sudo apt-get update && \
@@ -169,16 +186,43 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+      - name: Identify Buildx container
+        run: |
+          CONTAINER_ID=$(docker ps --filter=ancestor=moby/buildkit:buildx-stable-1 --format='{{ .ID }}')
+          echo "buildx_container=$CONTAINER_ID" | tee -a "$GITHUB_ENV"
+
+      - name: Restore cache
+        run: |
+          if [[ -f target/docker/cache.db ]]; then
+            docker cp target/docker/. "$BUILDER:/var/lib/buildkit"
+            docker restart "$BUILDER"
+            # Wait until the container is restarted
+            sleep 5
+          fi
+          docker buildx du # Check the restored cache
+        env:
+          BUILDER: ${{ env.buildx_container }}
+
       - name: Build image
         uses: docker/build-push-action@v3
         with:
           context: .
           file: cli/Dockerfile
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # We want to only store cache volumes (type=exec.cachemount) since
+      # their creation is computationally bound as opposed to other I/O-bound volume types.
+      - name: Extract image cache
+        run: |
+          docker buildx prune --force --filter=type=regular
+          docker buildx prune --force --filter=type=source.local
+          rm -rf target/docker && mkdir -p target/docker
+          docker cp "$BUILDER:/var/lib/buildkit/." target/docker
+          du -ah -d 1 target/docker
+        env:
+          BUILDER: ${{ env.buildx_container }}
 
       - name: Test image (--help)
         run: docker run --rm "$IMAGE_TAG" --help
@@ -226,18 +270,23 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Cache cargo build
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-document-target
-
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ env.nightly }}
           profile: minimal
           override: true
+      - name: Generate lockfile
+        uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-document-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-document
 
       - name: Build docs
         run: |
