@@ -28,7 +28,7 @@ Add this to your `Crate.toml`:
 
 ```toml
 [dependencies]
-term-transcript = "0.2.0"
+term-transcript = "0.3.0-beta.1"
 ```
 
 Example of usage:

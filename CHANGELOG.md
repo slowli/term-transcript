@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.3.0-beta.1 - 2023-01-19
+
 ### Added
 
 - Support custom rendering templates via `Template::custom()`. 
