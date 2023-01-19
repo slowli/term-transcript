@@ -58,10 +58,9 @@ from the [GitHub Container registry](https://github.com/slowli/term-transcript/p
 To run the app in a Docker container, use a command like
 
 ```shell
-cat examples/rainbow.svg | \
-  docker run -i --rm --env COLOR=always \
+docker run -i --rm --env COLOR=always \
   ghcr.io/slowli/term-transcript:master \
-  print -
+  print - < examples/rainbow.svg
 ```
 
 Here, the `COLOR` env variable sets the coloring preference for the output,

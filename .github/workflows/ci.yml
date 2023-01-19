@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [ master ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ master ]
 
@@ -25,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -66,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -194,14 +195,12 @@ jobs:
       - name: Restore cache
         run: |
           if [[ -f target/docker/cache.db ]]; then
-            docker cp target/docker/. "$BUILDER:/var/lib/buildkit"
-            docker restart "$BUILDER"
+            docker cp target/docker/. "$buildx_container:/var/lib/buildkit"
+            docker restart "$buildx_container"
             # Wait until the container is restarted
             sleep 5
           fi
           docker buildx du # Check the restored cache
-        env:
-          BUILDER: ${{ env.buildx_container }}
 
       - name: Build image
         uses: docker/build-push-action@v3
@@ -219,10 +218,8 @@ jobs:
           docker buildx prune --force --filter=type=regular
           docker buildx prune --force --filter=type=source.local
           rm -rf target/docker && mkdir -p target/docker
-          docker cp "$BUILDER:/var/lib/buildkit/." target/docker
+          docker cp "$buildx_container:/var/lib/buildkit/." target/docker
           du -ah -d 1 target/docker
-        env:
-          BUILDER: ${{ env.buildx_container }}
 
       - name: Test image (--help)
         run: docker run --rm "$IMAGE_TAG" --help
@@ -230,7 +227,7 @@ jobs:
           IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
       - name: Test image (print)
         run: |
-          cat examples/rainbow.svg | docker run -i --rm --env COLOR=always "$IMAGE_TAG" print -
+          docker run -i --rm --env COLOR=always "$IMAGE_TAG" print - < examples/rainbow.svg
         env:
           IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
       - name: Test image (exec, nc host)
@@ -240,7 +237,7 @@ jobs:
           docker run --rm -v /tmp/shell.sock:/tmp/shell.sock "$IMAGE_TAG" \
             exec --shell nc --echoing --args=-U --args=/tmp/shell.sock 'ls -al' \
             > test.svg
-          cat test.svg | docker run -i --rm --env COLOR=always "$IMAGE_TAG" print -
+          docker run -i --rm --env COLOR=always "$IMAGE_TAG" print - < test.svg
         env:
           IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
       - name: Test image (exec, socat host)
@@ -250,7 +247,7 @@ jobs:
           docker run --rm -v /tmp/shell.sock:/tmp/shell.sock "$IMAGE_TAG" \
             exec --shell nc --echoing --args=-U --args=/tmp/shell.sock 'ls -al' \
             > test-pty.svg
-          cat test-pty.svg | docker run -i --rm --env COLOR=always "$IMAGE_TAG" print -
+          docker run -i --rm --env COLOR=always "$IMAGE_TAG" print - < test-pty.svg
         env:
           IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
 
@@ -264,11 +261,11 @@ jobs:
     needs:
       - build
       - build-msrv
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref_type == 'branch'
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1

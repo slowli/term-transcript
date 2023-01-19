@@ -80,7 +80,7 @@ Generating command:
 ```shell
 term-transcript exec -T 250ms --palette gjm8 \
   --line-numbers continuous \
-  rainbow 'rainbow --long-lines'
+  'rainbow --long-lines'
 ```
 
 ## Failed inputs
