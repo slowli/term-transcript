@@ -1,6 +1,6 @@
 [package]
 name = "term-transcript-cli"
-version = "0.2.0"
+version = "0.3.0-beta.1"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 edition = "2021"
 rust-version = "1.61"
@@ -25,7 +25,7 @@ serde_json = "1.0"
 termcolor = "1.1.2"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"], optional = true }
 
-term-transcript = { version = "0.2.0", path = ".." }
+term-transcript = { version = "0.3.0-beta.1", path = ".." }
 
 [dev-dependencies]
 tempfile = "3.2.0"

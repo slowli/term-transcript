@@ -25,7 +25,7 @@ use crate::{svg::TemplateOptions, UserInput};
 /// let expected_json = serde_json::json!({
 ///     "creator": {
 ///         "name": "term-transcript",
-///         "version": "0.2.0",
+///         "version": "0.3.0-beta.1",
 ///         "repo": "https://github.com/slowli/term-transcript",
 ///     },
 ///     "width": 720,
