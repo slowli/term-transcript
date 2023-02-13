@@ -18,7 +18,10 @@ cargo install --locked term-transcript-cli
 term-transcript --help
 ```
 
-Alternatively, you may use the app Docker image [as described below](#using-docker-image).
+Alternatively, you may use the app Docker image [as described below](#using-docker-image),
+or download a pre-built app binary for popular targets (x86_64 for Linux / macOS / Windows
+and AArch64 for macOS)
+from [GitHub Releases](https://github.com/slowli/term-transcript/releases).
 
 ### Crate feature: `portable-pty`
 

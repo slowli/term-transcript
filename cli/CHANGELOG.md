@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.3.0-beta.1 - 2023-01-19
+
 ### Added
 
 - Add ability to customize the rendering template using `--tpl <path>` option.
@@ -20,6 +22,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Support line numbering with the help of the `--line-numbers` / `-n` option.
 - Add a Docker image for the CLI app
   on the [GitHub Container registry](https://github.com/slowli/term-transcript/pkgs/container/term-transcript).
+- Add prebuilt binaries for popular targets (x86_64 for Linux / macOS / Windows
+  and aarch64 for macOS) available from [GitHub releases](https://github.com/slowli/term-transcript/releases).
 
 ### Changed
 

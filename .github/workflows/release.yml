@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags: [ "v*" ]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.os }}
+    name: Release ${{ matrix.target }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Determine release type
+        id: release-type
+        run: |
+          if [[ ${{ github.ref }} =~ ^refs/tags/[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
+            echo 'type=release' >> "$GITHUB_OUTPUT"
+          else
+            echo 'type=prerelease' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: cli/target
+          key: ${{ runner.os }}-release-cargo-${{ hashFiles('cli/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-release-cargo
+
+      - name: Build CLI app
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --manifest-path=cli/Cargo.toml --release --target=${{ matrix.target }} --all-features --locked
+      - name: Package archive
+        id: package
+        run: ./cli/package.sh ${REF#"refs/tags/"}
+        env:
+          OS: ${{ matrix.os }}
+          TARGET: ${{ matrix.target }}
+          REF: ${{ github.ref }}
+      - name: Publish archive
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          files: ${{ steps.package.outputs.archive }}
+          prerelease: ${{ steps.release-type.outputs.type == 'prerelease' }}
