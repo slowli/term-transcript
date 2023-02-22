@@ -5,6 +5,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Update `portable-pty` dependency.
+
 ## 0.3.0-beta.1 - 2023-01-19
 
 ### Added
