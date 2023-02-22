@@ -188,14 +188,12 @@ impl ColorDiff {
         let mut diff = Self::default();
         let mut pos = 0;
         let mut lhs_iter = lhs.iter().cloned();
-        let mut lhs_span = match lhs_iter.next() {
-            Some(span) => span,
-            None => return diff,
+        let Some(mut lhs_span) = lhs_iter.next() else {
+            return diff;
         };
         let mut rhs_iter = rhs.iter().cloned();
-        let mut rhs_span = match rhs_iter.next() {
-            Some(span) => span,
-            None => return diff,
+        let Some(mut rhs_span) = rhs_iter.next() else {
+            return diff;
         };
 
         loop {
@@ -300,9 +298,7 @@ impl ColorDiff {
         let mut line_pos = 0;
 
         while line_pos < line_len {
-            let span = if let Some(span) = spans_iter.peek() {
-                span
-            } else {
+            let Some(span) = spans_iter.peek() else {
                 break;
             };
             let span_start = span.start.saturating_sub(line_offset);

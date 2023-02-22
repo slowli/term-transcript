@@ -284,6 +284,7 @@ fn command_exit_status_in_powershell() -> anyhow::Result<()> {
         .with_init_command("echo \"Hello world!\"")
         // ^ The first command executed by `pwsh` can take really long, so we warm up.
         .with_init_timeout(Duration::from_secs(3))
+        .with_io_timeout(Duration::from_secs(1))
         .with_lossy_utf8_decoder();
     // ^ The error output is locale-specific and is not always UTF-8
     let inputs = [

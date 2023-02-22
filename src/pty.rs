@@ -2,7 +2,7 @@
 
 // FIXME: Prompt incorrectly read from PTY in some cases (#24)
 
-use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtyPair, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, PtyPair, PtySize};
 
 use std::{
     collections::HashMap,
@@ -26,7 +26,7 @@ fn into_io_error(err: Box<dyn StdError + Send + Sync>) -> io::Error {
 ///
 /// # Examples
 ///
-/// Since shell spawning is performed [in a generic way](crate::traits::SpawnShell),
+/// Since shell spawning is performed [in a generic way](SpawnShell),
 /// [`PtyCommand`] can be used as a drop-in replacement for [`Command`](std::process::Command):
 ///
 /// ```
@@ -124,7 +124,7 @@ impl ConfigureCommand for PtyCommand {
 impl SpawnShell for PtyCommand {
     type ShellProcess = PtyShell;
     type Reader = Box<dyn io::Read + Send>;
-    type Writer = Box<dyn MasterPty + Send>;
+    type Writer = Box<dyn io::Write + Send>;
 
     #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn spawn_shell(&mut self) -> io::Result<SpawnedShell<Self>> {
@@ -144,10 +144,13 @@ impl SpawnShell for PtyCommand {
         let reader = master
             .try_clone_reader()
             .map_err(|err| into_io_error(err.into()))?;
+        let writer = master
+            .take_writer()
+            .map_err(|err| into_io_error(err.into()))?;
         Ok(SpawnedShell {
             shell: PtyShell { child },
             reader,
-            writer: master,
+            writer,
         })
     }
 }

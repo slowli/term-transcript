@@ -165,9 +165,8 @@ impl TextReadingState {
     fn parse_color_from_style(color_spec: &mut ColorSpec, style: &[u8]) -> Result<(), ParseError> {
         for style_property in style.split(|&ch| ch == b';') {
             let name_and_value: Vec<_> = style_property.splitn(2, |&ch| ch == b':').collect();
-            let (property_name, property_value) = match name_and_value.as_slice() {
-                [name, value] => (name, value),
-                _ => continue,
+            let [property_name, property_value] = name_and_value.as_slice() else {
+                continue;
             };
 
             let property_name = str::from_utf8(property_name)
