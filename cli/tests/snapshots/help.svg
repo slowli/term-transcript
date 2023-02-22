@@ -83,8 +83,8 @@
   <span class="bold">help</span>     Print this message or the help of the given subcommand(s)
 
 <span class="bold underline">Options:
-</span>  <span class="bold">-h</span>, <span class="bold">--help</span>     Print help information
-  <span class="bold">-V</span>, <span class="bold">--version</span>  Print version information</pre></div>
+</span>  <span class="bold">-h</span>, <span class="bold">--help</span>     Print help
+  <span class="bold">-V</span>, <span class="bold">--version</span>  Print version</pre></div>
       </div>
     </foreignObject>
   </svg>
