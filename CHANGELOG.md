@@ -7,7 +7,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ### Changed
 
-- Update `portable-pty` dependency.
+- Update `portable-pty` and `quick-xml` dependencies.
 - Bump minimum supported Rust version to 1.66.
 
 ## 0.3.0-beta.1 - 2023-01-19
