@@ -64,11 +64,16 @@ pub(crate) struct TemplateArgs {
     /// Adds a window frame around the rendered console.
     #[arg(long = "window", short = 'w')]
     window_frame: bool,
+    /// Configures a font family. The font families should be specified in the CSS format,
+    /// e.g. 'Consolas, Liberation Mono'. The `monospace` fallback will be added
+    /// automatically.
+    #[arg(long = "font")]
+    font_family: Option<String>,
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold
     /// corresponding to ~19 lines.
     #[arg(long)]
     scroll: bool,
-    /// Disable text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
+    /// Disables text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
     /// will be hidden.
     #[arg(long = "no-wrap")]
     no_wrap: bool,
@@ -85,7 +90,7 @@ pub(crate) struct TemplateArgs {
 
 impl From<TemplateArgs> for TemplateOptions {
     fn from(value: TemplateArgs) -> Self {
-        Self {
+        let mut this = Self {
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,
@@ -100,7 +105,13 @@ impl From<TemplateArgs> for TemplateOptions {
                 Some(WrapOptions::default())
             },
             ..Self::default()
+        };
+
+        if let Some(mut font_family) = value.font_family {
+            font_family.push_str(", monospace");
+            this.font_family = font_family;
         }
+        this
     }
 }
 
