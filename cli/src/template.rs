@@ -64,6 +64,10 @@ pub(crate) struct TemplateArgs {
     /// Adds a window frame around the rendered console.
     #[arg(long = "window", short = 'w')]
     window_frame: bool,
+    /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
+    /// to import fonts in conjunction with `--font`.
+    #[arg(long = "styles")]
+    additional_styles: Option<String>,
     /// Configures a font family. The font families should be specified in the CSS format,
     /// e.g. 'Consolas, Liberation Mono'. The `monospace` fallback will be added
     /// automatically.
@@ -104,6 +108,7 @@ impl From<TemplateArgs> for TemplateOptions {
             } else {
                 Some(WrapOptions::default())
             },
+            additional_styles: value.additional_styles.unwrap_or_default(),
             ..Self::default()
         };
 
