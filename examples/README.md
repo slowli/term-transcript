@@ -83,6 +83,27 @@ term-transcript exec -T 250ms --palette gjm8 \
   'rainbow --long-lines'
 ```
 
+## Custom fonts
+
+Using `--styles` and `--font` options, it's possible to use a custom font in the snapshot.
+For example, the snapshot below uses [Fira Mono](https://github.com/mozilla/Fira):
+
+![Snapshot with Fira Mono font](fira.svg)
+
+Note that the custom font will only be displayed when viewed in the browser
+if the [Content Security Policy][CSP] of the HTTP server hosting the SVG allows to do so.
+See the [FAQ](../FAQ.md#transcripts--content-security-policy) for more details.
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --palette gjm8 --window \
+  --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
+  --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow
+```
+
+[CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+
 ## Failed inputs
 
 Some shells may allow detecting whether an input resulted in a failure

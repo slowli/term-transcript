@@ -87,3 +87,10 @@ echo "Creating snapshot with --line-numbers and long lines"
 term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/numbers-long.$EXTENSION"
+
+# Backup fonts are for the case if CSP prevents CSS / font loading from the CDN
+echo "Creating snapshot with Fira Mono font..."
+term-transcript exec $TT_ARGS --palette gjm8 --window \
+  --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
+  --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow \
+  > "$ROOT_DIR/examples/fira.$EXTENSION"
