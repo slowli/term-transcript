@@ -50,7 +50,8 @@ println!("{}", str::from_utf8(&writer)?);
 Ok::<_, anyhow::Error>(())
 ```
 
-See more examples in the crate docs.
+See more examples in the crate docs and the [FAQ](FAQ.md) for some tips
+and troubleshooting advice.
 
 ### CLI app
 
