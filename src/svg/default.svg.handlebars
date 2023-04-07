@@ -84,9 +84,10 @@
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       {{>styles}}
       {{>background}}
-      {{>content}}
+
+      {{~>content}}
       {{~#if (scroll_animation)}}
-        {{>scrollbar}}
+      {{>scrollbar}}
       {{/if}}
     </g>
     {{>unsupported_error}}
@@ -104,144 +105,149 @@
 
 {{! CSS definitions }}
 {{~#*inline "styles"}}
-  <style>
-    .container {
-      padding: 0 {{const.WINDOW_PADDING}}px;
-      color: {{ palette.colors.white }};
-      line-height: {{const.LINE_HEIGHT}}px;
-    }
-    .container pre {
-      padding: 0;
-      margin: 0;
-      font: 14px {{font_family}};
-      line-height: inherit;
-    }
-    .user-input {
-      {{~#if (eq line_numbers "continuous")}}
+<style>
+  {{~#if additional_styles}}
 
-      display: flex;
-      {{~/if}}
+  {{{additional_styles}}}
+  {{~/if}}
 
-      margin: 0 -{{const.WINDOW_PADDING}}px {{const.BLOCK_MARGIN}}px;
-      color: {{ palette.colors.white }};
-      background: rgba(255, 255, 255, 0.1);
-      padding: 2px {{const.WINDOW_PADDING}}px;
-    }
+  .container {
+    padding: 0 {{const.WINDOW_PADDING}}px;
+    color: {{ palette.colors.white }};
+    line-height: {{const.LINE_HEIGHT}}px;
+  }
+  .container pre {
+    padding: 0;
+    margin: 0;
+    font: 14px {{font_family}};
+    line-height: inherit;
+  }
+  .user-input {
     {{~#if (eq line_numbers "continuous")}}
 
-    .user-input > pre { flex-grow: 1; }
+    display: flex;
     {{~/if}}
 
-    .term-output { {{#if line_numbers}}display: flex; {{/if}}margin-bottom: {{const.BLOCK_MARGIN}}px; }
-    {{~#if line_numbers}}
+    margin: 0 -{{const.WINDOW_PADDING}}px {{const.BLOCK_MARGIN}}px;
+    color: {{ palette.colors.white }};
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px {{const.WINDOW_PADDING}}px;
+  }
+  {{~#if (eq line_numbers "continuous")}}
 
-    .term-output > pre { flex-grow: 1; }
-    pre.line-numbers {
-      flex-grow: 0;
-      width: 1.5rem;
-      text-align: right;
-      padding-right: .5rem;
-      opacity: 0.35;
-      user-select: none;
-    }
-    {{/if}}
-    {{~#if has_failures}}
+  .user-input > pre { flex-grow: 1; }
+  {{~/if}}
 
-    .user-input-failure {
-      border-left: 2px solid {{ palette.colors.red }};
-      border-right: 2px solid {{ palette.colors.red }};
-      background: rgba(255, 0, 65, 0.15);
-    }
-    {{/if}}
-    {{~#if (scroll_animation)}}
+  .term-output { {{#if line_numbers}}display: flex; {{/if}}margin-bottom: {{const.BLOCK_MARGIN}}px; }
+  {{~#if line_numbers}}
 
-    .scrollbar { fill: #fff; fill-opacity: 0.35; }
-    {{~/if}}
+  .term-output > pre { flex-grow: 1; }
+  pre.line-numbers {
+    flex-grow: 0;
+    width: 1.5rem;
+    text-align: right;
+    padding-right: .5rem;
+    opacity: 0.35;
+    user-select: none;
+  }
+  {{/if}}
+  {{~#if has_failures}}
 
-    .bold,.prompt { font-weight: bold; }
-    .italic { font-style: italic; }
-    .underline { text-decoration: underline; }
-    .dimmed { opacity: 0.7; }
-    {{~#if wrap}}
+  .user-input-failure {
+    border-left: 2px solid {{ palette.colors.red }};
+    border-right: 2px solid {{ palette.colors.red }};
+    background: rgba(255, 0, 65, 0.15);
+  }
+  {{/if}}
+  {{~#if (scroll_animation)}}
 
-    .hard-br {
-      position: relative;
-      margin-left: 5px;
-    }
-    .hard-br:before {
-      content: '↓';
-      font-size: 16px;
-      height: 16px;
-      position: absolute;
-      bottom: 0;
-      transform: rotate(45deg);
-      opacity: 0.8;
-    }
-    {{~/if}}
+  .scrollbar { fill: #fff; fill-opacity: 0.35; }
+  {{~/if}}
 
-    .fg0 { color: {{ palette.colors.black }}; } .bg0 { background: {{ palette.colors.black }}; }
-    .fg1 { color: {{ palette.colors.red }}; } .bg1 { background: {{ palette.colors.red }}; }
-    .fg2 { color: {{ palette.colors.green }}; } .bg2 { background: {{ palette.colors.green }}; }
-    .fg3 { color: {{ palette.colors.yellow }}; } .bg3 { background: {{ palette.colors.yellow }}; }
-    .fg4 { color: {{ palette.colors.blue }}; } .bg4 { background: {{ palette.colors.blue }}; }
-    .fg5 { color: {{ palette.colors.magenta }}; } .bg5 { background: {{ palette.colors.magenta }}; }
-    .fg6 { color: {{ palette.colors.cyan }}; } .bg6 { background: {{ palette.colors.cyan }}; }
-    .fg7 { color: {{ palette.colors.white }}; } .bg7 { background: {{ palette.colors.white }}; }
-    .fg8 { color: {{ palette.intense_colors.black }}; } .bg8 { background: {{ palette.intense_colors.black }}; }
-    .fg9 { color: {{ palette.intense_colors.red }}; } .bg9 { background: {{ palette.intense_colors.red }}; }
-    .fg10 { color: {{ palette.intense_colors.green }}; } .bg10 { background: {{ palette.intense_colors.green }}; }
-    .fg11 { color: {{ palette.intense_colors.yellow }}; } .bg11 { background: {{ palette.intense_colors.yellow }}; }
-    .fg12 { color: {{ palette.intense_colors.blue }}; } .bg12 { background: {{ palette.intense_colors.blue }}; }
-    .fg13 { color: {{ palette.intense_colors.magenta }}; } .bg13 { background: {{ palette.intense_colors.magenta }}; }
-    .fg14 { color: {{ palette.intense_colors.cyan }}; } .bg14 { background: {{ palette.intense_colors.cyan }}; }
-    .fg15 { color: {{ palette.intense_colors.white }}; } .bg15 { background: {{ palette.intense_colors.white }}; }
-  </style>
+  .bold,.prompt { font-weight: bold; }
+  .italic { font-style: italic; }
+  .underline { text-decoration: underline; }
+  .dimmed { opacity: 0.7; }
+  {{~#if wrap}}
+
+  .hard-br {
+    position: relative;
+    margin-left: 5px;
+  }
+  .hard-br:before {
+    content: '↓';
+    font-size: 16px;
+    height: 16px;
+    position: absolute;
+    bottom: 0;
+    transform: rotate(45deg);
+    opacity: 0.8;
+  }
+  {{~/if}}
+
+  .fg0 { color: {{ palette.colors.black }}; } .bg0 { background: {{ palette.colors.black }}; }
+  .fg1 { color: {{ palette.colors.red }}; } .bg1 { background: {{ palette.colors.red }}; }
+  .fg2 { color: {{ palette.colors.green }}; } .bg2 { background: {{ palette.colors.green }}; }
+  .fg3 { color: {{ palette.colors.yellow }}; } .bg3 { background: {{ palette.colors.yellow }}; }
+  .fg4 { color: {{ palette.colors.blue }}; } .bg4 { background: {{ palette.colors.blue }}; }
+  .fg5 { color: {{ palette.colors.magenta }}; } .bg5 { background: {{ palette.colors.magenta }}; }
+  .fg6 { color: {{ palette.colors.cyan }}; } .bg6 { background: {{ palette.colors.cyan }}; }
+  .fg7 { color: {{ palette.colors.white }}; } .bg7 { background: {{ palette.colors.white }}; }
+  .fg8 { color: {{ palette.intense_colors.black }}; } .bg8 { background: {{ palette.intense_colors.black }}; }
+  .fg9 { color: {{ palette.intense_colors.red }}; } .bg9 { background: {{ palette.intense_colors.red }}; }
+  .fg10 { color: {{ palette.intense_colors.green }}; } .bg10 { background: {{ palette.intense_colors.green }}; }
+  .fg11 { color: {{ palette.intense_colors.yellow }}; } .bg11 { background: {{ palette.intense_colors.yellow }}; }
+  .fg12 { color: {{ palette.intense_colors.blue }}; } .bg12 { background: {{ palette.intense_colors.blue }}; }
+  .fg13 { color: {{ palette.intense_colors.magenta }}; } .bg13 { background: {{ palette.intense_colors.magenta }}; }
+  .fg14 { color: {{ palette.intense_colors.cyan }}; } .bg14 { background: {{ palette.intense_colors.cyan }}; }
+  .fg15 { color: {{ palette.intense_colors.white }}; } .bg15 { background: {{ palette.intense_colors.white }}; }
+</style>
 {{/inline~}}
 
 {{! Terminal background }}
 {{~#*inline "background"}}
-  <rect width="100%" height="100%" y="{{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}}" rx="4.5" style="fill: {{ palette.colors.black }};" />
-  {{~#if window_frame}}
+<rect width="100%" height="100%" y="{{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}}" rx="4.5" style="fill: {{ palette.colors.black }};" />
+{{~#if window_frame}}
 
-  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
-  <circle cx="17" cy="-9" r="7" style="fill: {{ palette.colors.red }};"/>
-  <circle cx="37" cy="-9" r="7" style="fill: {{ palette.colors.yellow }};"/>
-  <circle cx="57" cy="-9" r="7" style="fill: {{ palette.colors.green }};"/>
-  {{~/if}}
+<rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
+<circle cx="17" cy="-9" r="7" style="fill: {{ palette.colors.red }};"/>
+<circle cx="37" cy="-9" r="7" style="fill: {{ palette.colors.yellow }};"/>
+<circle cx="57" cy="-9" r="7" style="fill: {{ palette.colors.green }};"/>
+{{~/if}}
 
 {{/inline~}}
 
 {{~#*inline "content"}}
-  <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
-    {{~#if (scroll_animation)}}
-    {{~#with (scroll_animation)}}
+      <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
+        {{~#if (scroll_animation)}}
+        {{~#with (scroll_animation)}}
 
-    <animate attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-    {{~/with}}
-    {{~/if}}
+        <animate attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+        {{~/with}}
+        {{~/if}}
 
-    <foreignObject width="{{width}}" height="{{content_height}}">
-      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        {{~#each interactions}}
+        <foreignObject width="{{width}}" height="{{content_height}}">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+            {{~#each interactions}}
 
-        <div class="user-input{{#if failure}} user-input-failure{{/if}}"
-          {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
-          {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
-          {{~#if (eq ../line_numbers "continuous")}}{{>number_input_lines}}{{/if~}}
-          <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-        <div class="term-output">{{#if ../line_numbers}}{{>number_output_lines}}{{/if}}<pre>{{{output_html}}}</pre></div>
-        {{~/each}}
+            <div class="user-input{{#if failure}} user-input-failure{{/if}}"
+              {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
+              {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
+              {{~#if (eq ../line_numbers "continuous")}}{{>number_input_lines}}{{/if~}}
+              <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
+            <div class="term-output">{{#if ../line_numbers}}{{>number_output_lines}}{{/if}}<pre>{{{output_html}}}</pre></div>
+            {{~/each}}
 
-      </div>
-    </foreignObject>
-  </svg>
+          </div>
+        </foreignObject>
+      </svg>
 {{/inline~}}
 
 {{~#*inline "scrollbar"}}
 {{#with (scroll_animation)}}
-  <rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
-    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-  </rect>
+<rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
+  <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+</rect>
 {{/with}}
 {{/inline~}}
 

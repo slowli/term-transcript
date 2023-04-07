@@ -51,6 +51,12 @@ pub struct TemplateOptions {
     pub width: usize,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     pub palette: Palette,
+    /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
+    /// to import fonts in conjunction with `font_family`.
+    ///
+    /// The value is not validated in any way, so supplying invalid CSS instructions can lead
+    /// to broken SVG rendering.
+    pub additional_styles: String,
     /// Font family specification in the CSS format. Should be monospace.
     pub font_family: String,
     /// Indicates whether to display a window frame around the shell. Default value is `false`.
@@ -72,6 +78,7 @@ impl Default for TemplateOptions {
         Self {
             width: 720,
             palette: Palette::default(),
+            additional_styles: String::new(),
             font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
             window_frame: false,
             scroll: None,
@@ -599,6 +606,33 @@ mod tests {
         );
         assert!(
             buffer.contains(r#"<pre class="line-numbers">5<br/>6</pre>"#),
+            "{buffer}"
+        );
+    }
+
+    #[test]
+    fn rendering_transcript_with_styles() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let styles = "@font-face { font-family: 'Fira Mono'; }";
+        let options = TemplateOptions {
+            additional_styles: styles.to_owned(),
+            font_family: "Fira Mono, monospace".to_owned(),
+            ..TemplateOptions::default()
+        };
+        let mut buffer = vec![];
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains(styles), "{buffer}");
+        assert!(
+            buffer.contains("font: 14px Fira Mono, monospace;"),
             "{buffer}"
         );
     }
