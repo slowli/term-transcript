@@ -80,13 +80,26 @@
 {{~#*inline "root"}}
 <!-- Created with {{{creator.name}}} v{{{creator.version}}} ({{{creator.repo}}}) -->
 <svg viewBox="0 {{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" height="{{height}}" xmlns="http://www.w3.org/2000/svg">
-{{>styles}}
-{{>background}}
-{{>content}}
-{{~#if (scroll_animation)}}
-{{>scrollbar}}
-{{/if}}
+  <switch>
+    <g requiredExtensions="http://www.w3.org/1999/xhtml">
+      {{>styles}}
+      {{>background}}
+      {{>content}}
+      {{~#if (scroll_animation)}}
+        {{>scrollbar}}
+      {{/if}}
+    </g>
+    {{>unsupported_error}}
+  </switch>
 </svg>
+{{/inline~}}
+
+{{! NB. The warning text should fit in one 80-char line to not potentially overflow the viewbox. }}
+{{~#*inline "unsupported_error"}}
+<text x="10" y="{{const.LINE_HEIGHT}}" style="font: 14px {{font_family}}; fill: {{ palette.colors.red }};">
+  HTML embedding not supported.
+  Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://example.com/">term-transcript docs</a></tspan> for details.
+</text>
 {{/inline~}}
 
 {{! CSS definitions }}
@@ -104,9 +117,11 @@
       line-height: inherit;
     }
     .user-input {
-      {{#if (eq line_numbers "continuous")}}
+      {{~#if (eq line_numbers "continuous")}}
+
       display: flex;
-      {{/if}}
+      {{~/if}}
+
       margin: 0 -{{const.WINDOW_PADDING}}px {{const.BLOCK_MARGIN}}px;
       color: {{ palette.colors.white }};
       background: rgba(255, 255, 255, 0.1);
