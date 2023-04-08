@@ -444,14 +444,13 @@ mod tests {
 
         let top_svg = "<svg viewBox=\"0 0 720 118\"";
         assert!(buffer.contains(top_svg), "{buffer}");
-        let first_input_text = r#"<tspan xml:space="preserve" x="10" y="16" class="user-input">"#;
+        let first_input_text = r#"<tspan xml:space="preserve" x="10" y="16" class="input">"#;
         assert!(buffer.contains(first_input_text), "{buffer}");
-        let first_output_text = r#"<tspan xml:space="preserve" x="10" y="42" class="term-output">"#;
+        let first_output_text = r#"<tspan xml:space="preserve" x="10" y="42" class="output">"#;
         assert!(buffer.contains(first_output_text), "{buffer}");
-        let second_input_text = r#"<tspan xml:space="preserve" x="10" y="68" class="user-input">"#;
+        let second_input_text = r#"<tspan xml:space="preserve" x="10" y="68" class="input">"#;
         assert!(buffer.contains(second_input_text), "{buffer}");
-        let second_output_text =
-            r#"<tspan xml:space="preserve" x="10" y="94" class="term-output">"#;
+        let second_output_text = r#"<tspan xml:space="preserve" x="10" y="94" class="output">"#;
         assert!(buffer.contains(second_output_text), "{buffer}");
     }
 
@@ -474,10 +473,9 @@ mod tests {
         assert!(buffer.contains(top_svg), "{buffer}");
         let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22" />"#;
         assert!(buffer.contains(second_input_bg), "{buffer}");
-        let second_input_text = r#"<tspan xml:space="preserve" x="10" y="44" class="user-input">"#;
+        let second_input_text = r#"<tspan xml:space="preserve" x="10" y="44" class="input">"#;
         assert!(buffer.contains(second_input_text), "{buffer}");
-        let second_output_bg =
-            r#"<tspan xml:space="preserve" x="10" y="70" class="term-output-bg">"#;
+        let second_output_bg = r#"<tspan xml:space="preserve" x="10" y="70" class="output-bg">"#;
         assert!(buffer.contains(second_output_bg), "{buffer}");
     }
 
@@ -515,6 +513,32 @@ mod tests {
         assert!(buffer.contains("user-input-failure"));
         assert!(buffer.contains("title=\"This command exited with non-zero code\""));
         assert!(buffer.contains(r#"data-exit-status="1""#));
+    }
+
+    #[test]
+    fn rendering_pure_svg_transcript_with_failure() {
+        let mut transcript = Transcript::new();
+        let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+            .with_exit_status(ExitStatus(1));
+        transcript.add_existing_interaction(interaction);
+
+        let mut buffer = vec![];
+        Template::pure_svg(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains(".input-bg .input-failure"), "{buffer}");
+        let failure_bg = "<rect x=\"0\" y=\"0\" width=\"100%\" height=\"22\" \
+            class=\"input-failure\"";
+        assert!(buffer.contains(failure_bg), "{buffer}");
+        let left_failure_border = "<rect x=\"0\" y=\"0\" width=\"2\" height=\"22\" \
+            class=\"input-failure-hl\" />";
+        assert!(buffer.contains(left_failure_border), "{buffer}");
+        let right_failure_border = "<rect x=\"100%\" y=\"0\" width=\"2\" height=\"22\" \
+            class=\"input-failure-hl\" transform=\"translate(-2, 0)\" />";
+        assert!(buffer.contains(right_failure_border), "{buffer}");
+        assert!(buffer.contains("<title>This command exited"), "{buffer}");
     }
 
     #[test]

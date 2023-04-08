@@ -102,15 +102,16 @@
     font: 14px {{font_family}};
     line-height: {{const.LINE_HEIGHT}}px;
   }
-  .user-input,.term-output,.term-output-bg {
+  .input,.output,.output-bg {
     white-space: pre;
   }
-  .user-input-bg {
-    fill: #fff;
-    fill-opacity: 0.1;
-  }
-  .term-output-bg { user-select: none; text-rendering: geometricPrecision; }
+  .input-bg { fill: #fff; fill-opacity: 0.1; }
+  .output-bg { user-select: none; text-rendering: geometricPrecision; }
+  {{~#if has_failures}}
 
+  .input-bg .input-failure { fill: #ff0041; fill-opacity: 0.15; }
+  .input-failure-hl { fill: #ff0041; fill-opacity: 1; }
+  {{/if}}
   {{~#if (scroll_animation)}}
 
   .scrollbar { fill: #fff; fill-opacity: 0.35; }
@@ -171,7 +172,7 @@
 
       {{! Render backgrounds for each input beforehand since they cannot be placed in <text>. }}
       {{#scope y_pos=0 input_height=0 block_margin=0}}
-      <g class="user-input-bg">
+      <g class="input-bg">
         {{~#each interactions}}
         {{~input_height set=(add (mul (count_lines input.text) const.LINE_HEIGHT) const.USER_INPUT_PADDING)~}}
         {{~#if (eq (len output_svg) 0)~}}
@@ -180,7 +181,15 @@
           {{~block_margin set=(mul 2 const.BLOCK_MARGIN)~}}
         {{~/if~}}
 
-        <rect x="0" y="{{y_pos}}" width="100%" height="{{input_height}}" />
+        <rect x="0" y="{{y_pos}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
+        {{~#if failure~}}
+          <title>This command exited with non-zero code</title>
+        {{~/if~}}
+        </rect>
+        {{~#if failure~}}
+        <rect x="0" y="{{y_pos}}" width="2" height="{{input_height}}" class="input-failure-hl" />
+        <rect x="100%" y="{{y_pos}}" width="2" height="{{input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
+        {{~/if~}}
         {{~y_pos set=(add (y_pos) (input_height) (mul const.LINE_HEIGHT (len output_svg)) (block_margin))~}}
         {{~/each~}}
       </g>
@@ -193,7 +202,7 @@
       <text class="container fg7">
         {{~#each interactions}}
         {{y_pos set=(add (y_pos) (input_padding))}}
-        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="user-input{{#if failure}} user-input-failure{{/if}}"><tspan class="prompt">{{ input.prompt }}</tspan> {{ input.text }}</tspan>
+        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}"><tspan class="prompt">{{ input.prompt }}</tspan> {{ input.text }}</tspan>
         {{y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT) (input_padding))}}
         {{~#if (gt (len output_svg) 0)~}}
           {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)~}}
@@ -201,10 +210,10 @@
         {{~#each output_svg}}
         {{~#if (ne background null)~}}
 
-        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="term-output-bg">{{{background}}}</tspan>
+        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{background}}}</tspan>
         {{~/if~}}
 
-        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="term-output">{{{foreground}}}</tspan>
+        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">{{{foreground}}}</tspan>
         {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)~}}
         {{~/each~}}
         {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)}}
