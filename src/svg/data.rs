@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::{svg::TemplateOptions, UserInput};
+use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 
 /// Root data structure sent to the Handlebars template.
 ///
@@ -141,6 +141,8 @@ pub struct SerializedInteraction<'a> {
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
     pub output_html: String,
+    /// Terminal output in the SVG format.
+    pub(crate) output_svg: Vec<SvgLine>,
     /// Exit status of the latest executed program, or `None` if it cannot be determined.
     pub exit_status: Option<i32>,
     /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?

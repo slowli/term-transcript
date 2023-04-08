@@ -26,9 +26,10 @@ pub use self::{
 pub use crate::utils::{RgbColor, RgbColorParseError};
 
 use self::helpers::register_helpers;
-use crate::{TermError, Transcript};
+use crate::{write::SvgLine, TermError, Transcript};
 
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
+const PURE_TEMPLATE: &str = include_str!("pure.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
 
 /// Line numbering options.
@@ -110,7 +111,7 @@ impl TemplateOptions {
             .interactions()
             .iter()
             .zip(rendered_outputs)
-            .map(|(interaction, output_html)| {
+            .map(|(interaction, (output_html, output_svg))| {
                 let failure = interaction
                     .exit_status()
                     .map_or(false, |status| !status.is_success());
@@ -118,6 +119,7 @@ impl TemplateOptions {
                 SerializedInteraction {
                     input: interaction.input(),
                     output_html,
+                    output_svg,
                     exit_status: interaction.exit_status().map(|status| status.0),
                     failure,
                 }
@@ -136,7 +138,10 @@ impl TemplateOptions {
         feature = "tracing",
         tracing::instrument(level = "debug", skip_all, err)
     )]
-    fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<String>, TermError> {
+    fn render_outputs(
+        &self,
+        transcript: &Transcript,
+    ) -> Result<Vec<(String, Vec<SvgLine>)>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
             WrapOptions::HardBreakAt(width) => *width,
         });
@@ -148,7 +153,8 @@ impl TemplateOptions {
                 let output = interaction.output();
                 let mut buffer = String::with_capacity(output.as_ref().len());
                 output.write_as_html(&mut buffer, max_width)?;
-                Ok(buffer)
+                let svg_lines = output.write_as_svg(max_width)?;
+                Ok((buffer, svg_lines))
             })
             .collect()
     }
@@ -338,6 +344,13 @@ impl Template {
         Self::custom(template, options)
     }
 
+    /// Initializes the pure SVG template based on provided `options`.
+    pub fn pure_svg(options: TemplateOptions) -> Self {
+        let template =
+            HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");
+        Self::custom(template, options)
+    }
+
     /// Initializes a custom template.
     pub fn custom(template: HandlebarsTemplate, options: TemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
@@ -412,6 +425,63 @@ mod tests {
     }
 
     #[test]
+    fn rendering_simple_transcript_to_pure_svg() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+        transcript.add_interaction(
+            UserInput::command("test --arg"),
+            "Hello, \u{1b}[31m\u{1b}[42mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        Template::pure_svg(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        let top_svg = "<svg viewBox=\"0 0 720 118\"";
+        assert!(buffer.contains(top_svg), "{buffer}");
+        let first_input_text = r#"<tspan xml:space="preserve" x="10" y="16" class="user-input">"#;
+        assert!(buffer.contains(first_input_text), "{buffer}");
+        let first_output_text = r#"<tspan xml:space="preserve" x="10" y="42" class="term-output">"#;
+        assert!(buffer.contains(first_output_text), "{buffer}");
+        let second_input_text = r#"<tspan xml:space="preserve" x="10" y="68" class="user-input">"#;
+        assert!(buffer.contains(second_input_text), "{buffer}");
+        let second_output_text =
+            r#"<tspan xml:space="preserve" x="10" y="94" class="term-output">"#;
+        assert!(buffer.contains(second_output_text), "{buffer}");
+    }
+
+    #[test]
+    fn rendering_transcript_with_empty_output_to_pure_svg() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(UserInput::command("test"), "");
+        transcript.add_interaction(
+            UserInput::command("test --arg"),
+            "Hello, \u{1b}[31m\u{1b}[42mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        Template::pure_svg(TemplateOptions::default())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        let top_svg = "<svg viewBox=\"0 0 720 94\"";
+        assert!(buffer.contains(top_svg), "{buffer}");
+        let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22" />"#;
+        assert!(buffer.contains(second_input_bg), "{buffer}");
+        let second_input_text = r#"<tspan xml:space="preserve" x="10" y="44" class="user-input">"#;
+        assert!(buffer.contains(second_input_text), "{buffer}");
+        let second_output_bg =
+            r#"<tspan xml:space="preserve" x="10" y="70" class="term-output-bg">"#;
+        assert!(buffer.contains(second_output_bg), "{buffer}");
+    }
+
+    #[test]
     fn rendering_transcript_with_explicit_success() {
         let mut transcript = Transcript::new();
         let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
@@ -468,6 +538,26 @@ mod tests {
     }
 
     #[test]
+    fn rendering_pure_svg_transcript_with_frame() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            window_frame: true,
+            ..TemplateOptions::default()
+        };
+        Template::pure_svg(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+        assert!(buffer.contains("<circle"));
+    }
+
+    #[test]
     fn rendering_transcript_with_animation() {
         let mut transcript = Transcript::new();
         transcript.add_interaction(
@@ -484,6 +574,31 @@ mod tests {
             ..TemplateOptions::default()
         };
         Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
+        assert!(buffer.contains("<animateTransform"), "{buffer}");
+    }
+
+    #[test]
+    fn rendering_pure_svg_transcript_with_animation() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!\n".repeat(22),
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            scroll: Some(ScrollOptions {
+                max_height: 240,
+                interval: 3.0,
+            }),
+            ..TemplateOptions::default()
+        };
+        Template::pure_svg(options)
             .render(&transcript, &mut buffer)
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
@@ -512,6 +627,28 @@ mod tests {
 
         assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
         assert!(buffer.contains("<br/>"), "{buffer}");
+    }
+
+    #[test]
+    fn rendering_svg_transcript_with_wraps() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            wrap: Some(WrapOptions::HardBreakAt(5)),
+            ..TemplateOptions::default()
+        };
+        Template::pure_svg(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
+        assert!(buffer.contains("Hello<tspan class=\"hard-br\""), "{buffer}");
     }
 
     #[test]
