@@ -1,6 +1,8 @@
-use super::*;
+use termcolor::WriteColor;
 
 use std::io::Write;
+
+use super::*;
 
 #[test]
 fn html_escaping() -> anyhow::Result<()> {

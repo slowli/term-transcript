@@ -5,7 +5,7 @@
 use termcolor::NoColor;
 
 use super::*;
-use crate::html::HtmlWriter;
+use crate::write::HtmlWriter;
 
 #[test]
 fn getting_spans_basics() {

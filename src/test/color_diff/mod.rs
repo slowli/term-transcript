@@ -10,7 +10,7 @@ use std::{
 #[cfg(test)]
 mod tests;
 
-use crate::{html::IndexOrRgb, term::TermOutputParser, TermError};
+use crate::{term::TermOutputParser, write::IndexOrRgb, TermError};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ColorSpan {

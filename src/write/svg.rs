@@ -1,3 +1,4 @@
+use serde::Serialize;
 use termcolor::{ColorSpec, WriteColor};
 
 use std::{fmt, io, iter, mem, str};
@@ -20,7 +21,7 @@ impl StyledSpan {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub(crate) struct SvgLine {
     pub background: Option<String>,
     pub foreground: String,
@@ -136,11 +137,13 @@ impl SvgWriter {
         segment.char_width = current_width - segment.start_pos;
     }
 
-    pub fn close(mut self) -> Vec<SvgLine> {
-        self.output.push(SvgLine::new(
-            mem::take(&mut self.current_line),
-            mem::take(&mut self.current_background),
-        ));
+    pub fn into_lines(mut self) -> Vec<SvgLine> {
+        if self.line_splitter.current_width > 0 {
+            self.output.push(SvgLine::new(
+                mem::take(&mut self.current_line),
+                mem::take(&mut self.current_background),
+            ));
+        }
         self.output
     }
 }
@@ -233,7 +236,7 @@ mod tests {
         writer.reset()?;
         write!(writer, "!")?;
 
-        let mut lines = writer.close();
+        let mut lines = writer.into_lines();
         assert_eq!(lines.len(), 1);
         let SvgLine {
             background,
@@ -259,7 +262,7 @@ mod tests {
         write!(writer, "blue")?;
         writer.reset()?;
 
-        let mut lines = writer.close();
+        let mut lines = writer.into_lines();
         assert_eq!(lines.len(), 1);
         let SvgLine {
             background,
@@ -267,6 +270,23 @@ mod tests {
         } = lines.pop().unwrap();
         assert!(background.is_none());
         assert_eq!(foreground, r#"<tspan class="fg12">blue</tspan>"#);
+        Ok(())
+    }
+
+    #[test]
+    fn final_empty_line_in_writer() -> anyhow::Result<()> {
+        let writer = SvgWriter::new(None);
+        let lines = writer.into_lines();
+        assert!(lines.is_empty());
+
+        let mut writer = SvgWriter::new(None);
+
+        writer.set_color(ColorSpec::new().set_intense(true).set_fg(Some(Color::Blue)))?;
+        write!(writer, "")?;
+        writer.reset()?;
+
+        let lines = writer.into_lines();
+        assert!(lines.is_empty());
         Ok(())
     }
 
@@ -285,7 +305,7 @@ mod tests {
         write!(writer, "o")?;
         writer.reset()?;
 
-        let mut lines = writer.close();
+        let mut lines = writer.into_lines();
         assert_eq!(lines.len(), 1);
         let SvgLine {
             background,
@@ -327,7 +347,7 @@ mod tests {
         writer.reset()?;
         write!(writer, "!")?;
 
-        let lines = writer.close();
+        let lines = writer.into_lines();
         let [first, second, third] = lines.as_slice() else {
             panic!("Unexpected lines: {lines:?}");
         };
@@ -369,7 +389,7 @@ mod tests {
         writer.reset()?;
         write!(writer, "! More>\ntext")?;
 
-        let lines = writer.close();
+        let lines = writer.into_lines();
         assert_eq!(lines.len(), 5);
         let [first, second, third, ..] = lines.as_slice() else { unreachable!() };
         assert!(first.background.is_none());

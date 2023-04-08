@@ -152,7 +152,6 @@
 
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
-mod html;
 #[cfg(feature = "portable-pty")]
 mod pty;
 mod shell;
@@ -165,6 +164,7 @@ mod term;
 pub mod test;
 pub mod traits;
 mod utils;
+mod write;
 
 #[cfg(feature = "portable-pty")]
 pub use self::pty::{PtyCommand, PtyShell};
