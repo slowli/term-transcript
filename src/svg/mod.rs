@@ -471,7 +471,7 @@ mod tests {
 
         let top_svg = "<svg viewBox=\"0 0 720 94\"";
         assert!(buffer.contains(top_svg), "{buffer}");
-        let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22" />"#;
+        let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22""#;
         assert!(buffer.contains(second_input_bg), "{buffer}");
         let second_input_text = r#"<tspan xml:space="preserve" x="10" y="44" class="input">"#;
         assert!(buffer.contains(second_input_text), "{buffer}");
@@ -708,6 +708,37 @@ mod tests {
     }
 
     #[test]
+    fn rendering_pure_svg_transcript_with_line_numbers() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+        transcript.add_interaction(
+            UserInput::command("another_test"),
+            "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            line_numbers: Some(LineNumbers::EachOutput),
+            ..TemplateOptions::default()
+        };
+        Template::pure_svg(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        assert!(buffer.contains(".line-numbers {"), "{buffer}");
+        let first_output_ln = r#"<tspan x="34" y="42">1</tspan>"#;
+        assert!(buffer.contains(first_output_ln), "{buffer}");
+        let second_output_ln1 = r#"<tspan x="34" y="94">1</tspan>"#;
+        assert!(buffer.contains(second_output_ln1), "{buffer}");
+        let second_output_ln2 = r#"<tspan x="34" y="112">2</tspan>"#;
+        assert!(buffer.contains(second_output_ln2), "{buffer}");
+    }
+
+    #[test]
     fn rendering_transcript_with_continuous_line_numbers() {
         let mut transcript = Transcript::new();
         transcript.add_interaction(
@@ -769,6 +800,37 @@ mod tests {
             buffer.contains(r#"<pre class="line-numbers">5<br/>6</pre>"#),
             "{buffer}"
         );
+    }
+
+    #[test]
+    fn rendering_pure_svg_transcript_with_input_line_numbers() {
+        let mut transcript = Transcript::new();
+        transcript.add_interaction(
+            UserInput::command("test"),
+            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        );
+        transcript.add_interaction(
+            UserInput::command("another\ntest"),
+            "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        );
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            line_numbers: Some(LineNumbers::Continuous),
+            ..TemplateOptions::default()
+        };
+        Template::pure_svg(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        let line_numbers = "<tspan x=\"34\" y=\"16\">1</tspan>\
+            <tspan x=\"34\" y=\"42\">2</tspan>\
+            <tspan x=\"34\" y=\"68\">3</tspan>\
+            <tspan x=\"34\" y=\"86\">4</tspan>\
+            <tspan x=\"34\" y=\"112\">5</tspan>\
+            <tspan x=\"34\" y=\"130\">6</tspan>";
+        assert!(buffer.contains(line_numbers), "{buffer}");
     }
 
     #[test]

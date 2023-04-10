@@ -1,11 +1,15 @@
 {{~#*inline "define_const"}}
 {
-  {{! Bottom margin for each input or output block }}
+  {{! Top / bottom margin for each input or output block }}
   "BLOCK_MARGIN": 6,
-  {{! Additional padding for each user input block }}
-  "USER_INPUT_PADDING": 4,
+  {{! Top / bottom padding for each user input block }}
+  "INPUT_PADDING": 2,
   {{! Padding within the rendered terminal window in pixels }}
   "WINDOW_PADDING": 10,
+  {{! Width of the line numbers column in pixels }}
+  "LN_WIDTH": 24,
+  {{! Right padding for the line numbers column }}
+  "LN_PADDING": 8,
   {{! Line height in pixels }}
   "LINE_HEIGHT": 18,
   {{! Height of the window frame }}
@@ -39,7 +43,7 @@
     {{/if}}
     {{add (mul (lines) const.LINE_HEIGHT)
           (mul (margins) const.BLOCK_MARGIN)
-          (mul (len interactions) const.USER_INPUT_PADDING) }}
+          (mul 2 (len interactions) const.INPUT_PADDING) }}
   {{/scope}}
 {{/inline~}}
 
@@ -116,6 +120,10 @@
 
   .scrollbar { fill: #fff; fill-opacity: 0.35; }
   {{~/if}}
+  {{~#if line_numbers}}
+
+  .line-numbers { text-anchor: end; fill-opacity: 0.35; user-select: none; }
+  {{/if}}
 
   .bold,.prompt { font-weight: 600; }
   .italic { font-style: italic; }
@@ -174,7 +182,7 @@
       {{#scope y_pos=0 input_height=0 block_margin=0}}
       <g class="input-bg">
         {{~#each interactions}}
-        {{~input_height set=(add (mul (count_lines input.text) const.LINE_HEIGHT) const.USER_INPUT_PADDING)~}}
+        {{~input_height set=(add (mul (count_lines input.text) const.LINE_HEIGHT) (mul 2 const.INPUT_PADDING))~}}
         {{~#if (eq (len output_svg) 0)~}}
           {{~block_margin set=const.BLOCK_MARGIN~}}
         {{~else~}}
@@ -194,16 +202,24 @@
         {{~/each~}}
       </g>
       {{/scope}}
+      {{#if line_numbers}}{{>number_lines}}{{/if}}
+      {{! Render main text }}
       {{#scope
         x_pos=const.WINDOW_PADDING
+        input_x_pos=const.WINDOW_PADDING
         y_pos=14
-        input_padding=(div const.USER_INPUT_PADDING 2 round=true)
       }}
+      {{~#if line_numbers}}
+        {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
+      {{/if~}}
+      {{~#if (eq line_numbers "continuous")}}
+        {{input_x_pos set=(x_pos)}}
+      {{/if~}}
       <text class="container fg7">
         {{~#each interactions}}
-        {{y_pos set=(add (y_pos) (input_padding))}}
-        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}"><tspan class="prompt">{{ input.prompt }}</tspan> {{ input.text }}</tspan>
-        {{y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT) (input_padding))}}
+        {{y_pos set=(add (y_pos) const.INPUT_PADDING)}}
+        <tspan xml:space="preserve" x="{{input_x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}"><tspan class="prompt">{{ input.prompt }}</tspan> {{ input.text }}</tspan>
+        {{y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT) const.INPUT_PADDING)}}
         {{~#if (gt (len output_svg) 0)~}}
           {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)~}}
         {{~/if~}}
@@ -231,6 +247,45 @@
 </rect>
 {{/with}}
 {{/inline~}}
+
+{{~#*inline "number_lines"~}}
+  {{~#scope
+    x_pos=(add const.WINDOW_PADDING const.LN_WIDTH)
+    y_pos=14
+    line_number=1
+  }}
+  <text class="container fg7 line-numbers">
+    {{~#each interactions}}{{>number_lines_in_interaction}}{{/each~}}
+  </text>
+  {{/scope~}}
+{{~/inline~}}
+
+{{~#*inline "number_lines_in_interaction"~}}
+  {{! Number lines in the input }}
+  {{~y_pos set=(add (y_pos) const.INPUT_PADDING)~}}
+  {{~#if (eq ../line_numbers "continuous")}}
+    {{~#each (range 0 (count_lines input.text))~}}
+      <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
+      {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)~}}
+    {{~/each~}}
+    {{~line_number set=(add (line_number) (count_lines input.text))~}}
+  {{~else~}}
+    {{~y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT))~}}
+  {{~/if~}}
+  {{~y_pos set=(add (y_pos) const.INPUT_PADDING const.BLOCK_MARGIN)~}}
+
+  {{! Number lines in the output }}
+  {{~#each (range 0 (len output_svg))~}}
+    <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
+    {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)~}}
+  {{~/each~}}
+  {{~#if (gt (len output_svg) 0)~}}
+    {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)~}}
+  {{~/if~}}
+  {{~#if (ne ../line_numbers "each_output")~}}
+    {{line_number set=(add (line_number) (len output_svg))}}
+  {{~/if~}}
+{{~/inline~}}
 
 {{! Main logic }}
 {{#with this as |$|}}
