@@ -350,6 +350,46 @@ impl HelperDef for LineCounter {
 }
 
 #[derive(Debug)]
+struct LineSplitter;
+
+impl HelperDef for LineSplitter {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'reg, 'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+        let string = helper
+            .param(0)
+            .ok_or_else(|| RenderError::new("must be called with a single arg"))?;
+        let string = string
+            .value()
+            .as_str()
+            .ok_or_else(|| RenderError::new("argument must be a string"))?;
+
+        let lines = string.split('\n');
+        let mut lines: Vec<_> = lines.map(Json::from).collect();
+        // Remove the last empty line if necessary.
+        if let Some(Json::String(s)) = lines.last() {
+            if s.is_empty() {
+                lines.pop();
+            }
+        }
+
+        Ok(ScopedJson::Derived(lines.into()))
+    }
+}
+
+#[derive(Debug)]
 struct RangeHelper;
 
 impl RangeHelper {
@@ -394,6 +434,7 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
     reg.register_helper("count_lines", Box::new(LineCounter));
+    reg.register_helper("split_lines", Box::new(LineSplitter));
     reg.register_helper("range", Box::new(RangeHelper));
     reg.register_helper("scope", Box::new(ScopeHelper));
     reg.register_helper("eval", Box::new(EvalHelper));
@@ -581,6 +622,26 @@ mod tests {
         let data = serde_json::json!({ "text": text });
         let rendered = handlebars.render_template(template, &data).unwrap();
         assert_eq!(rendered.trim(), "2, 3");
+    }
+
+    #[test]
+    fn line_splitter() {
+        let template = r#"
+            {{#each (split_lines text)}}{{this}}<br/>{{/each}}
+        "#;
+        let text = "test\nother test";
+
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("split_lines", Box::new(LineSplitter));
+        let data = serde_json::json!({ "text": text });
+        let rendered = handlebars.render_template(template, &data).unwrap();
+        assert_eq!(rendered.trim(), "test<br/>other test<br/>");
+
+        let text = "test\nother test\n";
+        let data = serde_json::json!({ "text": text });
+        let rendered = handlebars.render_template(template, &data).unwrap();
+        assert_eq!(rendered.trim(), "test<br/>other test<br/>");
     }
 
     #[test]

@@ -223,9 +223,14 @@
       <text class="container fg7">
         {{~#each interactions~}}
         {{~y_pos set=(add (y_pos) const.INPUT_PADDING)~}}
-        <tspan xml:space="preserve" x="{{input_x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}"><tspan class="prompt">{{ input.prompt }}</tspan> {{ input.text }}
+        <tspan xml:space="preserve" x="{{input_x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}">
+          {{~#each (split_lines input.text)~}}
+          <tspan x="{{input_x_pos}}" y="{{y_pos}}">{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
 </tspan>
-        {{~y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT) const.INPUT_PADDING)}}
+          {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)}}
+          {{~/each~}}
+</tspan>
+        {{~y_pos set=(add (y_pos) const.INPUT_PADDING)}}
         {{~#if (gt (len output_svg) 0)~}}
           {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)~}}
         {{~/if~}}
