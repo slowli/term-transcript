@@ -51,6 +51,7 @@ use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 ///             "white": "#f7f7fb",
 ///         },
 ///     },
+///     "additional_styles": "",
 ///     "font_family": "Consolas, Menlo, monospace",
 ///     "window_frame": false,
 ///     "wrap": {
@@ -64,6 +65,11 @@ use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 ///             "prompt": "$",
 ///         },
 ///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
+/// #       "output_svg": [{
+/// #           "background": null,
+/// #           "foreground": "Hello,\u{a0}<tspan class=\"fg2\">world</tspan>!",
+/// #       }],
+/// #       // ^ Implementation detail for now
 ///         "failure": false,
 ///         "exit_status": null,
 ///     }]
