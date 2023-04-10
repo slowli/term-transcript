@@ -6,14 +6,14 @@ use unicode_width::UnicodeWidthChar;
 use std::{fmt, io, str};
 
 mod html;
+#[cfg(feature = "svg")]
 mod svg;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use self::{
-    html::HtmlWriter,
-    svg::{SvgLine, SvgWriter},
-};
+pub(crate) use self::html::HtmlWriter;
+#[cfg(feature = "svg")]
+pub(crate) use self::svg::{SvgLine, SvgWriter};
 
 fn fmt_to_io_error(err: fmt::Error) -> io::Error {
     io::Error::new(io::ErrorKind::Other, err)
