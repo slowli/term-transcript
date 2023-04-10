@@ -203,6 +203,22 @@ impl Default for WrapOptions {
 
 /// Template for rendering [`Transcript`]s, e.g. into an [SVG] image.
 ///
+/// # Available templates
+///
+/// When using a template created with [`Self::new()`], a transcript is rendered into SVG
+/// with the text content embedded as an HTML fragment. This is because SVG is not good
+/// at laying out multiline texts and text backgrounds, while HTML excels at both.
+/// As a downside of this approach, the resulting SVG requires for its viewer to support
+/// HTML embedding; while web browsers *a priori* support such embedding, some other SVG viewers
+/// may not.
+///
+/// A template created with [`Self::pure_svg()`] renders a transcript into 100% SVG,
+/// in which text is laid out manually and backgrounds use a hack (lines of text with
+/// appropriately colored `█` chars placed behind the content lines). The resulting SVG is
+/// supported by more viewers, but it may look incorrectly in certain corner cases. For example,
+/// if the font family used in the template does not contain `█` or some chars
+/// used in the transcript, the background may be mispositioned.
+///
 /// # Customization
 ///
 /// A custom [Handlebars] template can be supplied via [`Self::custom()`]. This can be used
