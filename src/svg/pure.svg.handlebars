@@ -110,7 +110,7 @@
     white-space: pre;
   }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
-  .output-bg { user-select: none; text-rendering: geometricPrecision; }
+  .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.1; }
   {{~#if has_failures}}
 
   .input-bg .input-failure { fill: #ff0041; fill-opacity: 0.15; }
@@ -127,32 +127,29 @@
 
   .bold,.prompt { font-weight: 600; }
   .italic { font-style: italic; }
-  .underline { text-decoration: underline; text-decoration-width: 1px; }
+  .underline { text-decoration: underline; }
   .dimmed { fill-opacity: 0.7; }
   {{~#if wrap}}
 
-  .hard-br {
-    font-size: 16px;
-    fill-opacity: 0.8;
-  }
+  .hard-br { font-size: 16px; fill-opacity: 0.8; user-select: none; }
   {{~/if}}
 
-  .fg0 { fill: {{ palette.colors.black }}; }
-  .fg1 { fill: {{ palette.colors.red }}; }
-  .fg2 { fill: {{ palette.colors.green }}; }
-  .fg3 { fill: {{ palette.colors.yellow }}; }
-  .fg4 { fill: {{ palette.colors.blue }}; }
-  .fg5 { fill: {{ palette.colors.magenta }}; }
-  .fg6 { fill: {{ palette.colors.cyan }}; }
-  .fg7 { fill: {{ palette.colors.white }}; }
-  .fg8 { fill: {{ palette.intense_colors.black }}; }
-  .fg9 { fill: {{ palette.intense_colors.red }}; }
-  .fg10 { fill: {{ palette.intense_colors.green }}; }
-  .fg11 { fill: {{ palette.intense_colors.yellow }}; }
-  .fg12 { fill: {{ palette.intense_colors.blue }}; }
-  .fg13 { fill: {{ palette.intense_colors.magenta }}; }
-  .fg14 { fill: {{ palette.intense_colors.cyan }}; }
-  .fg15 { fill: {{ palette.intense_colors.white }}; }
+  .fg0 { fill: {{ palette.colors.black }}; } .output-bg .fg0 { stroke: {{ palette.colors.black }}; }
+  .fg1 { fill: {{ palette.colors.red }}; } .output-bg .fg1 { stroke: {{ palette.colors.red }}; }
+  .fg2 { fill: {{ palette.colors.green }}; } .output-bg .fg2 { stroke: {{ palette.colors.green }}; }
+  .fg3 { fill: {{ palette.colors.yellow }}; } .output-bg .fg3 { stroke: {{ palette.colors.yellow }}; }
+  .fg4 { fill: {{ palette.colors.blue }}; } .output-bg .fg4 { stroke: {{ palette.colors.blue }}; }
+  .fg5 { fill: {{ palette.colors.magenta }}; } .output-bg .fg5 { stroke: {{ palette.colors.magenta }}; }
+  .fg6 { fill: {{ palette.colors.cyan }}; } .output-bg .fg6 { stroke: {{ palette.colors.cyan }}; }
+  .fg7 { fill: {{ palette.colors.white }}; } .output-bg .fg7 { stroke: {{ palette.colors.white }}; }
+  .fg8 { fill: {{ palette.intense_colors.black }}; } .output-bg .fg8 { stroke: {{ palette.intense_colors.black }}; }
+  .fg9 { fill: {{ palette.intense_colors.red }}; } .output-bg .fg9 { stroke: {{ palette.intense_colors.red }}; }
+  .fg10 { fill: {{ palette.intense_colors.green }}; } .output-bg .fg10 { stroke: {{ palette.intense_colors.green }}; }
+  .fg11 { fill: {{ palette.intense_colors.yellow }}; } .output-bg .fg11 { stroke: {{ palette.intense_colors.yellow }}; }
+  .fg12 { fill: {{ palette.intense_colors.blue }}; } .output-bg .fg12 { stroke: {{ palette.intense_colors.blue }}; }
+  .fg13 { fill: {{ palette.intense_colors.magenta }}; } .output-bg .fg13 { stroke: {{ palette.intense_colors.magenta }}; }
+  .fg14 { fill: {{ palette.intense_colors.cyan }}; } .output-bg .fg14 { stroke: {{ palette.intense_colors.cyan }}; }
+  .fg15 { fill: {{ palette.intense_colors.white }}; } .output-bg .fg15 { stroke: {{ palette.intense_colors.white }}; }
 </style>
 {{/inline~}}
 

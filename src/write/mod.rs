@@ -48,12 +48,12 @@ impl StyledSpan {
         };
         if let Some(color) = spec.fg() {
             let color = IndexOrRgb::new(*color)?;
-            this.set_fg(color, spec.intense(), fg_property);
+            this.set_fg(color, spec.intense(), &[fg_property]);
         }
         Ok(this)
     }
 
-    fn set_fg(&mut self, color: IndexOrRgb, intense: bool, fg_property: &str) {
+    fn set_fg(&mut self, color: IndexOrRgb, intense: bool, fg_properties: &[&str]) {
         use fmt::Write as _;
 
         let mut fore_color_class = String::with_capacity(4);
@@ -66,8 +66,10 @@ impl StyledSpan {
                 self.classes.push(fore_color_class);
             }
             IndexOrRgb::Rgb(r, g, b) => {
-                self.styles
-                    .push(format!("{fg_property}: #{r:02x}{g:02x}{b:02x}"));
+                for property in fg_properties {
+                    self.styles
+                        .push(format!("{property}: #{r:02x}{g:02x}{b:02x}"));
+                }
             }
         }
     }
