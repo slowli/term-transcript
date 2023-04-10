@@ -5,6 +5,18 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Add a pure SVG rendering option to `svg::Template`. Since rendered SVGs do not contain
+  embedded HTML, they are supported by more SVG viewers / editors (e.g., Inkscape).
+  On the downside, the rendered SVG may have mispositioned background text coloring
+  in certain corner cases.
+- Allow specifying additional CSS instructions in `svg::TemplateOptions`.
+  As an example, this can be used to import fonts using `@import` or `@font-face`.
+- Add a fallback error message to the default template if HTML-in-SVG embedding
+  is not supported.
+- Add [FAQ](FAQ.md) with some tips and troubleshooting advice.
+
 ### Changed
 
 - Update `portable-pty` and `quick-xml` dependencies.

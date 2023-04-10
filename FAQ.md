@@ -86,8 +86,8 @@ Such embedding, however, typically leads to a huge file size overhead (hundreds 
 unless the fonts are subsetted beforehand (minimized to contain only glyphs necessary
 to render the transcript).
 
-Beware that if a font is included from an external source, it may be subject to CSP restrictions
-as described [above](#transcripts--content-security-policy).
+Beware that if a font is included from an external source and the including SVG is hosted
+on a website, it may be subject to CSP restrictions as described [above](#transcripts--content-security-policy).
 
 [Inkscape]: https://inkscape.org/
 [CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP

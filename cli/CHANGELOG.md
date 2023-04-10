@@ -5,6 +5,16 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Allow specifying the font family to be used in the generated SVG snapshots
+  via the `--font` argument.
+- Allow specifying additional CSS instructions for the generated SVG snapshots
+  using the `--styles` argument. 
+  As an example, this can be used to import fonts using `@import` or `@font-face`.
+- Support rendering pure SVG using `--pure-svg` option. See the library changelog and FAQ
+  for more details.
+
 ## 0.3.0-beta.1 - 2023-01-19
 
 ### Added
