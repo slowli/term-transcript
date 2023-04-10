@@ -201,40 +201,44 @@
         {{~y_pos set=(add (y_pos) (input_height) (mul const.LINE_HEIGHT (len output_svg)) (block_margin))~}}
         {{~/each~}}
       </g>
-      {{/scope}}
-      {{#if line_numbers}}{{>number_lines}}{{/if}}
+      {{~/scope}}
+      {{#if line_numbers}}
+
+      {{>number_lines}}
+      {{/if}}
       {{! Render main text }}
       {{#scope
         x_pos=const.WINDOW_PADDING
         input_x_pos=const.WINDOW_PADDING
         y_pos=14
       }}
-      {{~#if line_numbers}}
+      {{~#if line_numbers~}}
         {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
-      {{/if~}}
-      {{~#if (eq line_numbers "continuous")}}
+      {{~/if~}}
+      {{~#if (eq line_numbers "continuous")~}}
         {{input_x_pos set=(x_pos)}}
-      {{/if~}}
+      {{~/if}}
+
+      {{! The awkward newlines at the end of line <tspan>s are required for the text to be properly copyable }}
       <text class="container fg7">
-        {{~#each interactions}}
-        {{y_pos set=(add (y_pos) const.INPUT_PADDING)}}
-        <tspan xml:space="preserve" x="{{input_x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}"><tspan class="prompt">{{ input.prompt }}</tspan> {{ input.text }}</tspan>
-        {{y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT) const.INPUT_PADDING)}}
+        {{~#each interactions~}}
+        {{~y_pos set=(add (y_pos) const.INPUT_PADDING)~}}
+        <tspan xml:space="preserve" x="{{input_x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}"><tspan class="prompt">{{ input.prompt }}</tspan> {{ input.text }}
+</tspan>
+        {{~y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT) const.INPUT_PADDING)}}
         {{~#if (gt (len output_svg) 0)~}}
           {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)~}}
         {{~/if~}}
         {{~#each output_svg}}
         {{~#if (ne background null)~}}
-
         <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{background}}}</tspan>
         {{~/if~}}
-
-        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">{{{foreground}}}</tspan>
+        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">{{{foreground}}}
+</tspan>
         {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)~}}
         {{~/each~}}
         {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)}}
-        {{~/each}}
-
+        {{~/each~}}
       </text>
       {{/scope}}
     </svg>
@@ -253,11 +257,11 @@
     x_pos=(add const.WINDOW_PADDING const.LN_WIDTH)
     y_pos=14
     line_number=1
-  }}
+  ~}}
   <text class="container fg7 line-numbers">
     {{~#each interactions}}{{>number_lines_in_interaction}}{{/each~}}
   </text>
-  {{/scope~}}
+  {{~/scope~}}
 {{~/inline~}}
 
 {{~#*inline "number_lines_in_interaction"~}}
@@ -273,7 +277,6 @@
     {{~y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT))~}}
   {{~/if~}}
   {{~y_pos set=(add (y_pos) const.INPUT_PADDING const.BLOCK_MARGIN)~}}
-
   {{! Number lines in the output }}
   {{~#each (range 0 (len output_svg))~}}
     <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
