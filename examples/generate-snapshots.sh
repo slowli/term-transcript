@@ -33,6 +33,10 @@ echo "Creating rainbow snapshot..."
 term-transcript exec $TT_ARGS --palette gjm8 rainbow \
   > "$ROOT_DIR/examples/rainbow.$EXTENSION"
 
+echo "Creating rainbow snapshot (pure SVG)..."
+term-transcript exec $TT_ARGS --pure-svg --palette gjm8 rainbow \
+  > "$ROOT_DIR/examples/rainbow-pure.$EXTENSION"
+
 echo "Creating animated rainbow snapshot..."
 term-transcript exec $TT_ARGS --palette powershell --pty --window --scroll \
   rainbow 'rainbow --long-lines' \
@@ -83,10 +87,20 @@ term-transcript exec $TT_ARGS --scroll --palette gjm8 --line-numbers continuous 
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/numbers-continuous.$EXTENSION"
 
+echo "Creating snapshot with --line-numbers continuous (pure SVG)"
+term-transcript exec $TT_ARGS --pure-svg --scroll --palette gjm8 --line-numbers continuous \
+  rainbow 'rainbow --short' \
+  > "$ROOT_DIR/examples/numbers-continuous-pure.$EXTENSION"
+
 echo "Creating snapshot with --line-numbers and long lines"
 term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/numbers-long.$EXTENSION"
+
+echo "Creating snapshot with --line-numbers and long lines (pure SVG)"
+term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
+  'rainbow --long-lines' \
+  > "$ROOT_DIR/examples/numbers-long-pure.$EXTENSION"
 
 # Backup fonts are for the case if CSP prevents CSS / font loading from the CDN
 echo "Creating snapshot with Fira Mono font..."

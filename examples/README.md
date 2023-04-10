@@ -17,6 +17,16 @@ term-transcript exec -T 250ms --palette gjm8 rainbow
 
 (`rainbow` is an executable for [end-to-end tests](../e2e-tests/rainbow).)
 
+### Static snapshot (pure SVG)
+
+![Snapshot of rainbow example](rainbow-pure.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --pure-svg --palette gjm8 rainbow
+```
+
 ### Animated snapshot
 
 ![Animated snapshot of rainbow example](animated.svg)
@@ -68,6 +78,11 @@ term-transcript exec -T 250ms --scroll --palette gjm8 \
   rainbow 'rainbow --short'
 ```
 
+Same snapshot generated using the pure SVG template (i.e., with the additional
+`--pure-svg` flag):
+
+![Continuous numbering for inputs and outputs](numbers-continuous-pure.svg)
+
 ### Numbering with line breaks
 
 As the example below shows, what is numbered are *displayed* lines
@@ -82,6 +97,11 @@ term-transcript exec -T 250ms --palette gjm8 \
   --line-numbers continuous \
   'rainbow --long-lines'
 ```
+
+Same snapshot generated using the pure SVG template (i.e., with the additional
+`--pure-svg` flag):
+
+![Numbering with line breaks](numbers-long-pure.svg)
 
 ## Custom fonts
 
