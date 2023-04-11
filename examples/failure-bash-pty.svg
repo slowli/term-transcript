@@ -1,100 +1,97 @@
-<!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 330" width="720" height="330" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    :root {
-      --black: #1c1c1c; --i-black: #666666;
-      --blue: #048ac7; --i-blue: #48c6ff;
-      --cyan: #0ac1cd; --i-cyan: #63e7f0;
-      --green: #cee318; --i-green: #ccff00;
-      --magenta: #833c9f; --i-magenta: #be67e1;
-      --red: #ff005b; --i-red: #ff00a0;
-      --white: #e5e5e5; --i-white: #f3f3f3;
-      --yellow: #ffe755; --i-yellow: #ff9f00;
-      --hl-black: rgba(255, 255, 255, 0.1);
-      --hl-red: rgba(255, 0, 65, 0.15);
-    }
-    .container {
-      padding: 0 10px;
-      color: var(--white);
-      line-height: 18px;
-    }
-    .container pre {
-      padding: 0;
-      margin: 0;
-      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-      line-height: inherit;
-    }
-    .user-input {
-      margin: 0 -10px 6px;
-      color: var(--white);
-      background: var(--hl-black);
-      padding: 2px 10px;
-    }
-    .term-output { margin-bottom: 6px; }
-    .user-input-failure {
-      border-left: 2px solid var(--red);
-      border-right: 2px solid var(--red);
-      background: var(--hl-red);
-    }
+<!-- Created with term-transcript v0.3.0-beta.1 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 -22 720 348" width="720" height="348" xmlns="http://www.w3.org/2000/svg">
+  <switch>
+    <g requiredExtensions="http://www.w3.org/1999/xhtml">
+      <style>
+        .container {
+          padding: 0 10px;
+          color: #e5e5e5;
+          line-height: 18px;
+        }
+        .container pre {
+          padding: 0;
+          margin: 0;
+          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+          line-height: inherit;
+        }
+        .user-input {
+          margin: 0 -10px 6px;
+          color: #e5e5e5;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 10px;
+        }
+        .term-output { margin-bottom: 6px; }
+        .user-input-failure {
+          border-left: 2px solid #ff005b;
+          border-right: 2px solid #ff005b;
+          background: rgba(255, 0, 65, 0.15);
+        }
 
-    .bold,.prompt { font-weight: bold; }
-    .italic { font-style: italic; }
-    .underline { text-decoration: underline; }
-    .dimmed { opacity: 0.7; }
-    .hard-br {
-      position: relative;
-      margin-left: 5px;
-    }
-    .hard-br:before {
-      content: '↓';
-      font-size: 16px;
-      height: 16px;
-      position: absolute;
-      bottom: 0;
-      transform: rotate(45deg);
-      opacity: 0.8;
-    }
-    .fg0 { color: var(--black); } .bg0 { background: var(--black); }
-    .fg1 { color: var(--red); } .bg1 { background: var(--red); }
-    .fg2 { color: var(--green); } .bg2 { background: var(--green); }
-    .fg3 { color: var(--yellow); } .bg3 { background: var(--yellow); }
-    .fg4 { color: var(--blue); } .bg4 { background: var(--blue); }
-    .fg5 { color: var(--magenta); } .bg5 { background: var(--magenta); }
-    .fg6 { color: var(--cyan); } .bg6 { background: var(--cyan); }
-    .fg7 { color: var(--white); } .bg7 { background: var(--white); }
-    .fg8 { color: var(--i-black); } .bg8 { background: var(--i-black); }
-    .fg9 { color: var(--i-red); } .bg9 { background: var(--i-red); }
-    .fg10 { color: var(--i-green); } .bg10 { background: var(--i-green); }
-    .fg11 { color: var(--i-yellow); } .bg11 { background: var(--i-yellow); }
-    .fg12 { color: var(--i-blue); } .bg12 { background: var(--i-blue); }
-    .fg13 { color: var(--i-magenta); } .bg13 { background: var(--i-magenta); }
-    .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
-    .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
-  </style>
-  <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: var(--black);" />
-  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: var(--hl-black);"/>
-  <circle cx="17" cy="-9" r="7" style="fill: var(--red);"/>
-  <circle cx="37" cy="-9" r="7" style="fill: var(--yellow);"/>
-  <circle cx="57" cy="-9" r="7" style="fill: var(--green);"/>
-  <svg x="0" y="10" width="720" height="288" viewBox="0 0 720 288">
-    <foreignObject width="720" height="288">
-      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
-        <div class="term-output"><pre>-rw-r--r-- 1 alex alex 20765 Dec 22 20:55 Cargo.lock</pre></div>
-        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
-        <div class="term-output"><pre></pre></div>
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> grep -n serde Cargo.lock</pre></div>
-        <div class="term-output"><pre><span class="fg2">154</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">155</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
-<span class="fg2">418</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
-<span class="fg2">423</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",
-<span class="fg2">427</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_derive"
-<span class="fg2">438</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_json"
-<span class="fg2">445</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">556</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">557</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
-<span class="fg2">634</span><span class="fg6">:</span> "<span class="fg1">serde</span>",</pre></div>
-      </div>
-    </foreignObject>
-  </svg>
+        .bold,.prompt { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .dimmed { opacity: 0.7; }
+        .hard-br {
+          position: relative;
+          margin-left: 5px;
+        }
+        .hard-br:before {
+          content: '↓';
+          font-size: 16px;
+          height: 16px;
+          position: absolute;
+          bottom: 0;
+          transform: rotate(45deg);
+          opacity: 0.8;
+        }
+        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
+        .fg2 { color: #cee318; } .bg2 { background: #cee318; }
+        .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
+        .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
+        .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
+        .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
+        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
+        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
+        .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
+        .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
+        .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
+        .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
+      </style>
+      <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: #1c1c1c;" />
+      <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
+      <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
+      <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
+      <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
+      <svg x="0" y="10" width="720" height="306" viewBox="0 0 720 306">
+        <foreignObject width="720" height="306">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+            <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
+            <div class="term-output"><pre>-rwxrwxrwx 1 alex alex 27149 Mar 14 12:54 <span class="fg2">Cargo.lock</span></pre></div>
+            <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
+            <div class="term-output"><pre></pre></div>
+            <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> grep -n serde Cargo.lock</pre></div>
+            <div class="term-output"><pre><span class="fg2">172</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">173</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
+<span class="fg2">539</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
+<span class="fg2">544</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",
+<span class="fg2">548</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_derive"
+<span class="fg2">559</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_json"
+<span class="fg2">566</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">692</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">693</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
+<span class="fg2">784</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">868</span><span class="fg6">:</span> "<span class="fg1">serde</span>",</pre></div>
+          </div>
+        </foreignObject>
+      </svg>
+    </g>
+    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
+      HTML embedding not supported.
+      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
+    </text>
+  </switch>
 </svg>

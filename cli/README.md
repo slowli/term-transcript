@@ -52,7 +52,7 @@ its filtering can be configured using the `RUST_LOG` env variable
 - The `print` subcommand parses an SVG snapshot and outputs it to the command line.
 
 Launch the CLI app with the `--help` option for more details about arguments
-for each subcommand.
+for each subcommand. See also the [FAQ] for some tips and troubleshooting advice.
 
 ### Using Docker image
 
@@ -145,6 +145,7 @@ shall be dual licensed as above, without any additional terms or conditions.
 
 [`term-transcript`]: https://crates.io/crates/term-transcript
 [fmt-subscriber]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/index.html
+[FAQ]: https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md
 [rainbow-script-link]: https://github.com/slowli/term-transcript/blob/HEAD/cli/rainbow.sh
 [test-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test.svg?sanitize=true
 [test-color-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/cli/tests/snapshots/test-fail.svg?sanitize=true

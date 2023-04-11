@@ -17,6 +17,16 @@ term-transcript exec -T 250ms --palette gjm8 rainbow
 
 (`rainbow` is an executable for [end-to-end tests](../e2e-tests/rainbow).)
 
+### Static snapshot (pure SVG)
+
+![Snapshot of rainbow example](rainbow-pure.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --pure-svg --palette gjm8 rainbow
+```
+
 ### Animated snapshot
 
 ![Animated snapshot of rainbow example](animated.svg)
@@ -68,6 +78,11 @@ term-transcript exec -T 250ms --scroll --palette gjm8 \
   rainbow 'rainbow --short'
 ```
 
+Same snapshot generated using the pure SVG template (i.e., with the additional
+`--pure-svg` flag):
+
+![Continuous numbering for inputs and outputs](numbers-continuous-pure.svg)
+
 ### Numbering with line breaks
 
 As the example below shows, what is numbered are *displayed* lines
@@ -82,6 +97,32 @@ term-transcript exec -T 250ms --palette gjm8 \
   --line-numbers continuous \
   'rainbow --long-lines'
 ```
+
+Same snapshot generated using the pure SVG template (i.e., with the additional
+`--pure-svg` flag):
+
+![Numbering with line breaks](numbers-long-pure.svg)
+
+## Custom fonts
+
+Using `--styles` and `--font` options, it's possible to use a custom font in the snapshot.
+For example, the snapshot below uses [Fira Mono](https://github.com/mozilla/Fira):
+
+![Snapshot with Fira Mono font](fira.svg)
+
+Note that the custom font will only be displayed when viewed in the browser
+if the [Content Security Policy][CSP] of the HTTP server hosting the SVG allows to do so.
+See the [FAQ](../FAQ.md#transcripts--content-security-policy) for more details.
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --palette gjm8 --window \
+  --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
+  --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow
+```
+
+[CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
 
 ## Failed inputs
 

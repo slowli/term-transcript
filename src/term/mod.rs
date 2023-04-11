@@ -2,9 +2,11 @@ use termcolor::NoColor;
 
 use std::{borrow::Cow, fmt::Write as WriteStr};
 
+#[cfg(feature = "svg")]
+use crate::write::{SvgLine, SvgWriter};
 use crate::{
-    html::HtmlWriter,
     utils::{normalize_newlines, WriteAdapter},
+    write::HtmlWriter,
     TermError,
 };
 
@@ -43,6 +45,16 @@ impl Captured {
     ) -> Result<(), TermError> {
         let mut html_writer = HtmlWriter::new(output, wrap_width);
         TermOutputParser::new(&mut html_writer).parse(self.0.as_bytes())
+    }
+
+    #[cfg(feature = "svg")]
+    pub(crate) fn write_as_svg(
+        &self,
+        wrap_width: Option<usize>,
+    ) -> Result<Vec<SvgLine>, TermError> {
+        let mut svg_writer = SvgWriter::new(wrap_width);
+        TermOutputParser::new(&mut svg_writer).parse(self.0.as_bytes())?;
+        Ok(svg_writer.into_lines())
     }
 
     /// Converts this terminal output to an HTML string.

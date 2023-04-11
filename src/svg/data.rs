@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::{svg::TemplateOptions, UserInput};
+use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 
 /// Root data structure sent to the Handlebars template.
 ///
@@ -51,6 +51,7 @@ use crate::{svg::TemplateOptions, UserInput};
 ///             "white": "#f7f7fb",
 ///         },
 ///     },
+///     "additional_styles": "",
 ///     "font_family": "Consolas, Menlo, monospace",
 ///     "window_frame": false,
 ///     "wrap": {
@@ -64,6 +65,11 @@ use crate::{svg::TemplateOptions, UserInput};
 ///             "prompt": "$",
 ///         },
 ///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
+/// #       "output_svg": [{
+/// #           "background": null,
+/// #           "foreground": "Hello,\u{a0}<tspan class=\"fg2\">world</tspan>!",
+/// #       }],
+/// #       // ^ Implementation detail for now
 ///         "failure": false,
 ///         "exit_status": null,
 ///     }]
@@ -141,6 +147,8 @@ pub struct SerializedInteraction<'a> {
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
     pub output_html: String,
+    /// Terminal output in the SVG format.
+    pub(crate) output_svg: Vec<SvgLine>,
     /// Exit status of the latest executed program, or `None` if it cannot be determined.
     pub exit_status: Option<i32>,
     /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?

@@ -1,6 +1,8 @@
-use super::*;
+use termcolor::WriteColor;
 
 use std::io::Write;
+
+use super::*;
 
 #[test]
 fn html_escaping() -> anyhow::Result<()> {
@@ -107,20 +109,20 @@ fn splitting_lines() {
         splitter.split_lines("tex text \u{7d75}\u{6587}\u{5b57}\n\u{1f602}\u{1f602}\u{1f602}\n");
 
     #[rustfmt::skip]
-        let expected_lines = vec![
-        Line { text: "tex t", br: Some(LineBreak::Hard) },
-        Line { text: "ext ", br: Some(LineBreak::Hard) },
-        Line { text: "\u{7d75}\u{6587}", br: Some(LineBreak::Hard) },
-        Line { text: "\u{5b57}", br: None },
-        Line { text: "\u{1f602}\u{1f602}", br: Some(LineBreak::Hard) },
-        Line { text: "\u{1f602}", br: None },
-        Line { text: "", br: None },
+    let expected_lines = vec![
+        Line { text: "tex t", br: Some(LineBreak::Hard), char_width: 5 },
+        Line { text: "ext ", br: Some(LineBreak::Hard), char_width: 4 },
+        Line { text: "\u{7d75}\u{6587}", br: Some(LineBreak::Hard), char_width: 4 },
+        Line { text: "\u{5b57}", br: None, char_width: 2 },
+        Line { text: "\u{1f602}\u{1f602}", br: Some(LineBreak::Hard), char_width: 4 },
+        Line { text: "\u{1f602}", br: None, char_width: 2 },
+        Line { text: "", br: None, char_width: 0 },
     ];
     assert_eq!(lines, expected_lines);
 }
 
 #[test]
-fn slitting_lines_in_writer() -> anyhow::Result<()> {
+fn splitting_lines_in_writer() -> anyhow::Result<()> {
     let mut buffer = String::new();
     let mut writer = HtmlWriter::new(&mut buffer, Some(5));
 
