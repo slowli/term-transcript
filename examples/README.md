@@ -101,7 +101,26 @@ term-transcript exec -T 250ms --palette gjm8 \
 Same snapshot generated using the pure SVG template (i.e., with the additional
 `--pure-svg` flag):
 
-![Numbering with line breaks](numbers-long-pure.svg)
+![Numbering with line breaks, pure SVG](numbers-long-pure.svg)
+
+## Hiding user inputs
+
+Combined with line numbering and scrolling to test more features.
+
+![Hidden user inputs](no-inputs-numbers.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --scroll --palette xterm \
+  --no-inputs --line-numbers continuous \
+  rainbow 'rainbow --short'
+```
+
+Same snapshot generated using the pure SVG template (i.e., with the additional
+`--pure-svg` flag):
+
+![Hidden user inputs, pure SVG](no-inputs-numbers-pure.svg)
 
 ## Custom fonts
 
