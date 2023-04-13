@@ -21,9 +21,8 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
     </svg>
 "#;
 
-#[test]
-fn reading_file() {
-    let transcript = Transcript::from_svg(SVG).unwrap();
+fn test_reading_file(file_contents: &[u8]) {
+    let transcript = Transcript::from_svg(file_contents).unwrap();
     assert_eq!(transcript.interactions.len(), 1);
 
     let interaction = &transcript.interactions[0];
@@ -44,6 +43,30 @@ fn reading_file() {
 
     let color_spans = &interaction.output.color_spans;
     assert_eq!(color_spans.len(), 5); // 2 colored regions + 3 surrounding areas
+}
+
+#[test]
+fn reading_file() {
+    test_reading_file(SVG);
+}
+
+#[test]
+fn reading_old_file() {
+    const LEGACY_SVG: &[u8] = br#"
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+          <foreignObject x="0" y="0" width="652" height="344">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+              <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
+              <div class="term-output"><pre>total 28
+drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg4">.</span>
+drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
+-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
+              </div>
+            </div>
+          </foreignObject>
+        </svg>
+    "#;
+    test_reading_file(LEGACY_SVG);
 }
 
 #[test]
