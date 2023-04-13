@@ -62,6 +62,32 @@ fn rendering_simple_transcript_to_pure_svg() {
 }
 
 #[test]
+fn rendering_transcript_with_hidden_input() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test").hide(),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let options = TemplateOptions {
+        window_frame: true,
+        ..TemplateOptions::default()
+    };
+    let mut buffer = vec![];
+    Template::new(options)
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    assert!(buffer.contains(r#"viewBox="0 -22 720 60""#), "{buffer}");
+    assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
+    assert!(
+        buffer.contains(r#"<div class="input input-hidden">"#),
+        "{buffer}"
+    );
+}
+
+#[test]
 fn rendering_transcript_with_empty_output_to_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(UserInput::command("test"), "");
@@ -407,6 +433,41 @@ fn rendering_transcript_with_input_line_numbers() {
         buffer.contains(r#"<pre class="line-numbers">5<br/>6</pre>"#),
         "{buffer}"
     );
+}
+
+#[test]
+fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test").hide(),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+    transcript.add_interaction(
+        UserInput::command("another\ntest"),
+        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+    );
+    transcript.add_interaction(
+        UserInput::command("third\ntest").hide(),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let mut buffer = vec![];
+    let options = TemplateOptions {
+        line_numbers: Some(LineNumbers::Continuous),
+        ..TemplateOptions::default()
+    };
+    Template::new(options)
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    let first_output_line_numbers = r#"<div class="output"><pre class="line-numbers">1</pre>"#;
+    assert!(buffer.contains(first_output_line_numbers), "{buffer}");
+    let input_line_numbers = r#"<div class="input"><pre class="line-numbers">2<br/>3</pre>"#;
+    assert!(buffer.contains(input_line_numbers), "{buffer}");
+    let second_output_line_numbers =
+        r#"<div class="output"><pre class="line-numbers">4<br/>5</pre>"#;
+    assert!(buffer.contains(second_output_line_numbers), "{buffer}");
 }
 
 #[test]

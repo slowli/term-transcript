@@ -24,13 +24,16 @@
   Expected hash inputs: `interactions`, `const`.
 }}
 {{~#*inline "compute_content_height"}}
-  {{#scope lines=0 margins=0}}
+  {{#scope lines=0 margins=0 displayed_interactions=0}}
     {{#each interactions}}
-      {{lines set=(add (lines) (count_lines input.text) (count_lines output_html format="html"))}}
-      {{#if (eq 0 (len output_html))}}
+      {{#if (not input.hidden)}}
+        {{lines set=(add (lines) (count_lines input.text))}}
         {{margins set=(add (margins) 1)}}
-      {{else}}
-        {{margins set=(add (margins) 2)}}
+        {{displayed_interactions set=(add (displayed_interactions) 1)}}
+      {{/if}}
+      {{lines set=(add (lines) (count_lines output_html format="html"))}}
+      {{#if (ne 0 (len output_html))}}
+        {{margins set=(add (margins) 1)}}
       {{/if}}
     {{/each}}
     {{#if (gt (margins) 0)}}
@@ -39,7 +42,7 @@
     {{/if}}
     {{add (mul (lines) const.LINE_HEIGHT)
           (mul (margins) const.BLOCK_MARGIN)
-          (mul (len interactions) const.USER_INPUT_PADDING) }}
+          (mul (displayed_interactions) const.USER_INPUT_PADDING) }}
   {{/scope}}
 {{/inline~}}
 
@@ -133,6 +136,7 @@
     background: rgba(255, 255, 255, 0.1);
     padding: 2px {{const.WINDOW_PADDING}}px;
   }
+  .input-hidden { display: none; }
   {{~#if (eq line_numbers "continuous")}}
 
   .input > pre { flex-grow: 1; }
@@ -230,10 +234,10 @@
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             {{~#each interactions}}
 
-            <div class="input{{#if failure}} input-failure{{/if}}"
+            <div class="input{{#if failure}} input-failure{{/if}}{{#if input.hidden}} input-hidden{{/if}}"
               {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
               {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
-              {{~#if (eq ../line_numbers "continuous")}}{{>number_input_lines}}{{/if~}}
+              {{~#if (and (eq ../line_numbers "continuous") (not input.hidden))}}{{>number_input_lines}}{{/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
             <div class="output">{{#if ../line_numbers}}{{>number_output_lines}}{{/if}}<pre>{{{output_html}}}</pre></div>
             {{~/each}}
