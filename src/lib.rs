@@ -383,6 +383,7 @@ impl<Out: TermOutput> Interaction<Out> {
 pub struct UserInput {
     text: String,
     prompt: Option<Cow<'static, str>>,
+    hidden: bool,
 }
 
 impl UserInput {
@@ -401,6 +402,7 @@ impl UserInput {
         Self {
             text: text.into(),
             prompt: Some(Cow::Borrowed("$")),
+            hidden: false,
         }
     }
 
@@ -409,6 +411,7 @@ impl UserInput {
         Self {
             text: text.into(),
             prompt: Some(Cow::Borrowed(">>>")),
+            hidden: false,
         }
     }
 
@@ -417,12 +420,20 @@ impl UserInput {
         Self {
             text: text.into(),
             prompt: Some(Cow::Borrowed("...")),
+            hidden: false,
         }
     }
 
     /// Returns the prompt part of this input.
     pub fn prompt(&self) -> Option<&str> {
         self.prompt.as_deref()
+    }
+
+    /// Marks this input as hidden (one that should not be displayed in the rendered transcript).
+    #[must_use]
+    pub fn hide(mut self) -> Self {
+        self.hidden = true;
+        self
     }
 }
 

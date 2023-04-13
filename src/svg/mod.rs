@@ -43,7 +43,8 @@ pub enum LineNumbers {
     EachOutput,
     /// Use continuous numbering for the lines in all outputs. Inputs are not numbered.
     ContinuousOutputs,
-    /// Use continuous numbering for the lines in all inputs and outputs.
+    /// Use continuous numbering for the lines in all displayed inputs (i.e., ones that
+    /// are not [hidden](crate::UserInput::hide())) and outputs.
     Continuous,
 }
 
