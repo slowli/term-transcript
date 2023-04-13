@@ -27,7 +27,7 @@ fn rendering_simple_transcript() {
     assert!(!buffer.contains("data-exit-status"));
     assert!(!buffer.contains("<circle"));
 
-    assert!(!buffer.contains("user-input-failure"));
+    assert!(!buffer.contains("input-failure"));
     assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
 }
 
@@ -99,7 +99,7 @@ fn rendering_transcript_with_explicit_success() {
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
 
-    assert!(!buffer.contains("user-input-failure"));
+    assert!(!buffer.contains("input-failure"));
     assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
     assert!(buffer.contains(r#"data-exit-status="0""#));
 }
@@ -117,7 +117,7 @@ fn rendering_transcript_with_failure() {
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
 
-    assert!(buffer.contains("user-input-failure"));
+    assert!(buffer.contains("input-failure"));
     assert!(buffer.contains("title=\"This command exited with non-zero code\""));
     assert!(buffer.contains(r#"data-exit-status="1""#));
 }
@@ -400,7 +400,7 @@ fn rendering_transcript_with_input_line_numbers() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(
-        buffer.contains(r#"<div class="user-input"><pre class="line-numbers">"#),
+        buffer.contains(r#"<div class="input"><pre class="line-numbers">"#),
         "{buffer}"
     );
     assert!(

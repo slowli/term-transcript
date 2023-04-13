@@ -122,7 +122,7 @@
     font: 14px {{font_family}};
     line-height: inherit;
   }
-  .user-input {
+  .input {
     {{~#if (eq line_numbers "continuous")}}
 
     display: flex;
@@ -135,13 +135,13 @@
   }
   {{~#if (eq line_numbers "continuous")}}
 
-  .user-input > pre { flex-grow: 1; }
+  .input > pre { flex-grow: 1; }
   {{~/if}}
 
-  .term-output { {{#if line_numbers}}display: flex; {{/if}}margin-bottom: {{const.BLOCK_MARGIN}}px; }
+  .output { {{#if line_numbers}}display: flex; {{/if}}margin-bottom: {{const.BLOCK_MARGIN}}px; }
   {{~#if line_numbers}}
 
-  .term-output > pre { flex-grow: 1; }
+  .output > pre { flex-grow: 1; }
   pre.line-numbers {
     flex-grow: 0;
     width: 1.5rem;
@@ -153,7 +153,7 @@
   {{/if}}
   {{~#if has_failures}}
 
-  .user-input-failure {
+  .input-failure {
     border-left: 2px solid {{ palette.colors.red }};
     border-right: 2px solid {{ palette.colors.red }};
     background: rgba(255, 0, 65, 0.15);
@@ -230,12 +230,12 @@
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             {{~#each interactions}}
 
-            <div class="user-input{{#if failure}} user-input-failure{{/if}}"
+            <div class="input{{#if failure}} input-failure{{/if}}"
               {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
               {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
               {{~#if (eq ../line_numbers "continuous")}}{{>number_input_lines}}{{/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-            <div class="term-output">{{#if ../line_numbers}}{{>number_output_lines}}{{/if}}<pre>{{{output_html}}}</pre></div>
+            <div class="output">{{#if ../line_numbers}}{{>number_output_lines}}{{/if}}<pre>{{{output_html}}}</pre></div>
             {{~/each}}
 
           </div>
