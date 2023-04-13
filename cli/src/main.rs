@@ -16,7 +16,7 @@ use std::{
 use term_transcript::{
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     traits::SpawnShell,
-    Transcript, UserInput,
+    Transcript,
 };
 
 mod shell;
@@ -98,7 +98,7 @@ impl Command {
                     term_output.pop();
                 }
 
-                transcript.add_interaction(UserInput::command(command), term_output);
+                transcript.add_interaction(template.create_input(command), term_output);
                 template.render(&transcript)?;
             }
 
@@ -107,7 +107,7 @@ impl Command {
                 inputs,
                 template,
             } => {
-                let inputs = inputs.into_iter().map(UserInput::command);
+                let inputs = inputs.into_iter().map(|input| template.create_input(input));
                 let transcript = shell.create_transcript(inputs)?;
                 template.render(&transcript)?;
             }
