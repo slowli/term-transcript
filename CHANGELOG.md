@@ -16,6 +16,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Add a fallback error message to the default template if HTML-in-SVG embedding
   is not supported.
 - Add [FAQ](FAQ.md) with some tips and troubleshooting advice.
+- Allow hiding `UserInput`s during transcript rendering by calling the `hide()` method.
+  Hidden inputs are supported by the default and pure SVG templates.
 
 ### Changed
 
