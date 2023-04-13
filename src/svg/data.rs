@@ -63,6 +63,7 @@ use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 ///         "input": {
 ///             "text": "rainbow",
 ///             "prompt": "$",
+///             "hidden": false,
 ///         },
 ///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
 /// #       "output_svg": [{

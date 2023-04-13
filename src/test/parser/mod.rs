@@ -265,6 +265,7 @@ impl UserInputState {
                 let input = UserInput {
                     text: String::new(),
                     prompt: Some(UserInput::intern_prompt(parsed.plaintext)),
+                    hidden: false,
                 };
                 return Ok(Some(Interaction {
                     input,
@@ -280,6 +281,7 @@ impl UserInputState {
             let input = UserInput {
                 text: parsed.into_input_text(),
                 prompt: self.prompt.take(),
+                hidden: false,
             };
             Interaction {
                 input,
@@ -297,13 +299,13 @@ enum ParserState {
     Initialized,
     /// Encountered `<svg>` tag; searching for `<div class="container">`.
     EncounteredSvgTag,
-    /// Encountered `<div class="container">`; searching for `<div class="user-input">`.
+    /// Encountered `<div class="container">`; searching for `<div class="input">`.
     EncounteredContainer,
-    /// Reading user input (`<div class="user-input">` contents).
+    /// Reading user input (`<div class="input">` contents).
     ReadingUserInput(UserInputState),
-    /// Finished reading user input; searching for `<div class="term-output">`.
+    /// Finished reading user input; searching for `<div class="output">`.
     EncounteredUserInput(Interaction<Parsed>),
-    /// Reading terminal output (`<div class="term-output">` contents).
+    /// Reading terminal output (`<div class="output">` contents).
     ReadingTermOutput(Interaction<Parsed>, TextReadingState),
 }
 
@@ -312,6 +314,7 @@ impl ParserState {
         input: UserInput {
             text: String::new(),
             prompt: None,
+            hidden: false,
         },
         output: Parsed::DEFAULT,
         exit_status: None,
@@ -348,7 +351,7 @@ impl ParserState {
             Self::EncounteredContainer => {
                 if let Event::Start(tag) = event {
                     let classes = parse_classes(tag.attributes())?;
-                    if extract_base_class(&classes) == b"user-input" {
+                    if Self::is_input_class(extract_base_class(&classes)) {
                         let exit_status = parse_exit_status(tag.attributes())?;
                         self.set_state(Self::ReadingUserInput(UserInputState::new(exit_status)));
                     }
@@ -366,13 +369,13 @@ impl ParserState {
                     let classes = parse_classes(tag.attributes())?;
                     let base_class = extract_base_class(&classes);
 
-                    if base_class == b"term-output" {
+                    if Self::is_output_class(base_class) {
                         let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
                         self.set_state(Self::ReadingTermOutput(
                             interaction,
                             TextReadingState::default(),
                         ));
-                    } else if base_class == b"user-input" {
+                    } else if Self::is_input_class(base_class) {
                         let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
                         let exit_status = parse_exit_status(tag.attributes())?;
                         self.set_state(Self::ReadingUserInput(UserInputState::new(exit_status)));
@@ -391,6 +394,14 @@ impl ParserState {
             }
         }
         Ok(None)
+    }
+
+    fn is_input_class(class_name: &[u8]) -> bool {
+        class_name == b"input" || class_name == b"user-input"
+    }
+
+    fn is_output_class(class_name: &[u8]) -> bool {
+        class_name == b"output" || class_name == b"term-output"
     }
 
     #[cfg_attr(

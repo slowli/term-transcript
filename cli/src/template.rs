@@ -12,7 +12,7 @@ use std::{
 
 use term_transcript::{
     svg::{self, ScrollOptions, Template, TemplateOptions, WrapOptions},
-    Transcript,
+    Transcript, UserInput,
 };
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -85,6 +85,9 @@ pub(crate) struct TemplateArgs {
     /// by more viewers, but there may be rendering artifacts.
     #[arg(long = "pure-svg", conflicts_with = "template_path")]
     pure_svg: bool,
+    /// Hides all user inputs; only outputs will be rendered.
+    #[arg(long = "no-inputs")]
+    no_inputs: bool,
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
     ///
@@ -125,6 +128,15 @@ impl From<TemplateArgs> for TemplateOptions {
 }
 
 impl TemplateArgs {
+    pub fn create_input(&self, command: String) -> UserInput {
+        let input = UserInput::command(command);
+        if self.no_inputs {
+            input.hide()
+        } else {
+            input
+        }
+    }
+
     pub fn render(mut self, transcript: &Transcript) -> anyhow::Result<()> {
         let pure_svg = self.pure_svg;
         let out_path = mem::take(&mut self.out);

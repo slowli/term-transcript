@@ -77,6 +77,18 @@ term-transcript exec $TT_ARGS --scroll --palette xterm --line-numbers each-outpu
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/numbers-each-output.$EXTENSION"
 
+echo "Creating snapshot with no inputs, --line-numbers continuous"
+term-transcript exec $TT_ARGS --scroll --palette xterm \
+  --no-inputs --line-numbers continuous \
+  rainbow 'rainbow --short' \
+  > "$ROOT_DIR/examples/no-inputs-numbers.$EXTENSION"
+
+echo "Creating snapshot with no inputs, --line-numbers continuous (pure SVG)"
+term-transcript exec $TT_ARGS --scroll --palette xterm --pure-svg \
+  --no-inputs --line-numbers continuous \
+  rainbow 'rainbow --short' \
+  > "$ROOT_DIR/examples/no-inputs-numbers-pure.$EXTENSION"
+
 echo "Creating snapshot with --line-numbers continuous-outputs"
 term-transcript exec $TT_ARGS --scroll --palette powershell --line-numbers continuous-outputs \
   rainbow 'rainbow --short' \

@@ -14,6 +14,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   As an example, this can be used to import fonts using `@import` or `@font-face`.
 - Support rendering pure SVG using `--pure-svg` option. See the library changelog and FAQ
   for more details.
+- Allow hiding all user inputs in a rendered transcript by specifying the `--no-inputs` flag.
 
 ## 0.3.0-beta.1 - 2023-01-19
 
