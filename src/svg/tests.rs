@@ -88,6 +88,33 @@ fn rendering_transcript_with_hidden_input() {
 }
 
 #[test]
+fn rendering_transcript_with_hidden_input_to_pure_svg() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test").hide(),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let options = TemplateOptions {
+        window_frame: true,
+        ..TemplateOptions::default()
+    };
+    let mut buffer = vec![];
+    Template::pure_svg(options)
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    assert!(buffer.contains(r#"viewBox="0 -22 720 60""#), "{buffer}");
+    assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
+    // No background for input should be displayed.
+    assert!(buffer.contains(r#"<g class="input-bg"></g>"#), "{buffer}");
+    let output_span = r#"<tspan xml:space="preserve" x="10" y="14" class="output">"#;
+    assert!(buffer.contains(output_span), "{buffer}");
+    assert!(!buffer.contains(r#"class="input""#), "{buffer}");
+}
+
+#[test]
 fn rendering_transcript_with_empty_output_to_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(UserInput::command("test"), "");
@@ -468,6 +495,50 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
     let second_output_line_numbers =
         r#"<div class="output"><pre class="line-numbers">4<br/>5</pre>"#;
     assert!(buffer.contains(second_output_line_numbers), "{buffer}");
+}
+
+#[test]
+fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test").hide(),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+    transcript.add_interaction(
+        UserInput::command("another\ntest"),
+        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+    );
+    transcript.add_interaction(
+        UserInput::command("third\ntest").hide(),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let mut buffer = vec![];
+    let options = TemplateOptions {
+        line_numbers: Some(LineNumbers::Continuous),
+        ..TemplateOptions::default()
+    };
+    Template::pure_svg(options)
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    let input_bg = r#"<g class="input-bg"><rect x="0" y="24" width="100%" height="40"></rect></g>"#;
+    assert!(buffer.contains(input_bg), "{buffer}");
+    let line_numbers = "<tspan x=\"34\" y=\"14\">1</tspan>\
+        <tspan x=\"34\" y=\"40\">2</tspan>\
+        <tspan x=\"34\" y=\"58\">3</tspan>\
+        <tspan x=\"34\" y=\"84\">4</tspan>\
+        <tspan x=\"34\" y=\"102\">5</tspan>\
+        <tspan x=\"34\" y=\"126\">6</tspan>";
+    assert!(buffer.contains(line_numbers), "{buffer}");
+
+    let first_output = r#"<tspan xml:space="preserve" x="42" y="84" class="output">"#;
+    assert!(buffer.contains(first_output), "{buffer}");
+    let second_output = r#"<tspan xml:space="preserve" x="42" y="102" class="output">"#;
+    assert!(buffer.contains(second_output), "{buffer}");
+    let third_output = r#"<tspan xml:space="preserve" x="42" y="126" class="output">"#;
+    assert!(buffer.contains(third_output), "{buffer}");
 }
 
 #[test]

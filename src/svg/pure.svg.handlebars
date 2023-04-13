@@ -28,13 +28,16 @@
   Expected hash inputs: `interactions`, `const`.
 }}
 {{~#*inline "compute_content_height"}}
-  {{#scope lines=0 margins=0}}
+  {{#scope lines=0 margins=0 displayed_interactions=0}}
     {{#each interactions}}
-      {{lines set=(add (lines) (count_lines input.text) (count_lines output_html format="html"))}}
-      {{#if (eq 0 (len output_html))}}
+      {{#if (not input.hidden)}}
+        {{lines set=(add (lines) (count_lines input.text))}}
         {{margins set=(add (margins) 1)}}
-      {{else}}
-        {{margins set=(add (margins) 2)}}
+        {{displayed_interactions set=(add (displayed_interactions) 1)}}
+      {{/if}}
+      {{lines set=(add (lines) (len output_svg))}}
+      {{#if (ne 0 (len output_svg))}}
+        {{margins set=(add (margins) 1)}}
       {{/if}}
     {{/each}}
     {{#if (gt (margins) 0)}}
@@ -43,7 +46,7 @@
     {{/if}}
     {{add (mul (lines) const.LINE_HEIGHT)
           (mul (margins) const.BLOCK_MARGIN)
-          (mul 2 (len interactions) const.INPUT_PADDING) }}
+          (mul 2 (displayed_interactions) const.INPUT_PADDING) }}
   {{/scope}}
 {{/inline~}}
 
@@ -176,15 +179,11 @@
       {{~/if}}
 
       {{! Render backgrounds for each input beforehand since they cannot be placed in <text>. }}
-      {{#scope y_pos=0 input_height=0 block_margin=0}}
+      {{#scope y_pos=0 input_height=0}}
       <g class="input-bg">
         {{~#each interactions}}
+        {{~#if (not input.hidden)}}
         {{~input_height set=(add (mul (count_lines input.text) const.LINE_HEIGHT) (mul 2 const.INPUT_PADDING))~}}
-        {{~#if (eq (len output_svg) 0)~}}
-          {{~block_margin set=const.BLOCK_MARGIN~}}
-        {{~else~}}
-          {{~block_margin set=(mul 2 const.BLOCK_MARGIN)~}}
-        {{~/if~}}
 
         <rect x="0" y="{{y_pos}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
         {{~#if failure~}}
@@ -195,7 +194,12 @@
         <rect x="0" y="{{y_pos}}" width="2" height="{{input_height}}" class="input-failure-hl" />
         <rect x="100%" y="{{y_pos}}" width="2" height="{{input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
         {{~/if~}}
-        {{~y_pos set=(add (y_pos) (input_height) (mul const.LINE_HEIGHT (len output_svg)) (block_margin))~}}
+        {{~y_pos set=(add (y_pos) (input_height) const.BLOCK_MARGIN)~}}
+        {{~/if~}} {{! if (not input.hidden) }}
+        {{~y_pos set=(add (y_pos) (mul const.LINE_HEIGHT (len output_svg)))~}}
+        {{~#if (ne (len output_svg) 0)}}
+          {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)}}
+        {{~/if}}
         {{~/each~}}
       </g>
       {{~/scope}}
@@ -219,6 +223,7 @@
       {{! The awkward newlines at the end of line <tspan>s are required for the text to be properly copyable }}
       <text class="container fg7">
         {{~#each interactions~}}
+        {{~#if (not input.hidden)~}}
         {{~y_pos set=(add (y_pos) const.INPUT_PADDING)~}}
         <tspan xml:space="preserve" x="{{input_x_pos}}" y="{{y_pos}}" class="input{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
@@ -227,10 +232,8 @@
           {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)}}
           {{~/each~}}
 </tspan>
-        {{~y_pos set=(add (y_pos) const.INPUT_PADDING)}}
-        {{~#if (gt (len output_svg) 0)~}}
-          {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)~}}
-        {{~/if~}}
+        {{~y_pos set=(add (y_pos) const.INPUT_PADDING const.BLOCK_MARGIN)}}
+        {{~/if~}} {{! if (not input.hidden) }}
         {{~#each output_svg}}
         {{~#if (ne background null)~}}
         <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{background}}}</tspan>
@@ -239,7 +242,9 @@
 </tspan>
         {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)~}}
         {{~/each~}}
-        {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)}}
+        {{~#if (gt (len output_svg) 0)~}}
+          {{~y_pos set=(add (y_pos) const.BLOCK_MARGIN)~}}
+        {{~/if~}}
         {{~/each~}}
       </text>
       {{/scope}}
@@ -268,17 +273,19 @@
 
 {{~#*inline "number_lines_in_interaction"~}}
   {{! Number lines in the input }}
-  {{~y_pos set=(add (y_pos) const.INPUT_PADDING)~}}
-  {{~#if (eq ../line_numbers "continuous")}}
-    {{~#each (range 0 (count_lines input.text))~}}
-      <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
-      {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)~}}
-    {{~/each~}}
-    {{~line_number set=(add (line_number) (count_lines input.text))~}}
-  {{~else~}}
-    {{~y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT))~}}
+  {{~#if (not input.hidden)}}
+    {{~y_pos set=(add (y_pos) const.INPUT_PADDING)~}}
+    {{~#if (eq ../line_numbers "continuous")}}
+      {{~#each (range 0 (count_lines input.text))~}}
+        <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
+        {{~y_pos set=(add (y_pos) const.LINE_HEIGHT)~}}
+      {{~/each~}}
+      {{~line_number set=(add (line_number) (count_lines input.text))~}}
+    {{~else~}}
+      {{~y_pos set=(add (y_pos) (mul (count_lines input.text) const.LINE_HEIGHT))~}}
+    {{~/if~}}
+    {{~y_pos set=(add (y_pos) const.INPUT_PADDING const.BLOCK_MARGIN)~}}
   {{~/if~}}
-  {{~y_pos set=(add (y_pos) const.INPUT_PADDING const.BLOCK_MARGIN)~}}
   {{! Number lines in the output }}
   {{~#each (range 0 (len output_svg))~}}
     <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
