@@ -5,6 +5,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.3.0-beta.2 - 2023-04-29
+
+*(All changes are relative compared to [the 0.3.0-beta.1 release](#030-beta1---2023-01-19))*
+
 ### Added
 
 - Allow specifying the font family to be used in the generated SVG snapshots
