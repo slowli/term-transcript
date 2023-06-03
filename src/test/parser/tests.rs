@@ -1,5 +1,6 @@
 use assert_matches::assert_matches;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText};
+use test_casing::test_casing;
 
 use std::io::{Cursor, Read};
 
@@ -21,7 +22,23 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
     </svg>
 "#;
 
-fn test_reading_file(file_contents: &[u8]) {
+const LEGACY_SVG: &[u8] = br#"
+    <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+      <foreignObject x="0" y="0" width="652" height="344">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+          <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
+          <div class="term-output"><pre>total 28
+drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg4">.</span>
+drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
+-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
+          </div>
+        </div>
+      </foreignObject>
+    </svg>
+"#;
+
+#[test_casing(2, [SVG, LEGACY_SVG])]
+fn reading_file(file_contents: &[u8]) {
     let transcript = Transcript::from_svg(file_contents).unwrap();
     assert_eq!(transcript.interactions.len(), 1);
 
@@ -43,30 +60,6 @@ fn test_reading_file(file_contents: &[u8]) {
 
     let color_spans = &interaction.output.color_spans;
     assert_eq!(color_spans.len(), 5); // 2 colored regions + 3 surrounding areas
-}
-
-#[test]
-fn reading_file() {
-    test_reading_file(SVG);
-}
-
-#[test]
-fn reading_old_file() {
-    const LEGACY_SVG: &[u8] = br#"
-        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
-          <foreignObject x="0" y="0" width="652" height="344">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-              <div class="user-input"><pre><span class="prompt">$</span> ls -al --color=always</pre></div>
-              <div class="term-output"><pre>total 28
-drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <span class="fg4">.</span>
-drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
--rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</pre>
-              </div>
-            </div>
-          </foreignObject>
-        </svg>
-    "#;
-    test_reading_file(LEGACY_SVG);
 }
 
 #[test]
@@ -170,34 +163,32 @@ fn reading_file_without_container() {
     assert_matches!(err, ParseError::UnexpectedEof);
 }
 
-#[test]
-fn reading_file_with_invalid_container() {
-    const INVALID_ATTRS: &[&str] = &[
-        "",
-        // no class
-        r#"xmlns="http://www.w3.org/1999/xhtml""#,
-        // no namespace
-        r#"class="container""#,
-        // invalid namespace
-        r#"xmlns="http://www.w3.org/2000/svg" class="container""#,
-        // invalid class
-        r#"xmlns="http://www.w3.org/1999/xhtml" class="cont""#,
-    ];
+const INVALID_ATTRS: [&str; 5] = [
+    "",
+    // no class
+    r#"xmlns="http://www.w3.org/1999/xhtml""#,
+    // no namespace
+    r#"class="container""#,
+    // invalid namespace
+    r#"xmlns="http://www.w3.org/2000/svg" class="container""#,
+    // invalid class
+    r#"xmlns="http://www.w3.org/1999/xhtml" class="cont""#,
+];
 
-    for &attrs in INVALID_ATTRS {
-        let bogus_data = format!(
-            r#"
-            <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
-              <foreignObject x="0" y="0" width="652" height="344">
-                <div {attrs}>Test</div>
-              </foreignObject>
-            </svg>
-            "#
-        );
-        let err = Transcript::from_svg(bogus_data.as_bytes()).unwrap_err();
+#[test_casing(5, INVALID_ATTRS)]
+fn reading_file_with_invalid_container(attrs: &str) {
+    let bogus_data = format!(
+        r#"
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
+          <foreignObject x="0" y="0" width="652" height="344">
+            <div {attrs}>Test</div>
+          </foreignObject>
+        </svg>
+        "#
+    );
+    let err = Transcript::from_svg(bogus_data.as_bytes()).unwrap_err();
 
-        assert_matches!(err, ParseError::InvalidContainer);
-    }
+    assert_matches!(err, ParseError::InvalidContainer);
 }
 
 #[test]
