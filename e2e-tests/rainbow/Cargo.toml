@@ -19,7 +19,6 @@ anyhow = "1.0.40"
 termcolor = "1.1.2"
 
 [dependencies.term-transcript]
-version = "0.3.0-beta.1"
 path = "../.."
 features = ["tracing"]
 
@@ -27,6 +26,7 @@ features = ["tracing"]
 handlebars = "4.3.1"
 pretty_assertions = "1.0.0"
 tempfile = "3.2.0"
+test-casing = "0.1.0"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 

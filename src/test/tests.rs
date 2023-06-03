@@ -1,4 +1,5 @@
 use termcolor::NoColor;
+use test_casing::test_casing;
 
 use super::{color_diff::ColorSpan, *};
 use crate::{
@@ -6,7 +7,9 @@ use crate::{
     Captured, Interaction, Transcript, UserInput,
 };
 
-fn test_snapshot_testing(test_config: &mut TestConfig) -> anyhow::Result<()> {
+#[test_casing(2, [MatchKind::TextOnly, MatchKind::Precise])]
+fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {
+    let mut test_config = TestConfig::new(ShellOptions::default()).with_match_kind(match_kind);
     let transcript = Transcript::from_inputs(
         &mut ShellOptions::default(),
         vec![UserInput::command("echo \"Hello, world!\"")],
@@ -18,18 +21,6 @@ fn test_snapshot_testing(test_config: &mut TestConfig) -> anyhow::Result<()> {
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
     test_config.test_transcript(&parsed);
     Ok(())
-}
-
-#[test]
-fn snapshot_testing_with_default_params() -> anyhow::Result<()> {
-    let mut test_config = TestConfig::new(ShellOptions::default());
-    test_snapshot_testing(&mut test_config)
-}
-
-#[test]
-fn snapshot_testing_with_exact_match() -> anyhow::Result<()> {
-    let test_config = TestConfig::new(ShellOptions::default());
-    test_snapshot_testing(&mut test_config.with_match_kind(MatchKind::Precise))
 }
 
 fn test_negative_snapshot_testing(

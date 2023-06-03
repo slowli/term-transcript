@@ -1,6 +1,7 @@
 //! Tests the full lifecycle of `Transcript`s.
 
 use assert_matches::assert_matches;
+use test_casing::{decorate, decorators::Retry, test_casing};
 use tracing::{subscriber::DefaultGuard, Subscriber};
 use tracing_capture::{CaptureLayer, CapturedSpan, SharedStorage, Storage};
 use tracing_subscriber::{
@@ -130,7 +131,17 @@ fn assert_tracing_for_parsing(storage: &Storage) {
     assert!(output.starts_with("\"Hello, world!"), "{output}");
 }
 
-fn test_transcript_with_empty_output(mute_outputs: &[bool]) -> anyhow::Result<()> {
+const MUTE_OUTPUT_CASES: [&[bool]; 6] = [
+    &[true],
+    &[true, false],
+    &[false, true],
+    &[false, true, false],
+    &[true, false, true],
+    &[true, true, false, true],
+];
+
+#[test_casing(6, MUTE_OUTPUT_CASES)]
+fn transcript_with_empty_output(mute_outputs: &[bool]) -> anyhow::Result<()> {
     #[cfg(unix)]
     const NULL_FILE: &str = "/dev/null";
     #[cfg(windows)]
@@ -213,36 +224,6 @@ fn assert_tracing_for_transcript_from_inputs(storage: &Storage) {
     );
 }
 
-#[test]
-fn transcript_with_empty_output() -> anyhow::Result<()> {
-    test_transcript_with_empty_output(&[true])
-}
-
-#[test]
-fn transcript_with_empty_and_then_non_empty_outputs() -> anyhow::Result<()> {
-    test_transcript_with_empty_output(&[true, false])
-}
-
-#[test]
-fn transcript_with_non_empty_and_then_empty_outputs() -> anyhow::Result<()> {
-    test_transcript_with_empty_output(&[false, true])
-}
-
-#[test]
-fn transcript_with_sandwiched_empty_output() -> anyhow::Result<()> {
-    test_transcript_with_empty_output(&[false, true, false])
-}
-
-#[test]
-fn transcript_with_sandwiched_non_empty_output() -> anyhow::Result<()> {
-    test_transcript_with_empty_output(&[true, false, true])
-}
-
-#[test]
-fn transcript_with_several_non_empty_outputs_in_succession() -> anyhow::Result<()> {
-    test_transcript_with_empty_output(&[true, true, false, true])
-}
-
 #[cfg(unix)]
 #[test]
 fn command_exit_status_in_sh() -> anyhow::Result<()> {
@@ -263,6 +244,7 @@ fn command_exit_status_in_sh() -> anyhow::Result<()> {
 }
 
 #[test]
+#[decorate(Retry::times(3))] // PowerShell can be quite slow
 fn command_exit_status_in_powershell() -> anyhow::Result<()> {
     fn powershell_exists() -> bool {
         let exit_status = Command::new("pwsh")
@@ -360,29 +342,8 @@ fn cmd_shell_with_utf8_output_in_pty() {
         .unwrap();
 }
 
-#[test]
-fn non_utf8_shell_output() {
-    #[cfg(unix)]
-    const CAT_COMMAND: &str = "cat";
-    #[cfg(windows)]
-    const CAT_COMMAND: &str = "type";
-
-    let _guard = enable_tracing();
-    let non_utf8_file = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("non-utf8.txt");
-    let input = UserInput::command(format!(
-        "{CAT_COMMAND} \"{}\"",
-        non_utf8_file.to_string_lossy()
-    ));
-    let err = Transcript::from_inputs(&mut ShellOptions::default(), vec![input]).unwrap_err();
-
-    assert_matches!(err.kind(), io::ErrorKind::InvalidData);
-    assert!(err.get_ref().unwrap().is::<Utf8Error>(), "{err:?}");
-}
-
-#[test]
-fn non_utf8_shell_output_with_lossy_decoder() -> anyhow::Result<()> {
+#[test_casing(2, [false, true])]
+fn non_utf8_shell_output(lossy: bool) -> anyhow::Result<()> {
     #[cfg(unix)]
     const CAT_COMMAND: &str = "cat";
     #[cfg(windows)]
@@ -397,9 +358,20 @@ fn non_utf8_shell_output_with_lossy_decoder() -> anyhow::Result<()> {
         non_utf8_file.to_string_lossy()
     ));
 
-    let mut options = ShellOptions::default().with_lossy_utf8_decoder();
-    let transcript = Transcript::from_inputs(&mut options, vec![input])?;
-    let output = transcript.interactions()[0].output();
-    assert!(output.to_plaintext()?.contains(char::REPLACEMENT_CHARACTER));
+    let mut options = ShellOptions::default();
+    if lossy {
+        options = options.with_lossy_utf8_decoder();
+    }
+
+    let result = Transcript::from_inputs(&mut options, vec![input]);
+    if lossy {
+        let transcript = result.unwrap();
+        let output = transcript.interactions()[0].output();
+        assert!(output.to_plaintext()?.contains(char::REPLACEMENT_CHARACTER));
+    } else {
+        let err = result.unwrap_err();
+        assert_matches!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(err.get_ref().unwrap().is::<Utf8Error>(), "{err:?}");
+    }
     Ok(())
 }

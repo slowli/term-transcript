@@ -1,5 +1,6 @@
 use handlebars::Template as HandlebarsTemplate;
 use tempfile::tempdir;
+use test_casing::{decorate, decorators::Retry, test_casing};
 use tracing::{subscriber::DefaultGuard, Subscriber};
 use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
@@ -213,6 +214,7 @@ fn bash_shell_example() {
 }
 
 #[test]
+#[decorate(Retry::times(3))] // PowerShell can be quite slow
 fn powershell_example() {
     fn powershell_exists() -> bool {
         let exit_status = Command::new("pwsh")
@@ -261,6 +263,12 @@ enum ErrorType {
 }
 
 impl ErrorType {
+    const ALL: [Self; 3] = [
+        Self::MissingSnapshot,
+        Self::InputMismatch,
+        Self::OutputMismatch,
+    ];
+
     fn create_snapshot(self, snapshot_path: &Path) -> io::Result<()> {
         match self {
             Self::MissingSnapshot => {
@@ -290,7 +298,8 @@ impl ErrorType {
     }
 }
 
-fn test_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
+#[test_casing(3, ErrorType::ALL)]
+fn new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let temp_dir = tempdir()?;
     let snapshot_path = temp_dir.path().join("rainbow.svg");
     error_type.create_snapshot(&snapshot_path)?;
@@ -327,22 +336,8 @@ fn test_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
-fn new_snapshot_is_created_if_original_is_missing() -> anyhow::Result<()> {
-    test_new_snapshot(ErrorType::MissingSnapshot)
-}
-
-#[test]
-fn new_snapshot_is_created_on_input_mismatch() -> anyhow::Result<()> {
-    test_new_snapshot(ErrorType::InputMismatch)
-}
-
-#[test]
-fn new_snapshot_is_created_on_output_mismatch() -> anyhow::Result<()> {
-    test_new_snapshot(ErrorType::OutputMismatch)
-}
-
-fn test_no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
+#[test_casing(3, ErrorType::ALL)]
+fn no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     let temp_dir = tempdir()?;
     let snapshot_path = temp_dir.path().join("rainbow.svg");
     error_type.create_snapshot(&snapshot_path)?;
@@ -370,19 +365,4 @@ fn test_no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     assert!(!new_snapshot_path.exists());
 
     Ok(())
-}
-
-#[test]
-fn new_snapshot_is_not_created_with_config_if_original_is_missing() -> anyhow::Result<()> {
-    test_no_new_snapshot(ErrorType::MissingSnapshot)
-}
-
-#[test]
-fn new_snapshot_is_not_created_with_config_on_input_mismatch() -> anyhow::Result<()> {
-    test_no_new_snapshot(ErrorType::InputMismatch)
-}
-
-#[test]
-fn new_snapshot_is_not_created_with_config_on_output_mismatch() -> anyhow::Result<()> {
-    test_no_new_snapshot(ErrorType::OutputMismatch)
 }
