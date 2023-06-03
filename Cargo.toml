@@ -1,6 +1,6 @@
 [package]
 name = "term-transcript"
-version = "0.3.0-beta.2"
+version = "0.3.0"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 edition = "2021"
 rust-version = "1.66"

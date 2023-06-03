@@ -5,6 +5,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.3.0 - 2023-06-03
+
+*(No substantial changes compared to the [0.3.0-beta.2 release](#030-beta2---2023-04-29))*
+
 ## 0.3.0-beta.2 - 2023-04-29
 
 *(All changes are relative compared to [the 0.3.0-beta.1 release](#030-beta1---2023-01-19))*
