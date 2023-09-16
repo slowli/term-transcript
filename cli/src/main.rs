@@ -2,6 +2,7 @@
 
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
+use is_terminal::IsTerminal;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use std::{
@@ -293,7 +294,7 @@ impl From<ColorPreference> for ColorChoice {
             ColorPreference::Always => ColorChoice::Always,
             ColorPreference::Ansi => ColorChoice::AlwaysAnsi,
             ColorPreference::Auto => {
-                if atty::is(atty::Stream::Stdout) {
+                if io::stdout().is_terminal() {
                     ColorChoice::Auto
                 } else {
                     ColorChoice::Never

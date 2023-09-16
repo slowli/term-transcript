@@ -10,10 +10,6 @@ unsound = "deny"
 yanked = "deny"
 notice = "warn"
 severity-threshold = "Medium"
-ignore = [
-  # FIXME: replace `atty` with `is-terminal`?
-  "RUSTSEC-2021-0145",
-]
 
 [licenses]
 unlicensed = "deny"
