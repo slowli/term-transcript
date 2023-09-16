@@ -40,12 +40,10 @@ jobs:
           fi
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          profile: minimal
-          override: true
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
 
       - name: Cache cargo build
         uses: actions/cache@v3
@@ -55,10 +53,7 @@ jobs:
           restore-keys: ${{ runner.os }}-release-cargo
 
       - name: Build CLI app
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --manifest-path=cli/Cargo.toml --release --target=${{ matrix.target }} --all-features --locked
+        run: cargo build --manifest-path=cli/Cargo.toml --release --target=${{ matrix.target }} --all-features --locked
       - name: Package archive
         id: package
         run: ./cli/package.sh ${REF#"refs/tags/"}
