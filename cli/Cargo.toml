@@ -36,9 +36,3 @@ default = []
 portable-pty = ["term-transcript/portable-pty"]
 # Enables tracing for main operations.
 tracing = ["tracing-subscriber", "term-transcript/tracing"]
-
-[profile.release]
-strip = true
-
-[workspace]
-# Separate workspace since we need a lockfile

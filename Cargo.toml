@@ -55,5 +55,11 @@ path = "tests/integration.rs"
 required-features = ["tracing"]
 
 [workspace]
-members = [".", "e2e-tests/rainbow"]
-exclude = ["cli"]
+members = [".", "cli", "e2e-tests/rainbow"]
+
+# Profile for workspace executables
+[profile.executable]
+inherits = "release"
+strip = true
+codegen-units = 1
+lto = true
