@@ -1,3 +1,2 @@
 # Do not send the `target` dirs to the Docker builder
 target
-cli/target

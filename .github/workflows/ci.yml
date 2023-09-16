@@ -36,16 +36,12 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
-          path: |
-            target
-            cli/target
+          path: target
           key: ${{ runner.os }}${{ matrix.features }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}${{ matrix.features }}-msrv-cargo
 
       - name: Run tests
         run: cargo test --workspace ${{ matrix.features }} --all-targets
-      - name: Run CLI tests
-        run: cargo test --manifest-path=cli/Cargo.toml ${{ matrix.features }} --all-targets
       - name: Run doc tests
         run: cargo test --workspace ${{ matrix.features }} --doc
 
@@ -64,9 +60,7 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
-          path: |
-            target
-            cli/target
+          path: target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo
 
@@ -74,8 +68,6 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --workspace --all-features --all-targets -- -D warnings
-      - name: Clippy CLI
-        run: cargo clippy --manifest-path=cli/Cargo.toml --all-features --all-targets -- -D warnings
       - name: Clippy (no features)
         run: cargo clippy -p term-transcript --no-default-features --lib
       - name: Clippy (features = svg)
@@ -85,8 +77,6 @@ jobs:
 
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets
-      - name: Run CLI tests
-        run: cargo test --manifest-path=cli/Cargo.toml --all-features --all-targets
       - name: Run doc tests
         run: cargo test --workspace --all-features --doc
 
@@ -95,7 +85,7 @@ jobs:
       - name: Test CLI tracing
         run: |
           RUST_LOG=term_transcript=debug \
-          cargo run --manifest-path=cli/Cargo.toml --all-features -- \
+          cargo run -p term-transcript-cli --all-features -- \
           exec 'echo Hello' |& grep INFO
 
   build-docker:
@@ -114,7 +104,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: target/docker
-          key: ${{ runner.os }}-docker-buildkit-${{ hashFiles('cli/Cargo.lock') }}
+          key: ${{ runner.os }}-docker-buildkit-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-docker-buildkit
 
       - name: Install `socat`

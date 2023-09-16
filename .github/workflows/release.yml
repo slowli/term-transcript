@@ -48,12 +48,17 @@ jobs:
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
-          path: cli/target
-          key: ${{ runner.os }}-release-cargo-${{ hashFiles('cli/Cargo.lock') }}
+          path: target
+          key: ${{ runner.os }}-release-cargo-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-release-cargo
 
       - name: Build CLI app
-        run: cargo build --manifest-path=cli/Cargo.toml --release --target=${{ matrix.target }} --all-features --locked
+        run: |
+          cargo build -p term-transcript-cli \
+            --profile=executable \
+            --target=${{ matrix.target }} \
+            --all-features \
+            --locked
       - name: Package archive
         id: package
         run: ./cli/package.sh ${REF#"refs/tags/"}
