@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: [ "v*" ]
+  workflow_dispatch: {}
 
 defaults:
   run:
@@ -68,7 +69,14 @@ jobs:
           REF: ${{ github.ref }}
       - name: Publish archive
         uses: softprops/action-gh-release@v1
+        if: github.event_name == "push"
         with:
           draft: false
           files: ${{ steps.package.outputs.archive }}
           prerelease: ${{ steps.release-type.outputs.type == 'prerelease' }}
+      - name: Attach archive to action
+        uses: actions/upload-artifact@v3
+        if: github.event_name == "workflow_dispatch"
+        with:
+          name: term-transcript-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive }}
