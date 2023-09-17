@@ -62,7 +62,7 @@ jobs:
             --locked
       - name: Package archive
         id: package
-        run: ./cli/package.sh ${REF#"refs/tags/"}
+        run: ./cli/package.sh ${REF#refs/*/}
         env:
           OS: ${{ matrix.os }}
           TARGET: ${{ matrix.target }}
