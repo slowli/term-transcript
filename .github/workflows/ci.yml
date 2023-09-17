@@ -41,9 +41,9 @@ jobs:
           restore-keys: ${{ runner.os }}${{ matrix.features }}-msrv-cargo
 
       - name: Run tests
-        run: cargo test --workspace ${{ matrix.features }} --all-targets
+        run: cargo test -p term-transcript ${{ matrix.features }} --all-targets
       - name: Run doc tests
-        run: cargo test --workspace ${{ matrix.features }} --doc
+        run: cargo test -p term-transcript ${{ matrix.features }} --doc
 
   build:
     runs-on: ubuntu-latest

@@ -2,7 +2,6 @@
 
 [![Build Status](https://github.com/slowli/term-transcript/workflows/CI/badge.svg?branch=master)](https://github.com/slowli/term-transcript/actions)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
-![rust 1.66+ required](https://img.shields.io/badge/rust-1.66+-blue.svg?label=Required%20Rust)
 
 This crate provides command-line interface for [`term-transcript`]. It allows capturing
 terminal output to SVG and testing the captured snapshots.
@@ -22,6 +21,11 @@ Alternatively, you may use the app Docker image [as described below](#using-dock
 or download a pre-built app binary for popular targets (x86_64 for Linux / macOS / Windows
 and AArch64 for macOS)
 from [GitHub Releases](https://github.com/slowli/term-transcript/releases).
+
+### Minimum supported Rust version
+
+The crate supports the latest stable Rust version. It may support previous stable Rust versions,
+but this is not guaranteed.
 
 ### Crate feature: `portable-pty`
 
