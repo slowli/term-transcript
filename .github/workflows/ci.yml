@@ -81,7 +81,7 @@ jobs:
         run: cargo clippy -p term-transcript --no-default-features --features test --lib -- -D warnings
 
       - name: Check dependencies
-        run: cargo deny --all-features check
+        run: cargo deny --workspace --all-features check
 
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets

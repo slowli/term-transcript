@@ -28,6 +28,17 @@ confidence-threshold = 0.8
 multiple-versions = "deny"
 wildcards = "deny"
 allow-wildcard-paths = true
+skip = [
+  # `bitflags` v1 is still used by many crates. Since it's largely a macro,
+  # having multiple versions seems OK.
+  { name = "bitflags", version = "^1" },
+]
+skip-tree = [
+  # Used by `tracing-subscriber` together with the new version :(
+  { name = "regex-automata", version = "^0.1" },
+  # Used by `clap` via `terminal_size`; likely to get updated soon.
+  { name = "rustix", version = "^0.37" },
+]
 
 [sources]
 unknown-registry = "deny"
