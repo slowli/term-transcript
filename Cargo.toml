@@ -23,7 +23,7 @@ handlebars = { version = "4.0.0", optional = true }
 portable-pty = { version = "0.8.0", optional = true }
 
 # Private dependencies (not exposed in the public API).
-atty = { version = "0.2.14", optional = true }
+is-terminal = { version = "0.4.9", optional = true }
 bytecount = "0.6.2"
 os_pipe = "1.0.0"
 serde = { version = "1.0", optional = true, features = ["derive"] }
@@ -47,7 +47,7 @@ default = ["pretty_assertions", "svg", "test"]
 # Rendering terminal transcripts into SVG snapshots
 svg = ["handlebars", "serde", "serde_json"]
 # Allows parsing transcripts from SVG snapshots and testing them
-test = ["quick-xml", "atty"]
+test = ["quick-xml", "is-terminal"]
 
 [[test]]
 name = "integration"
@@ -55,5 +55,11 @@ path = "tests/integration.rs"
 required-features = ["tracing"]
 
 [workspace]
-members = [".", "e2e-tests/rainbow"]
-exclude = ["cli"]
+members = [".", "cli", "e2e-tests/rainbow"]
+
+# Profile for workspace executables
+[profile.executable]
+inherits = "release"
+strip = true
+codegen-units = 1
+lto = true

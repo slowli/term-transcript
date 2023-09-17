@@ -393,7 +393,9 @@ mod tests {
 
         let lines = writer.into_lines();
         assert_eq!(lines.len(), 5);
-        let [first, second, third, ..] = lines.as_slice() else { unreachable!() };
+        let [first, second, third, ..] = lines.as_slice() else {
+            unreachable!();
+        };
         assert!(first.background.is_none());
         assert_eq!(
             first.foreground,

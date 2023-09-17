@@ -3,7 +3,6 @@ name = "term-transcript-cli"
 version = "0.3.0"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 edition = "2021"
-rust-version = "1.66"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 keywords = ["snapshot", "terminal", "SVG"]
@@ -17,10 +16,10 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.40"
-atty = "0.2.14"
 clap = { version = "4.0.30", features = ["derive", "env", "wrap_help"] }
 handlebars = "4.3.1"
 humantime = "2.1.0"
+is-terminal = "0.4.9"
 serde_json = "1.0"
 termcolor = "1.1.2"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"], optional = true }
@@ -36,9 +35,3 @@ default = []
 portable-pty = ["term-transcript/portable-pty"]
 # Enables tracing for main operations.
 tracing = ["tracing-subscriber", "term-transcript/tracing"]
-
-[profile.release]
-strip = true
-
-[workspace]
-# Separate workspace since we need a lockfile

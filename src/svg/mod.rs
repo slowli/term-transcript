@@ -360,6 +360,7 @@ impl Default for Template {
 
 impl Template {
     /// Initializes the default template based on provided `options`.
+    #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
     pub fn new(options: TemplateOptions) -> Self {
         let template = HandlebarsTemplate::compile(DEFAULT_TEMPLATE)
             .expect("Default template should be valid");
@@ -367,6 +368,7 @@ impl Template {
     }
 
     /// Initializes the pure SVG template based on provided `options`.
+    #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
     pub fn pure_svg(options: TemplateOptions) -> Self {
         let template =
             HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");

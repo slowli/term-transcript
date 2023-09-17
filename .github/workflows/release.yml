@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: [ "v*" ]
+  workflow_dispatch: {}
 
 defaults:
   run:
@@ -40,25 +41,25 @@ jobs:
           fi
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          profile: minimal
-          override: true
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
 
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
-          path: cli/target
-          key: ${{ runner.os }}-release-cargo-${{ hashFiles('cli/Cargo.lock') }}
+          path: target
+          key: ${{ runner.os }}-release-cargo-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-release-cargo
 
       - name: Build CLI app
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --manifest-path=cli/Cargo.toml --release --target=${{ matrix.target }} --all-features --locked
+        run: |
+          cargo build -p term-transcript-cli \
+            --profile=executable \
+            --target=${{ matrix.target }} \
+            --all-features \
+            --locked
       - name: Package archive
         id: package
         run: ./cli/package.sh ${REF#"refs/tags/"}
@@ -68,7 +69,14 @@ jobs:
           REF: ${{ github.ref }}
       - name: Publish archive
         uses: softprops/action-gh-release@v1
+        if: github.event_name == "push"
         with:
           draft: false
           files: ${{ steps.package.outputs.archive }}
           prerelease: ${{ steps.release-type.outputs.type == 'prerelease' }}
+      - name: Attach archive to action
+        uses: actions/upload-artifact@v3
+        if: github.event_name == "workflow_dispatch"
+        with:
+          name: term-transcript-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive }}

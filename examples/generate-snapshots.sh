@@ -11,7 +11,6 @@ EXTENSION=new.svg
 ROOT_DIR=$(dirname "$0")
 ROOT_DIR=$(realpath -L "$ROOT_DIR/..")
 TARGET_DIR="$ROOT_DIR/target/debug"
-CLI_TARGET_DIR="$ROOT_DIR/cli/target/debug"
 
 # Common `term-transcript` CLI args
 TT_ARGS="-T 250ms"
@@ -19,15 +18,15 @@ TT_ARGS="-T 250ms"
 (
   cd "$ROOT_DIR"
   cargo build -p term-transcript-rainbow
-  cargo build --manifest-path=cli/Cargo.toml --all-features
+  cargo build -p term-transcript-cli --all-features
 )
 
-if [[ ! -x "$CLI_TARGET_DIR/term-transcript" ]]; then
-  echo "Executable term-transcript not found in expected location $CLI_TARGET_DIR"
+if [[ ! -x "$TARGET_DIR/term-transcript" ]]; then
+  echo "Executable term-transcript not found in expected location $TARGET_DIR"
   exit 1
 fi
 
-export PATH=$PATH:$TARGET_DIR:$CLI_TARGET_DIR
+export PATH=$PATH:$TARGET_DIR
 
 echo "Creating rainbow snapshot..."
 term-transcript exec $TT_ARGS --palette gjm8 rainbow \

@@ -1,3 +1,4 @@
+use is_terminal::IsTerminal;
 use termcolor::{Ansi, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
@@ -113,7 +114,7 @@ impl ColorPrintlnWriter {
             ColorChoice::Never => false,
             ColorChoice::Always | ColorChoice::AlwaysAnsi => true,
             ColorChoice::Auto => {
-                if atty::is(atty::Stream::Stdout) {
+                if io::stdout().is_terminal() {
                     StandardStream::stdout(color_choice).supports_color()
                 } else {
                     false

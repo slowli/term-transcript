@@ -32,7 +32,7 @@ impl fmt::Debug for StatusCheck {
         formatter
             .debug_struct("StatusCheck")
             .field("command", &self.command)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -74,7 +74,7 @@ impl<Cmd: fmt::Debug> fmt::Debug for ShellOptions<Cmd> {
             .field("init_timeout", &self.init_timeout)
             .field("init_commands", &self.init_commands)
             .field("status_check", &self.status_check)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

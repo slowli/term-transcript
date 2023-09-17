@@ -11,7 +11,7 @@ env:
   # Minimum supported Rust version.
   msrv: 1.66.0
   # Nightly Rust necessary for building docs.
-  nightly: nightly-2022-11-24
+  nightly: nightly-2023-09-09
 
 jobs:
   build-msrv:
@@ -29,124 +29,24 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.msrv }}
-          override: true
-      - name: Generate lockfile
-        uses: actions-rs/cargo@v1
-        with:
-          command: generate-lockfile
 
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
-          path: |
-            target
-            cli/target
+          path: target
           key: ${{ runner.os }}${{ matrix.features }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}${{ matrix.features }}-msrv-cargo
 
       - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace ${{ matrix.features }} --all-targets
-      - name: Run CLI tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=cli/Cargo.toml ${{ matrix.features }} --all-targets
+        run: cargo test -p term-transcript ${{ matrix.features }} --all-targets
       - name: Run doc tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace ${{ matrix.features }} --doc
+        run: cargo test -p term-transcript ${{ matrix.features }} --doc
 
   build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-      - name: Generate lockfile
-        uses: actions-rs/cargo@v1
-        with:
-          command: generate-lockfile
-
-      - name: Cache cargo build
-        uses: actions/cache@v3
-        with:
-          path: |
-            target
-            cli/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo
-
-      - name: Format
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-      - name: Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --workspace --all-features --all-targets -- -D warnings
-      - name: Clippy CLI
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --manifest-path=cli/Cargo.toml --all-features --all-targets -- -D warnings
-          name: clippy (CLI)
-      - name: Clippy (no features)
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p term-transcript --no-default-features --lib
-          name: clippy (no features)
-      - name: Clippy (features = svg)
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p term-transcript --no-default-features --features svg --lib -- -D warnings
-          name: clippy (features = svg)
-      - name: Clippy (features = test)
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -p term-transcript --no-default-features --features test --lib -- -D warnings
-          name: clippy (features = test)
-
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace --all-features --all-targets
-      - name: Run CLI tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=cli/Cargo.toml --all-features --all-targets
-      - name: Run doc tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace --all-features --doc
-
-      - name: Generate snapshots
-        run: ./examples/generate-snapshots.sh
-      - name: Test CLI tracing
-        run: |
-          RUST_LOG=term_transcript=debug \
-          cargo run --manifest-path=cli/Cargo.toml --all-features -- \
-          exec 'echo Hello' |& grep INFO
+    uses: ./.github/workflows/build-reusable.yml
 
   build-docker:
     needs:
@@ -164,7 +64,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: target/docker
-          key: ${{ runner.os }}-docker-buildkit-${{ hashFiles('cli/Cargo.lock') }}
+          key: ${{ runner.os }}-docker-buildkit-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-docker-buildkit
 
       - name: Install `socat`
@@ -268,15 +168,9 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.nightly }}
-          profile: minimal
-          override: true
-      - name: Generate lockfile
-        uses: actions-rs/cargo@v1
-        with:
-          command: generate-lockfile
 
       - name: Cache cargo build
         uses: actions/cache@v3

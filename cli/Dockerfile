@@ -6,11 +6,11 @@ ADD .. ./
 ARG FEATURES=portable-pty,tracing
 RUN --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
   --mount=type=cache,id=artifacts,target=/volume/target \
-  cargo build --manifest-path=cli/Cargo.toml --release \
+  cargo build -p term-transcript-cli --profile=executable \
     --no-default-features --features=$FEATURES \
     --target-dir /volume/target && \
   # Move the resulting executable so it doesn't get unmounted together with the cache
-  mv /volume/target/x86_64-unknown-linux-musl/release/term-transcript /volume/term-transcript
+  mv /volume/target/x86_64-unknown-linux-musl/executable/term-transcript /volume/term-transcript
 
 FROM alpine:3.17
 COPY --from=builder /volume/term-transcript /usr/local/bin
