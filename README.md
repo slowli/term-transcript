@@ -106,6 +106,11 @@ See the [`examples` directory](examples) for more snapshot examples.
   The output of these tools is inherently *dynamic* (which, e.g., results in animated SVGs).
   This crate intentionally chooses a simpler static format, which makes snapshot testing easier.
 
+## Contributing
+
+All contributions are welcome! See [the contributing guide](CONTRIBUTING.md) to help
+you get involved.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
