@@ -74,7 +74,7 @@ jobs:
           draft: false
           files: ${{ steps.package.outputs.archive }}
           prerelease: ${{ steps.release-type.outputs.type == 'prerelease' }}
-      - name: Attach archive to action
+      - name: Attach archive to workflow
         uses: actions/upload-artifact@v3
         if: github.event_name == 'workflow_dispatch'
         with:
