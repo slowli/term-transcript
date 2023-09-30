@@ -16,7 +16,7 @@ path = "src/bin/repl.rs"
 
 [dependencies]
 anyhow = "1.0.40"
-termcolor = "1.1.2"
+termcolor = "1.3.0"
 
 [dependencies.term-transcript]
 path = "../.."
