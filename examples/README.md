@@ -40,6 +40,37 @@ term-transcript exec -T 250ms --palette powershell \
 
 Note the `--pty` flag to use a pseudo-terminal for capture instead of default pipes.
 
+## Configuring console size
+
+### Setting width
+
+![Wide snapshot](rainbow-wide.svg)
+
+Use `--width` to control the pixel width of the console, and `--hard-wrap` to control
+at which char the console output is hard-wrapped to a new line. It usually makes sense
+to set these both params: `width ≈ hard_wrap * 9` (the exact coefficient depends on
+the font being used).
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --palette gjm8 \
+  --hard-wrap=100 --width=900 'rainbow --long-lines'
+```
+
+### Setting scroll height
+
+![Small snapshot](rainbow-small.svg)
+
+Use `--scroll=$height` to set the maximum pixel height of the snapshot.
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --palette gjm8 \
+  --hard-wrap=50 --width=450 --scroll=180 rainbow
+```
+
 ## Line numbering
 
 ### Separate numbering for each output

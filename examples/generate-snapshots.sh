@@ -37,7 +37,7 @@ term-transcript exec $TT_ARGS --pure-svg --palette gjm8 rainbow \
   > "$ROOT_DIR/examples/rainbow-pure.$EXTENSION"
 
 echo "Creating animated rainbow snapshot..."
-term-transcript exec $TT_ARGS --palette powershell --pty --window --scroll \
+term-transcript exec $TT_ARGS --palette powershell --scroll --pty --window \
   rainbow 'rainbow --long-lines' \
   > "$ROOT_DIR/examples/animated.$EXTENSION"
 
@@ -51,6 +51,16 @@ term-transcript exec $TT_ARGS --shell rainbow-repl \
   'neutral #fa4 underline #c0ffee' \
   '#9f4010 (brown) italic' \
   > "$ROOT_DIR/e2e-tests/rainbow/repl.$EXTENSION"
+
+echo "Creating wide rainbow snapshot..."
+term-transcript exec $TT_ARGS --palette gjm8 \
+  --hard-wrap=100 --width=900 'rainbow --long-lines' \
+  > "$ROOT_DIR/examples/rainbow-wide.$EXTENSION"
+
+echo "Creating small rainbow snapshot..."
+term-transcript exec $TT_ARGS --palette gjm8 \
+  --hard-wrap=50 --width=450 --scroll=180 rainbow \
+  > "$ROOT_DIR/examples/rainbow-small.$EXTENSION"
 
 echo "Creating snapshot with custom template..."
 term-transcript exec $TT_ARGS --palette xterm \
