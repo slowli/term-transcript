@@ -73,10 +73,22 @@ pub(crate) struct TemplateArgs {
     /// automatically.
     #[arg(long = "font")]
     font_family: Option<String>,
-    /// Enables scrolling animation, but only if the snapshot height exceeds a threshold
-    /// corresponding to ~19 lines.
-    #[arg(long)]
-    scroll: bool,
+    /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
+    /// where width is around $chars * 9.
+    #[arg(long, default_value = "720")]
+    width: usize,
+    /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
+    /// If not specified, the default height is sufficient to fit 19 lines with the default template.
+    #[arg(long, value_name = "HEIGHT")]
+    scroll: Option<Option<usize>>,
+    /// Specifies text wrapping threshold in number of chars.
+    #[arg(
+        long = "hard-wrap",
+        value_name = "CHARS",
+        conflicts_with = "no_wrap",
+        default_value = "80"
+    )]
+    hard_wrap: usize,
     /// Disables text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
     /// will be hidden.
     #[arg(long = "no-wrap")]
@@ -102,18 +114,20 @@ pub(crate) struct TemplateArgs {
 impl From<TemplateArgs> for TemplateOptions {
     fn from(value: TemplateArgs) -> Self {
         let mut this = Self {
+            width: value.width,
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,
-            scroll: if value.scroll {
-                Some(ScrollOptions::default())
-            } else {
-                None
-            },
+            scroll: value.scroll.map(|max_height| {
+                max_height.map_or_else(ScrollOptions::default, |max_height| ScrollOptions {
+                    max_height,
+                    ..ScrollOptions::default()
+                })
+            }),
             wrap: if value.no_wrap {
                 None
             } else {
-                Some(WrapOptions::default())
+                Some(WrapOptions::HardBreakAt(value.hard_wrap))
             },
             additional_styles: value.additional_styles.unwrap_or_default(),
             ..Self::default()
