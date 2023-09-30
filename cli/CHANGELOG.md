@@ -5,6 +5,15 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Allow specifying the snapshot width in pixels using `--width`.
+- Allow specifying at which char to hard-break lines using `--hard-wrap`.
+
+### Changed
+
+- `--scroll` now accepts an optional value that specifies max snapshot height in pixels.
+
 ## 0.3.0 - 2023-06-03
 
 *(No substantial changes compared to the [0.3.0-beta.2 release](#030-beta2---2023-04-29))*
