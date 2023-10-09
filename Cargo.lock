@@ -100,9 +100,9 @@ dependencies = [
 
 [[package]]
 name = "bytecount"
-version = "0.6.3"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c676a478f63e9fa2dd5368a42f28bba0d6c560b775f38583c8bbaa7fcd67c9c"
+checksum = "ad152d03a2c813c80bb94fedbf3a3f02b28f793e39e7c214c8a0bcc196343de7"
 
 [[package]]
 name = "cc"
@@ -941,9 +941,9 @@ dependencies = [
 
 [[package]]
 name = "test-casing"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a368b60fd43dd855b44b15fd27238a569d58b524ef2b5dfdffe013e92e0e0c14"
+checksum = "a1742a35282bbdcc686b7f828b3e5335b1f7ef84682e032a9754a857b0b8fe1a"
 dependencies = [
  "test-casing-macro",
 ]
