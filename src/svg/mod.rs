@@ -184,14 +184,16 @@ impl TemplateOptions {
 /// Options that influence the scrolling animation.
 ///
 /// The animation is only displayed if the console exceeds [`Self::max_height`]. In this case,
-/// the console will be scrolled vertically with the interval of [`Self::interval`] seconds
-/// between every frame. The view is moved 4 lines of text per scroll.
+/// the console will be scrolled vertically by [`Self::pixels_per_scroll`]
+/// with the interval of [`Self::interval`] seconds between every frame.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScrollOptions {
     /// Maximum height of the console, in pixels. The default value allows to fit 19 lines
     /// of text into the view with the default template (potentially, slightly less because
     /// of vertical margins around user inputs).
     pub max_height: usize,
+    /// Number of pixels moved each scroll. Default value is 52 (4 lines of text with the default template).
+    pub pixels_per_scroll: usize,
     /// Interval between keyframes in seconds. The default value is `4`.
     pub interval: f32,
 }
@@ -201,6 +203,7 @@ impl Default for ScrollOptions {
         const DEFAULT_LINE_HEIGHT: usize = 18; // from the default template
         Self {
             max_height: DEFAULT_LINE_HEIGHT * 19,
+            pixels_per_scroll: DEFAULT_LINE_HEIGHT * 4,
             interval: 4.0,
         }
     }
