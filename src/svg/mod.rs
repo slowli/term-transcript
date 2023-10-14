@@ -52,25 +52,30 @@ pub enum LineNumbers {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. The default value is `720`.
+    #[serde(default = "TemplateOptions::default_width")]
     pub width: usize,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
+    #[serde(default)]
     pub palette: Palette,
     /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
     /// to import fonts in conjunction with `font_family`.
     ///
     /// The value is not validated in any way, so supplying invalid CSS instructions can lead
     /// to broken SVG rendering.
+    #[serde(skip_serializing_if = "str::is_empty", default)]
     pub additional_styles: String,
     /// Font family specification in the CSS format. Should be monospace.
+    #[serde(default = "TemplateOptions::default_font_family")]
     pub font_family: String,
     /// Indicates whether to display a window frame around the shell. Default value is `false`.
+    #[serde(default)]
     pub window_frame: bool,
     /// Options for the scroll animation. If set to `None` (which is the default),
     /// no scrolling will be enabled, and the height of the generated image is not limited.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub scroll: Option<ScrollOptions>,
     /// Text wrapping options. The default value of [`WrapOptions`] is used by default.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(default = "TemplateOptions::default_wrap")]
     pub wrap: Option<WrapOptions>,
     /// Line numbering options.
     #[serde(default)]
@@ -80,19 +85,32 @@ pub struct TemplateOptions {
 impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
-            width: 720,
+            width: Self::default_width(),
             palette: Palette::default(),
             additional_styles: String::new(),
-            font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
+            font_family: Self::default_font_family(),
             window_frame: false,
             scroll: None,
-            wrap: Some(WrapOptions::default()),
+            wrap: Self::default_wrap(),
             line_numbers: None,
         }
     }
 }
 
 impl TemplateOptions {
+    fn default_width() -> usize {
+        720
+    }
+
+    fn default_font_family() -> String {
+        "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned()
+    }
+
+    #[allow(clippy::unnecessary_wraps)] // required by serde
+    fn default_wrap() -> Option<WrapOptions> {
+        Some(WrapOptions::default())
+    }
+
     /// Generates data for rendering.
     ///
     /// # Errors
