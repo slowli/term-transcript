@@ -36,8 +36,6 @@ skip = [
 skip-tree = [
   # Used by `tracing-subscriber` together with the new version :(
   { name = "regex-automata", version = "^0.1" },
-  # Used by `clap` via `terminal_size`; likely to get updated soon.
-  { name = "rustix", version = "^0.37" },
 ]
 
 [sources]
