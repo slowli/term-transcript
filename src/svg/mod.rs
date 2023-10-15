@@ -2,7 +2,8 @@
 //!
 //! The included templating logic allows rendering SVG images. Templating is based on [Handlebars],
 //! and can be [customized](Template#customization) to support differing layout or even
-//! data formats (e.g., HTML).
+//! data formats (e.g., HTML). The default template supports [a variety of options](TemplateOptions)
+//! controlling output aspects, e.g. image dimensions and scrolling animation.
 //!
 //! [Handlebars]: https://handlebarsjs.com/
 //!
@@ -49,6 +50,52 @@ pub enum LineNumbers {
 }
 
 /// Configurable options of a [`Template`].
+///
+/// # Serialization
+///
+/// Options can be deserialized from `serde`-supported encoding formats, such as TOML. This is used
+/// in the CLI app to read options from a file:
+///
+/// ```
+/// # use assert_matches::assert_matches;
+/// # use term_transcript::svg::{RgbColor, TemplateOptions, WrapOptions};
+/// let options_toml = r#"
+/// width = 900
+/// window_frame = true
+/// line_numbers = 'continuous'
+/// wrap.hard_break_at = 100
+/// scroll = { max_height = 300, pixels_per_scroll = 18, interval = 1.5 }
+///
+/// [palette.colors]
+/// black = '#3c3836'
+/// red = '#b85651'
+/// green = '#8f9a52'
+/// yellow = '#c18f41'
+/// blue = '#68948a'
+/// magenta = '#ab6c7d'
+/// cyan = '#72966c'
+/// white = '#a89984'
+///
+/// [palette.intense_colors]
+/// black = '#5a524c'
+/// red = '#b85651'
+/// green = '#a9b665'
+/// yellow = '#d8a657'
+/// blue = '#7daea3'
+/// magenta = '#d3869b'
+/// cyan = '#89b482'
+/// white = '#ddc7a1'
+/// "#;
+///
+/// let options: TemplateOptions = toml::from_str(options_toml)?;
+/// assert_eq!(options.width, 900);
+/// assert_matches!(options.wrap, Some(WrapOptions::HardBreakAt(100)));
+/// assert_eq!(
+///     options.palette.colors.green,
+///     RgbColor(0x8f, 0x9a, 0x52)
+/// );
+/// # anyhow::Ok(())
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. The default value is `720`.

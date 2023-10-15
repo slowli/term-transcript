@@ -56,6 +56,8 @@ impl From<LineNumbers> for svg::LineNumbers {
 #[derive(Debug, Args)]
 pub(crate) struct TemplateArgs {
     /// Path to the configuration TOML file.
+    ///
+    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for the configuration format.
     #[arg(
         long,
         conflicts_with_all = [
@@ -112,7 +114,7 @@ pub(crate) struct TemplateArgs {
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
     ///
-    /// See https://slowli.github.io/term-transcript/term_transcript/ for docs on templating.
+    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for docs on templating.
     #[arg(long = "tpl")]
     template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.

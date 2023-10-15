@@ -853,6 +853,7 @@ dependencies = [
  "serde_json",
  "termcolor",
  "test-casing",
+ "toml 0.8.2",
  "tracing",
  "tracing-capture",
  "tracing-subscriber",
