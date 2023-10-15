@@ -1,0 +1,26 @@
+# Custom template configuration.
+width = 900
+window_frame = true
+line_numbers = 'continuous'
+wrap = { hard_break_at = 100 }
+scroll = { max_height = 300, pixels_per_scroll = 18, interval = 1.5 }
+
+[palette.colors]
+black = '#3c3836'
+red = '#b85651'
+green = '#8f9a52'
+yellow = '#c18f41'
+blue = '#68948a'
+magenta = '#ab6c7d'
+cyan = '#72966c'
+white = '#a89984'
+
+[palette.intense_colors]
+black = '#5a524c'
+red = '#b85651'
+green = '#a9b665'
+yellow = '#d8a657'
+blue = '#7daea3'
+magenta = '#d3869b'
+cyan = '#89b482'
+white = '#ddc7a1'

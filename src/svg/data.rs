@@ -51,7 +51,6 @@ use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 ///             "white": "#f7f7fb",
 ///         },
 ///     },
-///     "additional_styles": "",
 ///     "font_family": "Consolas, Menlo, monospace",
 ///     "window_frame": false,
 ///     "wrap": {

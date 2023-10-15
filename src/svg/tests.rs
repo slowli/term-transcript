@@ -253,6 +253,7 @@ fn rendering_transcript_with_animation() {
     let options = TemplateOptions {
         scroll: Some(ScrollOptions {
             max_height: 240,
+            pixels_per_scroll: 52,
             interval: 3.0,
         }),
         ..TemplateOptions::default()
@@ -278,6 +279,7 @@ fn rendering_pure_svg_transcript_with_animation() {
     let options = TemplateOptions {
         scroll: Some(ScrollOptions {
             max_height: 240,
+            pixels_per_scroll: 52,
             interval: 3.0,
         }),
         ..TemplateOptions::default()

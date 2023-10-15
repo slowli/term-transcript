@@ -2,7 +2,8 @@
 //!
 //! The included templating logic allows rendering SVG images. Templating is based on [Handlebars],
 //! and can be [customized](Template#customization) to support differing layout or even
-//! data formats (e.g., HTML).
+//! data formats (e.g., HTML). The default template supports [a variety of options](TemplateOptions)
+//! controlling output aspects, e.g. image dimensions and scrolling animation.
 //!
 //! [Handlebars]: https://handlebarsjs.com/
 //!
@@ -49,28 +50,79 @@ pub enum LineNumbers {
 }
 
 /// Configurable options of a [`Template`].
+///
+/// # Serialization
+///
+/// Options can be deserialized from `serde`-supported encoding formats, such as TOML. This is used
+/// in the CLI app to read options from a file:
+///
+/// ```
+/// # use assert_matches::assert_matches;
+/// # use term_transcript::svg::{RgbColor, TemplateOptions, WrapOptions};
+/// let options_toml = r#"
+/// width = 900
+/// window_frame = true
+/// line_numbers = 'continuous'
+/// wrap.hard_break_at = 100
+/// scroll = { max_height = 300, pixels_per_scroll = 18, interval = 1.5 }
+///
+/// [palette.colors]
+/// black = '#3c3836'
+/// red = '#b85651'
+/// green = '#8f9a52'
+/// yellow = '#c18f41'
+/// blue = '#68948a'
+/// magenta = '#ab6c7d'
+/// cyan = '#72966c'
+/// white = '#a89984'
+///
+/// [palette.intense_colors]
+/// black = '#5a524c'
+/// red = '#b85651'
+/// green = '#a9b665'
+/// yellow = '#d8a657'
+/// blue = '#7daea3'
+/// magenta = '#d3869b'
+/// cyan = '#89b482'
+/// white = '#ddc7a1'
+/// "#;
+///
+/// let options: TemplateOptions = toml::from_str(options_toml)?;
+/// assert_eq!(options.width, 900);
+/// assert_matches!(options.wrap, Some(WrapOptions::HardBreakAt(100)));
+/// assert_eq!(
+///     options.palette.colors.green,
+///     RgbColor(0x8f, 0x9a, 0x52)
+/// );
+/// # anyhow::Ok(())
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. The default value is `720`.
+    #[serde(default = "TemplateOptions::default_width")]
     pub width: usize,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
+    #[serde(default)]
     pub palette: Palette,
     /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
     /// to import fonts in conjunction with `font_family`.
     ///
     /// The value is not validated in any way, so supplying invalid CSS instructions can lead
     /// to broken SVG rendering.
+    #[serde(skip_serializing_if = "str::is_empty", default)]
     pub additional_styles: String,
     /// Font family specification in the CSS format. Should be monospace.
+    #[serde(default = "TemplateOptions::default_font_family")]
     pub font_family: String,
     /// Indicates whether to display a window frame around the shell. Default value is `false`.
+    #[serde(default)]
     pub window_frame: bool,
     /// Options for the scroll animation. If set to `None` (which is the default),
     /// no scrolling will be enabled, and the height of the generated image is not limited.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub scroll: Option<ScrollOptions>,
     /// Text wrapping options. The default value of [`WrapOptions`] is used by default.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(default = "TemplateOptions::default_wrap")]
     pub wrap: Option<WrapOptions>,
     /// Line numbering options.
     #[serde(default)]
@@ -80,19 +132,32 @@ pub struct TemplateOptions {
 impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
-            width: 720,
+            width: Self::default_width(),
             palette: Palette::default(),
             additional_styles: String::new(),
-            font_family: "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned(),
+            font_family: Self::default_font_family(),
             window_frame: false,
             scroll: None,
-            wrap: Some(WrapOptions::default()),
+            wrap: Self::default_wrap(),
             line_numbers: None,
         }
     }
 }
 
 impl TemplateOptions {
+    fn default_width() -> usize {
+        720
+    }
+
+    fn default_font_family() -> String {
+        "SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace".to_owned()
+    }
+
+    #[allow(clippy::unnecessary_wraps)] // required by serde
+    fn default_wrap() -> Option<WrapOptions> {
+        Some(WrapOptions::default())
+    }
+
     /// Generates data for rendering.
     ///
     /// # Errors
@@ -166,14 +231,16 @@ impl TemplateOptions {
 /// Options that influence the scrolling animation.
 ///
 /// The animation is only displayed if the console exceeds [`Self::max_height`]. In this case,
-/// the console will be scrolled vertically with the interval of [`Self::interval`] seconds
-/// between every frame. The view is moved 4 lines of text per scroll.
+/// the console will be scrolled vertically by [`Self::pixels_per_scroll`]
+/// with the interval of [`Self::interval`] seconds between every frame.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScrollOptions {
     /// Maximum height of the console, in pixels. The default value allows to fit 19 lines
     /// of text into the view with the default template (potentially, slightly less because
     /// of vertical margins around user inputs).
     pub max_height: usize,
+    /// Number of pixels moved each scroll. Default value is 52 (4 lines of text with the default template).
+    pub pixels_per_scroll: usize,
     /// Interval between keyframes in seconds. The default value is `4`.
     pub interval: f32,
 }
@@ -183,6 +250,7 @@ impl Default for ScrollOptions {
         const DEFAULT_LINE_HEIGHT: usize = 18; // from the default template
         Self {
             max_height: DEFAULT_LINE_HEIGHT * 19,
+            pixels_per_scroll: DEFAULT_LINE_HEIGHT * 4,
             interval: 4.0,
         }
     }

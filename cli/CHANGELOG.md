@@ -9,6 +9,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 - Allow specifying the snapshot width in pixels using `--width`.
 - Allow specifying at which char to hard-break lines using `--hard-wrap`.
+- Allow reading template configuration using `--config-path`.
 
 ### Changed
 

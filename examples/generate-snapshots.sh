@@ -129,3 +129,8 @@ term-transcript exec $TT_ARGS --palette gjm8 --window \
   --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
   --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow \
   > "$ROOT_DIR/examples/fira.$EXTENSION"
+
+echo "Creating snapshot with custom config..."
+term-transcript exec $TT_ARGS --config-path "$ROOT_DIR/examples/config.toml" \
+  'rainbow --long-lines' \
+  > "$ROOT_DIR/examples/custom-config.$EXTENSION"

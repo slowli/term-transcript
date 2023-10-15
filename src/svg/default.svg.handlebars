@@ -10,8 +10,6 @@
   "LINE_HEIGHT": 18,
   {{! Height of the window frame }}
   "WINDOW_FRAME_HEIGHT": 22,
-  {{! Pixels scrolled vertically per each animation frame }}
-  "PIXELS_PER_SCROLL": 52,
   {{! Right offset of the scrollbar relative to the right border of the frame }}
   "SCROLLBAR_RIGHT_OFFSET": 7,
   {{! Height of the scrollbar in pixels }}
@@ -56,7 +54,7 @@
     null
   {{else}}
     {{#scope
-      steps=(div (sub content_height scroll.max_height) const.PIXELS_PER_SCROLL round="up")
+      steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
       y_step=0
       view_box=""
       scrollbar_y=""
@@ -65,7 +63,7 @@
       {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
       {{#each (range 0 (add (steps) 1))}}
         {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{mul ../const.PIXELS_PER_SCROLL @index}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
+        {{#view_box}}"{{view_box}}{{sep}}0 {{mul ../scroll.pixels_per_scroll @index}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
         {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
       {{/each}}
 

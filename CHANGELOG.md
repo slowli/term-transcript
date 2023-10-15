@@ -5,6 +5,11 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Allow configuring pixels per scroll using new `ScrollOptions.pixels_per_scroll` field.
+- Change some default values and set more default values during `TemplateOptions` deserialization.
+
 ## 0.3.0 - 2023-06-03
 
 *(No substantial changes compared to the [0.3.0-beta.2 release](#030-beta2---2023-04-29))*

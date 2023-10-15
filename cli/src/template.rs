@@ -55,6 +55,17 @@ impl From<LineNumbers> for svg::LineNumbers {
 
 #[derive(Debug, Args)]
 pub(crate) struct TemplateArgs {
+    /// Path to the configuration TOML file.
+    ///
+    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for the configuration format.
+    #[arg(
+        long,
+        conflicts_with_all = [
+            "palette", "line_numbers", "window_frame", "additional_styles", "font_family", "width",
+            "scroll", "hard_wrap", "no_wrap",
+        ]
+    )]
+    config_path: Option<PathBuf>,
     /// Color palette to use.
     #[arg(long, short = 'p', default_value = "gjm8", value_enum)]
     palette: NamedPalette,
@@ -103,7 +114,7 @@ pub(crate) struct TemplateArgs {
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
     ///
-    /// See https://slowli.github.io/term-transcript/term_transcript/ for docs on templating.
+    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for docs on templating.
     #[arg(long = "tpl")]
     template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.
@@ -155,7 +166,18 @@ impl TemplateArgs {
         let pure_svg = self.pure_svg;
         let out_path = mem::take(&mut self.out);
         let template_path = mem::take(&mut self.template_path);
-        let options = TemplateOptions::from(self);
+        let config_path = mem::take(&mut self.config_path);
+
+        let options = if let Some(path) = &config_path {
+            let config = fs::read_to_string(path)
+                .with_context(|| format!("cannot read TOML config from `{}`", path.display()))?;
+            toml::from_str(&config).with_context(|| {
+                format!("failed deserializing TOML config from `{}`", path.display())
+            })?
+        } else {
+            TemplateOptions::from(self)
+        };
+
         let template = if let Some(template_path) = template_path {
             if template_path.as_os_str() == "-" {
                 return Self::render_data(out_path.as_deref(), transcript, &options);
@@ -169,18 +191,11 @@ impl TemplateArgs {
         };
 
         if let Some(out_path) = out_path {
-            let out = File::create(&out_path).with_context(|| {
-                format!(
-                    "cannot create output file `{}`",
-                    out_path.as_os_str().to_string_lossy()
-                )
-            })?;
-            template.render(transcript, out).with_context(|| {
-                format!(
-                    "cannot render template to `{}`",
-                    out_path.as_os_str().to_string_lossy()
-                )
-            })?;
+            let out = File::create(&out_path)
+                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
+            template
+                .render(transcript, out)
+                .with_context(|| format!("cannot render template to `{}`", out_path.display()))?;
         } else {
             template
                 .render(transcript, io::stdout())
@@ -198,17 +213,10 @@ impl TemplateArgs {
             .render_data(transcript)
             .context("cannot render data for Handlebars template")?;
         if let Some(out_path) = out_path {
-            let out = File::create(out_path).with_context(|| {
-                format!(
-                    "cannot create output file `{}`",
-                    out_path.as_os_str().to_string_lossy()
-                )
-            })?;
+            let out = File::create(out_path)
+                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
             serde_json::to_writer(out, &data).with_context(|| {
-                format!(
-                    "cannot write Handlebars data to `{}`",
-                    out_path.as_os_str().to_string_lossy()
-                )
+                format!("cannot write Handlebars data to `{}`", out_path.display())
             })?;
         } else {
             serde_json::to_writer(io::stdout(), &data)
@@ -221,13 +229,13 @@ impl TemplateArgs {
         let template_string = fs::read_to_string(template_path).with_context(|| {
             format!(
                 "cannot read Handlebars template from `{}`",
-                template_path.as_os_str().to_string_lossy()
+                template_path.display()
             )
         })?;
         let template = HandlebarsTemplate::compile(&template_string).with_context(|| {
             format!(
                 "cannot compile Handlebars template from `{}`",
-                template_path.as_os_str().to_string_lossy()
+                template_path.display()
             )
         })?;
         Ok(template)

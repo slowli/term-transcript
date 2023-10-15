@@ -174,6 +174,21 @@ term-transcript exec -T 250ms --palette gjm8 --window \
 
 [CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
 
+## Configuration file
+
+`--config-path` option allows reading rendering options from a TOML file. This enables
+configuring low-level template details. The snapshot below uses a [configuration file](config.toml)
+to customize palette colors and scroll animation step / interval.
+
+![Snapshot with config read from file](custom-config.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --config-path config.toml \
+  'rainbow --long-lines'
+```
+
 ## Failed inputs
 
 Some shells may allow detecting whether an input resulted in a failure
