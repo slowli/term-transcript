@@ -26,7 +26,7 @@ features = ["tracing"]
 handlebars = "4.3.1"
 pretty_assertions = "1.0.0"
 tempfile = "3.8.1"
-test-casing = "0.1.1"
+test-casing = "0.1.2"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
