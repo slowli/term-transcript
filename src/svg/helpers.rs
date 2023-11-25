@@ -446,7 +446,7 @@ mod tests {
 
     #[test]
     fn scope_helper_basics() {
-        let template = r#"{{#scope test_var=1}}Test var is: {{test_var}}{{/scope}}"#;
+        let template = "{{#scope test_var=1}}Test var is: {{test_var}}{{/scope}}";
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars.register_helper("scope", Box::new(ScopeHelper));
@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn add_helper_basics() {
-        let template = r#"{{add 1 2 5}}"#;
+        let template = "{{add 1 2 5}}";
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars.register_helper("add", Box::new(OpsHelper::Add));
@@ -506,7 +506,7 @@ mod tests {
 
     #[test]
     fn add_with_scope_var() {
-        let template = r#"
+        let template = "
             {{#scope lines=0 margins=0}}
                 {{#each values}}
                     {{lines set=(add (lines) input.line_count output.line_count)}}
@@ -518,7 +518,7 @@ mod tests {
                 {{/each}}
                 {{lines}}, {{margins}}
             {{/scope}}
-        "#;
+        ";
 
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
@@ -626,9 +626,7 @@ mod tests {
 
     #[test]
     fn line_splitter() {
-        let template = r#"
-            {{#each (split_lines text)}}{{this}}<br/>{{/each}}
-        "#;
+        let template = "{{#each (split_lines text)}}{{this}}<br/>{{/each}}";
         let text = "test\nother test";
 
         let mut handlebars = Handlebars::new();
@@ -646,9 +644,7 @@ mod tests {
 
     #[test]
     fn range_helper_with_each_block() {
-        let template = r#"
-            {{#each (range 0 4)}}{{@index}}: {{lookup ../xs @index}}, {{/each}}
-        "#;
+        let template = "{{#each (range 0 4)}}{{@index}}: {{lookup ../xs @index}}, {{/each}}";
 
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
