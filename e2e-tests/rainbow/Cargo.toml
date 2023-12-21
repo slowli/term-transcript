@@ -15,7 +15,7 @@ name = "rainbow-repl"
 path = "src/bin/repl.rs"
 
 [dependencies]
-anyhow = "1.0.40"
+anyhow = "1.0.76"
 termcolor = "1.4.0"
 
 [dependencies.term-transcript]
