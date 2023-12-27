@@ -15,8 +15,8 @@ name = "term-transcript"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.40"
-clap = { version = "4.4.8", features = ["derive", "env", "wrap_help"] }
+anyhow = "1.0.77"
+clap = { version = "4.4.11", features = ["derive", "env", "wrap_help"] }
 handlebars = "4.5.0"
 humantime = "2.1.0"
 is-terminal = "0.4.9"
