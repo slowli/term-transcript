@@ -23,7 +23,7 @@ handlebars = { version = "4.5.0", optional = true }
 portable-pty = { version = "0.8.0", optional = true }
 
 # Private dependencies (not exposed in the public API).
-is-terminal = { version = "0.4.9", optional = true }
+is-terminal = { version = "0.4.10", optional = true }
 bytecount = "0.6.7"
 os_pipe = "1.0.0"
 serde = { version = "1.0", optional = true, features = ["derive"] }
