@@ -15,7 +15,7 @@ name = "rainbow-repl"
 path = "src/bin/repl.rs"
 
 [dependencies]
-anyhow = "1.0.77"
+anyhow = "1.0.79"
 termcolor = "1.4.0"
 
 [dependencies.term-transcript]
@@ -25,7 +25,7 @@ features = ["tracing"]
 [dev-dependencies]
 handlebars = "4.5.0"
 pretty_assertions = "1.0.0"
-tempfile = "3.8.1"
+tempfile = "3.9.0"
 test-casing = "0.1.2"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
