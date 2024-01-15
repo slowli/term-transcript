@@ -36,6 +36,9 @@ skip = [
 skip-tree = [
   # Used by `tracing-subscriber` together with the new version :(
   { name = "regex-automata", version = "^0.1" },
+  # Used by some less frequently updated crates; since it only provides WinAPI declarations,
+  # multiple versions should be OK (?).
+  { name = "windows-sys", version = "^0.48" },
 ]
 
 [sources]
