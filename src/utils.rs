@@ -3,7 +3,9 @@
 use std::{borrow::Cow, fmt::Write as WriteStr, io, str};
 
 #[cfg(any(feature = "svg", feature = "test"))]
-pub use self::rgb_color::{RgbColor, RgbColorParseError};
+pub use self::rgb_color::RgbColor;
+#[cfg(feature = "svg")]
+pub use self::rgb_color::RgbColorParseError;
 
 /// Adapter for `dyn fmt::Write` that implements `io::Write`.
 pub(crate) struct WriteAdapter<'a> {
