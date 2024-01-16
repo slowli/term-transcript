@@ -23,7 +23,7 @@ path = "../.."
 features = ["tracing"]
 
 [dev-dependencies]
-handlebars = "4.5.0"
+handlebars = "5.0.0"
 pretty_assertions = "1.0.0"
 tempfile = "3.9.0"
 test-casing = "0.1.2"
