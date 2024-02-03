@@ -9,7 +9,7 @@ on:
 
 env:
   # Minimum supported Rust version.
-  msrv: 1.67.0
+  msrv: 1.69.0
   # Nightly Rust necessary for building docs.
   nightly: nightly-2023-09-09
 
