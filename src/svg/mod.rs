@@ -11,7 +11,7 @@
 //!
 //! See [`Template`] for examples of usage.
 
-use handlebars::{Handlebars, RenderError, Template as HandlebarsTemplate};
+use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
 
 use std::{fmt, io::Write};
@@ -474,7 +474,7 @@ impl Template {
         let data = self
             .options
             .render_data(transcript)
-            .map_err(|err| RenderError::from_error("content", err))?;
+            .map_err(|err| RenderErrorReason::NestedError(Box::new(err)))?;
 
         #[cfg(feature = "tracing")]
         let _entered = tracing::debug_span!("render_to_write").entered();

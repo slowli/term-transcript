@@ -2,7 +2,7 @@
 
 use handlebars::{
     BlockContext, Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError,
-    Renderable, ScopedJson, StringOutput,
+    RenderErrorReason, Renderable, ScopedJson, StringOutput,
 };
 use serde_json::Value as Json;
 
@@ -31,7 +31,7 @@ impl HelperDef for ScopeHelper {
     )]
     fn call<'reg: 'rc, 'rc>(
         &self,
-        helper: &Helper<'reg, 'rc>,
+        helper: &Helper<'rc>,
         reg: &'reg Handlebars<'reg>,
         ctx: &'rc Context,
         render_ctx: &mut RenderContext<'reg, 'rc>,
@@ -39,9 +39,11 @@ impl HelperDef for ScopeHelper {
     ) -> Result<(), RenderError> {
         const MESSAGE: &str = "`scope` must be called as block helper";
 
-        let template = helper.template().ok_or_else(|| RenderError::new(MESSAGE))?;
+        let template = helper
+            .template()
+            .ok_or(RenderErrorReason::BlockContentRequired)?;
         if !helper.params().is_empty() {
-            return Err(RenderError::new(MESSAGE));
+            return Err(RenderErrorReason::Other(MESSAGE.to_owned()).into());
         }
 
         for (name, value) in helper.hash() {
@@ -92,25 +94,22 @@ impl HelperDef for VarHelper {
     )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
-        helper: &Helper<'reg, 'rc>,
+        helper: &Helper<'rc>,
         reg: &'reg Handlebars<'reg>,
         ctx: &'rc Context,
         render_ctx: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+    ) -> Result<ScopedJson<'rc>, RenderError> {
         if helper.is_block() {
             if !helper.params().is_empty() {
                 let message = "In block form, var helpers must be called without args";
-                return Err(RenderError::new(message));
+                return Err(RenderErrorReason::Other(message.to_owned()).into());
             }
 
             let value = if let Some(template) = helper.template() {
                 let mut output = StringOutput::new();
                 template.render(reg, ctx, render_ctx, &mut output)?;
                 let json_string = output.into_string()?;
-                serde_json::from_str(&json_string).map_err(|err| {
-                    let message = format!("Cannot parse JSON value: {err}");
-                    RenderError::new(message)
-                })?
+                serde_json::from_str(&json_string).map_err(RenderErrorReason::from)?
             } else {
                 Json::Null
             };
@@ -120,7 +119,7 @@ impl HelperDef for VarHelper {
         } else {
             if !helper.params().is_empty() {
                 let message = "variable helper misuse; should be called without args";
-                return Err(RenderError::new(message));
+                return Err(RenderErrorReason::Other(message.to_owned()).into());
             }
 
             if let Some(value) = helper.hash_get("set") {
@@ -191,14 +190,14 @@ impl HelperDef for OpsHelper {
     )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
-        helper: &Helper<'reg, 'rc>,
+        helper: &Helper<'rc>,
         _: &'reg Handlebars<'reg>,
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+    ) -> Result<ScopedJson<'rc>, RenderError> {
         if matches!(self, Self::Sub | Self::Div) && helper.params().len() != 2 {
             let message = format!("`{}` expects exactly 2 number args", self.as_str());
-            return Err(RenderError::new(message));
+            return Err(RenderErrorReason::Other(message).into());
         }
 
         if !matches!(self, Self::Div) {
@@ -243,13 +242,17 @@ impl HelperDef for OpsHelper {
             Ok(ScopedJson::Derived(acc))
         } else {
             let message = "all args must be numbers";
-            Err(RenderError::new(message))
+            Err(RenderErrorReason::Other(message.to_owned()).into())
         }
     }
 }
 
 #[derive(Debug)]
 struct EvalHelper;
+
+impl EvalHelper {
+    const NAME: &'static str = "eval";
+}
 
 impl HelperDef for EvalHelper {
     #[cfg_attr(
@@ -262,23 +265,25 @@ impl HelperDef for EvalHelper {
     )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
-        helper: &Helper<'reg, 'rc>,
+        helper: &Helper<'rc>,
         reg: &'reg Handlebars<'reg>,
         ctx: &'rc Context,
         render_ctx: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
-        const MESSAGE: &str = "`eval` must be called with partial name as first arg";
-
-        let partial_name = helper.param(0).ok_or_else(|| RenderError::new(MESSAGE))?;
-        let partial_name = partial_name
-            .value()
-            .as_str()
-            .ok_or_else(|| RenderError::new(MESSAGE))?;
-
-        let partial = render_ctx.get_partial(partial_name).ok_or_else(|| {
-            let message = format!("partial `{partial_name}` not found");
-            RenderError::new(message)
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let partial_name = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let partial_name = partial_name.value().as_str().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "string".to_owned(),
+            )
         })?;
+
+        let partial = render_ctx
+            .get_partial(partial_name)
+            .ok_or_else(|| RenderErrorReason::PartialNotFound(partial_name.to_owned()))?;
 
         let object: serde_json::Map<String, Json> = helper
             .hash()
@@ -297,16 +302,17 @@ impl HelperDef for EvalHelper {
         let mut output = StringOutput::new();
         partial.render(reg, ctx, &mut render_ctx, &mut output)?;
         let json_string = output.into_string()?;
-        let json: Json = serde_json::from_str(&json_string).map_err(|err| {
-            let message = format!("Cannot parse JSON value: {err}");
-            RenderError::new(message)
-        })?;
+        let json: Json = serde_json::from_str(&json_string).map_err(RenderErrorReason::from)?;
         Ok(ScopedJson::Derived(json))
     }
 }
 
 #[derive(Debug)]
 struct LineCounter;
+
+impl LineCounter {
+    const NAME: &'static str = "count_lines";
+}
 
 impl HelperDef for LineCounter {
     #[cfg_attr(
@@ -319,18 +325,21 @@ impl HelperDef for LineCounter {
     )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
-        helper: &Helper<'reg, 'rc>,
+        helper: &Helper<'rc>,
         _: &'reg Handlebars<'reg>,
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+    ) -> Result<ScopedJson<'rc>, RenderError> {
         let string = helper
             .param(0)
-            .ok_or_else(|| RenderError::new("must be called with a single arg"))?;
-        let string = string
-            .value()
-            .as_str()
-            .ok_or_else(|| RenderError::new("argument must be a string"))?;
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let string = string.value().as_str().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "string".to_owned(),
+            )
+        })?;
         let is_html = helper
             .hash_get("format")
             .map_or(false, |format| format.value().as_str() == Some("html"));
@@ -344,13 +353,17 @@ impl HelperDef for LineCounter {
         }
 
         let lines = u64::try_from(lines)
-            .map_err(|err| RenderError::new(format!("cannot convert length: {err}")))?;
+            .map_err(|err| RenderErrorReason::Other(format!("cannot convert length: {err}")))?;
         Ok(ScopedJson::Derived(lines.into()))
     }
 }
 
 #[derive(Debug)]
 struct LineSplitter;
+
+impl LineSplitter {
+    const NAME: &'static str = "split_lines";
+}
 
 impl HelperDef for LineSplitter {
     #[cfg_attr(
@@ -363,18 +376,21 @@ impl HelperDef for LineSplitter {
     )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
-        helper: &Helper<'reg, 'rc>,
+        helper: &Helper<'rc>,
         _: &'reg Handlebars<'reg>,
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+    ) -> Result<ScopedJson<'rc>, RenderError> {
         let string = helper
             .param(0)
-            .ok_or_else(|| RenderError::new("must be called with a single arg"))?;
-        let string = string
-            .value()
-            .as_str()
-            .ok_or_else(|| RenderError::new("argument must be a string"))?;
+            .ok_or_else(|| RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let string = string.value().as_str().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "string".to_owned(),
+            )
+        })?;
 
         let lines = string.split('\n');
         let mut lines: Vec<_> = lines.map(Json::from).collect();
@@ -393,6 +409,8 @@ impl HelperDef for LineSplitter {
 struct RangeHelper;
 
 impl RangeHelper {
+    const NAME: &'static str = "range";
+
     fn coerce_value(value: &Json) -> Option<i64> {
         value
             .as_i64()
@@ -411,17 +429,31 @@ impl HelperDef for RangeHelper {
     )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
-        helper: &Helper<'reg, 'rc>,
+        helper: &Helper<'rc>,
         _: &'reg Handlebars<'reg>,
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
-        const MESSAGE: &str = "`range` must be called with two integer args";
-
-        let from = helper.param(0).ok_or_else(|| RenderError::new(MESSAGE))?;
-        let from = Self::coerce_value(from.value()).ok_or_else(|| RenderError::new(MESSAGE))?;
-        let to = helper.param(1).ok_or_else(|| RenderError::new(MESSAGE))?;
-        let to = Self::coerce_value(to.value()).ok_or_else(|| RenderError::new(MESSAGE))?;
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let from = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let from = Self::coerce_value(from.value()).ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "integer".to_owned(),
+            )
+        })?;
+        let to = helper
+            .param(1)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 1))?;
+        let to = Self::coerce_value(to.value()).ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "1".to_owned(),
+                "integer".to_owned(),
+            )
+        })?;
 
         let json: Vec<_> = (from..to).map(Json::from).collect();
         Ok(ScopedJson::Derived(json.into()))
@@ -433,11 +465,11 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
-    reg.register_helper("count_lines", Box::new(LineCounter));
-    reg.register_helper("split_lines", Box::new(LineSplitter));
-    reg.register_helper("range", Box::new(RangeHelper));
+    reg.register_helper(LineCounter::NAME, Box::new(LineCounter));
+    reg.register_helper(LineSplitter::NAME, Box::new(LineSplitter));
+    reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
     reg.register_helper("scope", Box::new(ScopeHelper));
-    reg.register_helper("eval", Box::new(EvalHelper));
+    reg.register_helper(EvalHelper::NAME, Box::new(EvalHelper));
 }
 
 #[cfg(test)]
