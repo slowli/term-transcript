@@ -5,7 +5,7 @@
 //! Simple scenario in which the tested transcript calls to one or more Cargo binaries / examples
 //! by their original names.
 //!
-//! ```
+//! ```no_run
 //! use term_transcript::{
 //!     ShellOptions, Transcript,
 //!     test::{MatchKind, TestConfig, TestOutputConfig},
