@@ -130,7 +130,7 @@
 //!
 //! Snapshot testing. See the [`test` module](crate::test) for more examples.
 //!
-//! ```
+//! ```no_run
 //! use term_transcript::{test::TestConfig, ShellOptions};
 //!
 //! #[test]
