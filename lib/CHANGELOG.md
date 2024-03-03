@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.4.0-beta.1 - 2024-03-03
+
 ### Changed
 
 - Allow configuring pixels per scroll using new `ScrollOptions.pixels_per_scroll` field.

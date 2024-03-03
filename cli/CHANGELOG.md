@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.4.0-beta.1 - 2024-03-03
+
 ### Added
 
 - Allow specifying the snapshot width in pixels using `--width`.
