@@ -1,10 +1,10 @@
 [package]
 name = "term-transcript-rainbow"
-version = "0.0.0"
 publish = false
-authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
-edition = "2021"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "rainbow"
@@ -15,20 +15,20 @@ name = "rainbow-repl"
 path = "src/bin/repl.rs"
 
 [dependencies]
-anyhow = "1.0.80"
-termcolor = "1.4.1"
+anyhow.workspace = true
+termcolor.workspace = true
 
 [dependencies.term-transcript]
-path = "../.."
+path = "../../lib"
 features = ["tracing"]
 
 [dev-dependencies]
-handlebars = "5.1.0"
-pretty_assertions = "1.0.0"
-tempfile = "3.10.1"
-test-casing = "0.1.3"
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+handlebars.workspace = true
+pretty_assertions.workspace = true
+tempfile.workspace = true
+test-casing.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [features]
 portable-pty = ["term-transcript/portable-pty"]
