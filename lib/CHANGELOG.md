@@ -10,6 +10,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Allow configuring pixels per scroll using new `ScrollOptions.pixels_per_scroll` field.
 - Change some default values and set more default values during `TemplateOptions` deserialization.
 - Bump minimum supported Rust version to 1.69.
+- Update `handlebars` and `quick-xml` dependencies.
 
 ## 0.3.0 - 2023-06-03
 

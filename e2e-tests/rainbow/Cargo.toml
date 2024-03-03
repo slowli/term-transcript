@@ -19,7 +19,7 @@ anyhow = "1.0.80"
 termcolor = "1.4.1"
 
 [dependencies.term-transcript]
-path = "../.."
+path = "../../lib"
 features = ["tracing"]
 
 [dev-dependencies]
