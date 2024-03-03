@@ -64,11 +64,11 @@ for the installation and usage guides.
 An SVG snapshot of [the `rainbow` example](../e2e-tests/rainbow)
 produced by this crate:
 
-![Snapshot of rainbow example](examples/rainbow.svg)
+![Snapshot of rainbow example][rainbow-snapshot-link]
 
 A snapshot of the same example with the scrolling animation and window frame:
 
-![Animated snapshot of rainbow example](examples/animated.svg)
+![Animated snapshot of rainbow example][animated-snapshot-link]
 
 ## Limitations
 
@@ -117,3 +117,5 @@ shall be dual licensed as above, without any additional terms or conditions.
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 [custom-templates]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.Template.html#customization
 [term-transcript-cli]: https://crates.io/crates/term-transcript-cli
+[rainbow-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/examples/rainbow.svg?sanitize=true
+[animated-snapshot-link]: https://github.com/slowli/term-transcript/raw/HEAD/examples/animated.svg?sanitize=true
