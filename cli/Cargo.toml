@@ -15,20 +15,20 @@ name = "term-transcript"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.80"
-clap = { version = "4.5.1", features = ["derive", "env", "wrap_help"] }
-handlebars = "5.1.0"
-humantime = "2.1.0"
-is-terminal = "0.4.12"
-serde_json = "1.0"
-termcolor = "1.4.1"
-toml = "0.8.10"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"], optional = true }
+anyhow.workspace = true
+clap = { workspace = true, features = ["derive", "env", "wrap_help"] }
+handlebars.workspace = true
+humantime.workspace = true
+is-terminal.workspace = true
+serde_json.workspace = true
+termcolor.workspace = true
+toml.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"], optional = true }
 
 term-transcript = { version = "0.3.0", path = "../lib" }
 
 [dev-dependencies]
-tempfile = "3.10.1"
+tempfile.workspace = true
 
 [features]
 default = []
