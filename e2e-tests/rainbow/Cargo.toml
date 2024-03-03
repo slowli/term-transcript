@@ -15,7 +15,7 @@ name = "rainbow-repl"
 path = "src/bin/repl.rs"
 
 [dependencies]
-anyhow = "1.0.79"
+anyhow = "1.0.80"
 termcolor = "1.4.1"
 
 [dependencies.term-transcript]
@@ -25,8 +25,8 @@ features = ["tracing"]
 [dev-dependencies]
 handlebars = "5.1.0"
 pretty_assertions = "1.0.0"
-tempfile = "3.10.0"
-test-casing = { version = "0.1.2", git = "https://github.com/slowli/test-casing.git", rev = "dd4d4eac4d3300ca1eed8ec64c22a5b8aa82fdbc" }
+tempfile = "3.10.1"
+test-casing = "0.1.3"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
