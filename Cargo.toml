@@ -13,7 +13,7 @@ repository = "https://github.com/slowli/term-transcript"
 [workspace.dependencies]
 anyhow = "1.0.82"
 assert_matches = "1.5.0"
-bytecount = "0.6.7"
+bytecount = "0.6.8"
 clap = "4.5.4"
 doc-comment = "0.3.3"
 handlebars = "5.1.2"
