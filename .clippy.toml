@@ -1,3 +1,5 @@
 # Minimum supported Rust version. Should be consistent with CI and mentions
 # in crate READMEs.
 msrv = "1.72"
+
+doc-valid-idents = ["PowerShell", ".."]

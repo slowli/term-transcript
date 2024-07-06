@@ -76,7 +76,6 @@ impl ShellOptions<StdShell> {
     }
 
     /// Creates options for PowerShell 6+ (the one with the `pwsh` executable).
-    #[allow(clippy::doc_markdown)] // false positive
     pub fn pwsh() -> Self {
         let mut command = Command::new("pwsh");
         command.arg("-NoLogo").arg("-NoExit");
@@ -105,7 +104,6 @@ impl ShellOptions<StdShell> {
     ///   is **not** checked.
     ///
     /// [`env!("CARGO_BIN_EXE_<name>")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
-    #[allow(clippy::doc_markdown)] // false positive
     #[must_use]
     pub fn with_alias(self, name: &str, path_to_bin: &str) -> Self {
         let alias_command = match self.command.shell_type {

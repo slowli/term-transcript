@@ -323,7 +323,6 @@ impl Transcript {
 /// # #[cfg(unix)] fn main() { test_wrapper().unwrap() }
 /// # #[cfg(not(unix))] fn main() { }
 /// ```
-#[allow(clippy::doc_markdown)] // false positive on "PowerShell"
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ExitStatus(pub i32);
 
