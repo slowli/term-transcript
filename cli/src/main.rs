@@ -2,13 +2,12 @@
 
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
-use is_terminal::IsTerminal;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use std::{
     fmt,
     fs::File,
-    io::{self, BufReader, Read, Write},
+    io::{self, BufReader, IsTerminal, Read, Write},
     path::{Path, PathBuf},
     process,
     str::FromStr,

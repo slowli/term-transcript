@@ -1,8 +1,7 @@
-use is_terminal::IsTerminal;
 use termcolor::{Ansi, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use std::{
-    io::{self, Write},
+    io::{self, IsTerminal, Write},
     str,
 };
 
