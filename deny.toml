@@ -1,27 +1,19 @@
 # `cargo-deny` configuration.
 
+[output]
 feature-depth = 1
 
 [advisories]
 db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "deny"
-unsound = "deny"
 yanked = "deny"
-notice = "warn"
-severity-threshold = "Medium"
 
 [licenses]
-unlicensed = "deny"
 allow = [
   # Permissive open-source licenses
   "MIT",
   "Apache-2.0",
   "Unicode-DFS-2016",
 ]
-copyleft = "deny"
-allow-osi-fsf-free = "neither"
-default = "deny"
 confidence-threshold = 0.8
 
 [bans]
