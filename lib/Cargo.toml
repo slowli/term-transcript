@@ -23,7 +23,6 @@ handlebars = { workspace = true, optional = true }
 portable-pty = { workspace = true, optional = true }
 
 # Private dependencies (not exposed in the public API).
-is-terminal = { workspace = true, optional = true }
 bytecount.workspace = true
 os_pipe.workspace = true
 serde = { workspace = true, optional = true }
@@ -48,7 +47,7 @@ default = ["pretty_assertions", "svg", "test"]
 # Rendering terminal transcripts into SVG snapshots
 svg = ["handlebars", "serde", "serde_json"]
 # Allows parsing transcripts from SVG snapshots and testing them
-test = ["quick-xml", "is-terminal"]
+test = ["quick-xml"]
 
 [[test]]
 name = "integration"
