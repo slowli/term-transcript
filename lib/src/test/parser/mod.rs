@@ -1,11 +1,5 @@
 //! SVG parsing logic.
 
-use quick_xml::{
-    events::{attributes::Attributes, Event},
-    Reader as XmlReader,
-};
-use termcolor::WriteColor;
-
 use std::{
     borrow::Cow,
     error::Error as StdError,
@@ -15,6 +9,12 @@ use std::{
     num::ParseIntError,
     str,
 };
+
+use quick_xml::{
+    events::{attributes::Attributes, Event},
+    Reader as XmlReader,
+};
+use termcolor::WriteColor;
 
 #[cfg(test)]
 mod tests;

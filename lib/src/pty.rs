@@ -2,8 +2,6 @@
 
 // FIXME: Prompt incorrectly read from PTY in some cases (#24)
 
-use portable_pty::{native_pty_system, Child, CommandBuilder, PtyPair, PtySize};
-
 use std::{
     collections::HashMap,
     error::Error as StdError,
@@ -11,6 +9,8 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
+
+use portable_pty::{native_pty_system, Child, CommandBuilder, PtyPair, PtySize};
 
 use crate::{
     traits::{ConfigureCommand, ShellProcess, SpawnShell, SpawnedShell},
@@ -201,14 +201,14 @@ impl ShellProcess for PtyShell {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{ShellOptions, Transcript, UserInput};
-
     use std::{
         io::{Read, Write},
         thread,
         time::Duration,
     };
+
+    use super::*;
+    use crate::{ShellOptions, Transcript, UserInput};
 
     #[test]
     fn pty_trait_implementation() -> anyhow::Result<()> {

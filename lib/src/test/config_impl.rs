@@ -1,7 +1,5 @@
 //! Implementation details for `TestConfig`.
 
-use termcolor::{Color, ColorSpec, NoColor, WriteColor};
-
 use std::{
     fmt,
     fs::File,
@@ -9,6 +7,8 @@ use std::{
     path::Path,
     str,
 };
+
+use termcolor::{Color, ColorSpec, NoColor, WriteColor};
 
 use super::{
     color_diff::{ColorDiff, ColorSpan},

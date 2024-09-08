@@ -1,13 +1,5 @@
 //! Tests the full lifecycle of `Transcript`s.
 
-use assert_matches::assert_matches;
-use test_casing::{decorate, decorators::Retry, test_casing};
-use tracing::{subscriber::DefaultGuard, Subscriber};
-use tracing_capture::{CaptureLayer, CapturedSpan, SharedStorage, Storage};
-use tracing_subscriber::{
-    fmt::format::FmtSpan, layer::SubscriberExt, registry::LookupSpan, FmtSubscriber,
-};
-
 use std::{
     io,
     path::Path,
@@ -16,9 +8,16 @@ use std::{
     time::Duration,
 };
 
+use assert_matches::assert_matches;
 use term_transcript::{
     svg::{Template, TemplateOptions},
     ShellOptions, Transcript, UserInput,
+};
+use test_casing::{decorate, decorators::Retry, test_casing};
+use tracing::{subscriber::DefaultGuard, Subscriber};
+use tracing_capture::{CaptureLayer, CapturedSpan, SharedStorage, Storage};
+use tracing_subscriber::{
+    fmt::format::FmtSpan, layer::SubscriberExt, registry::LookupSpan, FmtSubscriber,
 };
 
 fn create_fmt_subscriber() -> impl Subscriber + for<'a> LookupSpan<'a> {

@@ -52,11 +52,11 @@
 //! # }
 //! ```
 
-use termcolor::ColorChoice;
-
 use std::process::Command;
 #[cfg(feature = "svg")]
 use std::{env, ffi::OsStr};
+
+use termcolor::ColorChoice;
 
 mod color_diff;
 mod config_impl;
@@ -66,7 +66,6 @@ mod tests;
 mod utils;
 
 pub use self::parser::Parsed;
-
 #[cfg(feature = "svg")]
 use crate::svg::Template;
 use crate::{traits::SpawnShell, ShellOptions};

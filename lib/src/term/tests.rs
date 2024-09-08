@@ -1,7 +1,8 @@
-use super::*;
-
 use std::io::Write;
+
 use termcolor::{Ansi, Color, ColorSpec, WriteColor};
+
+use super::*;
 
 fn prepare_term_output() -> anyhow::Result<String> {
     let mut writer = Ansi::new(vec![]);

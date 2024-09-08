@@ -1,11 +1,11 @@
-use termcolor::{Color, ColorSpec, WriteColor};
-use unicode_width::UnicodeWidthStr;
-
 use std::{
     cmp::{self, Ordering},
     io,
     iter::{self, Peekable},
 };
+
+use termcolor::{Color, ColorSpec, WriteColor};
+use unicode_width::UnicodeWidthStr;
 
 #[cfg(test)]
 mod tests;

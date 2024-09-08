@@ -1,9 +1,9 @@
 //! Rendering logic for terminal outputs.
 
+use std::{fmt, io, str};
+
 use termcolor::{Color, ColorSpec};
 use unicode_width::UnicodeWidthChar;
-
-use std::{fmt, io, str};
 
 mod html;
 #[cfg(feature = "svg")]

@@ -11,10 +11,10 @@
 //!
 //! See [`Template`] for examples of usage.
 
+use std::{fmt, io::Write};
+
 use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
-
-use std::{fmt, io::Write};
 
 mod data;
 mod helpers;
@@ -22,13 +22,12 @@ mod palette;
 #[cfg(test)]
 mod tests;
 
+use self::helpers::register_helpers;
 pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-
-use self::helpers::register_helpers;
 use crate::{write::SvgLine, TermError, Transcript};
 
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");

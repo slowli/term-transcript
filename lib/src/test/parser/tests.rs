@@ -1,8 +1,8 @@
+use std::io::{Cursor, Read};
+
 use assert_matches::assert_matches;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText};
 use test_casing::test_casing;
-
-use std::io::{Cursor, Read};
 
 use super::*;
 use crate::ExitStatus;

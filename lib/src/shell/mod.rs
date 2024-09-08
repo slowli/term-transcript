@@ -14,7 +14,6 @@ mod standard;
 mod transcript_impl;
 
 pub use self::standard::StdShell;
-
 use crate::{
     traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
     Captured, ExitStatus,

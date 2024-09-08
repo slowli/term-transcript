@@ -1,12 +1,12 @@
 //! Custom Handlebars helpers.
 
+use std::sync::Mutex;
+
 use handlebars::{
     BlockContext, Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError,
     RenderErrorReason, Renderable, ScopedJson, StringOutput,
 };
 use serde_json::Value as Json;
-
-use std::sync::Mutex;
 
 /// Tries to convert an `f64` number to `i64` without precision loss.
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]

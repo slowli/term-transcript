@@ -1,9 +1,9 @@
 //! Text parsing.
 
+use std::{borrow::Cow, fmt, io::Write, mem, str};
+
 use quick_xml::events::{BytesStart, Event};
 use termcolor::{Color, ColorSpec, WriteColor};
-
-use std::{borrow::Cow, fmt, io::Write, mem, str};
 
 use super::{parse_classes, ParseError, Parsed};
 use crate::{

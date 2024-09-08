@@ -1,6 +1,6 @@
-use termcolor::NoColor;
-
 use std::{borrow::Cow, fmt::Write as WriteStr};
+
+use termcolor::NoColor;
 
 #[cfg(feature = "svg")]
 use crate::write::{SvgLine, SvgWriter};

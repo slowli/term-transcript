@@ -1,11 +1,11 @@
 //! Simple executable that outputs colored output. Used for testing.
 
-use termcolor::{Ansi, Color, ColorSpec, WriteColor};
-
 use std::{
     env,
     io::{self, Write},
 };
+
+use termcolor::{Ansi, Color, ColorSpec, WriteColor};
 
 const BASE_COLORS: &[(&str, Color)] = &[
     ("black", Color::Black),

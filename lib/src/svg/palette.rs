@@ -1,8 +1,8 @@
 //! `Palette` and other color-related types.
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
 use std::{error, fmt, str::FromStr};
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::utils::RgbColor;
 
