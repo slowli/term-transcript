@@ -256,6 +256,11 @@ impl<Out: TermOutput> Transcript<Out> {
     pub fn interactions(&self) -> &[Interaction<Out>] {
         &self.interactions
     }
+
+    /// Returns a mutable reference to interactions in this transcript.
+    pub fn interactions_mut(&mut self) -> &mut [Interaction<Out>] {
+        &mut self.interactions
+    }
 }
 
 impl Transcript {
@@ -346,7 +351,7 @@ impl Interaction {
     pub fn new(input: impl Into<UserInput>, output: impl Into<String>) -> Self {
         Self {
             input: input.into(),
-            output: Captured::new(output.into()),
+            output: Captured::from(output.into()),
             exit_status: None,
         }
     }
@@ -368,6 +373,11 @@ impl<Out: TermOutput> Interaction<Out> {
     /// Output to the terminal.
     pub fn output(&self) -> &Out {
         &self.output
+    }
+
+    /// Sets the output for this interaction.
+    pub fn set_output(&mut self, output: Out) {
+        self.output = output;
     }
 
     /// Returns exit status of the interaction, if available.

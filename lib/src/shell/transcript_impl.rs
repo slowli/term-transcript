@@ -256,7 +256,7 @@ impl Transcript {
                 Timeouts::new(options),
                 options.line_decoder.as_mut(),
             )?;
-            status_check.check(&Captured::new(response))
+            status_check.check(&Captured::from(response))
         } else {
             None
         };
