@@ -216,15 +216,17 @@ impl StdError for ParseError {
 #[derive(Debug)]
 struct UserInputState {
     exit_status: Option<ExitStatus>,
+    is_hidden: bool,
     text: TextReadingState,
     prompt: Option<Cow<'static, str>>,
     prompt_open_tags: Option<usize>,
 }
 
 impl UserInputState {
-    fn new(exit_status: Option<ExitStatus>) -> Self {
+    fn new(exit_status: Option<ExitStatus>, is_hidden: bool) -> Self {
         Self {
             exit_status,
+            is_hidden,
             text: TextReadingState::default(),
             prompt: None,
             prompt_open_tags: None,
@@ -265,7 +267,7 @@ impl UserInputState {
                 let input = UserInput {
                     text: String::new(),
                     prompt: Some(UserInput::intern_prompt(parsed.plaintext)),
-                    hidden: false,
+                    hidden: self.is_hidden,
                 };
                 return Ok(Some(Interaction {
                     input,
@@ -281,7 +283,7 @@ impl UserInputState {
             let input = UserInput {
                 text: parsed.into_input_text(),
                 prompt: self.prompt.take(),
-                hidden: false,
+                hidden: self.is_hidden,
             };
             Interaction {
                 input,
@@ -352,8 +354,14 @@ impl ParserState {
                 if let Event::Start(tag) = event {
                     let classes = parse_classes(tag.attributes())?;
                     if Self::is_input_class(extract_base_class(&classes)) {
+                        let is_hidden = classes
+                            .split(|byte| *byte == b' ')
+                            .any(|chunk| chunk == b"input-hidden");
                         let exit_status = parse_exit_status(tag.attributes())?;
-                        self.set_state(Self::ReadingUserInput(UserInputState::new(exit_status)));
+                        self.set_state(Self::ReadingUserInput(UserInputState::new(
+                            exit_status,
+                            is_hidden,
+                        )));
                     }
                 }
             }
@@ -378,7 +386,13 @@ impl ParserState {
                     } else if Self::is_input_class(base_class) {
                         let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
                         let exit_status = parse_exit_status(tag.attributes())?;
-                        self.set_state(Self::ReadingUserInput(UserInputState::new(exit_status)));
+                        let is_hidden = classes
+                            .split(|byte| *byte == b' ')
+                            .any(|chunk| chunk == b"input-hidden");
+                        self.set_state(Self::ReadingUserInput(UserInputState::new(
+                            exit_status,
+                            is_hidden,
+                        )));
                         return Ok(Some(interaction));
                     }
                 }
