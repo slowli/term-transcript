@@ -1,10 +1,9 @@
 //! Simple REPL application that echoes the input with coloring / styles applied.
 
-use termcolor::{Ansi, Color, ColorSpec, WriteColor};
-
 use std::io::{self, BufRead};
 
 use term_transcript::svg::RgbColor;
+use termcolor::{Ansi, Color, ColorSpec, WriteColor};
 
 fn process_line(writer: &mut impl WriteColor, line: &str) -> io::Result<()> {
     let parts: Vec<_> = line.split_whitespace().collect();

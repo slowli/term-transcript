@@ -1,6 +1,6 @@
-use termcolor::NoColor;
-
 use std::{borrow::Cow, fmt::Write as WriteStr};
+
+use termcolor::NoColor;
 
 #[cfg(feature = "svg")]
 use crate::write::{SvgLine, SvgWriter};
@@ -29,15 +29,17 @@ impl AsRef<str> for Captured {
     }
 }
 
-impl Captured {
-    pub(crate) fn new(term_output: String) -> Self {
+impl From<String> for Captured {
+    fn from(raw: String) -> Self {
         // Normalize newlines to `\n`.
-        Self(match normalize_newlines(&term_output) {
+        Self(match normalize_newlines(&raw) {
             Cow::Owned(normalized) => normalized,
-            Cow::Borrowed(_) => term_output,
+            Cow::Borrowed(_) => raw,
         })
     }
+}
 
+impl Captured {
     pub(crate) fn write_as_html(
         &self,
         output: &mut dyn WriteStr,

@@ -1,8 +1,8 @@
 //! `HtmlWriter` and related types.
 
-use termcolor::{ColorSpec, WriteColor};
-
 use std::{fmt, io};
+
+use termcolor::{ColorSpec, WriteColor};
 
 use super::{
     fmt_to_io_error, IndexOrRgb, LineBreak, LineSplitter, StyledSpan, WriteLines, WriteStr,

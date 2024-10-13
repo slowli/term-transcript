@@ -1,9 +1,3 @@
-use handlebars::Template as HandlebarsTemplate;
-use tempfile::tempdir;
-use test_casing::{decorate, decorators::Retry, test_casing};
-use tracing::{subscriber::DefaultGuard, Subscriber};
-use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
-
 use std::{
     fs::{self, File},
     io::{self, BufReader, Read},
@@ -13,6 +7,8 @@ use std::{
     time::Duration,
 };
 
+use handlebars::Template as HandlebarsTemplate;
+use tempfile::tempdir;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{
@@ -20,6 +16,9 @@ use term_transcript::{
     test::{MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ShellOptions, Transcript, UserInput,
 };
+use test_casing::{decorate, decorators::Retry, test_casing};
+use tracing::{subscriber::DefaultGuard, Subscriber};
+use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
 const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");

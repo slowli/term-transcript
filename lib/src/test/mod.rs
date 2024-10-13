@@ -52,11 +52,11 @@
 //! # }
 //! ```
 
-use termcolor::ColorChoice;
-
 use std::process::Command;
 #[cfg(feature = "svg")]
 use std::{env, ffi::OsStr};
+
+use termcolor::ColorChoice;
 
 mod color_diff;
 mod config_impl;
@@ -66,10 +66,9 @@ mod tests;
 mod utils;
 
 pub use self::parser::Parsed;
-
 #[cfg(feature = "svg")]
 use crate::svg::Template;
-use crate::{traits::SpawnShell, ShellOptions};
+use crate::{traits::SpawnShell, ShellOptions, Transcript};
 
 /// Configuration of output produced during testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -160,7 +159,7 @@ impl UpdateMode {
 ///
 /// See the [module docs](crate::test) for the examples of usage.
 #[derive(Debug)]
-pub struct TestConfig<Cmd = Command> {
+pub struct TestConfig<Cmd = Command, F = fn(&mut Transcript)> {
     shell_options: ShellOptions<Cmd>,
     match_kind: MatchKind,
     output: TestOutputConfig,
@@ -169,6 +168,7 @@ pub struct TestConfig<Cmd = Command> {
     update_mode: UpdateMode,
     #[cfg(feature = "svg")]
     template: Template,
+    transform: F,
 }
 
 impl<Cmd: SpawnShell> TestConfig<Cmd> {
@@ -188,9 +188,32 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             update_mode: UpdateMode::from_env(),
             #[cfg(feature = "svg")]
             template: Template::default(),
+            transform: |_| { /* do nothing */ },
         }
     }
 
+    /// Sets the transcript transform for these options. This can be used to transform the captured transcript
+    /// (e.g., to remove / replace uncontrollably varying data) before it's compared to the snapshot.
+    #[must_use]
+    pub fn with_transform<F>(self, transform: F) -> TestConfig<Cmd, F>
+    where
+        F: FnMut(&mut Transcript),
+    {
+        TestConfig {
+            shell_options: self.shell_options,
+            match_kind: self.match_kind,
+            output: self.output,
+            color_choice: self.color_choice,
+            #[cfg(feature = "svg")]
+            update_mode: self.update_mode,
+            #[cfg(feature = "svg")]
+            template: self.template,
+            transform,
+        }
+    }
+}
+
+impl<Cmd: SpawnShell, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
     /// Sets the matching kind applied.
     #[must_use]
     pub fn with_match_kind(mut self, kind: MatchKind) -> Self {

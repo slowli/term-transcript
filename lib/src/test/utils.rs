@@ -1,9 +1,9 @@
-use termcolor::{Ansi, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
-
 use std::{
     io::{self, IsTerminal, Write},
     str,
 };
+
+use termcolor::{Ansi, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 #[cfg(test)]
 use self::tests::print_to_buffer;
@@ -176,9 +176,9 @@ impl WriteColor for ColorPrintlnWriter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::{cell::RefCell, fmt, mem};
+
+    use super::*;
 
     thread_local! {
         static OUTPUT_CAPTURE: RefCell<Vec<u8>> = RefCell::default();

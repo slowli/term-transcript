@@ -1,15 +1,14 @@
 //! Templating-related command-line args.
 
-use anyhow::Context;
-use clap::{Args, ValueEnum};
-use handlebars::Template as HandlebarsTemplate;
-
 use std::{
     fs::{self, File},
     io, mem,
     path::{Path, PathBuf},
 };
 
+use anyhow::Context;
+use clap::{Args, ValueEnum};
+use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
     svg::{self, ScrollOptions, Template, TemplateOptions, WrapOptions},
     Transcript, UserInput,

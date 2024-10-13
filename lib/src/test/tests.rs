@@ -74,7 +74,7 @@ fn negative_snapshot_testing_with_verbose_output() {
 }
 
 fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (TestStats, String) {
-    let expected_capture = Captured::new(expected_capture.to_owned());
+    let expected_capture = Captured::from(expected_capture.to_owned());
     let parsed = Transcript {
         interactions: vec![Interaction {
             input: UserInput::command("test"),

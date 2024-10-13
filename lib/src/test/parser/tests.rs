@@ -1,8 +1,8 @@
+use std::io::{Cursor, Read};
+
 use assert_matches::assert_matches;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText};
 use test_casing::test_casing;
-
-use std::io::{Cursor, Read};
 
 use super::*;
 use crate::ExitStatus;
@@ -128,6 +128,23 @@ fn reading_file_with_exit_code_info() {
 }
 
 #[test]
+fn reading_file_with_hidden_input() {
+    const SVG: &[u8] = br#"
+        <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
+          <foreignObject x="0" y="0" width="652" height="344">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+              <div class="input input-hidden" data-exit-status="127"><pre><span class="prompt">$</span> what</pre></div>
+            </div>
+          </foreignObject>
+        </svg>
+    "#;
+
+    let transcript = Transcript::from_svg(SVG).unwrap();
+    assert_eq!(transcript.interactions.len(), 1);
+    assert!(transcript.interactions[0].input.hidden);
+}
+
+#[test]
 fn invalid_exit_code_info() {
     const SVG: &[u8] = br#"
         <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg">
@@ -193,7 +210,7 @@ fn reading_file_with_invalid_container(attrs: &str) {
 
 #[test]
 fn reading_user_input_with_manual_events() {
-    let mut state = UserInputState::new(None);
+    let mut state = UserInputState::new(None, false);
     {
         let event = Event::Start(BytesStart::new("pre"));
         assert!(state.process(event).unwrap().is_none());
@@ -238,7 +255,7 @@ fn read_user_input(input: &[u8]) -> UserInput {
     wrapped_input.extend_from_slice(b"</div>");
 
     let mut reader = XmlReader::from_reader(wrapped_input.as_slice());
-    let mut state = UserInputState::new(None);
+    let mut state = UserInputState::new(None, false);
 
     // Skip the `<div>` start event.
     while !matches!(reader.read_event().unwrap(), Event::Start(_)) {

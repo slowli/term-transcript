@@ -152,9 +152,9 @@ mod rgb_color {
 
 #[cfg(all(test, any(feature = "svg", feature = "test")))]
 mod tests {
-    use super::*;
-
     use assert_matches::assert_matches;
+
+    use super::*;
 
     #[test]
     fn parsing_color() {

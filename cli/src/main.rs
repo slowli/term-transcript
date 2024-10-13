@@ -1,9 +1,5 @@
 //! CLI for the `term-transcript` crate.
 
-use anyhow::Context;
-use clap::{Parser, Subcommand, ValueEnum};
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-
 use std::{
     fmt,
     fs::File,
@@ -13,11 +9,14 @@ use std::{
     str::FromStr,
 };
 
+use anyhow::Context;
+use clap::{Parser, Subcommand, ValueEnum};
 use term_transcript::{
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     traits::SpawnShell,
     Transcript,
 };
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 mod shell;
 mod template;

@@ -1,7 +1,7 @@
+use std::{fmt, io, iter, mem, str};
+
 use serde::Serialize;
 use termcolor::{ColorSpec, WriteColor};
-
-use std::{fmt, io, iter, mem, str};
 
 use super::{IndexOrRgb, LineBreak, LineSplitter, StyledSpan, WriteLines, WriteStr};
 

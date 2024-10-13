@@ -1,12 +1,11 @@
 #![cfg(unix)]
 
-use tempfile::{tempdir, TempDir};
-
 use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
 
+use tempfile::{tempdir, TempDir};
 use term_transcript::{
     svg::{ScrollOptions, Template, TemplateOptions},
     test::{MatchKind, TestConfig},

@@ -1,19 +1,18 @@
 //! Shell-related command-line args.
 
-use clap::Args;
-use humantime::Duration;
-
 use std::{env, ffi::OsString, io, process::Command};
 
+use clap::Args;
+use humantime::Duration;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{traits::Echoing, Captured, ExitStatus, ShellOptions, Transcript, UserInput};
 
 #[cfg(feature = "portable-pty")]
 mod pty {
-    use anyhow::Context;
-
     use std::str::FromStr;
+
+    use anyhow::Context;
 
     #[cfg(feature = "portable-pty")]
     #[derive(Debug, Clone, Copy)]

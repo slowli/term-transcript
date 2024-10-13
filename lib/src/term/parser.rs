@@ -1,9 +1,9 @@
 //! Parser for terminal output that converts it to a sequence of instructions to
 //! a writer implementing `WriteColor`.
 
-use termcolor::{Color, ColorSpec, WriteColor};
-
 use std::str;
+
+use termcolor::{Color, ColorSpec, WriteColor};
 
 use crate::TermError;
 

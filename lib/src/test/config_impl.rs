@@ -1,7 +1,5 @@
 //! Implementation details for `TestConfig`.
 
-use termcolor::{Color, ColorSpec, NoColor, WriteColor};
-
 use std::{
     fmt,
     fs::File,
@@ -9,6 +7,8 @@ use std::{
     path::Path,
     str,
 };
+
+use termcolor::{Color, ColorSpec, NoColor, WriteColor};
 
 use super::{
     color_diff::{ColorDiff, ColorSpan},
@@ -18,7 +18,7 @@ use super::{
 };
 use crate::{traits::SpawnShell, Interaction, TermError, Transcript, UserInput};
 
-impl<Cmd: SpawnShell + fmt::Debug> TestConfig<Cmd> {
+impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
     /// Tests a snapshot at the specified path with the provided inputs.
     ///
     /// If the path is relative, it is resolved relative to the current working dir,
@@ -54,7 +54,7 @@ impl<Cmd: SpawnShell + fmt::Debug> TestConfig<Cmd> {
     /// [inferred]: crate::test::UpdateMode::from_env()
     #[cfg_attr(
         feature = "tracing",
-        tracing::instrument(skip(snapshot_path, inputs), fields(snapshot_path, inputs))
+        tracing::instrument(skip_all, fields(snapshot_path, inputs))
     )]
     pub fn test<I: Into<UserInput>>(
         &mut self,
@@ -136,10 +136,11 @@ impl<Cmd: SpawnShell + fmt::Debug> TestConfig<Cmd> {
         path: &Path,
         inputs: impl Iterator<Item = UserInput>,
     ) -> String {
-        let reproduced =
-            Transcript::from_inputs(&mut self.shell_options, inputs).unwrap_or_else(|err| {
+        let mut reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)
+            .unwrap_or_else(|err| {
                 panic!("Cannot create a snapshot `{path:?}`: {err}");
             });
+        (self.transform)(&mut reproduced);
         self.write_new_snapshot(path, &reproduced)
     }
 
@@ -211,7 +212,7 @@ impl<Cmd: SpawnShell + fmt::Debug> TestConfig<Cmd> {
     ///
     /// - Returns an error if an error occurs during reproducing the transcript or processing
     ///   its output.
-    #[cfg_attr(feature = "tracing", tracing::instrument(skip(transcript), err))]
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, err))]
     pub fn test_transcript_for_stats(
         &mut self,
         transcript: &Transcript<Parsed>,
@@ -234,7 +235,8 @@ impl<Cmd: SpawnShell + fmt::Debug> TestConfig<Cmd> {
             .interactions()
             .iter()
             .map(|interaction| interaction.input().clone());
-        let reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
+        let mut reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
+        (self.transform)(&mut reproduced);
 
         let stats = self.compare_transcripts(out, transcript, &reproduced)?;
         Ok((stats, reproduced))

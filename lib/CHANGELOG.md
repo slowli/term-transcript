@@ -5,6 +5,12 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Allow transforming captured `Transcript`s. This is mostly useful for testing to filter out / replace
+  variable / env-dependent output parts. Correspondingly, `TestConfig` allows customizing a transform
+  using `with_transform()` method.
+
 ### Changed
 
 - Update `quick-xml` and `handlebars` dependencies.
@@ -37,7 +43,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   As an example, this can be used to import fonts using `@import` or `@font-face`.
 - Add a fallback error message to the default template if HTML-in-SVG embedding
   is not supported.
-- Add [FAQ](FAQ.md) with some tips and troubleshooting advice.
+- Add [FAQ](../FAQ.md) with some tips and troubleshooting advice.
 - Allow hiding `UserInput`s during transcript rendering by calling the `hide()` method.
   Hidden inputs are supported by the default and pure SVG templates.
 

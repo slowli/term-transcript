@@ -82,7 +82,7 @@ impl Transcript {
     fn read_output(
         lines_recv: &mpsc::Receiver<Vec<u8>>,
         mut timeouts: Timeouts,
-        line_decoder: &mut impl FnMut(Vec<u8>) -> io::Result<String>,
+        line_decoder: &mut dyn FnMut(Vec<u8>) -> io::Result<String>,
     ) -> io::Result<String> {
         let mut output = String::new();
 
@@ -242,7 +242,7 @@ impl Transcript {
         let output = Self::read_output(
             lines_recv,
             Timeouts::new(options),
-            &mut options.line_decoder,
+            options.line_decoder.as_mut(),
         )?;
 
         let exit_status = if let Some(status_check) = &options.status_check {
@@ -254,9 +254,9 @@ impl Transcript {
             let response = Self::read_output(
                 lines_recv,
                 Timeouts::new(options),
-                &mut options.line_decoder,
+                options.line_decoder.as_mut(),
             )?;
-            status_check.check(&Captured::new(response))
+            status_check.check(&Captured::from(response))
         } else {
             None
         };
