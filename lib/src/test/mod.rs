@@ -204,7 +204,9 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
             match_kind: self.match_kind,
             output: self.output,
             color_choice: self.color_choice,
+            #[cfg(feature = "svg")]
             update_mode: self.update_mode,
+            #[cfg(feature = "svg")]
             template: self.template,
             transform,
         }
