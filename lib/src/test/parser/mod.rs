@@ -7,10 +7,11 @@ use std::{
     io::{self, BufRead},
     mem,
     num::ParseIntError,
-    str,
+    str::{self, Utf8Error},
 };
 
 use quick_xml::{
+    encoding::EncodingError,
     events::{attributes::Attributes, Event},
     Reader as XmlReader,
 };
@@ -24,6 +25,10 @@ use self::text::TextReadingState;
 use crate::{
     test::color_diff::ColorSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput,
 };
+
+fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
+    quick_xml::Error::Encoding(EncodingError::Utf8(err))
+}
 
 /// Parsed terminal output.
 #[derive(Debug, Clone, Default)]
@@ -152,7 +157,8 @@ fn parse_exit_status(attributes: Attributes<'_>) -> Result<Option<ExitStatus>, P
     for attr in attributes {
         let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
         if attr.key.as_ref() == b"data-exit-status" {
-            let status = str::from_utf8(&attr.value).map_err(|err| ParseError::Xml(err.into()))?;
+            let status =
+                str::from_utf8(&attr.value).map_err(|err| ParseError::Xml(map_utf8_error(err)))?;
             let status = status.parse().map_err(ParseError::InvalidExitStatus)?;
             exit_status = Some(ExitStatus(status));
         }

@@ -5,7 +5,7 @@ use std::{borrow::Cow, fmt, io::Write, mem, str};
 use quick_xml::events::{BytesStart, Event};
 use termcolor::{Color, ColorSpec, WriteColor};
 
-use super::{parse_classes, ParseError, Parsed};
+use super::{map_utf8_error, parse_classes, ParseError, Parsed};
 use crate::{
     test::color_diff::ColorSpansWriter,
     utils::{normalize_newlines, RgbColor},
@@ -64,7 +64,7 @@ impl TextReadingState {
                 self.open_tags += 1;
                 if tag.name().as_ref() == b"span" {
                     self.html_buffer.push('<');
-                    let tag_str = str::from_utf8(&tag).map_err(quick_xml::Error::from)?;
+                    let tag_str = str::from_utf8(&tag).map_err(map_utf8_error)?;
                     self.html_buffer.push_str(tag_str);
                     self.html_buffer.push('>');
 
@@ -170,10 +170,10 @@ impl TextReadingState {
             };
 
             let property_name = str::from_utf8(property_name)
-                .map_err(quick_xml::Error::from)?
+                .map_err(map_utf8_error)?
                 .trim();
             let property_value = str::from_utf8(property_value)
-                .map_err(quick_xml::Error::from)?
+                .map_err(map_utf8_error)?
                 .trim();
 
             match property_name {
