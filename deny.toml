@@ -6,13 +6,16 @@ feature-depth = 1
 [advisories]
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
+ignore = [
+  "RUSTSEC-2017-0008", # `serial` crate is unmaintained; used by `portable-pty`
+]
 
 [licenses]
 allow = [
   # Permissive open-source licenses
   "MIT",
   "Apache-2.0",
-  "Unicode-DFS-2016",
+  "Unicode-3.0",
 ]
 confidence-threshold = 0.8
 
@@ -26,12 +29,9 @@ skip = [
   { name = "bitflags", version = "^1" },
 ]
 skip-tree = [
+  { name = "thiserror", version = "^1" },
   # Used by `tracing-subscriber` together with the new version :(
   { name = "regex-automata", version = "^0.1" },
-  # Used by some less frequently updated crates; since it only provides WinAPI declarations,
-  # multiple versions should be OK (?).
-  { name = "windows-sys", version = "^0.48" },
-  { name = "windows-sys", version = "^0.52" },
 ]
 
 [sources]
