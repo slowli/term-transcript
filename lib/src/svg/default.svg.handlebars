@@ -1,22 +1,3 @@
-{{~#*inline "define_const"}}
-{
-  {{! Bottom margin for each input or output block }}
-  "BLOCK_MARGIN": 6,
-  {{! Additional padding for each user input block }}
-  "USER_INPUT_PADDING": 4,
-  {{! Padding within the rendered terminal window in pixels }}
-  "WINDOW_PADDING": 10,
-  {{! Line height in pixels }}
-  "LINE_HEIGHT": 18,
-  {{! Height of the window frame }}
-  "WINDOW_FRAME_HEIGHT": 22,
-  {{! Right offset of the scrollbar relative to the right border of the frame }}
-  "SCROLLBAR_RIGHT_OFFSET": 7,
-  {{! Height of the scrollbar in pixels }}
-  "SCROLLBAR_HEIGHT": 40
-}
-{{/inline~}}
-
 {{!
   Computes content height based on line count in interactions.
   Expected hash inputs: `interactions`, `const`.
@@ -237,7 +218,14 @@
               {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
               {{~#if (and (eq ../line_numbers "continuous") (not input.hidden))}}{{>number_input_lines}}{{/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-            <div class="output">{{#if ../line_numbers}}{{>number_output_lines}}{{/if}}<pre>{{{output_html}}}</pre></div>
+            <div class="output">
+              {{~#if ../line_numbers~}}
+                {{~>number_output_lines~}}
+                {{~#if (ne ../line_numbers "each_output")~}}
+                  {{~line_number set=(add (line_number) (count_lines output_html format="html"))~}}
+                {{~/if~}}
+              {{~/if~}}
+              <pre>{{{output_html}}}</pre></div>
             {{~/each}}
 
           </div>
@@ -268,15 +256,9 @@
     {{add this (line_number)}}{{#if @last}}{{else}}<br/>{{/if}}
   {{~/each~}}
 </pre>
-{{~#if (ne ../line_numbers "each_output")~}}
-  {{line_number set=(add (line_number) (count_lines output_html format="html"))}}
-{{~/if~}}
 {{~/inline~}}
 
 {{! Main logic }}
-{{#with this as |$|}}
-{{#with (eval "define_const") as |const|}}
-{{#with $}}
 {{#scope
   content_height=(eval "compute_content_height" const=const interactions=interactions)
   scroll_animation=null
@@ -303,6 +285,3 @@
   {{~/if~}}
 {{>root~}} {{! <-- All rendering happens here }}
 {{/scope}}
-{{/with}}
-{{/with}}
-{{/with}}

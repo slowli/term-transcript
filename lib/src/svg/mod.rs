@@ -11,24 +11,24 @@
 //!
 //! See [`Template`] for examples of usage.
 
-use std::{fmt, io::Write};
+use std::{collections::HashMap, fmt, io::Write};
 
 use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
 
-mod data;
-mod helpers;
-mod palette;
-#[cfg(test)]
-mod tests;
-
-use self::helpers::register_helpers;
+use self::{data::CompleteHandlebarsData, helpers::register_helpers};
 pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
 use crate::{write::SvgLine, TermError, Transcript};
+
+mod data;
+mod helpers;
+mod palette;
+#[cfg(test)]
+mod tests;
 
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const PURE_TEMPLATE: &str = include_str!("pure.svg.handlebars");
@@ -408,6 +408,7 @@ impl Default for WrapOptions {
 pub struct Template {
     options: TemplateOptions,
     handlebars: Handlebars<'static>,
+    template_constants: HashMap<&'static str, u32>,
 }
 
 impl fmt::Debug for Template {
@@ -415,6 +416,7 @@ impl fmt::Debug for Template {
         formatter
             .debug_struct("Template")
             .field("options", &self.options)
+            .field("template_constants", &self.template_constants)
             .finish_non_exhaustive()
     }
 }
@@ -426,12 +428,31 @@ impl Default for Template {
 }
 
 impl Template {
+    const STD_CONSTANTS: &'static [(&'static str, u32)] = &[
+        ("BLOCK_MARGIN", 6),
+        ("USER_INPUT_PADDING", 4),
+        ("WINDOW_PADDING", 10),
+        ("LINE_HEIGHT", 18),
+        ("WINDOW_FRAME_HEIGHT", 22),
+        ("SCROLLBAR_RIGHT_OFFSET", 7),
+        ("SCROLLBAR_HEIGHT", 40),
+    ];
+
+    const PURE_SVG_CONSTANTS: &'static [(&'static str, u32)] = &[
+        ("USER_INPUT_PADDING", 2), // overrides the std template constant
+        ("LN_WIDTH", 24),
+        ("LN_PADDING", 8),
+    ];
+
     /// Initializes the default template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
     pub fn new(options: TemplateOptions) -> Self {
         let template = HandlebarsTemplate::compile(DEFAULT_TEMPLATE)
             .expect("Default template should be valid");
-        Self::custom(template, options)
+        Self {
+            template_constants: Self::STD_CONSTANTS.iter().copied().collect(),
+            ..Self::custom(template, options)
+        }
     }
 
     /// Initializes the pure SVG template based on provided `options`.
@@ -439,7 +460,14 @@ impl Template {
     pub fn pure_svg(options: TemplateOptions) -> Self {
         let template =
             HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");
-        Self::custom(template, options)
+        Self {
+            template_constants: Self::STD_CONSTANTS
+                .iter()
+                .chain(Self::PURE_SVG_CONSTANTS)
+                .copied()
+                .collect(),
+            ..Self::custom(template, options)
+        }
     }
 
     /// Initializes a custom template.
@@ -451,6 +479,7 @@ impl Template {
         Self {
             options,
             handlebars,
+            template_constants: HashMap::new(),
         }
     }
 
@@ -474,6 +503,10 @@ impl Template {
             .options
             .render_data(transcript)
             .map_err(|err| RenderErrorReason::NestedError(Box::new(err)))?;
+        let data = CompleteHandlebarsData {
+            inner: data,
+            constants: &self.template_constants,
+        };
 
         #[cfg(feature = "tracing")]
         let _entered = tracing::debug_span!("render_to_write").entered();
