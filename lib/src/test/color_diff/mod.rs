@@ -268,7 +268,7 @@ impl ColorDiff {
         for line in text.split('\n') {
             let line_contains_spans = highlights
                 .peek()
-                .map_or(false, |span| span.start <= line_start + line.len());
+                .is_some_and(|span| span.start <= line_start + line.len());
 
             if line_contains_spans {
                 out.set_color(&sideline_hl)?;

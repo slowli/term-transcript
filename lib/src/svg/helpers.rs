@@ -342,7 +342,7 @@ impl HelperDef for LineCounter {
         })?;
         let is_html = helper
             .hash_get("format")
-            .map_or(false, |format| format.value().as_str() == Some("html"));
+            .is_some_and(|format| format.value().as_str() == Some("html"));
 
         let mut lines = bytecount::count(string.as_bytes(), b'\n');
         if is_html {

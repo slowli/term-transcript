@@ -250,7 +250,7 @@ impl UserInputState {
         self.prompt.is_none()
             && self
                 .prompt_open_tags
-                .map_or(false, |tags| tags + 1 == self.text.open_tags())
+                .is_some_and(|tags| tags + 1 == self.text.open_tags())
     }
 
     fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {

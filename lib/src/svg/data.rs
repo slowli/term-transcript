@@ -1,5 +1,7 @@
 //! Data provided to Handlebars templates.
 
+use std::collections::HashMap;
+
 use serde::Serialize;
 
 use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
@@ -153,4 +155,12 @@ pub struct SerializedInteraction<'a> {
     pub exit_status: Option<i32>,
     /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?
     pub failure: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct CompleteHandlebarsData<'r> {
+    #[serde(flatten)]
+    pub inner: HandlebarsData<'r>,
+    #[serde(rename = "const")]
+    pub constants: &'r HashMap<&'static str, u32>,
 }

@@ -16,6 +16,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Update `quick-xml` and `handlebars` dependencies.
 - Bump minimum supported Rust version to 1.74.
 
+### Fixed
+
+- Fix rendering errors with standard templates with newer versions of `handlebars`.
+
 ## 0.4.0-beta.1 - 2024-03-03
 
 ### Changed
