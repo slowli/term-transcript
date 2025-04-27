@@ -181,7 +181,7 @@ impl TemplateOptions {
             .map(|(interaction, (output_html, output_svg))| {
                 let failure = interaction
                     .exit_status()
-                    .map_or(false, |status| !status.is_success());
+                    .is_some_and(|status| !status.is_success());
                 has_failures = has_failures || failure;
                 SerializedInteraction {
                     input: interaction.input(),
