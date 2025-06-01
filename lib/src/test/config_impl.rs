@@ -73,22 +73,31 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
             tracing::debug!(snapshot_path.is_file = true);
 
             let snapshot = File::open(snapshot_path).unwrap_or_else(|err| {
-                panic!("Cannot open `{snapshot_path:?}`: {err}");
+                panic!("Cannot open `{}`: {err}", snapshot_path.display());
             });
             let snapshot = BufReader::new(snapshot);
             let transcript = Transcript::from_svg(snapshot).unwrap_or_else(|err| {
-                panic!("Cannot parse snapshot from `{snapshot_path:?}`: {err}");
+                panic!(
+                    "Cannot parse snapshot from `{}`: {err}",
+                    snapshot_path.display()
+                );
             });
             self.compare_and_test_transcript(snapshot_path, &transcript, &inputs);
         } else if snapshot_path.exists() {
-            panic!("Snapshot path `{snapshot_path:?}` exists, but is not a file");
+            panic!(
+                "Snapshot path `{}` exists, but is not a file",
+                snapshot_path.display()
+            );
         } else {
             #[cfg(feature = "tracing")]
             tracing::debug!(snapshot_path.is_file = false);
 
             let new_snapshot_message =
                 self.create_and_write_new_snapshot(snapshot_path, inputs.into_iter());
-            panic!("Snapshot `{snapshot_path:?}` is missing\n{new_snapshot_message}");
+            panic!(
+                "Snapshot `{}` is missing\n{new_snapshot_message}",
+                snapshot_path.display()
+            );
         }
     }
 
@@ -138,7 +147,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
     ) -> String {
         let mut reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)
             .unwrap_or_else(|err| {
-                panic!("Cannot create a snapshot `{path:?}`: {err}");
+                panic!("Cannot create a snapshot `{}`: {err}", path.display());
             });
         (self.transform)(&mut reproduced);
         self.write_new_snapshot(path, &reproduced)
@@ -152,20 +161,26 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
     )]
     fn write_new_snapshot(&self, path: &Path, transcript: &Transcript) -> String {
         if !self.update_mode.should_create_snapshot() {
-            return format!("Skipped writing new snapshot `{path:?}` per test config");
+            return format!(
+                "Skipped writing new snapshot `{}` per test config",
+                path.display()
+            );
         }
 
         let mut new_path = path.to_owned();
         new_path.set_extension("new.svg");
         let new_snapshot = File::create(&new_path).unwrap_or_else(|err| {
-            panic!("Cannot create file for new snapshot `{new_path:?}`: {err}");
+            panic!(
+                "Cannot create file for new snapshot `{}`: {err}",
+                new_path.display()
+            );
         });
         self.template
             .render(transcript, &mut io::BufWriter::new(new_snapshot))
             .unwrap_or_else(|err| {
-                panic!("Cannot render snapshot `{new_path:?}`: {err}");
+                panic!("Cannot render snapshot `{}`: {err}", new_path.display());
             });
-        format!("A new snapshot was saved to `{new_path:?}`")
+        format!("A new snapshot was saved to `{}`", new_path.display())
     }
 
     #[cfg(not(feature = "svg"))]

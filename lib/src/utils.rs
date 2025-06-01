@@ -22,9 +22,7 @@ impl io::Write for WriteAdapter<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let segment =
             str::from_utf8(buf).map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-        self.inner
-            .write_str(segment)
-            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+        self.inner.write_str(segment).map_err(io::Error::other)?;
         Ok(buf.len())
     }
 
