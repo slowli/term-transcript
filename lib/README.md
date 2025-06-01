@@ -1,6 +1,6 @@
 # Capturing and Snapshot Testing for CLI / REPL Applications
 
-[![Build Status](https://github.com/slowli/term-transcript/workflows/CI/badge.svg?branch=master)](https://github.com/slowli/term-transcript/actions)
+[![CI](https://github.com/slowli/term-transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/slowli/term-transcript/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
 ![rust 1.74+ required](https://img.shields.io/badge/rust-1.74+-blue.svg?label=Required%20Rust)
 
