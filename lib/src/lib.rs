@@ -143,7 +143,7 @@
 //! ```
 
 // Documentation settings.
-#![doc(html_root_url = "https://docs.rs/term-transcript/0.4.0-beta.1")]
+#![doc(html_root_url = "https://docs.rs/term-transcript/0.4.0")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 // Linter settings.
 #![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
