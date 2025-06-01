@@ -408,7 +408,7 @@ impl Default for WrapOptions {
 pub struct Template {
     options: TemplateOptions,
     handlebars: Handlebars<'static>,
-    template_constants: HashMap<&'static str, u32>,
+    constants: HashMap<&'static str, u32>,
 }
 
 impl fmt::Debug for Template {
@@ -416,7 +416,7 @@ impl fmt::Debug for Template {
         formatter
             .debug_struct("Template")
             .field("options", &self.options)
-            .field("template_constants", &self.template_constants)
+            .field("constants", &self.constants)
             .finish_non_exhaustive()
     }
 }
@@ -450,7 +450,7 @@ impl Template {
         let template = HandlebarsTemplate::compile(DEFAULT_TEMPLATE)
             .expect("Default template should be valid");
         Self {
-            template_constants: Self::STD_CONSTANTS.iter().copied().collect(),
+            constants: Self::STD_CONSTANTS.iter().copied().collect(),
             ..Self::custom(template, options)
         }
     }
@@ -461,7 +461,7 @@ impl Template {
         let template =
             HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");
         Self {
-            template_constants: Self::STD_CONSTANTS
+            constants: Self::STD_CONSTANTS
                 .iter()
                 .chain(Self::PURE_SVG_CONSTANTS)
                 .copied()
@@ -479,7 +479,7 @@ impl Template {
         Self {
             options,
             handlebars,
-            template_constants: HashMap::new(),
+            constants: HashMap::new(),
         }
     }
 
@@ -505,7 +505,7 @@ impl Template {
             .map_err(|err| RenderErrorReason::NestedError(Box::new(err)))?;
         let data = CompleteHandlebarsData {
             inner: data,
-            constants: &self.template_constants,
+            constants: &self.constants,
         };
 
         #[cfg(feature = "tracing")]

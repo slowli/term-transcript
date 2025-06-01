@@ -16,7 +16,7 @@ pub(crate) use self::html::HtmlWriter;
 pub(crate) use self::svg::{SvgLine, SvgWriter};
 
 fn fmt_to_io_error(err: fmt::Error) -> io::Error {
-    io::Error::new(io::ErrorKind::Other, err)
+    io::Error::other(err)
 }
 
 /// HTML `<span>` / SVG `<tspan>` containing styling info.
@@ -205,7 +205,7 @@ impl IndexOrRgb {
             Color::White => Self::index(7),
             Color::Ansi256(idx) => Self::indexed_color(idx),
             Color::Rgb(r, g, b) => Self::Rgb(r, g, b),
-            _ => return Err(io::Error::new(io::ErrorKind::Other, "Unsupported color")),
+            _ => return Err(io::Error::other("Unsupported color")),
         })
     }
 

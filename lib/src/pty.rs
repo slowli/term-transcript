@@ -19,7 +19,7 @@ use crate::{
 
 fn into_io_error(err: Box<dyn StdError + Send + Sync>) -> io::Error {
     err.downcast::<io::Error>()
-        .map_or_else(|err| io::Error::new(io::ErrorKind::Other, err), |err| *err)
+        .map_or_else(io::Error::other, |err| *err)
 }
 
 /// Command to spawn in a pseudo-terminal (PTY).
