@@ -6,9 +6,7 @@ feature-depth = 1
 [advisories]
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
-ignore = [
-  "RUSTSEC-2017-0008", # `serial` crate is unmaintained; used by `portable-pty`
-]
+ignore = []
 
 [licenses]
 allow = [

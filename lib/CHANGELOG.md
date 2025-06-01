@@ -5,6 +5,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.4.0 - 2025-06-01
+
+*(All changes are relative compared to the [0.4.0-beta.1 release](#040-beta1---2024-03-03))*
+
 ### Added
 
 - Allow transforming captured `Transcript`s. This is mostly useful for testing to filter out / replace
