@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["LineNumbers","NamedPalette","RgbColorParseError","WrapOptions"],"struct":["CreatorData","HandlebarsData","NamedPaletteParseError","Palette","RgbColor","ScrollOptions","SerializedInteraction","Template","TemplateOptions","TermColors"]};
