@@ -5,6 +5,14 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Add location info for transcript parsing errors and make error types public.
+
+### Changed
+
+- Update `quick-xml` dependency.
+
 ## 0.4.0 - 2025-06-01
 
 *(All changes are relative compared to the [0.4.0-beta.1 release](#040-beta1---2024-03-03))*
