@@ -7,6 +7,7 @@ use std::{
     io::{self, BufRead},
     mem,
     num::ParseIntError,
+    ops,
     str::{self, Utf8Error},
 };
 
@@ -97,8 +98,11 @@ impl Transcript<Parsed> {
         let mut transcript = Self::new();
         let mut open_tags = 0;
 
+        #[allow(clippy::cast_possible_truncation)] // Truncation shouldn't happen in practice
         loop {
+            let prev_position = reader.buffer_position() as usize;
             let event = reader.read_event_into(&mut buffer)?;
+            let event_position = prev_position..reader.buffer_position() as usize;
             match &event {
                 Event::Start(_) => {
                     open_tags += 1;
@@ -113,7 +117,7 @@ impl Transcript<Parsed> {
                 _ => { /* Do nothing. */ }
             }
 
-            if let Some(interaction) = state.process(event)? {
+            if let Some(interaction) = state.process(event, event_position)? {
                 #[cfg(feature = "tracing")]
                 tracing::debug!(
                     ?interaction.input,
@@ -253,7 +257,11 @@ impl UserInputState {
                 .is_some_and(|tags| tags + 1 == self.text.open_tags())
     }
 
-    fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {
+    fn process(
+        &mut self,
+        event: Event<'_>,
+        position: ops::Range<usize>,
+    ) -> Result<Option<Interaction<Parsed>>, ParseError> {
         let mut is_prompt_end = false;
         if let Event::Start(tag) = &event {
             if self.can_start_prompt() && parse_classes(tag.attributes())?.as_ref() == b"prompt" {
@@ -266,7 +274,7 @@ impl UserInputState {
             }
         }
 
-        let maybe_parsed = self.text.process(event)?;
+        let maybe_parsed = self.text.process(event, position)?;
         if is_prompt_end {
             if let Some(parsed) = maybe_parsed {
                 // Special case: user input consists of the prompt only.
@@ -334,7 +342,11 @@ impl ParserState {
     }
 
     #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace", err))]
-    fn process(&mut self, event: Event<'_>) -> Result<Option<Interaction<Parsed>>, ParseError> {
+    fn process(
+        &mut self,
+        event: Event<'_>,
+        position: ops::Range<usize>,
+    ) -> Result<Option<Interaction<Parsed>>, ParseError> {
         match self {
             Self::Initialized => {
                 if let Event::Start(tag) = event {
@@ -373,7 +385,7 @@ impl ParserState {
             }
 
             Self::ReadingUserInput(state) => {
-                if let Some(interaction) = state.process(event)? {
+                if let Some(interaction) = state.process(event, position)? {
                     self.set_state(Self::EncounteredUserInput(interaction));
                 }
             }
@@ -405,7 +417,7 @@ impl ParserState {
             }
 
             Self::ReadingTermOutput(interaction, text_state) => {
-                if let Some(term_output) = text_state.process(event)? {
+                if let Some(term_output) = text_state.process(event, position)? {
                     let mut interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
                     interaction.output = term_output;
                     self.set_state(Self::EncounteredContainer);
