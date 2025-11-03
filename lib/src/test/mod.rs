@@ -1,4 +1,4 @@
-//! Snapshot testing tools for [`Transcript`](crate::Transcript)s.
+//! Snapshot testing tools for [`Transcript`]s.
 //!
 //! # Examples
 //!
@@ -58,6 +58,11 @@ use std::{env, ffi::OsStr};
 
 use termcolor::ColorChoice;
 
+pub use self::parser::{LocatedParseError, ParseError, Parsed};
+#[cfg(feature = "svg")]
+use crate::svg::Template;
+use crate::{traits::SpawnShell, ShellOptions, Transcript};
+
 mod color_diff;
 mod config_impl;
 mod parser;
@@ -65,27 +70,17 @@ mod parser;
 mod tests;
 mod utils;
 
-pub use self::parser::Parsed;
-#[cfg(feature = "svg")]
-use crate::svg::Template;
-use crate::{traits::SpawnShell, ShellOptions, Transcript};
-
 /// Configuration of output produced during testing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum TestOutputConfig {
     /// Do not output anything.
     Quiet,
     /// Output normal amount of details.
+    #[default]
     Normal,
     /// Output more details.
     Verbose,
-}
-
-impl Default for TestOutputConfig {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// Strategy for saving a new snapshot on a test failure within [`TestConfig::test()`] and

@@ -1,8 +1,11 @@
 //! Text parsing.
 
-use std::{borrow::Cow, fmt, io::Write, mem, str};
+use std::{borrow::Cow, fmt, io::Write, mem, ops, str};
 
-use quick_xml::events::{BytesStart, Event};
+use quick_xml::{
+    escape::{resolve_xml_entity, EscapeError},
+    events::{BytesStart, Event},
+};
 use termcolor::{Color, ColorSpec, WriteColor};
 
 use super::{map_utf8_error, parse_classes, ParseError, Parsed};
@@ -48,17 +51,30 @@ impl TextReadingState {
     }
 
     // We only retain `<span>` tags in the HTML since they are the only ones containing color info.
-    pub fn process(&mut self, event: Event<'_>) -> Result<Option<Parsed>, ParseError> {
+    pub fn process(
+        &mut self,
+        event: Event<'_>,
+        position: ops::Range<usize>,
+    ) -> Result<Option<Parsed>, ParseError> {
         match event {
             Event::Text(text) => {
-                let unescaped_str = text.unescape()?;
+                let unescaped_str = text.decode().map_err(quick_xml::Error::from)?;
                 let unescaped_str = normalize_newlines(&unescaped_str);
-
-                self.html_buffer.push_str(&unescaped_str);
-                self.plaintext_buffer.push_str(&unescaped_str);
-                self.color_spans_writer
-                    .write_all(unescaped_str.as_bytes())
-                    .expect("cannot write to ANSI buffer");
+                self.push_text(&unescaped_str);
+            }
+            Event::GeneralRef(reference) => {
+                let maybe_char = reference.resolve_char_ref()?;
+                let mut char_buffer = [0_u8; 4];
+                let decoded = if let Some(c) = maybe_char {
+                    c.encode_utf8(&mut char_buffer)
+                } else {
+                    let decoded = reference.decode().map_err(quick_xml::Error::from)?;
+                    resolve_xml_entity(&decoded).ok_or_else(|| {
+                        let err = EscapeError::UnrecognizedEntity(position, decoded.into_owned());
+                        quick_xml::Error::from(err)
+                    })?
+                };
+                self.push_text(decoded);
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
@@ -102,6 +118,14 @@ impl TextReadingState {
             _ => { /* Do nothing */ }
         }
         Ok(None)
+    }
+
+    fn push_text(&mut self, text: &str) {
+        self.html_buffer.push_str(text);
+        self.plaintext_buffer.push_str(text);
+        self.color_spans_writer
+            .write_all(text.as_bytes())
+            .expect("cannot write to ANSI buffer");
     }
 
     /// Parses color spec from a `span`.

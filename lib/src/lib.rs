@@ -153,6 +153,13 @@
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 
 #[cfg(feature = "portable-pty")]
+pub use self::pty::{PtyCommand, PtyShell};
+pub use self::{
+    shell::{ShellOptions, StdShell},
+    term::{Captured, TermOutput},
+};
+
+#[cfg(feature = "portable-pty")]
 mod pty;
 mod shell;
 #[cfg(feature = "svg")]
@@ -165,13 +172,6 @@ pub mod test;
 pub mod traits;
 mod utils;
 mod write;
-
-#[cfg(feature = "portable-pty")]
-pub use self::pty::{PtyCommand, PtyShell};
-pub use self::{
-    shell::{ShellOptions, StdShell},
-    term::{Captured, TermOutput},
-};
 
 /// Errors that can occur when processing terminal output.
 #[derive(Debug)]
@@ -277,7 +277,7 @@ impl Transcript {
 
     /// Manually adds a new interaction to the end of this transcript.
     ///
-    /// This is a shortcut for calling [`Self::add_existing_interaction(_)`].
+    /// This is a shortcut for calling [`Self::add_existing_interaction()`].
     pub fn add_interaction(
         &mut self,
         input: impl Into<UserInput>,

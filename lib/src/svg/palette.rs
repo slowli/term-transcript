@@ -204,7 +204,7 @@ impl<'de> Deserialize<'de> for RgbColor {
 }
 
 /// Named [`Palette`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum NamedPalette {
     /// Dracula color scheme. This is the [`Default`] value.
@@ -216,13 +216,8 @@ pub enum NamedPalette {
     /// Ubuntu terminal color scheme.
     Ubuntu,
     /// [gjm8 color scheme](https://terminal.sexy/).
+    #[default]
     Gjm8,
-}
-
-impl Default for NamedPalette {
-    fn default() -> Self {
-        Self::Gjm8
-    }
 }
 
 impl From<NamedPalette> for Palette {
