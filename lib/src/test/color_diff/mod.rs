@@ -313,9 +313,8 @@ impl ColorDiff {
             }
 
             let ch = span.kind.underline_char();
-            let underline: String = iter::repeat(ch)
-                .take(line[span_start..span_end].width())
-                .collect();
+            let underline: String =
+                iter::repeat_n(ch, line[span_start..span_end].width()).collect();
             out.set_color(&span.kind.highlight_spec())?;
             write!(out, "{underline}")?;
             out.reset()?;

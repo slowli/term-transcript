@@ -37,7 +37,7 @@ impl SvgLine {
             let mut background = String::with_capacity(estimated_capacity);
             let mut pos = 0;
             for segment in background_segments {
-                background.extend(iter::repeat('\u{a0}').take(segment.start_pos - pos));
+                background.extend(iter::repeat_n('\u{a0}', segment.start_pos - pos));
                 pos = segment.start_pos + segment.char_width;
                 segment.write_tspan(&mut background);
             }
@@ -63,7 +63,7 @@ struct BackgroundSegment {
 impl BackgroundSegment {
     fn write_tspan(self, output: &mut String) {
         self.span.write_tag(output, "tspan").unwrap();
-        output.extend(iter::repeat('█').take(self.char_width));
+        output.extend(iter::repeat_n('█', self.char_width));
         output.push_str("</tspan>");
     }
 }

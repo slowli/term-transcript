@@ -12,6 +12,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 ### Changed
 
 - Update `quick-xml` dependency.
+- Bump minimum supported Rust version to 1.82.
 
 ## 0.4.0 - 2025-06-01
 
