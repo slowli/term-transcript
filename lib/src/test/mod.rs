@@ -71,21 +71,16 @@ use crate::svg::Template;
 use crate::{traits::SpawnShell, ShellOptions, Transcript};
 
 /// Configuration of output produced during testing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum TestOutputConfig {
     /// Do not output anything.
     Quiet,
     /// Output normal amount of details.
+    #[default]
     Normal,
     /// Output more details.
     Verbose,
-}
-
-impl Default for TestOutputConfig {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// Strategy for saving a new snapshot on a test failure within [`TestConfig::test()`] and

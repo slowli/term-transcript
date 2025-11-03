@@ -51,7 +51,7 @@ impl TextReadingState {
     pub fn process(&mut self, event: Event<'_>) -> Result<Option<Parsed>, ParseError> {
         match event {
             Event::Text(text) => {
-                let unescaped_str = text.unescape()?;
+                let unescaped_str = text.decode().map_err(quick_xml::Error::from)?;
                 let unescaped_str = normalize_newlines(&unescaped_str);
 
                 self.html_buffer.push_str(&unescaped_str);
@@ -60,6 +60,7 @@ impl TextReadingState {
                     .write_all(unescaped_str.as_bytes())
                     .expect("cannot write to ANSI buffer");
             }
+            // FIXME: entities are now emitted separately
             Event::Start(tag) => {
                 self.open_tags += 1;
                 if tag.name().as_ref() == b"span" {
