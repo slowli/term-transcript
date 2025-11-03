@@ -18,14 +18,14 @@ use quick_xml::{
 };
 use termcolor::WriteColor;
 
-#[cfg(test)]
-mod tests;
-mod text;
-
 use self::text::TextReadingState;
 use crate::{
     test::color_diff::ColorSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput,
 };
+
+#[cfg(test)]
+mod tests;
+mod text;
 
 fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
     quick_xml::Error::Encoding(EncodingError::Utf8(err))
@@ -91,7 +91,7 @@ impl Transcript<Parsed> {
     ///
     /// [`Template::render()`]: crate::svg::Template::render()
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, err))]
-    pub fn from_svg<R: BufRead>(reader: R) -> Result<Self, ParseError> {
+    pub fn from_svg<R: BufRead>(reader: R) -> Result<Self, LocatedParseError> {
         let mut reader = XmlReader::from_reader(reader);
         let mut buffer = vec![];
         let mut state = ParserState::Initialized;
@@ -101,7 +101,9 @@ impl Transcript<Parsed> {
         #[allow(clippy::cast_possible_truncation)] // Truncation shouldn't happen in practice
         loop {
             let prev_position = reader.buffer_position() as usize;
-            let event = reader.read_event_into(&mut buffer)?;
+            let event = reader
+                .read_event_into(&mut buffer)
+                .map_err(|err| LocatedParseError::new(err.into(), prev_position..prev_position))?;
             let event_position = prev_position..reader.buffer_position() as usize;
             match &event {
                 Event::Start(_) => {
@@ -117,7 +119,10 @@ impl Transcript<Parsed> {
                 _ => { /* Do nothing. */ }
             }
 
-            if let Some(interaction) = state.process(event, event_position)? {
+            let maybe_interaction = state
+                .process(event, event_position.clone())
+                .map_err(|err| LocatedParseError::new(err, event_position))?;
+            if let Some(interaction) = maybe_interaction {
                 #[cfg(feature = "tracing")]
                 tracing::debug!(
                     ?interaction.input,
@@ -135,7 +140,11 @@ impl Transcript<Parsed> {
                 transcript.interactions.push(interaction);
                 Ok(transcript)
             }
-            _ => Err(ParseError::UnexpectedEof),
+            #[allow(clippy::cast_possible_truncation)] // Shouldn't happen in practice
+            _ => {
+                let pos = reader.buffer_position() as usize;
+                Err(LocatedParseError::new(ParseError::UnexpectedEof, pos..pos))
+            }
         }
     }
 }
@@ -220,6 +229,47 @@ impl StdError for ParseError {
             Self::InvalidExitStatus(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+/// [`ParseError`] together with its location in the XML input.
+#[derive(Debug)]
+pub struct LocatedParseError {
+    inner: ParseError,
+    location: ops::Range<usize>,
+}
+
+impl LocatedParseError {
+    fn new(inner: ParseError, location: ops::Range<usize>) -> Self {
+        Self { inner, location }
+    }
+
+    /// Returns a reference to the contained [`ParseError`].
+    pub fn inner(&self) -> &ParseError {
+        &self.inner
+    }
+
+    /// Returns the error location as the starting and ending byte offsets in the input.
+    pub fn location(&self) -> ops::Range<usize> {
+        self.location.clone()
+    }
+
+    /// Unwraps the contained parse error.
+    pub fn into_inner(self) -> ParseError {
+        self.inner
+    }
+}
+
+impl fmt::Display for LocatedParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self { inner, location } = self;
+        write!(formatter, "at {}-{}: {inner}", location.start, location.end)
+    }
+}
+
+impl StdError for LocatedParseError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        self.inner.source()
     }
 }
 

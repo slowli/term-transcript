@@ -157,7 +157,9 @@ fn invalid_exit_code_info() {
     "#;
 
     let err = Transcript::from_svg(SVG).unwrap_err();
-    assert_matches!(err, ParseError::InvalidExitStatus(_));
+    assert_matches!(err.inner(), ParseError::InvalidExitStatus(_));
+    assert!(err.location().start >= 200);
+    assert!(!err.location().is_empty());
 }
 
 #[test]
@@ -165,7 +167,7 @@ fn reading_file_without_svg_tag() {
     let data: &[u8] = b"<div>Text</div>";
     let err = Transcript::from_svg(data).unwrap_err();
 
-    assert_matches!(err, ParseError::UnexpectedRoot(tag) if tag == "div");
+    assert_matches!(err.inner(), ParseError::UnexpectedRoot(tag) if tag == "div");
 }
 
 #[test]
@@ -173,11 +175,12 @@ fn reading_file_without_container() {
     let bogus_data: &[u8] = br#"
         <svg viewBox="0 0 652 344" xmlns="http://www.w3.org/2000/svg" version="1.1">
           <style>.container { color: #eee; }</style>
-        </svg>
-    "#;
+        </svg>"#;
     let err = Transcript::from_svg(bogus_data).unwrap_err();
 
-    assert_matches!(err, ParseError::UnexpectedEof);
+    assert_matches!(err.inner(), ParseError::UnexpectedEof);
+    assert_eq!(err.location().start, bogus_data.len());
+    assert!(err.location().is_empty());
 }
 
 const INVALID_ATTRS: [&str; 5] = [
@@ -205,7 +208,9 @@ fn reading_file_with_invalid_container(attrs: &str) {
     );
     let err = Transcript::from_svg(bogus_data.as_bytes()).unwrap_err();
 
-    assert_matches!(err, ParseError::InvalidContainer);
+    assert_matches!(err.inner(), ParseError::InvalidContainer);
+    assert_ne!(err.location().start, 0);
+    assert!(!err.location().is_empty());
 }
 
 #[test]
@@ -356,9 +361,9 @@ fn parser_errors_on_unknown_entity() {
     let err = Transcript::from_svg(SVG).unwrap_err();
 
     assert_matches!(
-        err,
+        err.inner(),
         ParseError::Xml(quick_xml::Error::Escape(
-            quick_xml::escape::EscapeError::UnrecognizedEntity(_, entity),
-        )) if entity == "what"
+            quick_xml::escape::EscapeError::UnrecognizedEntity(pos, entity),
+        )) if entity == "what" && *pos == err.location()
     );
 }

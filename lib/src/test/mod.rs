@@ -1,4 +1,4 @@
-//! Snapshot testing tools for [`Transcript`](crate::Transcript)s.
+//! Snapshot testing tools for [`Transcript`]s.
 //!
 //! # Examples
 //!
@@ -58,17 +58,17 @@ use std::{env, ffi::OsStr};
 
 use termcolor::ColorChoice;
 
+pub use self::parser::{LocatedParseError, ParseError, Parsed};
+#[cfg(feature = "svg")]
+use crate::svg::Template;
+use crate::{traits::SpawnShell, ShellOptions, Transcript};
+
 mod color_diff;
 mod config_impl;
 mod parser;
 #[cfg(test)]
 mod tests;
 mod utils;
-
-pub use self::parser::Parsed;
-#[cfg(feature = "svg")]
-use crate::svg::Template;
-use crate::{traits::SpawnShell, ShellOptions, Transcript};
 
 /// Configuration of output produced during testing.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
