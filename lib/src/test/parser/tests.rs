@@ -37,7 +37,6 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
     </svg>
 "#;
 
-// FIXME: wrap output into separate <tspan> so that this actually represents produced output
 const PURE_SVG: &[u8] = br#"
 <svg viewBox="0 0 720 138" width="720" height="138" xmlns="http://www.w3.org/2000/svg">
   <svg x="0" y="10" width="720" height="118" viewBox="0 0 720 118">
