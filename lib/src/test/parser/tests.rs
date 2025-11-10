@@ -55,7 +55,6 @@ const PURE_SVG: &[u8] = br#"
 #[test_casing(3, [SVG, LEGACY_SVG, PURE_SVG])]
 fn reading_file(file_contents: &[u8]) {
     let transcript = Transcript::from_svg(file_contents).unwrap();
-    dbg!(&transcript);
     assert_eq!(transcript.interactions.len(), 1);
 
     let interaction = &transcript.interactions[0];

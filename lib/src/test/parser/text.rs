@@ -138,14 +138,11 @@ impl TextReadingState {
                     let html = mem::take(&mut self.html_buffer);
                     let plaintext = mem::take(&mut self.plaintext_buffer);
                     let color_spans = mem::take(&mut self.color_spans_writer).into_inner();
-                    let mut parsed = Parsed {
+                    return Ok(Some(Parsed {
                         plaintext,
                         color_spans,
                         html,
-                    };
-                    // A trailing newline is inserted by the pure SVG template.
-                    parsed.trim_trailing_newline();
-                    return Ok(Some(parsed));
+                    }));
                 }
             }
             _ => { /* Do nothing */ }

@@ -66,29 +66,20 @@ impl Parsed {
         &self.html
     }
 
-    pub(crate) fn trim_trailing_newline(&mut self) {
-        if self.plaintext.ends_with('\n') {
-            self.plaintext.pop();
-            debug_assert!(self.html.ends_with('\n'));
-            self.html.pop();
-            if let Some(span) = self.color_spans.last_mut() {
-                span.len -= 1;
-                if span.len == 0 {
-                    self.color_spans.pop();
-                }
-            }
-        }
-    }
-
     /// Converts this parsed fragment into text for `UserInput`. This takes into account
     /// that while the first space after prompt is inserted automatically, the further whitespace
     /// may be significant.
     fn into_input_text(self) -> String {
-        if self.plaintext.starts_with(' ') {
+        let mut text = if self.plaintext.starts_with(' ') {
             self.plaintext[1..].to_owned()
         } else {
             self.plaintext
+        };
+
+        if text.ends_with('\n') {
+            text.pop();
         }
+        text
     }
 }
 
