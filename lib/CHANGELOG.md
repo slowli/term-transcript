@@ -8,6 +8,9 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 ### Added
 
 - Add location info for transcript parsing errors and make error types public.
+- Support parsing SVG transcripts generated with the pure SVG template. In particular, these transcripts
+  are now supported in snapshot testing. The pure SVG template is slightly updated for parsing;
+  thus, parsing won't work with transcripts produced with old `term-transcript` versions.
 
 ### Changed
 
