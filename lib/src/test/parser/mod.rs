@@ -66,6 +66,20 @@ impl Parsed {
         &self.html
     }
 
+    pub(crate) fn trim_trailing_newline(&mut self) {
+        if self.plaintext.ends_with('\n') {
+            self.plaintext.pop();
+            debug_assert!(self.html.ends_with('\n'));
+            self.html.pop();
+            if let Some(span) = self.color_spans.last_mut() {
+                span.len -= 1;
+                if span.len == 0 {
+                    self.color_spans.pop();
+                }
+            }
+        }
+    }
+
     /// Converts this parsed fragment into text for `UserInput`. This takes into account
     /// that while the first space after prompt is inserted automatically, the further whitespace
     /// may be significant.
@@ -414,6 +428,10 @@ impl ParserState {
                     if tag.name().as_ref() == b"div" {
                         Self::verify_container_attrs(tag.attributes())?;
                         self.set_state(Self::EncounteredContainer);
+                    } else if tag.name().as_ref() == b"text"
+                        && Self::is_text_container(tag.attributes())?
+                    {
+                        self.set_state(Self::EncounteredContainer);
                     }
                 }
             }
@@ -520,5 +538,10 @@ impl ParserState {
         } else {
             Err(ParseError::InvalidContainer)
         }
+    }
+
+    fn is_text_container(attributes: Attributes<'_>) -> Result<bool, ParseError> {
+        let classes = parse_classes(attributes)?;
+        Ok(extract_base_class(&classes) == b"container")
     }
 }

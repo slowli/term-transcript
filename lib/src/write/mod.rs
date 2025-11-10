@@ -21,7 +21,7 @@ fn fmt_to_io_error(err: fmt::Error) -> io::Error {
 
 /// HTML `<span>` / SVG `<tspan>` containing styling info.
 #[derive(Debug)]
-struct StyledSpan {
+pub(crate) struct StyledSpan {
     classes: Vec<String>,
     styles: Vec<String>,
 }

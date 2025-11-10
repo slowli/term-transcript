@@ -37,9 +37,26 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
     </svg>
 "#;
 
-#[test_casing(2, [SVG, LEGACY_SVG])]
+// FIXME: wrap output into separate <tspan> so that this actually represents produced output
+const PURE_SVG: &[u8] = br#"
+<svg viewBox="0 0 720 138" width="720" height="138" xmlns="http://www.w3.org/2000/svg">
+  <svg x="0" y="10" width="720" height="118" viewBox="0 0 720 118">
+    <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect></g>
+    <text class="container fg7"><tspan xml:space="preserve" class="input"><tspan x="10" y="16"><tspan class="prompt">$</tspan> ls -al --color&#x3D;always
+</tspan></tspan><tspan xml:space="preserve" class="output"><tspan x="10" y="42">total 28
+</tspan><tspan x="10" y="60">drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <tspan class="fg4">.</tspan>
+</tspan><tspan x="10" y="78" class="output-bg">                                         <tspan class="fg2">__</tspan></tspan><tspan x="10" y="78">drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <tspan class="fg4 bg2">..</tspan>
+</tspan><tspan x="10" y="96">-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock
+</tspan><tspan x="10" y="114">
+</tspan></tspan></text>
+  </svg>
+</svg>
+"#;
+
+#[test_casing(3, [SVG, LEGACY_SVG, PURE_SVG])]
 fn reading_file(file_contents: &[u8]) {
     let transcript = Transcript::from_svg(file_contents).unwrap();
+    dbg!(&transcript);
     assert_eq!(transcript.interactions.len(), 1);
 
     let interaction = &transcript.interactions[0];
@@ -57,6 +74,7 @@ fn reading_file(file_contents: &[u8]) {
     let html = &interaction.output.html;
     assert!(html.starts_with("total 28\ndrwxr-xr-x"));
     assert!(html.contains(r#"Apr 18 12:54 <span class="fg4">.</span>"#));
+    assert!(html.contains(r#"<span class="fg4 bg2">..</span>"#));
 
     let color_spans = &interaction.output.color_spans;
     assert_eq!(color_spans.len(), 5); // 2 colored regions + 3 surrounding areas
