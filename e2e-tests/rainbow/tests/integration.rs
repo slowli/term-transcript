@@ -16,7 +16,7 @@ use term_transcript::{
     test::{MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ShellOptions, Transcript, UserInput,
 };
-use test_casing::{decorate, decorators::Retry, test_casing};
+use test_casing::{decorate, decorators::Retry, test_casing, Product};
 use tracing::{subscriber::DefaultGuard, Subscriber};
 use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
@@ -170,53 +170,73 @@ fn snapshot_testing_low_level() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test_casing(2, [false, true])]
 #[test]
-fn snapshot_testing() {
+fn snapshot_testing(pure_svg: bool) {
     let _guard = enable_tracing();
     let shell_options = ShellOptions::default().with_cargo_path();
-    TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
+    let mut config = TestConfig::new(shell_options);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(main_snapshot_path(), ["rainbow"]);
 }
 
 #[cfg(feature = "portable-pty")]
+#[test_casing(2, [false, true])]
 #[test]
-fn snapshot_testing_with_pty() {
+fn snapshot_testing_with_pty(pure_svg: bool) {
     let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
-    TestConfig::new(shell_options).test(main_snapshot_path(), ["rainbow"]);
+    let mut config = TestConfig::new(shell_options);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(main_snapshot_path(), ["rainbow"]);
 }
 
-#[test]
-fn animated_snapshot_testing() {
+#[test_casing(2, [false, true])]
+fn animated_snapshot_testing(pure_svg: bool) {
     let shell_options = ShellOptions::default().with_cargo_path();
-    TestConfig::new(shell_options).test(
+    let mut config = TestConfig::new(shell_options);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(
         animated_snapshot_path(),
         ["rainbow", "rainbow --long-lines"],
     );
 }
 
-#[test]
-fn snapshot_testing_with_custom_settings() {
+#[test_casing(2, [false, true])]
+fn snapshot_testing_with_custom_settings(pure_svg: bool) {
     let shell_options = ShellOptions::default().with_cargo_path();
-    TestConfig::new(shell_options)
+    let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutputConfig::Verbose)
-        .test(main_snapshot_path(), ["rainbow"]);
+        .with_output(TestOutputConfig::Verbose);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(main_snapshot_path(), ["rainbow"]);
 }
 
 #[cfg(unix)]
-#[test]
-fn sh_shell_example() {
+#[test_casing(2, [false, true])]
+fn sh_shell_example(pure_svg: bool) {
     let shell_options = ShellOptions::sh().with_alias("colored-output", PATH_TO_BIN);
-    TestConfig::new(shell_options)
+    let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutputConfig::Verbose)
-        .test(aliased_snapshot_path(), ["colored-output"]);
+        .with_output(TestOutputConfig::Verbose);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(aliased_snapshot_path(), ["colored-output"]);
 }
 
 #[cfg(unix)]
+#[test_casing(2, [false, true])]
 // Although `bash` can be present on Windows, `with_alias` will most probably work
 // improperly because of Windows-style paths.
-#[test]
-fn bash_shell_example() {
+fn bash_shell_example(pure_svg: bool) {
     fn bash_exists() -> bool {
         let exit_status = Command::new("bash")
             .arg("--version")
@@ -233,15 +253,18 @@ fn bash_shell_example() {
     }
 
     let shell_options = ShellOptions::bash().with_alias("colored-output", PATH_TO_BIN);
-    TestConfig::new(shell_options)
+    let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutputConfig::Verbose)
-        .test(aliased_snapshot_path(), ["colored-output"]);
+        .with_output(TestOutputConfig::Verbose);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(aliased_snapshot_path(), ["colored-output"]);
 }
 
-#[test]
+#[test_casing(2, [false, true])]
 #[decorate(Retry::times(3))] // PowerShell can be quite slow
-fn powershell_example() {
+fn powershell_example(pure_svg: bool) {
     fn powershell_exists() -> bool {
         let exit_status = Command::new("pwsh")
             .arg("-Help")
@@ -260,25 +283,30 @@ fn powershell_example() {
     let shell_options = ShellOptions::pwsh()
         .with_init_timeout(Duration::from_secs(2))
         .with_alias("colored-output", PATH_TO_BIN);
-    TestConfig::new(shell_options)
+    let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
-        .with_output(TestOutputConfig::Verbose)
-        .test(aliased_snapshot_path(), ["colored-output"]);
+        .with_output(TestOutputConfig::Verbose);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(aliased_snapshot_path(), ["colored-output"]);
 }
 
-#[test]
-fn repl_snapshot_testing() {
+#[test_casing(2, [false, true])]
+fn repl_snapshot_testing(pure_svg: bool) {
     let shell_options = ShellOptions::from(Command::new(PATH_TO_REPL_BIN));
-    TestConfig::new(shell_options)
-        .with_match_kind(MatchKind::Precise)
-        .test(
-            repl_snapshot_path(),
-            [
-                "yellow intense bold green cucumber",
-                "neutral #fa4 underline #c0ffee",
-                "#9f4010 (brown) italic",
-            ],
-        );
+    let mut config = TestConfig::new(shell_options).with_match_kind(MatchKind::Precise);
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+    }
+    config.test(
+        repl_snapshot_path(),
+        [
+            "yellow intense bold green cucumber",
+            "neutral #fa4 underline #c0ffee",
+            "#9f4010 (brown) italic",
+        ],
+    );
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -324,17 +352,19 @@ impl ErrorType {
     }
 }
 
-#[test_casing(3, ErrorType::ALL)]
-fn new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
+#[test_casing(6, Product((ErrorType::ALL, [false, true])))]
+fn new_snapshot(error_type: ErrorType, pure_svg: bool) -> anyhow::Result<()> {
     let temp_dir = tempdir()?;
     let snapshot_path = temp_dir.path().join("rainbow.svg");
     error_type.create_snapshot(&snapshot_path)?;
 
     let test_result = panic::catch_unwind(|| {
         let shell_options = ShellOptions::default().with_cargo_path();
-        TestConfig::new(shell_options)
-            .with_update_mode(UpdateMode::Always)
-            .test(&snapshot_path, ["rainbow"]);
+        let mut config = TestConfig::new(shell_options).with_update_mode(UpdateMode::Always);
+        if pure_svg {
+            config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        }
+        config.test(&snapshot_path, ["rainbow"]);
     });
 
     let err = *test_result.unwrap_err().downcast::<String>().unwrap();
@@ -389,6 +419,5 @@ fn no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
 
     let new_snapshot_path = temp_dir.path().join("rainbow.new.svg");
     assert!(!new_snapshot_path.exists());
-
     Ok(())
 }
