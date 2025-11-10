@@ -44,6 +44,10 @@ fn read_main_snapshot() -> io::Result<BufReader<File>> {
     File::open(main_snapshot_path()).map(BufReader::new)
 }
 
+fn read_pure_snapshot() -> io::Result<BufReader<File>> {
+    File::open("../../examples/rainbow-pure.svg").map(BufReader::new)
+}
+
 fn read_custom_template() -> anyhow::Result<HandlebarsTemplate> {
     let template_string = fs::read_to_string(Path::new("../../examples/custom.html.handlebars"))?;
     HandlebarsTemplate::compile(&template_string).map_err(Into::into)
@@ -61,8 +65,9 @@ fn repl_snapshot_path() -> &'static Path {
     Path::new("repl.svg")
 }
 
+#[test_casing(2, [false, true])]
 #[test]
-fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
+fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_cargo_path();
     let transcript =
@@ -73,11 +78,21 @@ fn main_snapshot_can_be_rendered() -> anyhow::Result<()> {
         palette: NamedPalette::Gjm8.into(),
         ..TemplateOptions::default()
     };
-    Template::new(template_options).render(&transcript, &mut buffer)?;
+    let template = if pure_svg {
+        Template::pure_svg(template_options)
+    } else {
+        Template::new(template_options)
+    };
+    template.render(&transcript, &mut buffer)?;
     let rendered = String::from_utf8(buffer)?;
 
     let mut snapshot = String::with_capacity(rendered.len());
-    read_main_snapshot()?.read_to_string(&mut snapshot)?;
+    let mut snapshot_reader = if pure_svg {
+        read_pure_snapshot()?
+    } else {
+        read_main_snapshot()?
+    };
+    snapshot_reader.read_to_string(&mut snapshot)?;
 
     // Normalize newlines.
     let rendered = rendered.replace("\r\n", "\n");
@@ -106,18 +121,25 @@ fn snapshot_with_custom_template() -> anyhow::Result<()> {
 }
 
 #[cfg(feature = "portable-pty")]
+#[test_casing(2, [false, true])]
 #[test]
-fn main_snapshot_can_be_rendered_from_pty() -> anyhow::Result<()> {
+fn main_snapshot_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::Result<()> {
     let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
-    Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
+    let template = if pure_svg {
+        Template::pure_svg(TemplateOptions::default())
+    } else {
+        Template::new(TemplateOptions::default())
+    };
+    template.render(&transcript, io::sink())?;
     Ok(())
 }
 
 #[cfg(feature = "portable-pty")]
+#[test_casing(2, [false, true])]
 #[test]
-fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
+fn snapshot_with_long_lines_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::Result<()> {
     let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
     let transcript = Transcript::from_inputs(
         &mut shell_options,
@@ -131,7 +153,12 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty() -> anyhow::Result<()> {
         "{output}"
     );
 
-    Template::new(TemplateOptions::default()).render(&transcript, io::sink())?;
+    let template = if pure_svg {
+        Template::pure_svg(TemplateOptions::default())
+    } else {
+        Template::new(TemplateOptions::default())
+    };
+    template.render(&transcript, io::sink())?;
     Ok(())
 }
 
