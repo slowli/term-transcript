@@ -169,7 +169,6 @@ impl TextReadingState {
     /// Parses color spec from a `span`.
     ///
     /// **NB.** Must correspond to the span creation logic in the `html` module.
-    // FIXME: test in isolation
     fn parse_color_from_span(span_tag: &BytesStart) -> Result<ColorSpec, ParseError> {
         let class_attr = parse_classes(span_tag.attributes())?;
         let mut color_spec = ColorSpec::new();
@@ -216,6 +215,11 @@ impl TextReadingState {
                 bg if bg.starts_with(b"bg") => {
                     if let Some(color) = Self::parse_indexed_color(&bg[2..]) {
                         color_spec.set_bg(Some(color));
+                    } else if let Ok(color_str) = str::from_utf8(&bg[2..]) {
+                        // Parse `bg#..` classes produced by the pure SVG template
+                        if let Ok(color) = color_str.parse::<RgbColor>() {
+                            color_spec.set_bg(Some(color.into_ansi_color()));
+                        }
                     }
                 }
 
@@ -347,5 +351,24 @@ mod tests {
 
         assert_eq!(color_spec.fg(), Some(&Color::Rgb(0xff, 0xee, 0xdd)));
         assert_eq!(color_spec.bg(), Some(&Color::Rgb(0xc0, 0xff, 0xee)));
+    }
+
+    #[test]
+    fn parsing_fg_color_from_svg_style() {
+        let mut color_spec = ColorSpec::new();
+        TextReadingState::parse_color_from_style(&mut color_spec, b"fill: #fed; stroke: #fed")
+            .unwrap();
+
+        assert_eq!(color_spec.fg(), Some(&Color::Rgb(0xff, 0xee, 0xdd)));
+        assert_eq!(color_spec.bg(), None);
+    }
+
+    #[test]
+    fn parsing_bg_color_from_svg_style() {
+        let mut color_spec = ColorSpec::new();
+        TextReadingState::parse_color_from_classes(&mut color_spec, b"bold fg3 bg#d7d75f");
+        assert!(color_spec.bold());
+        assert_eq!(color_spec.fg(), Some(&Color::Yellow));
+        assert_eq!(color_spec.bg(), Some(&Color::Rgb(0xd7, 0xd7, 0x5f)));
     }
 }
