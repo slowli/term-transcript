@@ -160,14 +160,13 @@ trait WriteLines: WriteStr {
     }
 
     /// Implements `io::Write::write()`.
-    fn io_write(&mut self, buffer: &[u8], convert_spaces: bool) -> io::Result<usize> {
+    fn io_write(&mut self, buffer: &[u8]) -> io::Result<usize> {
         let mut last_escape = 0;
         for (i, &byte) in buffer.iter().enumerate() {
             let escaped = match byte {
                 b'>' => "&gt;",
                 b'<' => "&lt;",
                 b'&' => "&amp;",
-                b' ' if convert_spaces => "\u{a0}", // non-breakable space
                 _ => continue,
             };
             let saved_str = str::from_utf8(&buffer[last_escape..i])

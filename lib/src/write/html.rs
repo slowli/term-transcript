@@ -92,7 +92,7 @@ impl WriteLines for HtmlWriter<'_> {
 
 impl io::Write for HtmlWriter<'_> {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        self.io_write(buffer, false)
+        self.io_write(buffer)
     }
 
     fn flush(&mut self) -> io::Result<()> {
