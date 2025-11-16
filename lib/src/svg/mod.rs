@@ -238,7 +238,7 @@ pub struct ScrollOptions {
     /// of text into the view with the default template (potentially, slightly less because
     /// of vertical margins around user inputs).
     pub max_height: usize,
-    /// Number of pixels moved each scroll. Default value is 52 (4 lines of text with the default template).
+    /// Number of pixels moved each scroll. Default value is 52 (~3 lines of text with the default template).
     pub pixels_per_scroll: usize,
     /// Interval between keyframes in seconds. The default value is `4`.
     pub interval: f32,
@@ -249,7 +249,7 @@ impl Default for ScrollOptions {
         const DEFAULT_LINE_HEIGHT: usize = 18; // from the default template
         Self {
             max_height: DEFAULT_LINE_HEIGHT * 19,
-            pixels_per_scroll: DEFAULT_LINE_HEIGHT * 4,
+            pixels_per_scroll: 52,
             interval: 4.0,
         }
     }
