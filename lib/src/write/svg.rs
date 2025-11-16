@@ -188,7 +188,7 @@ impl WriteLines for SvgWriter {
 
 impl io::Write for SvgWriter {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        self.io_write(buffer, true)
+        self.io_write(buffer)
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -251,7 +251,7 @@ mod tests {
         );
         assert_eq!(
             foreground,
-            "Hello,\u{a0}<tspan class=\"bold underline fg2 bg7\">world</tspan>!"
+            "Hello, <tspan class=\"bold underline fg2 bg7\">world</tspan>!"
         );
         Ok(())
     }
@@ -361,7 +361,7 @@ mod tests {
         );
         assert_eq!(
             second.foreground,
-            "\u{a0}<tspan class=\"bold underline fg2 bg7\">wor</tspan>"
+            " <tspan class=\"bold underline fg2 bg7\">wor</tspan>"
         );
         assert_eq!(
             third.background.as_ref().unwrap(),
@@ -407,7 +407,7 @@ mod tests {
         );
         assert_eq!(
             second.foreground,
-            ",\u{a0}<tspan class=\"bold underline fg2 bg7\">wor\
+            ", <tspan class=\"bold underline fg2 bg7\">wor\
              <tspan class=\"hard-br\" rotate=\"45\" dx=\".1em\" dy=\"-.2em\">↓</tspan></tspan>"
         );
         assert_eq!(
@@ -416,7 +416,7 @@ mod tests {
         );
         assert_eq!(
             third.foreground,
-            "<tspan class=\"bold underline fg2 bg7\">ld</tspan>!\u{a0}M\
+            "<tspan class=\"bold underline fg2 bg7\">ld</tspan>! M\
              <tspan class=\"hard-br\" rotate=\"45\" dx=\".1em\" dy=\"-.2em\">↓</tspan>"
         );
 

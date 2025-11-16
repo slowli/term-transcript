@@ -9,6 +9,19 @@ use super::{
 };
 
 impl StyledSpan {
+    #[cfg(feature = "test")]
+    pub(crate) fn html(spec: &ColorSpec) -> io::Result<Self> {
+        let mut this = Self::new(spec, "color")?;
+        this.set_html_bg(spec)?;
+        Ok(this)
+    }
+
+    #[cfg(feature = "test")]
+    pub(crate) fn write_html_tag(self, buffer: &mut String) {
+        self.write_tag(buffer, "span")
+            .expect("writing to String never fails");
+    }
+
     fn set_html_bg(&mut self, spec: &ColorSpec) -> io::Result<()> {
         use fmt::Write as _;
 
@@ -81,7 +94,7 @@ impl WriteLines for HtmlWriter<'_> {
 
 impl io::Write for HtmlWriter<'_> {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        self.io_write(buffer, false)
+        self.io_write(buffer)
     }
 
     fn flush(&mut self) -> io::Result<()> {

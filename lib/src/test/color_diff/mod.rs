@@ -14,7 +14,7 @@ use crate::{term::TermOutputParser, write::IndexOrRgb, TermError};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ColorSpan {
-    len: usize,
+    pub(crate) len: usize,
     color_spec: ColorSpec,
 }
 
@@ -105,6 +105,10 @@ impl ColorSpansWriter {
 
             _ => color,
         }
+    }
+
+    pub(crate) fn spec(&self) -> &ColorSpec {
+        &self.color_spec
     }
 
     /// Unites sequential spans with the same color spec.

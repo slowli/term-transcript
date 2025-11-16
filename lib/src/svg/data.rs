@@ -69,7 +69,7 @@ use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 ///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
 /// #       "output_svg": [{
 /// #           "background": null,
-/// #           "foreground": "Hello,\u{a0}<tspan class=\"fg2\">world</tspan>!",
+/// #           "foreground": "Hello, <tspan class=\"fg2\">world</tspan>!",
 /// #       }],
 /// #       // ^ Implementation detail for now
 ///         "failure": false,

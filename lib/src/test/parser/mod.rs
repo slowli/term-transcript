@@ -70,11 +70,16 @@ impl Parsed {
     /// that while the first space after prompt is inserted automatically, the further whitespace
     /// may be significant.
     fn into_input_text(self) -> String {
-        if self.plaintext.starts_with(' ') {
+        let mut text = if self.plaintext.starts_with(' ') {
             self.plaintext[1..].to_owned()
         } else {
             self.plaintext
+        };
+
+        if text.ends_with('\n') {
+            text.pop();
         }
+        text
     }
 }
 
@@ -414,6 +419,10 @@ impl ParserState {
                     if tag.name().as_ref() == b"div" {
                         Self::verify_container_attrs(tag.attributes())?;
                         self.set_state(Self::EncounteredContainer);
+                    } else if tag.name().as_ref() == b"text"
+                        && Self::is_text_container(tag.attributes())?
+                    {
+                        self.set_state(Self::EncounteredContainer);
                     }
                 }
             }
@@ -520,5 +529,10 @@ impl ParserState {
         } else {
             Err(ParseError::InvalidContainer)
         }
+    }
+
+    fn is_text_container(attributes: Attributes<'_>) -> Result<bool, ParseError> {
+        let classes = parse_classes(attributes)?;
+        Ok(extract_base_class(&classes) == b"container")
     }
 }

@@ -13,7 +13,7 @@ use term_transcript::{
     svg::{Template, TemplateOptions},
     ShellOptions, Transcript, UserInput,
 };
-use test_casing::{decorate, decorators::Retry, test_casing};
+use test_casing::{decorate, decorators::Retry, test_casing, Product};
 use tracing::{subscriber::DefaultGuard, Subscriber};
 use tracing_capture::{CaptureLayer, CapturedSpan, SharedStorage, Storage};
 use tracing_subscriber::{
@@ -54,8 +54,9 @@ fn echo_command() -> Command {
     command
 }
 
+#[test_casing(2, [false, true])]
 #[test]
-fn transcript_lifecycle() -> anyhow::Result<()> {
+fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
     let (_guard, tracing_storage) = enable_tracing_assertions();
     let mut transcript = Transcript::new();
 
@@ -68,7 +69,13 @@ fn transcript_lifecycle() -> anyhow::Result<()> {
 
     // 2. Render the transcript into SVG.
     let mut svg_buffer = vec![];
-    Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+    let options = TemplateOptions::default();
+    let template = if pure_svg {
+        Template::pure_svg(options)
+    } else {
+        Template::new(options)
+    };
+    template.render(&transcript, &mut svg_buffer)?;
 
     // 3. Parse SVG back to the transcript.
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
@@ -139,8 +146,8 @@ const MUTE_OUTPUT_CASES: [&[bool]; 6] = [
     &[true, true, false, true],
 ];
 
-#[test_casing(6, MUTE_OUTPUT_CASES)]
-fn transcript_with_empty_output(mute_outputs: &[bool]) -> anyhow::Result<()> {
+#[test_casing(12, Product((MUTE_OUTPUT_CASES, [false, true])))]
+fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow::Result<()> {
     #[cfg(unix)]
     const NULL_FILE: &str = "/dev/null";
     #[cfg(windows)]
@@ -162,7 +169,12 @@ fn transcript_with_empty_output(mute_outputs: &[bool]) -> anyhow::Result<()> {
     assert_tracing_for_transcript_from_inputs(&tracing_storage.lock());
 
     let mut svg_buffer = vec![];
-    Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+    let template = if pure_svg {
+        Template::pure_svg(TemplateOptions::default())
+    } else {
+        Template::new(TemplateOptions::default())
+    };
+    template.render(&transcript, &mut svg_buffer)?;
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
 
     assert_eq!(parsed.interactions().len(), mute_outputs.len());

@@ -4,14 +4,15 @@ use std::{borrow::Cow, fmt, io::Write, mem, ops, str};
 
 use quick_xml::{
     escape::{resolve_xml_entity, EscapeError},
-    events::{BytesStart, Event},
+    events::{attributes::Attributes, BytesStart, Event},
 };
 use termcolor::{Color, ColorSpec, WriteColor};
 
-use super::{map_utf8_error, parse_classes, ParseError, Parsed};
+use super::{extract_base_class, map_utf8_error, parse_classes, ParseError, Parsed};
 use crate::{
     test::color_diff::ColorSpansWriter,
     utils::{normalize_newlines, RgbColor},
+    write::StyledSpan,
 };
 
 pub(super) struct TextReadingState {
@@ -19,6 +20,7 @@ pub(super) struct TextReadingState {
     html_buffer: String,
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
+    bg_line_level: Option<usize>,
 }
 
 impl fmt::Debug for TextReadingState {
@@ -37,6 +39,7 @@ impl Default for TextReadingState {
             color_spans_writer: ColorSpansWriter::default(),
             plaintext_buffer: String::new(),
             open_tags: 1,
+            bg_line_level: None,
         }
     }
 }
@@ -58,11 +61,19 @@ impl TextReadingState {
     ) -> Result<Option<Parsed>, ParseError> {
         match event {
             Event::Text(text) => {
+                if self.bg_line_level.is_some() {
+                    return Ok(None);
+                }
+
                 let unescaped_str = text.decode().map_err(quick_xml::Error::from)?;
                 let unescaped_str = normalize_newlines(&unescaped_str);
                 self.push_text(&unescaped_str);
             }
             Event::GeneralRef(reference) => {
+                if self.bg_line_level.is_some() {
+                    return Ok(None);
+                }
+
                 let maybe_char = reference.resolve_char_ref()?;
                 let mut char_buffer = [0_u8; 4];
                 let decoded = if let Some(c) = maybe_char {
@@ -78,25 +89,44 @@ impl TextReadingState {
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
-                if tag.name().as_ref() == b"span" {
-                    self.html_buffer.push('<');
-                    let tag_str = str::from_utf8(&tag).map_err(map_utf8_error)?;
-                    self.html_buffer.push_str(tag_str);
-                    self.html_buffer.push('>');
+                if self.bg_line_level.is_some() {
+                    return Ok(None);
+                }
 
+                let tag_name = tag.name();
+                let is_tspan = tag_name.as_ref() == b"tspan";
+                if is_tspan && Self::is_bg_line(tag.attributes())? {
+                    self.bg_line_level = Some(self.open_tags);
+                    return Ok(None);
+                }
+
+                if tag_name.as_ref() == b"span" || is_tspan {
                     let color_spec = Self::parse_color_from_span(&tag)?;
                     if !color_spec.is_none() {
                         self.color_spans_writer
                             .set_color(&color_spec)
                             .expect("cannot set color for ANSI buffer");
+                        StyledSpan::html(&color_spec)?.write_html_tag(&mut self.html_buffer);
                     }
                 }
             }
             Event::End(tag) => {
                 self.open_tags -= 1;
+                if let Some(level) = self.bg_line_level {
+                    debug_assert!(level <= self.open_tags);
+                    if self.open_tags == level {
+                        self.bg_line_level = None;
+                    }
+                    return Ok(None);
+                }
 
-                if tag.name().as_ref() == b"span" {
-                    self.html_buffer.push_str("</span>");
+                let tag_name = tag.name();
+                let is_tspan = tag_name.as_ref() == b"tspan";
+                if tag.name().as_ref() == b"span" || is_tspan {
+                    if !self.color_spans_writer.spec().is_none() {
+                        // We've opened a `<span>` corresponding to the spec; now it's the time to close it.
+                        self.html_buffer.push_str("</span>");
+                    }
 
                     // FIXME: check embedded color specs (should never be produced).
                     self.color_spans_writer
@@ -126,6 +156,11 @@ impl TextReadingState {
         self.color_spans_writer
             .write_all(text.as_bytes())
             .expect("cannot write to ANSI buffer");
+    }
+
+    fn is_bg_line(attrs: Attributes<'_>) -> Result<bool, ParseError> {
+        let classes = parse_classes(attrs)?;
+        Ok(extract_base_class(&classes) == b"output-bg")
     }
 
     /// Parses color spec from a `span`.
@@ -177,6 +212,11 @@ impl TextReadingState {
                 bg if bg.starts_with(b"bg") => {
                     if let Some(color) = Self::parse_indexed_color(&bg[2..]) {
                         color_spec.set_bg(Some(color));
+                    } else if let Ok(color_str) = str::from_utf8(&bg[2..]) {
+                        // Parse `bg#..` classes produced by the pure SVG template
+                        if let Ok(color) = color_str.parse::<RgbColor>() {
+                            color_spec.set_bg(Some(color.into_ansi_color()));
+                        }
                     }
                 }
 
@@ -201,7 +241,7 @@ impl TextReadingState {
                 .trim();
 
             match property_name {
-                "color" => {
+                "color" | "fill" => {
                     if let Ok(color) = property_value.parse::<RgbColor>() {
                         color_spec.set_fg(Some(color.into_ansi_color()));
                     }
@@ -308,5 +348,24 @@ mod tests {
 
         assert_eq!(color_spec.fg(), Some(&Color::Rgb(0xff, 0xee, 0xdd)));
         assert_eq!(color_spec.bg(), Some(&Color::Rgb(0xc0, 0xff, 0xee)));
+    }
+
+    #[test]
+    fn parsing_fg_color_from_svg_style() {
+        let mut color_spec = ColorSpec::new();
+        TextReadingState::parse_color_from_style(&mut color_spec, b"fill: #fed; stroke: #fed")
+            .unwrap();
+
+        assert_eq!(color_spec.fg(), Some(&Color::Rgb(0xff, 0xee, 0xdd)));
+        assert_eq!(color_spec.bg(), None);
+    }
+
+    #[test]
+    fn parsing_bg_color_from_svg_style() {
+        let mut color_spec = ColorSpec::new();
+        TextReadingState::parse_color_from_classes(&mut color_spec, b"bold fg3 bg#d7d75f");
+        assert!(color_spec.bold());
+        assert_eq!(color_spec.fg(), Some(&Color::Yellow));
+        assert_eq!(color_spec.bg(), Some(&Color::Rgb(0xd7, 0xd7, 0x5f)));
     }
 }
