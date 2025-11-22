@@ -383,3 +383,45 @@ fn parser_errors_on_unknown_entity() {
         )) if entity == "what" && *pos == err.location()
     );
 }
+
+#[test]
+fn reading_pure_svg_with_hard_breaks() {
+    const SVG: &str = r#"
+<svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
+  <text class="container fg7"><tspan xml:space="preserve" x="10" y="16" class="input"><tspan x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
+</tspan></tspan><tspan xml:space="preserve" x="42" y="42" class="output"><tspan x="42" y="42"><tspan class="bold">Roboto Mono</tspan> <tspan class="dimmed">Regular</tspan>
+</tspan><tspan x="42" y="60"><tspan class="bold">License:</tspan> This Font Software is licensed under the SIL Open Font License, Version<tspan class="hard-br" rotate="45" dx=".1em" dy="-.2em">↓</tspan>
+</tspan><tspan x="42" y="78"> 1.1. This license is available with a FAQ at: https://openfontlicense.org
+</tspan></tspan>
+  </text>
+</svg>"#;
+
+    let transcript = Transcript::from_svg(SVG.as_bytes()).unwrap();
+    assert_eq!(transcript.interactions().len(), 1);
+    let output = transcript.interactions()[0].output();
+    assert!(
+        output
+            .plaintext
+            .starts_with("Roboto Mono Regular\nLicense:"),
+        "{output:#?}"
+    );
+    assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
+    assert!(!output.plaintext.contains("↓"), "{output:#?}");
+}
+
+#[test]
+fn reading_pure_svg_with_styled_hard_breaks() {
+    const SVG: &str = r#"
+<svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
+  <text class="container fg7"><tspan xml:space="preserve" x="10" y="16" class="input"><tspan x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
+</tspan></tspan><tspan xml:space="preserve" x="42" y="42" class="output"><tspan x="42" y="60"><tspan class="bold">License:</tspan> <tspan class="fg3">don't know<tspan class="hard-br" rotate="45" dx=".1em" dy="-.2em">↓</tspan></tspan>
+</tspan><tspan x="42" y="78"><tspan class="fg3"> lol</tspan>
+</tspan></tspan>
+  </text>
+</svg>"#;
+
+    let transcript = Transcript::from_svg(SVG.as_bytes()).unwrap();
+    assert_eq!(transcript.interactions().len(), 1);
+    let output = transcript.interactions()[0].output().plaintext();
+    assert_eq!(output, "License: don't know lol");
+}

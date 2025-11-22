@@ -15,12 +15,19 @@ use crate::{
     write::StyledSpan,
 };
 
+#[derive(Debug)]
+enum HardBreak {
+    Active,
+    JustEnded,
+}
+
 pub(super) struct TextReadingState {
     pub plaintext_buffer: String,
     html_buffer: String,
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
     bg_line_level: Option<usize>,
+    hard_br: Option<HardBreak>,
 }
 
 impl fmt::Debug for TextReadingState {
@@ -40,6 +47,7 @@ impl Default for TextReadingState {
             plaintext_buffer: String::new(),
             open_tags: 1,
             bg_line_level: None,
+            hard_br: None,
         }
     }
 }
@@ -53,24 +61,44 @@ impl TextReadingState {
         self.open_tags
     }
 
+    fn should_ignore_text(&self) -> bool {
+        self.bg_line_level.is_some() || self.hard_br.is_some()
+    }
+
     // We only retain `<span>` tags in the HTML since they are the only ones containing color info.
+    #[allow(clippy::too_many_lines)]
     pub fn process(
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,
     ) -> Result<Option<Parsed>, ParseError> {
+        let after_hard_break = matches!(self.hard_br, Some(HardBreak::JustEnded));
+        if after_hard_break
+            && matches!(
+                &event,
+                Event::Text(_) | Event::GeneralRef(_) | Event::Start(_)
+            )
+        {
+            self.hard_br = None;
+        }
+
         match event {
             Event::Text(text) => {
-                if self.bg_line_level.is_some() {
+                if self.should_ignore_text() {
                     return Ok(None);
                 }
 
                 let unescaped_str = text.decode().map_err(quick_xml::Error::from)?;
                 let unescaped_str = normalize_newlines(&unescaped_str);
-                self.push_text(&unescaped_str);
+                let unescaped_str = if after_hard_break && unescaped_str.starts_with('\n') {
+                    &unescaped_str[1..] // gobble the starting '\n' as produced by a hard break
+                } else {
+                    &unescaped_str
+                };
+                self.push_text(unescaped_str);
             }
             Event::GeneralRef(reference) => {
-                if self.bg_line_level.is_some() {
+                if self.should_ignore_text() {
                     return Ok(None);
                 }
 
@@ -91,6 +119,8 @@ impl TextReadingState {
                 self.open_tags += 1;
                 if self.bg_line_level.is_some() {
                     return Ok(None);
+                } else if self.hard_br.is_some() {
+                    return Err(ParseError::InvalidHardBreak);
                 }
 
                 let tag_name = tag.name();
@@ -98,6 +128,14 @@ impl TextReadingState {
                 if is_tspan && Self::is_bg_line(tag.attributes())? {
                     self.bg_line_level = Some(self.open_tags);
                     return Ok(None);
+                } else if is_tspan {
+                    // Check for the hard line break <tspan>. We mustn't add its contents to the text,
+                    // and instead gobble the following '\n'.
+                    let classes = parse_classes(tag.attributes())?;
+                    if extract_base_class(&classes) == b"hard-br" {
+                        self.hard_br = Some(HardBreak::Active);
+                        return Ok(None);
+                    }
                 }
 
                 if tag_name.as_ref() == b"span" || is_tspan {
@@ -117,6 +155,9 @@ impl TextReadingState {
                     if self.open_tags == level {
                         self.bg_line_level = None;
                     }
+                    return Ok(None);
+                } else if matches!(self.hard_br, Some(HardBreak::Active)) {
+                    self.hard_br = Some(HardBreak::JustEnded);
                     return Ok(None);
                 }
 

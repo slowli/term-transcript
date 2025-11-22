@@ -196,6 +196,8 @@ pub enum ParseError {
     InvalidExitStatus(ParseIntError),
     /// Unexpected end of file.
     UnexpectedEof,
+    /// Invalid hard line break.
+    InvalidHardBreak,
     /// Error parsing XML.
     Xml(quick_xml::Error),
 }
@@ -222,6 +224,7 @@ impl fmt::Display for ParseError {
             Self::InvalidContainer => formatter.write_str("invalid transcript container"),
             Self::InvalidExitStatus(err) => write!(formatter, "invalid exit status: {err}"),
             Self::UnexpectedEof => formatter.write_str("unexpected EOF"),
+            Self::InvalidHardBreak => formatter.write_str("invalid hard line break"),
             Self::Xml(err) => write!(formatter, "error parsing XML: {err}"),
         }
     }
