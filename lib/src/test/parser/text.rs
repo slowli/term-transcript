@@ -179,11 +179,13 @@ impl TextReadingState {
                     let html = mem::take(&mut self.html_buffer);
                     let plaintext = mem::take(&mut self.plaintext_buffer);
                     let color_spans = mem::take(&mut self.color_spans_writer).into_inner();
-                    return Ok(Some(Parsed {
+                    let mut parsed = Parsed {
                         plaintext,
                         color_spans,
                         html,
-                    }));
+                    };
+                    parsed.trim_ending_newline();
+                    return Ok(Some(parsed));
                 }
             }
             _ => { /* Do nothing */ }

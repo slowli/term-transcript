@@ -81,6 +81,17 @@ impl Parsed {
         }
         text
     }
+
+    fn trim_ending_newline(&mut self) {
+        if self.plaintext.ends_with('\n') {
+            self.plaintext.pop();
+            debug_assert!(self.html.ends_with('\n'));
+            self.html.pop();
+            if let Some(last_span) = self.color_spans.last_mut() {
+                last_span.len -= 1;
+            }
+        }
+    }
 }
 
 impl TermOutput for Parsed {}

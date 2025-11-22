@@ -303,8 +303,11 @@ impl Transcript {
         pipe_reader.read_to_end(&mut output)?;
         child.wait()?;
 
-        let output = String::from_utf8(output)
+        let mut output = String::from_utf8(output)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))?;
+        if output.ends_with('\n') {
+            output.truncate(output.len() - 1);
+        }
         #[cfg(feature = "tracing")]
         tracing::debug!(?output, "read command output");
 
