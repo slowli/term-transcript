@@ -16,6 +16,12 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 - Update `quick-xml` dependency.
 - Bump minimum supported Rust version to 1.82.
+- Align the view box bottom during the last scroll animation frame, so that there's no overscroll.
+- Consistently trim the ending newline for captured outputs.
+
+### Removed
+
+- Remove the `Parsed::html()` getter as difficult to maintain given pure SVG parsing.
 
 ## 0.4.0 - 2025-06-01
 
