@@ -23,7 +23,7 @@ enum HardBreak {
 
 pub(super) struct TextReadingState {
     pub plaintext_buffer: String,
-    html_buffer: String,
+    html_buffer: String, // FIXME: remove?
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
     bg_line_level: Option<usize>,
@@ -176,13 +176,11 @@ impl TextReadingState {
                 }
 
                 if self.open_tags == 0 {
-                    let html = mem::take(&mut self.html_buffer);
                     let plaintext = mem::take(&mut self.plaintext_buffer);
                     let color_spans = mem::take(&mut self.color_spans_writer).into_inner();
                     let mut parsed = Parsed {
                         plaintext,
                         color_spans,
-                        html,
                     };
                     parsed.trim_ending_newline();
                     return Ok(Some(parsed));

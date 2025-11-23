@@ -92,10 +92,6 @@ fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
         interaction.output().plaintext(),
         transcript.interactions()[0].output().to_plaintext()?
     );
-    assert_eq!(
-        interaction.output().html(),
-        transcript.interactions()[0].output().to_html()?
-    );
     Ok(())
 }
 
@@ -182,10 +178,8 @@ fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow
     for (interaction, &mute) in parsed.interactions().iter().zip(mute_outputs) {
         if mute {
             assert_eq!(interaction.output().plaintext(), "");
-            assert_eq!(interaction.output().html(), "");
         } else {
             assert_ne!(interaction.output().plaintext(), "");
-            assert_ne!(interaction.output().html(), "");
         }
     }
     Ok(())

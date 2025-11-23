@@ -81,7 +81,6 @@ fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (Te
             output: Parsed {
                 plaintext: expected_capture.to_plaintext().unwrap(),
                 color_spans: ColorSpan::parse(expected_capture.as_ref()).unwrap(),
-                html: expected_capture.to_html().unwrap(),
             },
             exit_status: None,
         }],

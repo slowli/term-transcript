@@ -36,14 +36,12 @@ fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
 pub struct Parsed {
     pub(crate) plaintext: String,
     pub(crate) color_spans: Vec<ColorSpan>,
-    pub(crate) html: String,
 }
 
 impl Parsed {
     const DEFAULT: Self = Self {
         plaintext: String::new(),
         color_spans: Vec::new(),
-        html: String::new(),
     };
 
     /// Returns the parsed plaintext.
@@ -59,11 +57,6 @@ impl Parsed {
     #[doc(hidden)] // makes `termcolor` dependency public, which we want to avoid so far
     pub fn write_colorized(&self, out: &mut impl WriteColor) -> io::Result<()> {
         ColorSpan::write_colorized(&self.color_spans, out, &self.plaintext)
-    }
-
-    /// Returns the parsed HTML.
-    pub fn html(&self) -> &str {
-        &self.html
     }
 
     /// Converts this parsed fragment into text for `UserInput`. This takes into account
@@ -85,8 +78,6 @@ impl Parsed {
     fn trim_ending_newline(&mut self) {
         if self.plaintext.ends_with('\n') {
             self.plaintext.pop();
-            debug_assert!(self.html.ends_with('\n'));
-            self.html.pop();
             if let Some(last_span) = self.color_spans.last_mut() {
                 last_span.len -= 1;
             }

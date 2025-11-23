@@ -69,11 +69,6 @@ fn reading_file(file_contents: &[u8]) {
     assert!(plaintext.contains("4096 Apr 18 12:54 .\n"));
     assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
 
-    let html = &interaction.output.html;
-    assert!(html.starts_with("total 28\ndrwxr-xr-x"));
-    assert!(html.contains(r#"Apr 18 12:54 <span class="fg4">.</span>"#));
-    assert!(html.contains(r#"<span class="fg4 bg2">..</span>"#));
-
     let color_spans = &interaction.output.color_spans;
     assert_eq!(color_spans.len(), 5); // 2 colored regions + 3 surrounding areas
 }
@@ -116,11 +111,9 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
 
     assert_eq!(transcript.interactions[0].input.text, "ls > /dev/null");
     assert!(transcript.interactions[0].output.plaintext.is_empty());
-    assert!(transcript.interactions[0].output.html.is_empty());
 
     assert_eq!(transcript.interactions[1].input.text, "ls");
     assert!(!transcript.interactions[1].output.plaintext.is_empty());
-    assert!(!transcript.interactions[1].output.html.is_empty());
 }
 
 #[test]
