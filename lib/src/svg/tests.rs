@@ -265,6 +265,8 @@ fn rendering_transcript_with_animation() {
 
     assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
     assert!(buffer.contains("<animateTransform"), "{buffer}");
+    let expected_view_boxes = "0 0 720 240;0 52 720 240;0 104 720 240;0 156 720 240;0 184 720 240";
+    assert!(buffer.contains(expected_view_boxes), "{buffer}");
 }
 
 #[test]
@@ -291,6 +293,8 @@ fn rendering_pure_svg_transcript_with_animation() {
 
     assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
     assert!(buffer.contains("<animateTransform"), "{buffer}");
+    let expected_view_boxes = "0 0 720 240;0 52 720 240;0 104 720 240;0 156 720 240;0 184 720 240";
+    assert!(buffer.contains(expected_view_boxes), "{buffer}");
 }
 
 #[test]
