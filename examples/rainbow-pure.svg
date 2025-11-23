@@ -10,7 +10,7 @@
     }
     .input-bg { fill: #fff; fill-opacity: 0.1; }
     .input-hidden { display: none; }
-    .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.1; }
+    .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.5; }
     .bold,.prompt { font-weight: 600; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }

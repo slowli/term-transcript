@@ -1,4 +1,4 @@
-<!-- Created with term-transcript v0.3.0-beta.1 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 -22 720 384" width="720" height="384" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
@@ -14,13 +14,14 @@
           font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
           line-height: inherit;
         }
-        .user-input {
+        .input {
           margin: 0 -10px 6px;
           color: #cccccc;
           background: rgba(255, 255, 255, 0.1);
           padding: 2px 10px;
         }
-        .term-output { margin-bottom: 6px; }
+        .input-hidden { display: none; }
+        .output { margin-bottom: 6px; }
         .scrollbar { fill: #fff; fill-opacity: 0.35; }
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
@@ -62,11 +63,11 @@
       <circle cx="37" cy="-9" r="7" style="fill: #c19c00;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #13a10e;"/>
       <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 260 720 342;0 312 720 342;0 364 720 342;0 416 720 342" dur="32.0s" repeatCount="indefinite" calcMode="discrete" />
+        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 260 720 342;0 312 720 342;0 364 720 342;0 368 720 342" dur="32.0s" repeatCount="indefinite" calcMode="discrete" />
         <foreignObject width="720" height="710">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-            <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
-            <div class="term-output"><pre>Base colors:
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
+            <div class="output"><pre>Base colors:
 <span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
 <span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 
 Base colors (bg):
@@ -83,8 +84,8 @@ ANSI grayscale palette:
 <span style="color: #080808;">!</span><span class="bold fg7" style="background: #080808;">?</span><span style="color: #121212;">!</span><span class="bold fg7" style="background: #121212;">?</span><span style="color: #1c1c1c;">!</span><span class="bold fg7" style="background: #1c1c1c;">?</span><span style="color: #262626;">!</span><span class="bold fg7" style="background: #262626;">?</span><span style="color: #303030;">!</span><span class="bold fg7" style="background: #303030;">?</span><span style="color: #3a3a3a;">!</span><span class="bold fg7" style="background: #3a3a3a;">?</span><span style="color: #444444;">!</span><span class="bold fg7" style="background: #444444;">?</span><span style="color: #4e4e4e;">!</span><span class="bold fg7" style="background: #4e4e4e;">?</span><span style="color: #585858;">!</span><span class="bold fg7" style="background: #585858;">?</span><span style="color: #626262;">!</span><span class="bold fg7" style="background: #626262;">?</span><span style="color: #6c6c6c;">!</span><span class="bold fg7" style="background: #6c6c6c;">?</span><span style="color: #767676;">!</span><span class="bold fg7" style="background: #767676;">?</span><span style="color: #808080;">!</span><span class="bold fg0" style="background: #808080;">?</span><span style="color: #8a8a8a;">!</span><span class="bold fg0" style="background: #8a8a8a;">?</span><span style="color: #949494;">!</span><span class="bold fg0" style="background: #949494;">?</span><span style="color: #9e9e9e;">!</span><span class="bold fg0" style="background: #9e9e9e;">?</span><span style="color: #a8a8a8;">!</span><span class="bold fg0" style="background: #a8a8a8;">?</span><span style="color: #b2b2b2;">!</span><span class="bold fg0" style="background: #b2b2b2;">?</span><span style="color: #bcbcbc;">!</span><span class="bold fg0" style="background: #bcbcbc;">?</span><span style="color: #c6c6c6;">!</span><span class="bold fg0" style="background: #c6c6c6;">?</span><span style="color: #d0d0d0;">!</span><span class="bold fg0" style="background: #d0d0d0;">?</span><span style="color: #dadada;">!</span><span class="bold fg0" style="background: #dadada;">?</span><span style="color: #e4e4e4;">!</span><span class="bold fg0" style="background: #e4e4e4;">?</span><span style="color: #eeeeee;">!</span><span class="bold fg0" style="background: #eeeeee;">?</span>
 24-bit colors:
 <span style="color: #ffbbdd;">pink</span> <span style="color: #ffaa44;">orange</span> <span style="color: #9f4010;">brown</span> <span style="color: #10889f;">teal</span> </pre></div>
-            <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
-            <div class="term-output"><pre>Base colors:
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
+            <div class="output"><pre>Base colors:
 <span class="underline fg0">black</span> <span class="italic fg0">black/italic</span> <span class="fg4">blue</span> <span class="italic underline fg4">blue/italic</span> <span class="underline fg2">green</span> <span class="italic fg2">green/italic</span> <span class="fg1">red</span> <span class="italic underline fg1">red/italic</span> <span class="underline fg6">cyan</span> <span class="italic fg6">cyan/<b class="hard-br"><br/></b>italic</span> <span class="fg5">magenta</span> <span class="italic underline fg5">magenta/italic</span> <span class="underline fg3">yellow</span> <span class="italic fg3">yellow/italic</span> 
 <span class="fg8">black</span> <span class="italic underline fg8">black/italic</span> <span class="underline fg12">blue</span> <span class="italic fg12">blue/italic</span> <span class="fg10">green</span> <span class="italic underline fg10">green/italic</span> <span class="underline fg9">red</span> <span class="italic fg9">red/italic</span> <span class="fg14">cyan</span> <span class="italic underline fg14">cyan/<b class="hard-br"><br/></b>italic</span> <span class="underline fg13">magenta</span> <span class="italic fg13">magenta/italic</span> <span class="fg11">yellow</span> <span class="italic underline fg11">yellow/italic</span> 
 Base colors (bg):

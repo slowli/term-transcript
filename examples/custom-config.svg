@@ -1,4 +1,4 @@
-<!-- Created with term-transcript v0.3.0 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 -22 900 342" width="900" height="342" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
@@ -75,7 +75,7 @@
       <circle cx="37" cy="-9" r="7" style="fill: #c18f41;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #8f9a52;"/>
       <svg x="0" y="10" width="900" height="300" viewBox="0 0 900 300">
-        <animate attributeName="viewBox" values="0 0 900 300;0 18 900 300;0 36 900 300;0 54 900 300" dur="4.5s" repeatCount="indefinite" calcMode="discrete" />
+        <animate attributeName="viewBox" values="0 0 900 300;0 18 900 300;0 36 900 300;0 52 900 300" dur="4.5s" repeatCount="indefinite" calcMode="discrete" />
         <foreignObject width="900" height="352">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>

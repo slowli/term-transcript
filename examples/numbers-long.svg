@@ -1,4 +1,4 @@
-<!-- Created with term-transcript v0.3.0-beta.1 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 0 720 390" width="720" height="390" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
@@ -14,16 +14,17 @@
           font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
           line-height: inherit;
         }
-        .user-input {
+        .input {
           display: flex;
           margin: 0 -10px 6px;
           color: #e5e5e5;
           background: rgba(255, 255, 255, 0.1);
           padding: 2px 10px;
         }
-        .user-input > pre { flex-grow: 1; }
-        .term-output { display: flex; margin-bottom: 6px; }
-        .term-output > pre { flex-grow: 1; }
+        .input-hidden { display: none; }
+        .input > pre { flex-grow: 1; }
+        .output { display: flex; margin-bottom: 6px; }
+        .output > pre { flex-grow: 1; }
         pre.line-numbers {
           flex-grow: 0;
           width: 1.5rem;
@@ -71,8 +72,8 @@
       <svg x="0" y="10" width="720" height="370" viewBox="0 0 720 370">
         <foreignObject width="720" height="370">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-            <div class="user-input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
-            <div class="term-output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20</pre><pre>Base colors:
+            <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
+            <div class="output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20</pre><pre>Base colors:
 <span class="underline fg0">black</span> <span class="italic fg0">black/italic</span> <span class="fg4">blue</span> <span class="italic underline fg4">blue/italic</span> <span class="underline fg2">green</span> <span class="italic fg2">green/italic</span> <span class="fg1">red</span> <span class="italic underline fg1">red/italic</span> <span class="underline fg6">cyan</span> <span class="italic fg6">cyan/<b class="hard-br"><br/></b>italic</span> <span class="fg5">magenta</span> <span class="italic underline fg5">magenta/italic</span> <span class="underline fg3">yellow</span> <span class="italic fg3">yellow/italic</span> 
 <span class="fg8">black</span> <span class="italic underline fg8">black/italic</span> <span class="underline fg12">blue</span> <span class="italic fg12">blue/italic</span> <span class="fg10">green</span> <span class="italic underline fg10">green/italic</span> <span class="underline fg9">red</span> <span class="italic fg9">red/italic</span> <span class="fg14">cyan</span> <span class="italic underline fg14">cyan/<b class="hard-br"><br/></b>italic</span> <span class="underline fg13">magenta</span> <span class="italic fg13">magenta/italic</span> <span class="fg11">yellow</span> <span class="italic underline fg11">yellow/italic</span> 
 Base colors (bg):
