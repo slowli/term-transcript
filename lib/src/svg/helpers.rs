@@ -141,6 +141,7 @@ enum OpsHelper {
     Mul,
     Sub,
     Div,
+    Min,
 }
 
 impl OpsHelper {
@@ -150,6 +151,7 @@ impl OpsHelper {
             Self::Mul => "mul",
             Self::Sub => "sub",
             Self::Div => "div",
+            Self::Min => "min",
         }
     }
 
@@ -159,6 +161,7 @@ impl OpsHelper {
             Self::Mul => values.product(),
             // `unwrap`s are safe because of previous checks
             Self::Sub => values.next().unwrap() - values.next().unwrap(),
+            Self::Min => values.min().unwrap(),
             Self::Div => unreachable!(),
         }
     }
@@ -170,6 +173,7 @@ impl OpsHelper {
             // `unwrap`s are safe because of previous checks
             Self::Sub => values.next().unwrap() - values.next().unwrap(),
             Self::Div => values.next().unwrap() / values.next().unwrap(),
+            Self::Min => values.reduce(f64::min).unwrap(),
         }
     }
 }
@@ -465,6 +469,7 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
+    reg.register_helper("min", Box::new(OpsHelper::Min));
     reg.register_helper(LineCounter::NAME, Box::new(LineCounter));
     reg.register_helper(LineSplitter::NAME, Box::new(LineSplitter));
     reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
@@ -534,6 +539,16 @@ mod tests {
         handlebars.register_helper("add", Box::new(OpsHelper::Add));
         let rendered = handlebars.render_template(template, &()).unwrap();
         assert_eq!(rendered, "8");
+    }
+
+    #[test]
+    fn min_helper_basics() {
+        let template = "{{min 2 -1 5}}";
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("min", Box::new(OpsHelper::Min));
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(rendered, "-1");
     }
 
     #[test]

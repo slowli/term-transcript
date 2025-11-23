@@ -12,15 +12,20 @@ use super::{extract_base_class, map_utf8_error, parse_classes, ParseError, Parse
 use crate::{
     test::color_diff::ColorSpansWriter,
     utils::{normalize_newlines, RgbColor},
-    write::StyledSpan,
 };
+
+#[derive(Debug)]
+enum HardBreak {
+    Active,
+    JustEnded,
+}
 
 pub(super) struct TextReadingState {
     pub plaintext_buffer: String,
-    html_buffer: String,
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
     bg_line_level: Option<usize>,
+    hard_br: Option<HardBreak>,
 }
 
 impl fmt::Debug for TextReadingState {
@@ -35,11 +40,11 @@ impl fmt::Debug for TextReadingState {
 impl Default for TextReadingState {
     fn default() -> Self {
         Self {
-            html_buffer: String::new(),
             color_spans_writer: ColorSpansWriter::default(),
             plaintext_buffer: String::new(),
             open_tags: 1,
             bg_line_level: None,
+            hard_br: None,
         }
     }
 }
@@ -53,24 +58,44 @@ impl TextReadingState {
         self.open_tags
     }
 
+    fn should_ignore_text(&self) -> bool {
+        self.bg_line_level.is_some() || self.hard_br.is_some()
+    }
+
     // We only retain `<span>` tags in the HTML since they are the only ones containing color info.
+    #[allow(clippy::too_many_lines)]
     pub fn process(
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,
     ) -> Result<Option<Parsed>, ParseError> {
+        let after_hard_break = matches!(self.hard_br, Some(HardBreak::JustEnded));
+        if after_hard_break
+            && matches!(
+                &event,
+                Event::Text(_) | Event::GeneralRef(_) | Event::Start(_)
+            )
+        {
+            self.hard_br = None;
+        }
+
         match event {
             Event::Text(text) => {
-                if self.bg_line_level.is_some() {
+                if self.should_ignore_text() {
                     return Ok(None);
                 }
 
                 let unescaped_str = text.decode().map_err(quick_xml::Error::from)?;
                 let unescaped_str = normalize_newlines(&unescaped_str);
-                self.push_text(&unescaped_str);
+                let unescaped_str = if after_hard_break && unescaped_str.starts_with('\n') {
+                    &unescaped_str[1..] // gobble the starting '\n' as produced by a hard break
+                } else {
+                    &unescaped_str
+                };
+                self.push_text(unescaped_str);
             }
             Event::GeneralRef(reference) => {
-                if self.bg_line_level.is_some() {
+                if self.should_ignore_text() {
                     return Ok(None);
                 }
 
@@ -91,6 +116,8 @@ impl TextReadingState {
                 self.open_tags += 1;
                 if self.bg_line_level.is_some() {
                     return Ok(None);
+                } else if self.hard_br.is_some() {
+                    return Err(ParseError::InvalidHardBreak);
                 }
 
                 let tag_name = tag.name();
@@ -98,6 +125,14 @@ impl TextReadingState {
                 if is_tspan && Self::is_bg_line(tag.attributes())? {
                     self.bg_line_level = Some(self.open_tags);
                     return Ok(None);
+                } else if is_tspan {
+                    // Check for the hard line break <tspan>. We mustn't add its contents to the text,
+                    // and instead gobble the following '\n'.
+                    let classes = parse_classes(tag.attributes())?;
+                    if extract_base_class(&classes) == b"hard-br" {
+                        self.hard_br = Some(HardBreak::Active);
+                        return Ok(None);
+                    }
                 }
 
                 if tag_name.as_ref() == b"span" || is_tspan {
@@ -106,7 +141,6 @@ impl TextReadingState {
                         self.color_spans_writer
                             .set_color(&color_spec)
                             .expect("cannot set color for ANSI buffer");
-                        StyledSpan::html(&color_spec)?.write_html_tag(&mut self.html_buffer);
                     }
                 }
             }
@@ -118,16 +152,14 @@ impl TextReadingState {
                         self.bg_line_level = None;
                     }
                     return Ok(None);
+                } else if matches!(self.hard_br, Some(HardBreak::Active)) {
+                    self.hard_br = Some(HardBreak::JustEnded);
+                    return Ok(None);
                 }
 
                 let tag_name = tag.name();
                 let is_tspan = tag_name.as_ref() == b"tspan";
                 if tag.name().as_ref() == b"span" || is_tspan {
-                    if !self.color_spans_writer.spec().is_none() {
-                        // We've opened a `<span>` corresponding to the spec; now it's the time to close it.
-                        self.html_buffer.push_str("</span>");
-                    }
-
                     // FIXME: check embedded color specs (should never be produced).
                     self.color_spans_writer
                         .reset()
@@ -135,14 +167,14 @@ impl TextReadingState {
                 }
 
                 if self.open_tags == 0 {
-                    let html = mem::take(&mut self.html_buffer);
                     let plaintext = mem::take(&mut self.plaintext_buffer);
                     let color_spans = mem::take(&mut self.color_spans_writer).into_inner();
-                    return Ok(Some(Parsed {
+                    let mut parsed = Parsed {
                         plaintext,
                         color_spans,
-                        html,
-                    }));
+                    };
+                    parsed.trim_ending_newline();
+                    return Ok(Some(parsed));
                 }
             }
             _ => { /* Do nothing */ }
@@ -151,7 +183,6 @@ impl TextReadingState {
     }
 
     fn push_text(&mut self, text: &str) {
-        self.html_buffer.push_str(text);
         self.plaintext_buffer.push_str(text);
         self.color_spans_writer
             .write_all(text.as_bytes())

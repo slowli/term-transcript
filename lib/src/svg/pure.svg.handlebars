@@ -44,7 +44,7 @@
       {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
       {{#each (range 0 (add (steps) 1))}}
         {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{mul ../scroll.pixels_per_scroll @index}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
+        {{#view_box}}"{{view_box}}{{sep}}0 {{min (mul ../scroll.pixels_per_scroll @index) (sub ../content_height ../scroll.max_height)}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
         {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
       {{/each}}
 
@@ -89,7 +89,7 @@
   }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
   .input-hidden { display: none; }
-  .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.1; }
+  .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.5; }
   {{~#if has_failures}}
 
   .input-bg .input-failure { fill: #ff0041; fill-opacity: 0.15; }

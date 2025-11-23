@@ -10,7 +10,7 @@
     }
     .input-bg { fill: #fff; fill-opacity: 0.1; }
     .input-hidden { display: none; }
-    .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.1; }
+    .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.5; }
     .scrollbar { fill: #fff; fill-opacity: 0.35; }
     .line-numbers { text-anchor: end; fill-opacity: 0.35; user-select: none; }
 
@@ -38,7 +38,7 @@
   </style>
   <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
     <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-      <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342" dur="12.0s" repeatCount="indefinite" calcMode="discrete" />
+      <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 134 720 342" dur="12.0s" repeatCount="indefinite" calcMode="discrete" />
       <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect><rect x="0" y="340" width="100%" height="22"></rect></g>
       <text class="container fg7 line-numbers"><tspan x="34" y="16">1</tspan><tspan x="34" y="42">2</tspan><tspan x="34" y="60">3</tspan><tspan x="34" y="78">4</tspan><tspan x="34" y="96">5</tspan><tspan x="34" y="114">6</tspan><tspan x="34" y="132">7</tspan><tspan x="34" y="150">8</tspan><tspan x="34" y="168">9</tspan><tspan x="34" y="186">10</tspan><tspan x="34" y="204">11</tspan><tspan x="34" y="222">12</tspan><tspan x="34" y="240">13</tspan><tspan x="34" y="258">14</tspan><tspan x="34" y="276">15</tspan><tspan x="34" y="294">16</tspan><tspan x="34" y="312">17</tspan><tspan x="34" y="330">18</tspan><tspan x="34" y="356">19</tspan><tspan x="34" y="382">20</tspan><tspan x="34" y="400">21</tspan><tspan x="34" y="418">22</tspan><tspan x="34" y="436">23</tspan><tspan x="34" y="454">24</tspan><tspan x="34" y="472">25</tspan></text>
       <text class="container fg7"><tspan xml:space="preserve" x="42" y="16" class="input"><tspan x="42" y="16"><tspan class="prompt">$</tspan> rainbow

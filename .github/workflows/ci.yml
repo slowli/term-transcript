@@ -20,8 +20,9 @@ jobs:
         include:
           - os: windows-latest
             features: ""
-          - os: macos-latest
-            features: ""
+          # TODO: restore once `hashFiles` is not broken on MacOS
+          # - os: macos-latest
+          #  features: ""
           - os: ubuntu-latest
             features: --all-features
 

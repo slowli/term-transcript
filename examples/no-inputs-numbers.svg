@@ -1,4 +1,4 @@
-<!-- Created with term-transcript v0.3.0-beta.1 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 0 720 362" width="720" height="362" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
@@ -71,7 +71,7 @@
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #000000;" />
       <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
+        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 78 720 342" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
         <foreignObject width="720" height="420">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input input-hidden" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>

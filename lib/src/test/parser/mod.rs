@@ -36,14 +36,12 @@ fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
 pub struct Parsed {
     pub(crate) plaintext: String,
     pub(crate) color_spans: Vec<ColorSpan>,
-    pub(crate) html: String,
 }
 
 impl Parsed {
     const DEFAULT: Self = Self {
         plaintext: String::new(),
         color_spans: Vec::new(),
-        html: String::new(),
     };
 
     /// Returns the parsed plaintext.
@@ -61,11 +59,6 @@ impl Parsed {
         ColorSpan::write_colorized(&self.color_spans, out, &self.plaintext)
     }
 
-    /// Returns the parsed HTML.
-    pub fn html(&self) -> &str {
-        &self.html
-    }
-
     /// Converts this parsed fragment into text for `UserInput`. This takes into account
     /// that while the first space after prompt is inserted automatically, the further whitespace
     /// may be significant.
@@ -80,6 +73,15 @@ impl Parsed {
             text.pop();
         }
         text
+    }
+
+    fn trim_ending_newline(&mut self) {
+        if self.plaintext.ends_with('\n') {
+            self.plaintext.pop();
+            if let Some(last_span) = self.color_spans.last_mut() {
+                last_span.len -= 1;
+            }
+        }
     }
 }
 
@@ -196,6 +198,8 @@ pub enum ParseError {
     InvalidExitStatus(ParseIntError),
     /// Unexpected end of file.
     UnexpectedEof,
+    /// Invalid hard line break.
+    InvalidHardBreak,
     /// Error parsing XML.
     Xml(quick_xml::Error),
 }
@@ -222,6 +226,7 @@ impl fmt::Display for ParseError {
             Self::InvalidContainer => formatter.write_str("invalid transcript container"),
             Self::InvalidExitStatus(err) => write!(formatter, "invalid exit status: {err}"),
             Self::UnexpectedEof => formatter.write_str("unexpected EOF"),
+            Self::InvalidHardBreak => formatter.write_str("invalid hard line break"),
             Self::Xml(err) => write!(formatter, "error parsing XML: {err}"),
         }
     }

@@ -10,7 +10,7 @@
     }
     .input-bg { fill: #fff; fill-opacity: 0.1; }
     .input-hidden { display: none; }
-    .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.1; }
+    .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.5; }
     .scrollbar { fill: #fff; fill-opacity: 0.35; }
     .line-numbers { text-anchor: end; fill-opacity: 0.35; user-select: none; }
 
@@ -38,7 +38,7 @@
   </style>
   <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #000000;" />
     <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-      <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
+      <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 78 720 342" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
       <g class="input-bg"></g>
       <text class="container fg7 line-numbers"><tspan x="34" y="14">1</tspan><tspan x="34" y="32">2</tspan><tspan x="34" y="50">3</tspan><tspan x="34" y="68">4</tspan><tspan x="34" y="86">5</tspan><tspan x="34" y="104">6</tspan><tspan x="34" y="122">7</tspan><tspan x="34" y="140">8</tspan><tspan x="34" y="158">9</tspan><tspan x="34" y="176">10</tspan><tspan x="34" y="194">11</tspan><tspan x="34" y="212">12</tspan><tspan x="34" y="230">13</tspan><tspan x="34" y="248">14</tspan><tspan x="34" y="266">15</tspan><tspan x="34" y="284">16</tspan><tspan x="34" y="302">17</tspan><tspan x="34" y="326">18</tspan><tspan x="34" y="344">19</tspan><tspan x="34" y="362">20</tspan><tspan x="34" y="380">21</tspan><tspan x="34" y="398">22</tspan><tspan x="34" y="416">23</tspan></text>
       <text class="container fg7"><tspan xml:space="preserve" class="input input-hidden"><tspan><tspan class="prompt">$</tspan> rainbow
