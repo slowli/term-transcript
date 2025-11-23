@@ -283,9 +283,16 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
 
             // First, process text only.
             let original_text = original.output().plaintext();
-            let reproduced_text = reproduced
+            let mut reproduced_text = reproduced
                 .to_plaintext()
                 .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+            // Trimming the terminal newline when capturing it may not be enough:
+            // the newline may be followed by the no-op ASCII color sequences.
+            let should_trim_newline = reproduced_text.ends_with('\n');
+            if should_trim_newline {
+                reproduced_text.pop();
+            }
+
             let mut actual_match = if original_text == reproduced_text {
                 Some(MatchKind::TextOnly)
             } else {
@@ -297,11 +304,16 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
             // If we do precise matching, check it as well.
             let color_diff = if self.match_kind == MatchKind::Precise && actual_match.is_some() {
                 let original_spans = &original.output().color_spans;
-                let reproduced_spans =
+                let mut reproduced_spans =
                     ColorSpan::parse(reproduced.as_ref()).map_err(|err| match err {
                         TermError::Io(err) => err,
                         other => io::Error::new(io::ErrorKind::InvalidInput, other),
                     })?;
+                if should_trim_newline {
+                    if let Some(last_span) = reproduced_spans.last_mut() {
+                        last_span.len -= 1;
+                    }
+                }
 
                 let diff = ColorDiff::new(original_spans, &reproduced_spans);
                 #[cfg(feature = "tracing")]
