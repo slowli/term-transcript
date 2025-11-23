@@ -12,7 +12,6 @@ use super::{extract_base_class, map_utf8_error, parse_classes, ParseError, Parse
 use crate::{
     test::color_diff::ColorSpansWriter,
     utils::{normalize_newlines, RgbColor},
-    write::StyledSpan,
 };
 
 #[derive(Debug)]
@@ -23,7 +22,6 @@ enum HardBreak {
 
 pub(super) struct TextReadingState {
     pub plaintext_buffer: String,
-    html_buffer: String, // FIXME: remove?
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
     bg_line_level: Option<usize>,
@@ -42,7 +40,6 @@ impl fmt::Debug for TextReadingState {
 impl Default for TextReadingState {
     fn default() -> Self {
         Self {
-            html_buffer: String::new(),
             color_spans_writer: ColorSpansWriter::default(),
             plaintext_buffer: String::new(),
             open_tags: 1,
@@ -144,7 +141,6 @@ impl TextReadingState {
                         self.color_spans_writer
                             .set_color(&color_spec)
                             .expect("cannot set color for ANSI buffer");
-                        StyledSpan::html(&color_spec)?.write_html_tag(&mut self.html_buffer);
                     }
                 }
             }
@@ -164,11 +160,6 @@ impl TextReadingState {
                 let tag_name = tag.name();
                 let is_tspan = tag_name.as_ref() == b"tspan";
                 if tag.name().as_ref() == b"span" || is_tspan {
-                    if !self.color_spans_writer.spec().is_none() {
-                        // We've opened a `<span>` corresponding to the spec; now it's the time to close it.
-                        self.html_buffer.push_str("</span>");
-                    }
-
                     // FIXME: check embedded color specs (should never be produced).
                     self.color_spans_writer
                         .reset()
@@ -192,7 +183,6 @@ impl TextReadingState {
     }
 
     fn push_text(&mut self, text: &str) {
-        self.html_buffer.push_str(text);
         self.plaintext_buffer.push_str(text);
         self.color_spans_writer
             .write_all(text.as_bytes())

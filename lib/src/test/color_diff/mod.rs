@@ -107,10 +107,6 @@ impl ColorSpansWriter {
         }
     }
 
-    pub(crate) fn spec(&self) -> &ColorSpec {
-        &self.color_spec
-    }
-
     /// Unites sequential spans with the same color spec.
     fn shrink(self) -> Self {
         let mut shrunk_spans = Vec::<ColorSpan>::with_capacity(self.spans.len());
