@@ -173,6 +173,8 @@ pub mod traits;
 mod utils;
 mod write;
 
+pub(crate) type BoxedError = Box<dyn std::error::Error + Send + Sync>;
+
 /// Errors that can occur when processing terminal output.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -192,6 +194,8 @@ pub enum TermError {
     InvalidColorIndex(ParseIntError),
     /// IO error.
     Io(io::Error),
+    /// Font embedding error.
+    FontEmbedding(BoxedError),
 }
 
 impl fmt::Display for TermError {
@@ -218,6 +222,7 @@ impl fmt::Display for TermError {
                 write!(formatter, "Failed parsing color index: {err}")
             }
             Self::Io(err) => write!(formatter, "I/O error: {err}"),
+            Self::FontEmbedding(err) => write!(formatter, "font embedding error: {err}"),
         }
     }
 }

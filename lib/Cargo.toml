@@ -25,6 +25,8 @@ portable-pty = { workspace = true, optional = true }
 # Private dependencies (not exposed in the public API).
 base64.workspace = true
 bytecount.workspace = true
+# **NB.** Must be an optional dependency; we want to use `term-transcript` in the font-subset workspace.
+font-subset = { workspace = true, features = ["woff2"], optional = true }
 os_pipe.workspace = true
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -44,7 +46,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 version-sync.workspace = true
 
 [features]
-default = ["pretty_assertions", "svg", "test"]
+default = ["pretty_assertions", "svg", "test", "font-subset"] # FIXME
 # Rendering terminal transcripts into SVG snapshots
 svg = ["handlebars", "serde", "serde_json"]
 # Allows parsing transcripts from SVG snapshots and testing them

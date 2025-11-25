@@ -17,6 +17,8 @@ base64 = "0.22.1"
 bytecount = "0.6.9"
 clap = "4.5.50"
 doc-comment = "0.3.4"
+# FIXME: use published revision
+font-subset = { version = "0.1.0", path = "../font-tools/crates/font-subset" }
 handlebars = "6.3.2"
 humantime = "2.3.0"
 os_pipe = "1.2.3"

@@ -11,23 +11,32 @@
 //!
 //! See [`Template`] for examples of usage.
 
-use std::{collections::HashMap, fmt, io, io::Write};
+use std::{
+    collections::{BTreeSet, HashMap},
+    fmt,
+    io::Write,
+    iter,
+};
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize, Serializer};
 
+#[cfg(feature = "font-subset")]
+pub use self::subset::{FontSubsetter, SubsettingError};
 use self::{data::CompleteHandlebarsData, helpers::register_helpers};
 pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{write::SvgLine, Interaction, TermError, Transcript};
+use crate::{write::SvgLine, BoxedError, TermError, Transcript};
 
 mod data;
 mod helpers;
 mod palette;
+#[cfg(feature = "font-subset")]
+mod subset;
 #[cfg(test)]
 mod tests;
 
@@ -67,7 +76,10 @@ fn base64_encode<S: Serializer>(data: &[u8], serializer: S) -> Result<S::Ok, S::
 }
 
 /// Produces an [`EmbeddedFont`] for SVG.
-pub trait FontEmbedder: fmt::Debug + Send + Sync {
+pub trait FontEmbedder: 'static + fmt::Debug + Send + Sync {
+    /// Errors produced by the embedder.
+    type Error: 'static + Send + Sync;
+
     /// Performs embedding. This can involve subsetting the font based on the specified `interactions`.
     ///
     /// # Arguments
@@ -81,8 +93,25 @@ pub trait FontEmbedder: fmt::Debug + Send + Sync {
     fn embed_font(
         &self,
         font_family: &str,
-        interactions: &[Interaction],
-    ) -> io::Result<EmbeddedFont>;
+        used_chars: BTreeSet<char>,
+    ) -> Result<EmbeddedFont, Self::Error>;
+}
+
+#[derive(Debug)]
+struct BoxedErrorEmbedder<T>(T);
+
+impl<T: FontEmbedder<Error: std::error::Error>> FontEmbedder for BoxedErrorEmbedder<T> {
+    type Error = BoxedError;
+
+    fn embed_font(
+        &self,
+        font_family: &str,
+        used_chars: BTreeSet<char>,
+    ) -> Result<EmbeddedFont, Self::Error> {
+        self.0
+            .embed_font(font_family, used_chars)
+            .map_err(Into::into)
+    }
 }
 
 /// Configurable options of a [`Template`].
@@ -165,7 +194,7 @@ pub struct TemplateOptions {
     pub line_numbers: Option<LineNumbers>,
     /// Font embedder.
     #[serde(skip)]
-    pub font_embedder: Option<Box<dyn FontEmbedder>>,
+    pub font_embedder: Option<Box<dyn FontEmbedder<Error = BoxedError>>>,
 }
 
 impl Default for TemplateOptions {
@@ -185,6 +214,23 @@ impl Default for TemplateOptions {
 }
 
 impl TemplateOptions {
+    /// Sets the font embedder to be used.
+    #[must_use]
+    pub fn with_font_embedder(
+        mut self,
+        embedder: impl FontEmbedder<Error: std::error::Error>,
+    ) -> Self {
+        self.font_embedder = Some(Box::new(BoxedErrorEmbedder(embedder)));
+        self
+    }
+
+    /// Sets the [standard font embedder / subsetter](FontSubsetter).
+    #[cfg(feature = "font-subset")]
+    #[must_use]
+    pub fn with_font_subsetting(self, options: FontSubsetter) -> Self {
+        self.with_font_embedder(options)
+    }
+
     fn default_width() -> usize {
         720
     }
@@ -215,12 +261,27 @@ impl TemplateOptions {
         let rendered_outputs = self.render_outputs(transcript)?;
         let mut has_failures = false;
 
+        let mut used_chars = BTreeSet::new();
+        for interaction in transcript.interactions() {
+            let output = interaction.output().to_plaintext()?;
+            used_chars.extend(output.chars());
+
+            let input = interaction.input();
+            if !input.hidden {
+                let prompt = input.prompt.as_deref();
+                let input_chars = iter::once(input.text.as_str())
+                    .chain(prompt)
+                    .flat_map(str::chars);
+                used_chars.extend(input_chars);
+            }
+        }
+
         let embedded_font = self
             .font_embedder
             .as_deref()
-            .map(|embedder| embedder.embed_font(&self.font_family, transcript.interactions()))
+            .map(|embedder| embedder.embed_font(&self.font_family, used_chars))
             .transpose()
-            .map_err(TermError::Io)?;
+            .map_err(TermError::FontEmbedding)?;
 
         let interactions: Vec<_> = transcript
             .interactions()

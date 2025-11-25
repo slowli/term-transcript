@@ -1,5 +1,7 @@
 //! Tests for the SVG rendering logic.
 
+use std::convert::Infallible;
+
 use super::*;
 use crate::{ExitStatus, Interaction, UserInput};
 
@@ -606,16 +608,18 @@ fn rendering_transcript_with_styles() {
 }
 
 #[derive(Debug)]
-struct TestSubsetter;
+struct TestEmbedder;
 
-impl FontEmbedder for TestSubsetter {
+impl FontEmbedder for TestEmbedder {
+    type Error = Infallible;
+
     fn embed_font(
         &self,
         font_family: &str,
-        interactions: &[Interaction],
-    ) -> io::Result<EmbeddedFont> {
+        used_chars: BTreeSet<char>,
+    ) -> Result<EmbeddedFont, Self::Error> {
         assert_eq!(font_family, "./FiraMono.ttf");
-        assert_eq!(interactions.len(), 1);
+        assert_eq!(used_chars, "???".chars().collect::<BTreeSet<_>>());
         Ok(EmbeddedFont {
             mime_type: "font/woff2".to_owned(),
             family_name: "Fira Mono".to_owned(),
@@ -634,9 +638,9 @@ fn embedding_font() {
 
     let options = TemplateOptions {
         font_family: "./FiraMono.ttf".to_owned(),
-        font_embedder: Some(Box::new(TestSubsetter)),
         ..TemplateOptions::default()
-    };
+    }
+    .with_font_embedder(TestEmbedder);
     let mut buffer = vec![];
     Template::new(options)
         .render(&transcript, &mut buffer)
