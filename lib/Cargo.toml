@@ -23,6 +23,7 @@ handlebars = { workspace = true, optional = true }
 portable-pty = { workspace = true, optional = true }
 
 # Private dependencies (not exposed in the public API).
+base64.workspace = true
 bytecount.workspace = true
 os_pipe.workspace = true
 serde = { workspace = true, optional = true }

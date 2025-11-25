@@ -604,3 +604,53 @@ fn rendering_transcript_with_styles() {
         "{buffer}"
     );
 }
+
+#[derive(Debug)]
+struct TestSubsetter;
+
+impl FontEmbedder for TestSubsetter {
+    fn embed_font(
+        &self,
+        font_family: &str,
+        interactions: &[Interaction],
+    ) -> io::Result<EmbeddedFont> {
+        assert_eq!(font_family, "./FiraMono.ttf");
+        assert_eq!(interactions.len(), 1);
+        Ok(EmbeddedFont {
+            mime_type: "font/woff2".to_owned(),
+            family_name: "Fira Mono".to_owned(),
+            base64_data: b"fira mono".to_vec(),
+        })
+    }
+}
+
+#[test]
+fn embedding_font() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test"),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let options = TemplateOptions {
+        font_family: "./FiraMono.ttf".to_owned(),
+        font_embedder: Some(Box::new(TestSubsetter)),
+        ..TemplateOptions::default()
+    };
+    let mut buffer = vec![];
+    Template::new(options)
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    assert!(buffer.contains("@font-face"), "{buffer}");
+    assert!(buffer.contains("font-family: \"Fira Mono\""), "{buffer}");
+    assert!(
+        buffer.contains("src: url(\"data:font/woff2;base64,ZmlyYSBtb25v\")"),
+        "{buffer}"
+    );
+    assert!(
+        buffer.contains("font: 14px \"Fira Mono\", monospace"),
+        "{buffer}"
+    );
+}

@@ -11,10 +11,11 @@
 //!
 //! See [`Template`] for examples of usage.
 
-use std::{collections::HashMap, fmt, io::Write};
+use std::{collections::HashMap, fmt, io, io::Write};
 
+use base64::{prelude::BASE64_STANDARD, Engine};
 use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as HandlebarsTemplate};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 use self::{data::CompleteHandlebarsData, helpers::register_helpers};
 pub use self::{
@@ -22,7 +23,7 @@ pub use self::{
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{write::SvgLine, TermError, Transcript};
+use crate::{write::SvgLine, Interaction, TermError, Transcript};
 
 mod data;
 mod helpers;
@@ -46,6 +47,42 @@ pub enum LineNumbers {
     /// Use continuous numbering for the lines in all displayed inputs (i.e., ones that
     /// are not [hidden](crate::UserInput::hide())) and outputs.
     Continuous,
+}
+
+/// Representation of a font that can be embedded into SVG via `@font-face` CSS with a data URL `src`.
+#[derive(Debug, Serialize)]
+pub struct EmbeddedFont {
+    /// MIME type for the font, e.g. `font/woff2`.
+    pub mime_type: String,
+    /// Family name of the font.
+    pub family_name: String,
+    /// Font data. Encoded in base64 when serialized.
+    #[serde(serialize_with = "base64_encode")]
+    pub base64_data: Vec<u8>,
+}
+
+fn base64_encode<S: Serializer>(data: &[u8], serializer: S) -> Result<S::Ok, S::Error> {
+    let encoded = BASE64_STANDARD.encode(data);
+    encoded.serialize(serializer)
+}
+
+/// Produces an [`EmbeddedFont`] for SVG.
+pub trait FontEmbedder: fmt::Debug + Send + Sync {
+    /// Performs embedding. This can involve subsetting the font based on the specified `interactions`.
+    ///
+    /// # Arguments
+    ///
+    /// - It's up to the implementation to interpret the supplied `font_family`. E.g., it can be a file path
+    ///   to the font file.
+    ///
+    /// # Errors
+    ///
+    /// May return I/O errors if embedding / subsetting fails.
+    fn embed_font(
+        &self,
+        font_family: &str,
+        interactions: &[Interaction],
+    ) -> io::Result<EmbeddedFont>;
 }
 
 /// Configurable options of a [`Template`].
@@ -95,7 +132,7 @@ pub enum LineNumbers {
 /// );
 /// # anyhow::Ok(())
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. The default value is `720`.
     #[serde(default = "TemplateOptions::default_width")]
@@ -126,6 +163,9 @@ pub struct TemplateOptions {
     /// Line numbering options.
     #[serde(default)]
     pub line_numbers: Option<LineNumbers>,
+    /// Font embedder.
+    #[serde(skip)]
+    pub font_embedder: Option<Box<dyn FontEmbedder>>,
 }
 
 impl Default for TemplateOptions {
@@ -139,6 +179,7 @@ impl Default for TemplateOptions {
             scroll: None,
             wrap: Self::default_wrap(),
             line_numbers: None,
+            font_embedder: None,
         }
     }
 }
@@ -174,6 +215,13 @@ impl TemplateOptions {
         let rendered_outputs = self.render_outputs(transcript)?;
         let mut has_failures = false;
 
+        let embedded_font = self
+            .font_embedder
+            .as_deref()
+            .map(|embedder| embedder.embed_font(&self.font_family, transcript.interactions()))
+            .transpose()
+            .map_err(TermError::Io)?;
+
         let interactions: Vec<_> = transcript
             .interactions()
             .iter()
@@ -198,6 +246,7 @@ impl TemplateOptions {
             interactions,
             options: self,
             has_failures,
+            embedded_font,
         })
     }
 

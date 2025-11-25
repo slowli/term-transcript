@@ -91,6 +91,13 @@
   {{~#if additional_styles}}
 
   {{{additional_styles}}}
+  {{~/if~}}
+  {{~#if embedded_font}}
+
+  @font-face {
+    font-family: "{{embedded_font.family_name}}";
+    src: url("data:{{embedded_font.mime_type}};base64,{{embedded_font.base64_data}}");
+  }
   {{~/if}}
 
   .container {
@@ -101,7 +108,7 @@
   .container pre {
     padding: 0;
     margin: 0;
-    font: 14px {{font_family}};
+    font: 14px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: inherit;
   }
   .input {
