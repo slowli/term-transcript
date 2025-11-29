@@ -162,8 +162,7 @@ impl WriteLines for SvgWriter {
     }
 
     fn write_line_break(&mut self, br: LineBreak, char_width: usize) -> io::Result<()> {
-        const HARD_BR: &str =
-            r#"<tspan class="hard-br" rotate="45" dx=".1em" dy="-.2em">↓</tspan>"#;
+        const HARD_BR: &str = r#"<tspan class="hard-br" dx="5">»</tspan>"#;
         match br {
             LineBreak::Hard => self.write_str(HARD_BR)?,
         }
@@ -399,7 +398,7 @@ mod tests {
         assert!(first.background.is_none());
         assert_eq!(
             first.foreground,
-            "Hello<tspan class=\"hard-br\" rotate=\"45\" dx=\".1em\" dy=\"-.2em\">↓</tspan>"
+            "Hello<tspan class=\"hard-br\" dx=\"5\">»</tspan>"
         );
         assert_eq!(
             second.background.as_ref().unwrap(),
@@ -408,7 +407,7 @@ mod tests {
         assert_eq!(
             second.foreground,
             ", <tspan class=\"bold underline fg2 bg7\">wor\
-             <tspan class=\"hard-br\" rotate=\"45\" dx=\".1em\" dy=\"-.2em\">↓</tspan></tspan>"
+             <tspan class=\"hard-br\" dx=\"5\">»</tspan></tspan>"
         );
         assert_eq!(
             third.background.as_ref().unwrap(),
@@ -417,7 +416,7 @@ mod tests {
         assert_eq!(
             third.foreground,
             "<tspan class=\"bold underline fg2 bg7\">ld</tspan>! M\
-             <tspan class=\"hard-br\" rotate=\"45\" dx=\".1em\" dy=\"-.2em\">↓</tspan>"
+             <tspan class=\"hard-br\" dx=\"5\">»</tspan>"
         );
 
         assert!(lines[3].background.is_none());

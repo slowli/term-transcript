@@ -15,7 +15,7 @@
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { fill-opacity: 0.7; }
-    .hard-br { font-size: 16px; fill-opacity: 0.8; user-select: none; }
+    .hard-br { fill-opacity: 0.6; user-select: none; }
     .fg0 { fill: #1c1c1c; } .output-bg .fg0 { stroke: #1c1c1c; }
     .fg1 { fill: #ff005b; } .output-bg .fg1 { stroke: #ff005b; }
     .fg2 { fill: #cee318; } .output-bg .fg2 { stroke: #cee318; }

@@ -2,6 +2,8 @@
 
 use std::convert::Infallible;
 
+use test_casing::test_casing;
+
 use super::*;
 use crate::{ExitStatus, Interaction, UserInput};
 
@@ -619,7 +621,10 @@ impl FontEmbedder for TestEmbedder {
         used_chars: BTreeSet<char>,
     ) -> Result<EmbeddedFont, Self::Error> {
         assert_eq!(font_family, "./FiraMono.ttf");
-        assert_eq!(used_chars, "???".chars().collect::<BTreeSet<_>>());
+        assert_eq!(
+            used_chars,
+            "$ test Hello, world! »".chars().collect::<BTreeSet<_>>()
+        );
         Ok(EmbeddedFont {
             mime_type: "font/woff2".to_owned(),
             family_name: "Fira Mono".to_owned(),
@@ -628,8 +633,8 @@ impl FontEmbedder for TestEmbedder {
     }
 }
 
-#[test]
-fn embedding_font() {
+#[test_casing(2, [false, true])]
+fn embedding_font(pure_svg: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
@@ -638,13 +643,15 @@ fn embedding_font() {
 
     let options = TemplateOptions {
         font_family: "./FiraMono.ttf".to_owned(),
-        ..TemplateOptions::default()
-    }
-    .with_font_embedder(TestEmbedder);
+        ..TemplateOptions::default().with_font_embedder(TestEmbedder)
+    };
     let mut buffer = vec![];
-    Template::new(options)
-        .render(&transcript, &mut buffer)
-        .unwrap();
+    let template = if pure_svg {
+        Template::pure_svg(options)
+    } else {
+        Template::new(options)
+    };
+    template.render(&transcript, &mut buffer).unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains("@font-face"), "{buffer}");

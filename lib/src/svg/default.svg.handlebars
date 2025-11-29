@@ -79,7 +79,7 @@
 
 {{! NB. The warning text should fit in one 80-char line to not potentially overflow the viewbox. }}
 {{~#*inline "unsupported_error"}}
-<text x="10" y="{{const.LINE_HEIGHT}}" style="font: 14px {{font_family}}; fill: {{ palette.colors.red }};">
+<text x="10" y="{{const.LINE_HEIGHT}}" style="font: 14px monospace; fill: {{ palette.colors.red }};">
   HTML embedding not supported.
   Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
 </text>
@@ -165,13 +165,8 @@
     margin-left: 5px;
   }
   .hard-br:before {
-    content: '↓';
-    font-size: 16px;
-    height: 16px;
-    position: absolute;
-    bottom: 0;
-    transform: rotate(45deg);
-    opacity: 0.8;
+    content: '»';
+    opacity: 0.6;
   }
   {{~/if}}
 

@@ -275,6 +275,14 @@ impl TemplateOptions {
                 used_chars.extend(input_chars);
             }
         }
+        if self.line_numbers.is_some() {
+            used_chars.extend('0'..='9');
+        }
+        if self.wrap.is_some() {
+            used_chars.insert('»');
+        }
+        // FIXME: pure SVG also uses the full block char, which may not be present in the font;
+        //   use another approach (e.g., `<rect>` based on font metrics).
 
         let embedded_font = self
             .font_embedder

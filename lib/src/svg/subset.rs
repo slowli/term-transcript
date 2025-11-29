@@ -130,18 +130,20 @@ impl FontEmbedder for FontSubsetter {
 
 #[cfg(test)]
 mod tests {
+    use test_casing::test_casing;
+
     use super::*;
     use crate::{
         svg::{Template, TemplateOptions},
         Transcript, UserInput,
     };
 
-    #[test]
-    fn subsetting_font() {
+    #[test_casing(2, [false, true])]
+    fn subsetting_font(pure_svg: bool) {
         let mut transcript = Transcript::new();
         transcript.add_interaction(
             UserInput::command("test"),
-            "Hello, \u{1b}[32mworld\u{1b}[0m!",
+            "\u{1b}[44mH\u{1b}[0mello, \u{1b}[32mworld\u{1b}[0m! ".repeat(10),
         );
 
         let options = TemplateOptions {
@@ -149,9 +151,12 @@ mod tests {
             ..TemplateOptions::default().with_font_subsetting(FontSubsetter::default())
         };
         let mut buffer = vec![];
-        Template::new(options)
-            .render(&transcript, &mut buffer)
-            .unwrap();
+        let template = if pure_svg {
+            Template::pure_svg(options)
+        } else {
+            Template::new(options)
+        };
+        template.render(&transcript, &mut buffer).unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
         assert!(buffer.contains("@font-face"), "{buffer}");
