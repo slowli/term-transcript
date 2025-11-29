@@ -24,7 +24,7 @@ termcolor.workspace = true
 toml.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"], optional = true }
 
-term-transcript = { version = "=0.4.0", path = "../lib" }
+term-transcript = { workspace = true, features = ["font-subset"] }
 
 [dev-dependencies]
 tempfile.workspace = true

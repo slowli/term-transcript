@@ -192,7 +192,8 @@ pub struct TemplateOptions {
     /// Line numbering options.
     #[serde(default)]
     pub line_numbers: Option<LineNumbers>,
-    /// Font embedder.
+    /// *Font embedder* that will embed the font into the SVG file via `@font-face` CSS.
+    /// This guarantees that the SVG will look identical on all platforms.
     #[serde(skip)]
     pub font_embedder: Option<Box<dyn FontEmbedder<Error = BoxedError>>>,
 }

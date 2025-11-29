@@ -11,6 +11,7 @@ EXTENSION=new.svg
 ROOT_DIR=$(dirname "$0")
 ROOT_DIR=$(realpath -L "$ROOT_DIR/..")
 TARGET_DIR="$ROOT_DIR/target/debug"
+FONT_PATH="$ROOT_DIR/examples/RobotoMono-VariableFont_wght.ttf"
 
 # Common `term-transcript` CLI args
 TT_ARGS="-T 250ms"
@@ -134,3 +135,16 @@ echo "Creating snapshot with custom config..."
 term-transcript exec $TT_ARGS --config-path "$ROOT_DIR/examples/config.toml" \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/custom-config.$EXTENSION"
+
+echo "Creating snapshot with --embed-font"
+term-transcript exec $TT_ARGS --scroll --palette gjm8 --line-numbers continuous \
+  --embed-font="$FONT_PATH" \
+  rainbow 'rainbow --short' \
+  > "$ROOT_DIR/examples/embedded-font.$EXTENSION"
+
+# FIXME: looks terrible because of misaligned background boxes
+echo "Creating snapshot with --embed-font, --pure-svg"
+term-transcript exec $TT_ARGS --scroll --palette gjm8 --line-numbers continuous \
+  --embed-font="$FONT_PATH" --pure-svg \
+  rainbow 'rainbow --short' \
+  > "$ROOT_DIR/examples/embedded-font-pure.$EXTENSION"
