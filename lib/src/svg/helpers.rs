@@ -464,6 +464,59 @@ impl HelperDef for RangeHelper {
     }
 }
 
+#[derive(Debug)]
+struct RepeatHelper;
+
+impl RepeatHelper {
+    const NAME: &'static str = "repeat";
+}
+
+impl HelperDef for RepeatHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let repeated_str = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let repeated_str = repeated_str.value().as_str().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "string".to_owned(),
+            )
+        })?;
+
+        let quantity = helper
+            .param(1)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 1))?;
+        let quantity = quantity.value().as_u64().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "integer".to_owned(),
+            )
+        })?;
+
+        let quantity = quantity
+            .try_into()
+            .map_err(|_| RenderErrorReason::Other("quantity is too large".to_owned()))?;
+        let output = repeated_str.repeat(quantity);
+        Ok(ScopedJson::Derived(output.into()))
+    }
+}
+
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("add", Box::new(OpsHelper::Add));
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
@@ -475,6 +528,7 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
     reg.register_helper("scope", Box::new(ScopeHelper));
     reg.register_helper(EvalHelper::NAME, Box::new(EvalHelper));
+    reg.register_helper(RepeatHelper::NAME, Box::new(RepeatHelper));
 }
 
 #[cfg(test)]
@@ -699,5 +753,16 @@ mod tests {
         let data = serde_json::json!({ "xs": [2, 3, 5, 8] });
         let rendered = handlebars.render_template(template, &data).unwrap();
         assert_eq!(rendered.trim(), "0: 2, 1: 3, 2: 5, 3: 8,");
+    }
+
+    #[test]
+    fn repeat_helper_basics() {
+        let template = "{{repeat \"█\" 5}}";
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("repeat", Box::new(RepeatHelper));
+
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(rendered.trim(), "█████");
     }
 }

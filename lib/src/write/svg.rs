@@ -1,4 +1,4 @@
-use std::{fmt, io, iter, mem, str};
+use std::{fmt, io, mem, str};
 
 use serde::Serialize;
 use termcolor::{ColorSpec, WriteColor};
@@ -25,27 +25,12 @@ impl StyledSpan {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct SvgLine {
-    pub background: Option<String>,
+    pub background: Vec<BackgroundSegment>,
     pub foreground: String,
 }
 
 impl SvgLine {
-    fn new(foreground: String, background_segments: Vec<BackgroundSegment>) -> Self {
-        let background = if let Some(segment) = background_segments.last() {
-            let estimated_capacity =
-                16 * background_segments.len() + segment.start_pos + segment.char_width;
-            let mut background = String::with_capacity(estimated_capacity);
-            let mut pos = 0;
-            for segment in background_segments {
-                background.extend(iter::repeat_n('\u{a0}', segment.start_pos - pos));
-                pos = segment.start_pos + segment.char_width;
-                segment.write_tspan(&mut background);
-            }
-            Some(background)
-        } else {
-            None
-        };
-
+    fn new(foreground: String, background: Vec<BackgroundSegment>) -> Self {
         Self {
             background,
             foreground,
@@ -53,19 +38,11 @@ impl SvgLine {
     }
 }
 
-#[derive(Debug)]
-struct BackgroundSegment {
+#[derive(Debug, PartialEq, Serialize)]
+pub(crate) struct BackgroundSegment {
     start_pos: usize,
     char_width: usize,
-    span: StyledSpan,
-}
-
-impl BackgroundSegment {
-    fn write_tspan(self, output: &mut String) {
-        self.span.write_tag(output, "tspan").unwrap();
-        output.extend(iter::repeat_n('█', self.char_width));
-        output.push_str("</tspan>");
-    }
+    attrs: String,
 }
 
 #[derive(Debug)]
@@ -110,10 +87,13 @@ impl SvgWriter {
             None => { /* Do nothing. */ }
         }
         if let Some(color) = back_color {
+            let span = StyledSpan::for_bg(color, spec.intense(), spec.dimmed());
+            let mut attrs = String::new();
+            span.write_attrs(&mut attrs).unwrap();
             self.current_background.push(BackgroundSegment {
                 start_pos,
                 char_width: 0,
-                span: StyledSpan::for_bg(color, spec.intense(), spec.dimmed()),
+                attrs,
             });
         }
 
@@ -243,10 +223,13 @@ mod tests {
             background,
             foreground,
         } = lines.pop().unwrap();
-        let background = background.unwrap();
         assert_eq!(
             background,
-            "\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}\u{a0}<tspan class=\"fg7\">█████</tspan>"
+            [BackgroundSegment {
+                start_pos: 7,
+                char_width: 5,
+                attrs: " class=\"fg7\"".to_owned(),
+            }]
         );
         assert_eq!(
             foreground,
@@ -269,7 +252,7 @@ mod tests {
             background,
             foreground,
         } = lines.pop().unwrap();
-        assert!(background.is_none());
+        assert!(background.is_empty());
         assert_eq!(foreground, r#"<tspan class="fg12">blue</tspan>"#);
         Ok(())
     }
@@ -312,13 +295,27 @@ mod tests {
             background,
             foreground,
         } = lines.pop().unwrap();
-        let background = background.unwrap();
         assert_eq!(
             background,
-            "\u{a0}<tspan class=\"fg14\">█</tspan>\
-             <tspan style=\"fill: #5fd700; stroke: #5fd700;\">█</tspan>\
-             \u{a0}<tspan style=\"fill: #bcbcbc; stroke: #bcbcbc;\">█</tspan>"
+            [
+                BackgroundSegment {
+                    start_pos: 1,
+                    char_width: 1,
+                    attrs: " class=\"fg14\"".to_owned(),
+                },
+                BackgroundSegment {
+                    start_pos: 2,
+                    char_width: 1,
+                    attrs: " style=\"fill: #5fd700; stroke: #5fd700;\"".to_owned(),
+                },
+                BackgroundSegment {
+                    start_pos: 4,
+                    char_width: 1,
+                    attrs: " style=\"fill: #bcbcbc; stroke: #bcbcbc;\"".to_owned()
+                },
+            ]
         );
+
         assert_eq!(
             foreground,
             "<tspan class=\"fg5\">H</tspan>\
@@ -352,19 +349,27 @@ mod tests {
         let [first, second, third] = lines.as_slice() else {
             panic!("Unexpected lines: {lines:?}");
         };
-        assert!(first.background.is_none());
+        assert!(first.background.is_empty());
         assert_eq!(first.foreground, "Hello,");
         assert_eq!(
-            second.background.as_ref().unwrap(),
-            "\u{a0}<tspan class=\"fg7\">███</tspan>"
+            second.background,
+            [BackgroundSegment {
+                start_pos: 1,
+                char_width: 3,
+                attrs: " class=\"fg7\"".to_owned(),
+            }]
         );
         assert_eq!(
             second.foreground,
             " <tspan class=\"bold underline fg2 bg7\">wor</tspan>"
         );
         assert_eq!(
-            third.background.as_ref().unwrap(),
-            "<tspan class=\"fg7\">██</tspan>"
+            third.background,
+            [BackgroundSegment {
+                start_pos: 0,
+                char_width: 2,
+                attrs: " class=\"fg7\"".to_owned(),
+            }]
         );
         assert_eq!(
             third.foreground,
@@ -395,14 +400,18 @@ mod tests {
         let [first, second, third, ..] = lines.as_slice() else {
             unreachable!();
         };
-        assert!(first.background.is_none());
+        assert!(first.background.is_empty());
         assert_eq!(
             first.foreground,
             "Hello<tspan class=\"hard-br\" dx=\"5\">»</tspan>"
         );
         assert_eq!(
-            second.background.as_ref().unwrap(),
-            "\u{a0}\u{a0}<tspan class=\"fg7\">███</tspan>"
+            second.background,
+            [BackgroundSegment {
+                start_pos: 2,
+                char_width: 3,
+                attrs: " class=\"fg7\"".to_owned(),
+            }]
         );
         assert_eq!(
             second.foreground,
@@ -410,8 +419,12 @@ mod tests {
              <tspan class=\"hard-br\" dx=\"5\">»</tspan></tspan>"
         );
         assert_eq!(
-            third.background.as_ref().unwrap(),
-            "<tspan class=\"fg7\">██</tspan>"
+            third.background,
+            [BackgroundSegment {
+                start_pos: 0,
+                char_width: 2,
+                attrs: " class=\"fg7\"".to_owned(),
+            }]
         );
         assert_eq!(
             third.foreground,
@@ -419,9 +432,9 @@ mod tests {
              <tspan class=\"hard-br\" dx=\"5\">»</tspan>"
         );
 
-        assert!(lines[3].background.is_none());
+        assert!(lines[3].background.is_empty());
         assert_eq!(lines[3].foreground, "ore&gt;");
-        assert!(lines[4].background.is_none());
+        assert!(lines[4].background.is_empty());
         assert_eq!(lines[4].foreground, "text");
 
         Ok(())

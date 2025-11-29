@@ -223,8 +223,15 @@
         {{~/if~}}
         <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">
         {{~#each output_svg}}
-        {{~#if (ne background null)~}}
-        <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{background}}}</tspan>
+        {{~#if (gt (len background) 0)~}}
+        <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">
+          {{~#scope char_pos=0 ~}}
+          {{~#each background~}}
+            {{repeat " " (sub start_pos (char_pos))}}<tspan{{{attrs}}}>{{repeat "█" char_width}}</tspan>
+            {{~char_pos set=(add start_pos char_width)~}}
+          {{~/each~}}
+          {{~/scope~}}
+        </tspan>
         {{~/if~}}
         <tspan x="{{x_pos}}" y="{{y_pos}}">{{{foreground}}}
 </tspan>
