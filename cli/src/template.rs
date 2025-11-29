@@ -86,7 +86,7 @@ pub(crate) struct TemplateArgs {
     /// Embeds the font family (after subsetting it) into the SVG file. This guarantees that
     /// the SVG will look identical on all platforms.
     #[arg(long, conflicts_with = "font_family", value_name = "PATH")]
-    embed_font: Option<String>,
+    embed_font: Option<PathBuf>,
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
     #[arg(long, default_value = "720")]
@@ -148,8 +148,9 @@ impl From<TemplateArgs> for TemplateOptions {
         };
 
         if let Some(path) = value.embed_font {
-            this.font_family = path;
-            this = this.with_font_subsetting(FontSubsetter::default());
+            this = this.with_font_subsetting(FontSubsetter::new(&path).unwrap_or_else(|err| {
+                panic!("Failed loading font from {}: {err}", path.display());
+            }));
         } else if let Some(mut font_family) = value.font_family {
             font_family.push_str(", monospace");
             this.font_family = font_family;

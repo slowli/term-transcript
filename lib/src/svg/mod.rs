@@ -65,6 +65,8 @@ pub struct EmbeddedFont {
     pub mime_type: String,
     /// Family name of the font.
     pub family_name: String,
+    /// Font metrics.
+    pub metrics: FontMetrics,
     /// Font data. Encoded in base64 when serialized.
     #[serde(serialize_with = "base64_encode")]
     pub base64_data: Vec<u8>,
@@ -90,11 +92,20 @@ pub trait FontEmbedder: 'static + fmt::Debug + Send + Sync {
     /// # Errors
     ///
     /// May return I/O errors if embedding / subsetting fails.
-    fn embed_font(
-        &self,
-        font_family: &str,
-        used_chars: BTreeSet<char>,
-    ) -> Result<EmbeddedFont, Self::Error>;
+    fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error>;
+}
+
+/// Font metrics used in SVG layout.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct FontMetrics {
+    /// Font design units per em. Usually 1,000 or a power of 2 (e.g., 2,048).
+    pub units_per_em: u16,
+    /// Horizontal advance in font design units.
+    pub horizontal_advance: u16,
+    /// Typographic ascender in font design units. Usually positive.
+    pub ascender: i16,
+    /// Typographic descender in font design units. Usually negative.
+    pub descender: i16,
 }
 
 #[derive(Debug)]
@@ -103,14 +114,8 @@ struct BoxedErrorEmbedder<T>(T);
 impl<T: FontEmbedder<Error: std::error::Error>> FontEmbedder for BoxedErrorEmbedder<T> {
     type Error = BoxedError;
 
-    fn embed_font(
-        &self,
-        font_family: &str,
-        used_chars: BTreeSet<char>,
-    ) -> Result<EmbeddedFont, Self::Error> {
-        self.0
-            .embed_font(font_family, used_chars)
-            .map_err(Into::into)
+    fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
+        self.0.embed_font(used_chars).map_err(Into::into)
     }
 }
 
@@ -282,13 +287,11 @@ impl TemplateOptions {
         if self.wrap.is_some() {
             used_chars.insert('»');
         }
-        // FIXME: pure SVG also uses the full block char, which may not be present in the font;
-        //   use another approach (e.g., `<rect>` based on font metrics).
 
         let embedded_font = self
             .font_embedder
             .as_deref()
-            .map(|embedder| embedder.embed_font(&self.font_family, used_chars))
+            .map(|embedder| embedder.embed_font(used_chars))
             .transpose()
             .map_err(TermError::FontEmbedding)?;
 

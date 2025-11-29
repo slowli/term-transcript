@@ -615,12 +615,7 @@ struct TestEmbedder;
 impl FontEmbedder for TestEmbedder {
     type Error = Infallible;
 
-    fn embed_font(
-        &self,
-        font_family: &str,
-        used_chars: BTreeSet<char>,
-    ) -> Result<EmbeddedFont, Self::Error> {
-        assert_eq!(font_family, "./FiraMono.ttf");
+    fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
         assert_eq!(
             used_chars,
             "$ test Hello, world! »".chars().collect::<BTreeSet<_>>()
@@ -629,6 +624,12 @@ impl FontEmbedder for TestEmbedder {
             mime_type: "font/woff2".to_owned(),
             family_name: "Fira Mono".to_owned(),
             base64_data: b"fira mono".to_vec(),
+            metrics: FontMetrics {
+                units_per_em: 1_000,
+                horizontal_advance: 600,
+                ascender: 1_050,
+                descender: -350,
+            },
         })
     }
 }
