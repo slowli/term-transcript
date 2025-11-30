@@ -237,8 +237,7 @@
             {{~#each background~}}
               {{~#with (font_metrics)~}}
                 {{~#output_bg append=true ~}}
-                  {{! FIXME: limit precision }}
-                  <rect x="{{add (x_pos) (mul ../start_pos advance_width)}}" y="{{sub (y_pos) ascent}}" width="{{mul ../char_width advance_width}}" height="{{sub ascent descent}}"{{{../attrs}}}/>
+                  <rect x="{{round (add (x_pos) (mul ../start_pos advance_width)) digits=2}}" y="{{round (sub (y_pos) ascent) digits=2}}" width="{{round (mul ../char_width advance_width) digits=2}}" height="{{round (sub ascent descent) digits=2}}"{{{../attrs}}}/>
                 {{~/output_bg~}}
               {{~/with~}}
             {{~/each~}}

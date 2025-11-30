@@ -666,12 +666,10 @@ fn embedding_font(pure_svg: bool) {
         "{buffer}"
     );
 
-    /* FIXME: assert on background boxes
     if pure_svg {
         assert!(
             buffer.contains(r#"<rect x="18.4" y="27.3" width="25.2" height="19.6" class="fg4"/>"#),
             "{buffer}"
         );
     }
-    */
 }

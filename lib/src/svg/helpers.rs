@@ -77,7 +77,6 @@ impl VarHelper {
         *self.value.lock().unwrap() = value;
     }
 
-    // FIXME: test
     fn push_str(&self, s: &str) -> Result<(), RenderErrorReason> {
         #[cfg(feature = "tracing")]
         tracing::trace!(s, "appended string");
@@ -87,7 +86,9 @@ impl VarHelper {
             this_s.push_str(s);
             Ok(())
         } else {
-            Err(RenderErrorReason::Other("current value is not a string".to_owned()))
+            Err(RenderErrorReason::Other(
+                "current value is not a string".to_owned(),
+            ))
         }
     }
 }
@@ -130,8 +131,8 @@ impl HelperDef for VarHelper {
                 if is_append {
                     self.push_str(&raw_string)?;
                 } else {
-                    let json = serde_json::from_str(&raw_string)
-                        .map_err(RenderErrorReason::from)?;
+                    let json =
+                        serde_json::from_str(&raw_string).map_err(RenderErrorReason::from)?;
                     self.set_value(json);
                 }
             } else {
@@ -540,12 +541,87 @@ impl HelperDef for RepeatHelper {
     }
 }
 
+#[derive(Debug)]
+struct RoundHelper;
+
+impl RoundHelper {
+    const NAME: &'static str = "round";
+    const MAX_DIGITS: u64 = 15;
+}
+
+impl HelperDef for RoundHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let val = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let val = val.value().as_f64().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "float".to_owned(),
+            )
+        })?;
+
+        let digits = if let Some(digits) = helper.hash_get("digits") {
+            digits.value().as_u64().ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    Self::NAME,
+                    "digits".to_owned(),
+                    "non-negative int".to_owned(),
+                )
+            })?
+        } else {
+            0
+        };
+        if digits > Self::MAX_DIGITS {
+            let msg = format!("too many digits: {digits}, use <= {}", Self::MAX_DIGITS);
+            return Err(RenderErrorReason::Other(msg).into());
+        }
+
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        // ^ Partially guarded by checks; the remaining precision loss is OK
+        let rounded: Json = if digits == 0 {
+            let rounded = val.round();
+            if rounded >= 0.0 && rounded <= u64::MAX as f64 {
+                (rounded as u64).into()
+            } else if rounded >= i64::MIN as f64 {
+                (rounded as i64).into()
+            } else {
+                rounded.into()
+            }
+        } else {
+            let pow10 = 10.0_f64.powi(digits.try_into().unwrap());
+            ((val * pow10).round() / pow10).into()
+        };
+        Ok(ScopedJson::Derived(rounded))
+    }
+}
+
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("add", Box::new(OpsHelper::Add));
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
     reg.register_helper("min", Box::new(OpsHelper::Min));
+    reg.register_helper(RoundHelper::NAME, Box::new(RoundHelper));
     reg.register_helper(LineCounter::NAME, Box::new(LineCounter));
     reg.register_helper(LineSplitter::NAME, Box::new(LineSplitter));
     reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
@@ -583,6 +659,23 @@ mod tests {
         let data = serde_json::json!({ "test": 3 });
         let rendered = handlebars.render_template(template, &data).unwrap();
         assert_eq!(rendered.trim(), "Test var is: test value");
+    }
+
+    #[test]
+    fn reassigning_scope_vars_via_appending() {
+        let template = r#"
+            {{#scope test_var="test"}}
+                {{#test_var append=true}} value{{/test_var}}
+                {{#test_var append=true}}!{{/test_var}}
+                Test var is: {{test_var}}
+            {{/scope}}
+        "#;
+
+        let mut handlebars = Handlebars::new();
+        handlebars.register_helper("scope", Box::new(ScopeHelper));
+        let data = serde_json::json!({ "test": 3 });
+        let rendered = handlebars.render_template(template, &data).unwrap();
+        assert_eq!(rendered.trim(), "Test var is: test value!");
     }
 
     #[test]
@@ -674,6 +767,20 @@ mod tests {
         let data = serde_json::json!({ "x": 9, "y": 4 });
         let rendered = handlebars.render_template(template, &data).unwrap();
         assert_eq!(rendered.trim(), "2.25, 2, 2, 3");
+    }
+
+    #[test]
+    fn rounding_helper() {
+        let template = "
+            {{round 10.5}}, {{round 10.5 digits=2}}, {{round (mul 14 (div 1050 1000)) digits=2}}
+        ";
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("mul", Box::new(OpsHelper::Mul));
+        handlebars.register_helper("div", Box::new(OpsHelper::Div));
+        handlebars.register_helper("round", Box::new(RoundHelper));
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(rendered.trim(), "11, 10.5, 14.7");
     }
 
     #[test]
