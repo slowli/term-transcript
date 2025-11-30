@@ -75,6 +75,12 @@
 //! Exposes [the eponymous module](svg) that allows rendering [`Transcript`]s
 //! into the SVG format.
 //!
+//! ## `font-subset`
+//!
+//! *(On by default)*
+//!
+//! Enables subsetting and embedding OpenType fonts into snapshots. Requires the `svg` feature.
+//!
 //! ## `test`
 //!
 //! *(On by default)*

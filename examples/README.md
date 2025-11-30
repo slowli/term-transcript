@@ -174,6 +174,30 @@ term-transcript exec -T 250ms --palette gjm8 --window \
 
 [CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
 
+### Embedding custom fonts
+
+Using `--embed-font`, it's possible to embed a font into the snapshot (rather than hot-linking it
+as with `--font`). The font is *subset* before embedding, meaning that only glyphs for chars
+used in the transcripts are retained; this means that the font overhead is not that significant (order of 10 kB).
+For example, the snapshot below embeds [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono):
+
+![Snapshot with embedded Roboto Mono font](embedded-font.svg)
+
+...and the same transcript using pure SVG:
+
+![Snapshot with embedded Roboto Mono font, pure SVG](embedded-font-pure.svg)
+
+Generating command:
+
+```shell
+term-transcript exec -T 250ms --scroll --palette gjm8 \
+  --line-numbers continuous \
+  --embed-font="$FONT_PATH" \
+  rainbow 'rainbow --short'
+```
+
+The same note regarding [content security policy][CSP] applies.
+
 ## Configuration file
 
 `--config-path` option allows reading rendering options from a TOML file. This enables
