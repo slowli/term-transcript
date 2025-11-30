@@ -142,7 +142,6 @@ term-transcript exec $TT_ARGS --scroll --palette gjm8 --line-numbers continuous 
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/embedded-font.$EXTENSION"
 
-# FIXME: looks terrible because of misaligned background boxes
 echo "Creating snapshot with --embed-font, --pure-svg"
 term-transcript exec $TT_ARGS --scroll --palette gjm8 --line-numbers continuous \
   --embed-font="$FONT_PATH" --pure-svg \
