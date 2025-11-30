@@ -115,11 +115,11 @@ impl FontEmbedder for FontSubsetter {
         let metrics = font.metrics();
         let metrics = FontMetrics {
             units_per_em: metrics.units_per_em,
-            horizontal_advance: metrics
-                .monospace_horizontal_advance
+            advance_width: metrics
+                .monospace_advance_width
                 .ok_or(SubsettingError::NotMonospace)?,
-            ascender: metrics.ascender,
-            descender: metrics.descender,
+            ascent: metrics.ascent,
+            descent: metrics.descent,
         };
 
         let subset_bytes = subset.to_woff2();

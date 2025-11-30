@@ -76,6 +76,20 @@ impl VarHelper {
         tracing::trace!(?value, "overwritten var");
         *self.value.lock().unwrap() = value;
     }
+
+    // FIXME: test
+    fn push_str(&self, s: &str) -> Result<(), RenderErrorReason> {
+        #[cfg(feature = "tracing")]
+        tracing::trace!(s, "appended string");
+
+        let mut val = self.value.lock().unwrap();
+        if let Json::String(this_s) = &mut *val {
+            this_s.push_str(s);
+            Ok(())
+        } else {
+            Err(RenderErrorReason::Other("current value is not a string".to_owned()))
+        }
+    }
 }
 
 impl HelperDef for VarHelper {
@@ -105,16 +119,25 @@ impl HelperDef for VarHelper {
                 return Err(RenderErrorReason::Other(message.to_owned()).into());
             }
 
-            let value = if let Some(template) = helper.template() {
+            let is_append = helper
+                .hash_get("append")
+                .is_some_and(|val| val.value().as_bool() == Some(true));
+
+            if let Some(template) = helper.template() {
                 let mut output = StringOutput::new();
                 template.render(reg, ctx, render_ctx, &mut output)?;
-                let json_string = output.into_string()?;
-                serde_json::from_str(&json_string).map_err(RenderErrorReason::from)?
+                let raw_string = output.into_string()?;
+                if is_append {
+                    self.push_str(&raw_string)?;
+                } else {
+                    let json = serde_json::from_str(&raw_string)
+                        .map_err(RenderErrorReason::from)?;
+                    self.set_value(json);
+                }
             } else {
-                Json::Null
-            };
+                self.set_value(Json::Null);
+            }
 
-            self.set_value(value);
             Ok(ScopedJson::Constant(&Json::Null))
         } else {
             if !helper.params().is_empty() {

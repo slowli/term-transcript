@@ -101,11 +101,11 @@ pub struct FontMetrics {
     /// Font design units per em. Usually 1,000 or a power of 2 (e.g., 2,048).
     pub units_per_em: u16,
     /// Horizontal advance in font design units.
-    pub horizontal_advance: u16,
-    /// Typographic ascender in font design units. Usually positive.
-    pub ascender: i16,
-    /// Typographic descender in font design units. Usually negative.
-    pub descender: i16,
+    pub advance_width: u16,
+    /// Typographic ascent in font design units. Usually positive.
+    pub ascent: i16,
+    /// Typographic descent in font design units. Usually negative.
+    pub descent: i16,
 }
 
 #[derive(Debug)]

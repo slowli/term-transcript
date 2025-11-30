@@ -626,9 +626,9 @@ impl FontEmbedder for TestEmbedder {
             base64_data: b"fira mono".to_vec(),
             metrics: FontMetrics {
                 units_per_em: 1_000,
-                horizontal_advance: 600,
-                ascender: 1_050,
-                descender: -350,
+                advance_width: 600,
+                ascent: 1_050,
+                descent: -350,
             },
         })
     }
@@ -639,7 +639,7 @@ fn embedding_font(pure_svg: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        "H\u{1b}[44mell\u{1b}[0mo, \u{1b}[32mworld\u{1b}[0m!",
     );
 
     let options = TemplateOptions {
@@ -665,4 +665,13 @@ fn embedding_font(pure_svg: bool) {
         buffer.contains("font: 14px \"Fira Mono\", monospace"),
         "{buffer}"
     );
+
+    /* FIXME: assert on background boxes
+    if pure_svg {
+        assert!(
+            buffer.contains(r#"<rect x="18.4" y="27.3" width="25.2" height="19.6" class="fg4"/>"#),
+            "{buffer}"
+        );
+    }
+    */
 }
