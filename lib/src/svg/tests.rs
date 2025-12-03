@@ -621,15 +621,25 @@ impl FontEmbedder for TestEmbedder {
             "$ test Hello, world! »".chars().collect::<BTreeSet<_>>()
         );
         Ok(EmbeddedFont {
-            mime_type: "font/woff2".to_owned(),
             family_name: "Fira Mono".to_owned(),
-            base64_data: b"fira mono".to_vec(),
             metrics: FontMetrics {
                 units_per_em: 1_000,
                 advance_width: 600,
                 ascent: 1_050,
                 descent: -350,
+                bold_spacing: 0.01,
+                italic_spacing: 0.0,
             },
+            faces: vec![
+                EmbeddedFontFace {
+                    is_bold: Some(false),
+                    ..EmbeddedFontFace::woff2(b"fira mono".to_vec())
+                },
+                EmbeddedFontFace {
+                    is_bold: Some(true),
+                    ..EmbeddedFontFace::woff2(b"fira mono bold".to_vec())
+                },
+            ],
         })
     }
 }
@@ -661,8 +671,18 @@ fn embedding_font(pure_svg: bool) {
         buffer.contains("src: url(\"data:font/woff2;base64,ZmlyYSBtb25v\")"),
         "{buffer}"
     );
+    // Bold font face
+    assert!(
+        buffer.contains("src: url(\"data:font/woff2;base64,ZmlyYSBtb25vIGJvbGQ=\");"),
+        "{buffer}"
+    );
     assert!(
         buffer.contains("font: 14px \"Fira Mono\", monospace"),
+        "{buffer}"
+    );
+    // Letter spacing adjustment for the bold font face
+    assert!(
+        buffer.contains(".bold,.prompt { font-weight: bold; letter-spacing: 0.01em; }"),
         "{buffer}"
     );
 

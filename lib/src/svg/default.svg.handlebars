@@ -92,12 +92,22 @@
 
   {{{additional_styles}}}
   {{~/if~}}
-  {{~#if embedded_font}}
+  {{~#if embedded_font~}}
+  {{~#with embedded_font~}}
+  {{~#each faces}}
 
   @font-face {
-    font-family: "{{embedded_font.family_name}}";
-    src: url("data:{{embedded_font.mime_type}};base64,{{embedded_font.base64_data}}");
+    font-family: "{{../family_name}}";
+    src: url("data:{{mime_type}};base64,{{{base64_data}}}");
+    {{#if (ne is_bold null)}}
+    font-weight: {{#if is_bold}}bold{{else}}normal{{/if}};
+    {{/if}}
+    {{#if (ne is_italic null)}}
+    font-style: {{#if is_italic}}italic{{else}}normal{{/if}};
+    {{/if}}
   }
+  {{~/each~}}
+  {{~/with~}}
   {{~/if}}
 
   .container {
@@ -154,8 +164,8 @@
   .scrollbar { fill: #fff; fill-opacity: 0.35; }
   {{~/if}}
 
-  .bold,.prompt { font-weight: bold; }
-  .italic { font-style: italic; }
+  .bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
+  .italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
   .underline { text-decoration: underline; }
   .dimmed { opacity: 0.7; }
   {{~#if wrap}}
