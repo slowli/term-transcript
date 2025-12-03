@@ -40,6 +40,7 @@ mod subset;
 #[cfg(test)]
 mod tests;
 
+const COMMON_HELPERS: &str = include_str!("common.handlebars");
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const PURE_TEMPLATE: &str = include_str!("pure.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
@@ -581,7 +582,7 @@ impl Default for Template {
 impl Template {
     const STD_CONSTANTS: &'static [(&'static str, u32)] = &[
         ("BLOCK_MARGIN", 6),
-        ("USER_INPUT_PADDING", 4),
+        ("USER_INPUT_PADDING", 2),
         ("WINDOW_PADDING", 10),
         ("LINE_HEIGHT", 18),
         ("WINDOW_FRAME_HEIGHT", 22),
@@ -589,11 +590,8 @@ impl Template {
         ("SCROLLBAR_HEIGHT", 40),
     ];
 
-    const PURE_SVG_CONSTANTS: &'static [(&'static str, u32)] = &[
-        ("USER_INPUT_PADDING", 2), // overrides the std template constant
-        ("LN_WIDTH", 24),
-        ("LN_PADDING", 8),
-    ];
+    const PURE_SVG_CONSTANTS: &'static [(&'static str, u32)] =
+        &[("LN_WIDTH", 24), ("LN_PADDING", 8)];
 
     /// Initializes the default template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
@@ -627,6 +625,8 @@ impl Template {
         handlebars.set_strict_mode(true);
         register_helpers(&mut handlebars);
         handlebars.register_template(MAIN_TEMPLATE_NAME, template);
+        let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+        handlebars.register_template("_helpers", helpers);
         Self {
             options,
             handlebars,

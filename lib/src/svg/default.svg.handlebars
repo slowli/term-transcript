@@ -1,62 +1,5 @@
-{{!
-  Computes content height based on line count in interactions.
-  Expected hash inputs: `interactions`, `const`.
-}}
-{{~#*inline "compute_content_height"}}
-  {{#scope lines=0 margins=0 displayed_interactions=0}}
-    {{#each interactions}}
-      {{#if (not input.hidden)}}
-        {{lines set=(add (lines) (count_lines input.text))}}
-        {{margins set=(add (margins) 1)}}
-        {{displayed_interactions set=(add (displayed_interactions) 1)}}
-      {{/if}}
-      {{lines set=(add (lines) (count_lines output_html format="html"))}}
-      {{#if (ne 0 (len output_html))}}
-        {{margins set=(add (margins) 1)}}
-      {{/if}}
-    {{/each}}
-    {{#if (gt (margins) 0)}}
-      {{! The last margin is not displayed. }}
-      {{margins set=(sub (margins) 1)}}
-    {{/if}}
-    {{add (mul (lines) const.LINE_HEIGHT)
-          (mul (margins) const.BLOCK_MARGIN)
-          (mul (displayed_interactions) const.USER_INPUT_PADDING) }}
-  {{/scope}}
-{{/inline~}}
-
-{{!
-  Computes scroll animation parameters.
-  Expected hash inputs: `content_height`, `const`, `scroll`, `width`
-}}
-{{~#*inline "compute_scroll_animation"}}
-  {{#if (gte scroll.max_height content_height)}}
-  {{! No need for scroll animation }}
-    null
-  {{else}}
-    {{#scope
-      steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
-      y_step=0
-      view_box=""
-      scrollbar_y=""
-      sep=""
-    }}
-      {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
-      {{#each (range 0 (add (steps) 1))}}
-        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{min (mul ../scroll.pixels_per_scroll @index) (sub ../content_height ../scroll.max_height)}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
-      {{/each}}
-
-      {
-        "duration": {{mul scroll.interval (steps)}},
-        "view_box": "{{view_box}}",
-        "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
-        "scrollbar_y": "{{scrollbar_y}}"
-      }
-    {{/scope}}
-  {{/if}}
-{{/inline~}}
+{{! Load common helpers }}
+{{>_helpers~}}
 
 {{! Root template }}
 {{~#*inline "root"}}
@@ -88,28 +31,7 @@
 {{! CSS definitions }}
 {{~#*inline "styles"}}
 <style>
-  {{~#if additional_styles}}
-
-  {{{additional_styles}}}
-  {{~/if~}}
-  {{~#if embedded_font~}}
-  {{~#with embedded_font~}}
-  {{~#each faces}}
-
-  @font-face {
-    font-family: "{{../family_name}}";
-    src: url("data:{{mime_type}};base64,{{{base64_data}}}");
-    {{#if (ne is_bold null)}}
-    font-weight: {{#if is_bold}}bold{{else}}normal{{/if}};
-    {{/if}}
-    {{#if (ne is_italic null)}}
-    font-style: {{#if is_italic}}italic{{else}}normal{{/if}};
-    {{/if}}
-  }
-  {{~/each~}}
-  {{~/with~}}
-  {{~/if}}
-
+  {{>common_styles_header}}
   .container {
     padding: 0 {{const.WINDOW_PADDING}}px;
     color: {{ palette.colors.white }};
@@ -164,9 +86,7 @@
   .scrollbar { fill: #fff; fill-opacity: 0.35; }
   {{~/if}}
 
-  .bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
-  .italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
-  .underline { text-decoration: underline; }
+  {{>common_font_styles}}
   .dimmed { opacity: 0.7; }
   {{~#if wrap}}
 
@@ -197,19 +117,6 @@
   .fg14 { color: {{ palette.intense_colors.cyan }}; } .bg14 { background: {{ palette.intense_colors.cyan }}; }
   .fg15 { color: {{ palette.intense_colors.white }}; } .bg15 { background: {{ palette.intense_colors.white }}; }
 </style>
-{{/inline~}}
-
-{{! Terminal background }}
-{{~#*inline "background"}}
-<rect width="100%" height="100%" y="{{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}}" rx="4.5" style="fill: {{ palette.colors.black }};" />
-{{~#if window_frame}}
-
-<rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
-<circle cx="17" cy="-9" r="7" style="fill: {{ palette.colors.red }};"/>
-<circle cx="37" cy="-9" r="7" style="fill: {{ palette.colors.yellow }};"/>
-<circle cx="57" cy="-9" r="7" style="fill: {{ palette.colors.green }};"/>
-{{~/if}}
-
 {{/inline~}}
 
 {{~#*inline "content"}}
@@ -243,14 +150,6 @@
           </div>
         </foreignObject>
       </svg>
-{{/inline~}}
-
-{{~#*inline "scrollbar"}}
-{{#with (scroll_animation)}}
-<rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
-  <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-</rect>
-{{/with}}
 {{/inline~}}
 
 {{~#*inline "number_input_lines"~}}
