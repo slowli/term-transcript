@@ -85,8 +85,13 @@ pub(crate) struct TemplateArgs {
     font_family: Option<String>,
     /// Embeds the font family (after subsetting it) into the SVG file. This guarantees that
     /// the SVG will look identical on all platforms.
-    #[arg(long, conflicts_with = "font_family", value_name = "PATH")]
-    embed_font: Option<PathBuf>,
+    #[arg(
+        long,
+        conflicts_with = "font_family",
+        value_name = "PATH",
+        value_delimiter = ':'
+    )]
+    embed_font: Vec<PathBuf>,
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
     #[arg(long, default_value = "720")]
@@ -125,8 +130,10 @@ pub(crate) struct TemplateArgs {
     out: Option<PathBuf>,
 }
 
-impl From<TemplateArgs> for TemplateOptions {
-    fn from(value: TemplateArgs) -> Self {
+impl TryFrom<TemplateArgs> for TemplateOptions {
+    type Error = anyhow::Error;
+
+    fn try_from(value: TemplateArgs) -> Result<Self, Self::Error> {
         let mut this = Self {
             width: value.width,
             palette: svg::NamedPalette::from(value.palette).into(),
@@ -147,15 +154,32 @@ impl From<TemplateArgs> for TemplateOptions {
             ..Self::default()
         };
 
-        if let Some(path) = value.embed_font {
-            this = this.with_font_subsetting(FontSubsetter::new(&path).unwrap_or_else(|err| {
-                panic!("Failed loading font from {}: {err}", path.display());
-            }));
+        if !value.embed_font.is_empty() {
+            anyhow::ensure!(
+                value.embed_font.len() <= 2,
+                "Only 2 fonts can be embedded at the moment (regular + bold or italic)"
+            );
+
+            let first_path = &value.embed_font[0];
+            let font_bytes = fs::read(first_path)
+                .with_context(|| format!("Failed loading font from {}", first_path.display()))?;
+            let aux_font_bytes = value
+                .embed_font
+                .get(1)
+                .map(|path| {
+                    fs::read(path)
+                        .with_context(|| format!("Failed loading font from {}", path.display()))
+                })
+                .transpose()?
+                .map(Into::into);
+
+            let subsetter = FontSubsetter::new(font_bytes.into(), aux_font_bytes)?;
+            this = this.with_font_subsetting(subsetter);
         } else if let Some(mut font_family) = value.font_family {
             font_family.push_str(", monospace");
             this.font_family = font_family;
         }
-        this
+        Ok(this)
     }
 }
 
@@ -182,7 +206,7 @@ impl TemplateArgs {
                 format!("failed deserializing TOML config from `{}`", path.display())
             })?
         } else {
-            TemplateOptions::from(self)
+            TemplateOptions::try_from(self)?
         };
 
         let template = if let Some(template_path) = template_path {
