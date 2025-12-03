@@ -14,11 +14,11 @@
     .scrollbar { fill: #fff; fill-opacity: 0.35; }
     .line-numbers { text-anchor: end; fill-opacity: 0.35; user-select: none; }
 
-    .bold,.prompt { font-weight: 600; }
+    .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { fill-opacity: 0.7; }
-    .hard-br { font-size: 16px; fill-opacity: 0.8; user-select: none; }
+    .hard-br { fill-opacity: 0.6; user-select: none; }
     .fg0 { fill: #000000; } .output-bg .fg0 { stroke: #000000; }
     .fg1 { fill: #cd0000; } .output-bg .fg1 { stroke: #cd0000; }
     .fg2 { fill: #00cd00; } .output-bg .fg2 { stroke: #00cd00; }
@@ -36,12 +36,11 @@
     .fg14 { fill: #00ffff; } .output-bg .fg14 { stroke: #00ffff; }
     .fg15 { fill: #ffffff; } .output-bg .fg15 { stroke: #ffffff; }
   </style>
-  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #000000;" />
+  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #000000;"/>
     <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-      <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 78 720 342" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
-      <g class="input-bg"></g>
-      <text class="container fg7 line-numbers"><tspan x="34" y="14">1</tspan><tspan x="34" y="32">2</tspan><tspan x="34" y="50">3</tspan><tspan x="34" y="68">4</tspan><tspan x="34" y="86">5</tspan><tspan x="34" y="104">6</tspan><tspan x="34" y="122">7</tspan><tspan x="34" y="140">8</tspan><tspan x="34" y="158">9</tspan><tspan x="34" y="176">10</tspan><tspan x="34" y="194">11</tspan><tspan x="34" y="212">12</tspan><tspan x="34" y="230">13</tspan><tspan x="34" y="248">14</tspan><tspan x="34" y="266">15</tspan><tspan x="34" y="284">16</tspan><tspan x="34" y="302">17</tspan><tspan x="34" y="326">18</tspan><tspan x="34" y="344">19</tspan><tspan x="34" y="362">20</tspan><tspan x="34" y="380">21</tspan><tspan x="34" y="398">22</tspan><tspan x="34" y="416">23</tspan></text>
-      <text class="container fg7"><tspan xml:space="preserve" class="input input-hidden"><tspan><tspan class="prompt">$</tspan> rainbow
+      <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 168 720 342" dur="16.0s" repeatCount="indefinite" calcMode="discrete" />
+<g class="input-bg"></g>
+      <text class="container fg7 line-numbers"><tspan x="34" y="14">1</tspan><tspan x="34" y="32">2</tspan><tspan x="34" y="50">3</tspan><tspan x="34" y="68">4</tspan><tspan x="34" y="86">5</tspan><tspan x="34" y="104">6</tspan><tspan x="34" y="122">7</tspan><tspan x="34" y="140">8</tspan><tspan x="34" y="158">9</tspan><tspan x="34" y="176">10</tspan><tspan x="34" y="194">11</tspan><tspan x="34" y="212">12</tspan><tspan x="34" y="230">13</tspan><tspan x="34" y="248">14</tspan><tspan x="34" y="266">15</tspan><tspan x="34" y="284">16</tspan><tspan x="34" y="302">17</tspan><tspan x="34" y="326">18</tspan><tspan x="34" y="344">19</tspan><tspan x="34" y="362">20</tspan><tspan x="34" y="380">21</tspan><tspan x="34" y="398">22</tspan><tspan x="34" y="416">23</tspan><tspan x="34" y="434">24</tspan><tspan x="34" y="452">25</tspan><tspan x="34" y="470">26</tspan><tspan x="34" y="488">27</tspan><tspan x="34" y="506">28</tspan></text>      <text class="container fg7"><tspan xml:space="preserve" class="input input-hidden"><tspan><tspan class="prompt">$</tspan> rainbow
 </tspan></tspan><tspan xml:space="preserve" x="42" y="14" class="output"><tspan x="42" y="14">Base colors:
 </tspan><tspan x="42" y="32"><tspan class="underline fg0">black</tspan> <tspan class="fg4">blue</tspan> <tspan class="underline fg2">green</tspan> <tspan class="fg1">red</tspan> <tspan class="underline fg6">cyan</tspan> <tspan class="fg5">magenta</tspan> <tspan class="underline fg3">yellow</tspan> 
 </tspan><tspan x="42" y="50"><tspan class="fg8">black</tspan> <tspan class="underline fg12">blue</tspan> <tspan class="fg10">green</tspan> <tspan class="underline fg9">red</tspan> <tspan class="fg14">cyan</tspan> <tspan class="underline fg13">magenta</tspan> <tspan class="fg11">yellow</tspan> 
@@ -60,15 +59,19 @@
 </tspan><tspan x="42" y="284">24-bit colors:
 </tspan><tspan x="42" y="302"><tspan style="fill: #ffbbdd;">pink</tspan> <tspan style="fill: #ffaa44;">orange</tspan> <tspan style="fill: #9f4010;">brown</tspan> <tspan style="fill: #10889f;">teal</tspan> 
 </tspan></tspan><tspan xml:space="preserve" class="input input-hidden"><tspan><tspan class="prompt">$</tspan> rainbow --short
-</tspan></tspan><tspan xml:space="preserve" x="42" y="326" class="output"><tspan x="42" y="326">Base colors:
-</tspan><tspan x="42" y="344"><tspan class="underline fg0">black</tspan> <tspan class="fg4">blue</tspan> <tspan class="underline fg2">green</tspan> <tspan class="fg1">red</tspan> <tspan class="underline fg6">cyan</tspan> <tspan class="fg5">magenta</tspan> <tspan class="underline fg3">yellow</tspan> 
-</tspan><tspan x="42" y="362"><tspan class="fg8">black</tspan> <tspan class="underline fg12">blue</tspan> <tspan class="fg10">green</tspan> <tspan class="underline fg9">red</tspan> <tspan class="fg14">cyan</tspan> <tspan class="underline fg13">magenta</tspan> <tspan class="fg11">yellow</tspan> 
-</tspan><tspan x="42" y="380">Base colors (bg):
-</tspan><tspan x="42" y="398" class="output-bg"><tspan class="fg0">█████</tspan> <tspan class="fg4">████</tspan> <tspan class="fg2">█████</tspan> <tspan class="fg1">███</tspan> <tspan class="fg6">████</tspan> <tspan class="fg5">███████</tspan> <tspan class="fg3">██████</tspan></tspan><tspan x="42" y="398"><tspan class="fg7 bg0">black</tspan> <tspan class="fg7 bg4">blue</tspan> <tspan class="fg7 bg2">green</tspan> <tspan class="fg7 bg1">red</tspan> <tspan class="fg7 bg6">cyan</tspan> <tspan class="fg7 bg5">magenta</tspan> <tspan class="fg7 bg3">yellow</tspan> 
-</tspan><tspan x="42" y="416" class="output-bg"><tspan class="fg8">█████</tspan> <tspan class="fg12">████</tspan> <tspan class="fg10">█████</tspan> <tspan class="fg9">███</tspan> <tspan class="fg14">████</tspan> <tspan class="fg13">███████</tspan> <tspan class="fg11">██████</tspan></tspan><tspan x="42" y="416"><tspan class="fg15 bg8">black</tspan> <tspan class="fg15 bg12">blue</tspan> <tspan class="fg15 bg10">green</tspan> <tspan class="fg15 bg9">red</tspan> <tspan class="fg15 bg14">cyan</tspan> <tspan class="fg15 bg13">magenta</tspan> <tspan class="fg15 bg11">yellow</tspan> 
-</tspan></tspan></text>
-    </svg>
+</tspan></tspan><tspan xml:space="preserve" x="42" y="326" class="output"><tspan x="42" y="326">Base styles:
+</tspan><tspan x="42" y="344">     None: Regular <tspan class="bold">Bold</tspan> <tspan class="italic">Italic</tspan> <tspan class="bold italic">Bold+Italic</tspan>
+</tspan><tspan x="42" y="362">   Dimmed: <tspan class="dimmed">Regular</tspan> <tspan class="bold dimmed">Bold</tspan> <tspan class="dimmed italic">Italic</tspan> <tspan class="bold dimmed italic">Bold+Italic</tspan>
+</tspan><tspan x="42" y="380">Underline: <tspan class="underline">Regular</tspan> <tspan class="bold underline">Bold</tspan> <tspan class="italic underline">Italic</tspan> <tspan class="bold italic underline">Bold+Italic</tspan>
+</tspan><tspan x="42" y="398" class="output-bg">           <tspan class="fg7">███████</tspan> <tspan class="fg7">████</tspan> <tspan class="fg7">██████</tspan> <tspan class="fg7">███████████</tspan></tspan><tspan x="42" y="398">  With bg: <tspan class="fg0 bg7">Regular</tspan> <tspan class="bold fg0 bg7">Bold</tspan> <tspan class="italic fg0 bg7">Italic</tspan> <tspan class="bold italic fg0 bg7">Bold+Italic</tspan>
+</tspan><tspan x="42" y="416">Base colors:
+</tspan><tspan x="42" y="434"><tspan class="underline fg0">black</tspan> <tspan class="fg4">blue</tspan> <tspan class="underline fg2">green</tspan> <tspan class="fg1">red</tspan> <tspan class="underline fg6">cyan</tspan> <tspan class="fg5">magenta</tspan> <tspan class="underline fg3">yellow</tspan> 
+</tspan><tspan x="42" y="452"><tspan class="fg8">black</tspan> <tspan class="underline fg12">blue</tspan> <tspan class="fg10">green</tspan> <tspan class="underline fg9">red</tspan> <tspan class="fg14">cyan</tspan> <tspan class="underline fg13">magenta</tspan> <tspan class="fg11">yellow</tspan> 
+</tspan><tspan x="42" y="470">Base colors (bg):
+</tspan><tspan x="42" y="488" class="output-bg"><tspan class="fg0">█████</tspan> <tspan class="fg4">████</tspan> <tspan class="fg2">█████</tspan> <tspan class="fg1">███</tspan> <tspan class="fg6">████</tspan> <tspan class="fg5">███████</tspan> <tspan class="fg3">██████</tspan></tspan><tspan x="42" y="488"><tspan class="fg7 bg0">black</tspan> <tspan class="fg7 bg4">blue</tspan> <tspan class="fg7 bg2">green</tspan> <tspan class="fg7 bg1">red</tspan> <tspan class="fg7 bg6">cyan</tspan> <tspan class="fg7 bg5">magenta</tspan> <tspan class="fg7 bg3">yellow</tspan> 
+</tspan><tspan x="42" y="506" class="output-bg"><tspan class="fg8">█████</tspan> <tspan class="fg12">████</tspan> <tspan class="fg10">█████</tspan> <tspan class="fg9">███</tspan> <tspan class="fg14">████</tspan> <tspan class="fg13">███████</tspan> <tspan class="fg11">██████</tspan></tspan><tspan x="42" y="506"><tspan class="fg15 bg8">black</tspan> <tspan class="fg15 bg12">blue</tspan> <tspan class="fg15 bg10">green</tspan> <tspan class="fg15 bg9">red</tspan> <tspan class="fg15 bg14">cyan</tspan> <tspan class="fg15 bg13">magenta</tspan> <tspan class="fg15 bg11">yellow</tspan> 
+</tspan></tspan></text>    </svg>
   <rect class="scrollbar" x="713" y="10" width="5" height="40">
-    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 151;0 302" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
+    <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 75;0 151;0 226;0 302" dur="16.0s" repeatCount="indefinite" calcMode="discrete" />
   </rect>
 </svg>

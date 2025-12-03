@@ -1,5 +1,5 @@
-<!-- Created with term-transcript v0.3.0-beta.1 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 348" width="720" height="348" xmlns="http://www.w3.org/2000/svg">
+<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 -22 720 240" width="720" height="240" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
@@ -14,14 +14,15 @@
           font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
           line-height: inherit;
         }
-        .user-input {
+        .input {
           margin: 0 -10px 6px;
           color: #e5e5e5;
           background: rgba(255, 255, 255, 0.1);
           padding: 2px 10px;
         }
-        .term-output { margin-bottom: 6px; }
-        .user-input-failure {
+        .input-hidden { display: none; }
+        .output { margin-bottom: 6px; }
+        .input-failure {
           border-left: 2px solid #ff005b;
           border-right: 2px solid #ff005b;
           background: rgba(255, 0, 65, 0.15);
@@ -36,13 +37,8 @@
           margin-left: 5px;
         }
         .hard-br:before {
-          content: '↓';
-          font-size: 16px;
-          height: 16px;
-          position: absolute;
-          bottom: 0;
-          transform: rotate(45deg);
-          opacity: 0.8;
+          content: '»';
+          opacity: 0.6;
         }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
@@ -61,35 +57,29 @@
         .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
-      <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: #1c1c1c;" />
+      <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: #1c1c1c;"/>
       <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="306" viewBox="0 0 720 306">
-        <foreignObject width="720" height="306">
+      <svg x="0" y="10" width="720" height="198" viewBox="0 0 720 198">
+        <foreignObject width="720" height="198">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-            <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
-            <div class="term-output"><pre>-rwxrwxrwx 1 alex alex 27149 Mar 14 12:54 <span class="fg2">Cargo.lock</span></pre></div>
-            <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
-            <div class="term-output"><pre></pre></div>
-            <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> grep -n serde Cargo.lock</pre></div>
-            <div class="term-output"><pre><span class="fg2">172</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">173</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
-<span class="fg2">539</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
-<span class="fg2">544</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",
-<span class="fg2">548</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_derive"
-<span class="fg2">559</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>_json"
-<span class="fg2">566</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">692</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">693</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
-<span class="fg2">784</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">868</span><span class="fg6">:</span> "<span class="fg1">serde</span>",</pre></div>
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
+            <div class="output"><pre>-rwxrwxrwx 1 alex alex 43994 Nov 25 11:14 <span class="fg2">Cargo.lock</span></pre></div>
+            <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
+            <div class="output"><pre></pre></div>
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> grep -m 5 -n serde Cargo.lock</pre></div>
+            <div class="output"><pre><span class="fg2">410</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+<span class="fg2">411</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
+<span class="fg2">934</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
+<span class="fg2">939</span><span class="fg6">:</span> "<span class="fg1">serde</span>_core",
+<span class="fg2">940</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",</pre></div>
           </div>
         </foreignObject>
       </svg>
     </g>
-    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
+    <text x="10" y="18" style="font: 14px monospace; fill: #ff005b;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>

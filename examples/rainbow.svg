@@ -51,11 +51,11 @@
         .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
-      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
       <svg x="0" y="10" width="720" height="334" viewBox="0 0 720 334">
         <foreignObject width="720" height="334">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-            <div class="input"><pre><span class="prompt">$</span> rainbow</pre></div>
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
             <div class="output"><pre>Base colors:
 <span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
 <span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 

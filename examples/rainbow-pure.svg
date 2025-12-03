@@ -11,7 +11,7 @@
     .input-bg { fill: #fff; fill-opacity: 0.1; }
     .input-hidden { display: none; }
     .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.5; }
-    .bold,.prompt { font-weight: 600; }
+    .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
     .dimmed { fill-opacity: 0.7; }
@@ -33,7 +33,7 @@
     .fg14 { fill: #63e7f0; } .output-bg .fg14 { stroke: #63e7f0; }
     .fg15 { fill: #f3f3f3; } .output-bg .fg15 { stroke: #f3f3f3; }
   </style>
-  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
+  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
     <svg x="0" y="10" width="720" height="334" viewBox="0 0 720 334">
 <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect></g>      <text class="container fg7"><tspan xml:space="preserve" x="10" y="16" class="input"><tspan x="10" y="16"><tspan class="prompt">$</tspan> rainbow
 </tspan></tspan><tspan xml:space="preserve" x="10" y="42" class="output"><tspan x="10" y="42">Base colors:

@@ -183,20 +183,45 @@ For example, the snapshot below embeds [Roboto Mono](https://fonts.google.com/sp
 
 ![Snapshot with embedded Roboto Mono font](embedded-font.svg)
 
-...and the same transcript using pure SVG:
-
-![Snapshot with embedded Roboto Mono font, pure SVG](embedded-font-pure.svg)
-
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --scroll --palette gjm8 \
+term-transcript exec -T 250ms --palette gjm8 \
   --line-numbers continuous \
-  --embed-font="$FONT_PATH" \
-  rainbow 'rainbow --short'
+  --embed-font="$ROBOTO_MONO_PATH" \
+  'rainbow --short'
 ```
 
+The embedded Roboto Mono font is [*variable*][variable-fonts] by font weight, meaning that it has the bold version
+(weight: 700) embedded as well. In contrast, the *italic* font face must be synthesized by the browser.
+It is possible to embed the italic font face as well by specifying 2 paths for `--embed-font`:
+
+```shell
+term-transcript exec -T 250ms --palette gjm8 \
+  --line-numbers continuous \
+  --embed-font="$ROBOTO_MONO_PATH:$ROBOTO_MONO_ITALIC_PATH" \
+  --pure-svg \
+  'rainbow --short'
+```
+
+![Snapshot with two embedded Roboto Mono fonts, pure SVG](embedded-font-pure.svg)
+
+Another example: [Fira Mono](https://fonts.google.com/specimen/Fira+Mono), which is a non-variable font.
+We embed its regular and **bold** faces (i.e., *italic* is synthesized):
+
+```shell
+term-transcript exec -T 250ms --palette gjm8 \
+  --line-numbers continuous \
+  --embed-font="$FIRA_MONO_PATH:$FIRA_MONO_BOLD_PATH" \
+  --pure-svg \
+  'rainbow --short'
+```
+
+![Snapshot with embedded Fira Mono fonts, pure SVG](embedded-font-fira.svg)
+
 The same note regarding [content security policy][CSP] applies.
+
+[variable-fonts]: https://learn.microsoft.com/en-us/typography/opentype/spec/otvaroverview
 
 ## Configuration file
 
