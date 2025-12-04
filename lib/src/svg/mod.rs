@@ -620,6 +620,7 @@ impl Template {
     }
 
     /// Initializes a custom template.
+    #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
     pub fn custom(template: HandlebarsTemplate, options: TemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);

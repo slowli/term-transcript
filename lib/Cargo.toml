@@ -46,13 +46,13 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 version-sync.workspace = true
 
 [features]
-default = ["pretty_assertions", "svg", "test", "font-subset"]
+default = ["pretty_assertions", "svg", "test"]
 # Rendering terminal transcripts into SVG snapshots
-svg = ["handlebars", "serde", "serde_json"]
+svg = ["dep:handlebars", "dep:serde", "dep:serde_json"]
 # Enables subsetting and embedding OpenType fonts into snapshots
 font-subset = ["svg", "dep:font-subset"]
 # Allows parsing transcripts from SVG snapshots and testing them
-test = ["quick-xml"]
+test = ["dep:quick-xml"]
 
 [[test]]
 name = "integration"

@@ -77,7 +77,7 @@
 //!
 //! ## `font-subset`
 //!
-//! *(On by default)*
+//! *(Off by default)*
 //!
 //! Enables subsetting and embedding OpenType fonts into snapshots. Requires the `svg` feature.
 //!
