@@ -72,7 +72,7 @@ use crate::{
 ///         },
 ///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
 /// #       "output_svg": [{
-/// #           "background": null,
+/// #           "background": [],
 /// #           "foreground": "Hello, <tspan class=\"fg2\">world</tspan>!",
 /// #       }],
 /// #       // ^ Implementation detail for now

@@ -49,10 +49,10 @@
       {{/each}}
 
       {
-      "duration": {{mul scroll.interval (steps)}},
-      "view_box": "{{view_box}}",
-      "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
-      "scrollbar_y": "{{scrollbar_y}}"
+        "duration": {{mul scroll.interval (steps)}},
+        "view_box": "{{view_box}}",
+        "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
+        "scrollbar_y": "{{scrollbar_y}}"
       }
     {{/scope}}
   {{/if}}

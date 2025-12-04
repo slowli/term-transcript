@@ -106,16 +106,11 @@ pub trait FontEmbedder: 'static + fmt::Debug + Send + Sync {
     /// Errors produced by the embedder.
     type Error: 'static + Send + Sync;
 
-    /// Performs embedding. This can involve subsetting the font based on the specified `interactions`.
-    ///
-    /// # Arguments
-    ///
-    /// - It's up to the implementation to interpret the supplied `font_family`. E.g., it can be a file path
-    ///   to the font file.
+    /// Performs embedding. This can involve subsetting the font based on the specified chars used in the transcript.
     ///
     /// # Errors
     ///
-    /// May return I/O errors if embedding / subsetting fails.
+    /// May return errors if embedding / subsetting fails.
     fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error>;
 }
 
