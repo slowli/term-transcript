@@ -367,6 +367,11 @@ impl Interaction {
         }
     }
 
+    /// Sets an exit status for this interaction.
+    pub fn set_exit_status(&mut self, exit_status: Option<ExitStatus>) {
+        self.exit_status = exit_status;
+    }
+
     /// Assigns an exit status to this interaction.
     #[must_use]
     pub fn with_exit_status(mut self, exit_status: ExitStatus) -> Self {

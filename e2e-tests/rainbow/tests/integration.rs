@@ -14,7 +14,7 @@ use term_transcript::PtyCommand;
 use term_transcript::{
     svg::{NamedPalette, Template, TemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, UpdateMode},
-    ShellOptions, Transcript, UserInput,
+    ExitStatus, ShellOptions, Transcript, UserInput,
 };
 use test_casing::{decorate, decorators::Retry, test_casing, Product};
 use tracing::{subscriber::DefaultGuard, Subscriber};
@@ -70,8 +70,10 @@ fn repl_snapshot_path() -> &'static Path {
 fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_cargo_path();
-    let transcript =
+    let mut transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+    // Patch the exit status for cross-platform compatibility.
+    transcript.interactions_mut()[0].set_exit_status(Some(ExitStatus(0)));
 
     let mut buffer = vec![];
     let template_options = TemplateOptions {
