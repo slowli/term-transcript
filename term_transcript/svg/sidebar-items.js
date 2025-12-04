@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["LineNumbers","NamedPalette","RgbColorParseError","SubsettingError","WrapOptions"],"struct":["CreatorData","EmbeddedFont","EmbeddedFontFace","FontMetrics","FontSubsetter","HandlebarsData","NamedPaletteParseError","Palette","RgbColor","ScrollOptions","SerializedInteraction","Template","TemplateOptions","TermColors"],"trait":["FontEmbedder"]};
