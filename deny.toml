@@ -13,6 +13,7 @@ allow = [
   # Permissive open-source licenses
   "MIT",
   "Apache-2.0",
+  "BSD-3-Clause",
   "Unicode-3.0",
 ]
 confidence-threshold = 0.8
@@ -28,10 +29,12 @@ skip = [
 ]
 skip-tree = [
   { name = "thiserror", version = "^1" },
-  # Used by `tracing-subscriber` together with the new version :(
-  { name = "regex-automata", version = "^0.1" },
 ]
 
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+
+[sources.allow-org]
+# Temporarily allow non-published `font-tools`
+github = ["slowli"]

@@ -361,6 +361,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 [[package]]
 name = "font-subset"
 version = "0.1.0"
+source = "git+https://github.com/slowli/font-tools.git?rev=9102262dbf5bf931b82644b72e1c2e5b887a2c69#9102262dbf5bf931b82644b72e1c2e5b887a2c69"
 dependencies = [
  "brotli",
 ]
