@@ -43,13 +43,8 @@
           margin-left: 5px;
         }
         .hard-br:before {
-          content: '↓';
-          font-size: 16px;
-          height: 16px;
-          position: absolute;
-          bottom: 0;
-          transform: rotate(45deg);
-          opacity: 0.8;
+          content: '»';
+          opacity: 0.6;
         }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
@@ -68,7 +63,7 @@
         .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
-      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
       <svg x="0" y="10" width="720" height="370" viewBox="0 0 720 370">
         <foreignObject width="720" height="370">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
@@ -89,7 +84,7 @@ ANSI grayscale palette:
         </foreignObject>
       </svg>
     </g>
-    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
+    <text x="10" y="18" style="font: 14px monospace; fill: #ff005b;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>

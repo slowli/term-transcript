@@ -44,13 +44,8 @@
           margin-left: 5px;
         }
         .hard-br:before {
-          content: '↓';
-          font-size: 16px;
-          height: 16px;
-          position: absolute;
-          bottom: 0;
-          transform: rotate(45deg);
-          opacity: 0.8;
+          content: '»';
+          opacity: 0.6;
         }
         .fg0 { color: #3c3836; } .bg0 { background: #3c3836; }
         .fg1 { color: #b85651; } .bg1 { background: #b85651; }
@@ -69,7 +64,7 @@
         .fg14 { color: #89b482; } .bg14 { background: #89b482; }
         .fg15 { color: #ddc7a1; } .bg15 { background: #ddc7a1; }
       </style>
-      <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: #3c3836;" />
+      <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: #3c3836;"/>
       <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
       <circle cx="17" cy="-9" r="7" style="fill: #b85651;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #c18f41;"/>
@@ -98,7 +93,7 @@ ANSI grayscale palette:
         <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 86;0 173;0 260" dur="4.5s" repeatCount="indefinite" calcMode="discrete" />
       </rect>
     </g>
-    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #b85651;">
+    <text x="10" y="18" style="font: 14px monospace; fill: #b85651;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>

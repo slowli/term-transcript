@@ -44,13 +44,8 @@
           margin-left: 5px;
         }
         .hard-br:before {
-          content: '↓';
-          font-size: 16px;
-          height: 16px;
-          position: absolute;
-          bottom: 0;
-          transform: rotate(45deg);
-          opacity: 0.8;
+          content: '»';
+          opacity: 0.6;
         }
         .fg0 { color: #000000; } .bg0 { background: #000000; }
         .fg1 { color: #cd0000; } .bg1 { background: #cd0000; }
@@ -69,10 +64,10 @@
         .fg14 { color: #00ffff; } .bg14 { background: #00ffff; }
         .fg15 { color: #ffffff; } .bg15 { background: #ffffff; }
       </style>
-      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #000000;" />
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #000000;"/>
       <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 78 720 342" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
-        <foreignObject width="720" height="420">
+        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 168 720 342" dur="16.0s" repeatCount="indefinite" calcMode="discrete" />
+        <foreignObject width="720" height="510">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input input-hidden" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
             <div class="output"><pre class="line-numbers">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17</pre><pre>Base colors:
@@ -93,7 +88,12 @@ ANSI grayscale palette:
 24-bit colors:
 <span style="color: #ffbbdd;">pink</span> <span style="color: #ffaa44;">orange</span> <span style="color: #9f4010;">brown</span> <span style="color: #10889f;">teal</span> </pre></div>
             <div class="input input-hidden" data-exit-status="0"><pre><span class="prompt">$</span> rainbow --short</pre></div>
-            <div class="output"><pre class="line-numbers">18<br/>19<br/>20<br/>21<br/>22<br/>23</pre><pre>Base colors:
+            <div class="output"><pre class="line-numbers">18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28</pre><pre>Base styles:
+     None: Regular <span class="bold">Bold</span> <span class="italic">Italic</span> <span class="bold italic">Bold+Italic</span>
+   Dimmed: <span class="dimmed">Regular</span> <span class="bold dimmed">Bold</span> <span class="dimmed italic">Italic</span> <span class="bold dimmed italic">Bold+Italic</span>
+Underline: <span class="underline">Regular</span> <span class="bold underline">Bold</span> <span class="italic underline">Italic</span> <span class="bold italic underline">Bold+Italic</span>
+  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg0 bg7">Bold</span> <span class="italic fg0 bg7">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
+Base colors:
 <span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
 <span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 
 Base colors (bg):
@@ -103,10 +103,10 @@ Base colors (bg):
         </foreignObject>
       </svg>
       <rect class="scrollbar" x="713" y="10" width="5" height="40">
-        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 151;0 302" dur="8.0s" repeatCount="indefinite" calcMode="discrete" />
+        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 75;0 151;0 226;0 302" dur="16.0s" repeatCount="indefinite" calcMode="discrete" />
       </rect>
     </g>
-    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #cd0000;">
+    <text x="10" y="18" style="font: 14px monospace; fill: #cd0000;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>

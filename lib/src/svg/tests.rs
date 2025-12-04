@@ -1,5 +1,9 @@
 //! Tests for the SVG rendering logic.
 
+use std::convert::Infallible;
+
+use test_casing::test_casing;
+
 use super::*;
 use crate::{ExitStatus, Interaction, UserInput};
 
@@ -603,4 +607,89 @@ fn rendering_transcript_with_styles() {
         buffer.contains("font: 14px Fira Mono, monospace;"),
         "{buffer}"
     );
+}
+
+#[derive(Debug)]
+struct TestEmbedder;
+
+impl FontEmbedder for TestEmbedder {
+    type Error = Infallible;
+
+    fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
+        assert_eq!(
+            used_chars,
+            "$ test Hello, world! »".chars().collect::<BTreeSet<_>>()
+        );
+        Ok(EmbeddedFont {
+            family_name: "Fira Mono".to_owned(),
+            metrics: FontMetrics {
+                units_per_em: 1_000,
+                advance_width: 600,
+                ascent: 1_050,
+                descent: -350,
+                bold_spacing: 0.01,
+                italic_spacing: 0.0,
+            },
+            faces: vec![
+                EmbeddedFontFace {
+                    is_bold: Some(false),
+                    ..EmbeddedFontFace::woff2(b"fira mono".to_vec())
+                },
+                EmbeddedFontFace {
+                    is_bold: Some(true),
+                    ..EmbeddedFontFace::woff2(b"fira mono bold".to_vec())
+                },
+            ],
+        })
+    }
+}
+
+#[test_casing(2, [false, true])]
+fn embedding_font(pure_svg: bool) {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test"),
+        "H\u{1b}[44mell\u{1b}[0mo, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let options = TemplateOptions {
+        font_family: "./FiraMono.ttf".to_owned(),
+        ..TemplateOptions::default().with_font_embedder(TestEmbedder)
+    };
+    let mut buffer = vec![];
+    let template = if pure_svg {
+        Template::pure_svg(options)
+    } else {
+        Template::new(options)
+    };
+    template.render(&transcript, &mut buffer).unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    assert!(buffer.contains("@font-face"), "{buffer}");
+    assert!(buffer.contains("font-family: \"Fira Mono\""), "{buffer}");
+    assert!(
+        buffer.contains("src: url(\"data:font/woff2;base64,ZmlyYSBtb25v\")"),
+        "{buffer}"
+    );
+    // Bold font face
+    assert!(
+        buffer.contains("src: url(\"data:font/woff2;base64,ZmlyYSBtb25vIGJvbGQ=\");"),
+        "{buffer}"
+    );
+    assert!(
+        buffer.contains("font: 14px \"Fira Mono\", monospace"),
+        "{buffer}"
+    );
+    // Letter spacing adjustment for the bold font face
+    assert!(
+        buffer.contains(".bold,.prompt { font-weight: bold; letter-spacing: 0.01em; }"),
+        "{buffer}"
+    );
+
+    if pure_svg {
+        assert!(
+            buffer.contains(r#"<rect x="18.4" y="27.3" width="25.2" height="19.6" class="fg4"/>"#),
+            "{buffer}"
+        );
+    }
 }

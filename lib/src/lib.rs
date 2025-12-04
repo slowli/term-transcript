@@ -75,6 +75,12 @@
 //! Exposes [the eponymous module](svg) that allows rendering [`Transcript`]s
 //! into the SVG format.
 //!
+//! ## `font-subset`
+//!
+//! *(Off by default)*
+//!
+//! Enables subsetting and embedding OpenType fonts into snapshots. Requires the `svg` feature.
+//!
 //! ## `test`
 //!
 //! *(On by default)*
@@ -173,6 +179,8 @@ pub mod traits;
 mod utils;
 mod write;
 
+pub(crate) type BoxedError = Box<dyn std::error::Error + Send + Sync>;
+
 /// Errors that can occur when processing terminal output.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -192,6 +200,8 @@ pub enum TermError {
     InvalidColorIndex(ParseIntError),
     /// IO error.
     Io(io::Error),
+    /// Font embedding error.
+    FontEmbedding(BoxedError),
 }
 
 impl fmt::Display for TermError {
@@ -218,6 +228,7 @@ impl fmt::Display for TermError {
                 write!(formatter, "Failed parsing color index: {err}")
             }
             Self::Io(err) => write!(formatter, "I/O error: {err}"),
+            Self::FontEmbedding(err) => write!(formatter, "font embedding error: {err}"),
         }
     }
 }
@@ -354,6 +365,11 @@ impl Interaction {
             output: Captured::from(output.into()),
             exit_status: None,
         }
+    }
+
+    /// Sets an exit status for this interaction.
+    pub fn set_exit_status(&mut self, exit_status: Option<ExitStatus>) {
+        self.exit_status = exit_status;
     }
 
     /// Assigns an exit status to this interaction.

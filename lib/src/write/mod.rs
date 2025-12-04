@@ -74,9 +74,7 @@ impl StyledSpan {
         }
     }
 
-    fn write_tag(self, output: &mut impl WriteStr, tag: &str) -> io::Result<()> {
-        output.write_str("<")?;
-        output.write_str(tag)?;
+    fn write_attrs(self, output: &mut impl WriteStr) -> io::Result<()> {
         if !self.classes.is_empty() {
             output.write_str(" class=\"")?;
             for (i, class) in self.classes.iter().enumerate() {
@@ -97,6 +95,13 @@ impl StyledSpan {
             }
             output.write_str(";\"")?;
         }
+        Ok(())
+    }
+
+    fn write_tag(self, output: &mut impl WriteStr, tag: &str) -> io::Result<()> {
+        output.write_str("<")?;
+        output.write_str(tag)?;
+        self.write_attrs(output)?;
         output.write_str(">")
     }
 }

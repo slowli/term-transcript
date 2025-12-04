@@ -24,6 +24,30 @@ const RGB_COLORS: &[(&str, Color)] = &[
     ("teal", Color::Rgb(0x10, 0x88, 0x9f)),
 ];
 
+fn write_base_styles(writer: &mut impl WriteColor, base: &ColorSpec, name: &str) -> io::Result<()> {
+    writer.reset()?;
+    write!(writer, "{name}: ")?;
+    writer.set_color(base)?;
+    write!(writer, "Regular")?;
+    writer.reset()?;
+    write!(writer, " ")?;
+
+    writer.set_color(base.clone().set_bold(true))?;
+    write!(writer, "Bold")?;
+    writer.reset()?;
+    write!(writer, " ")?;
+
+    writer.set_color(base.clone().set_italic(true))?;
+    write!(writer, "Italic")?;
+    writer.reset()?;
+    write!(writer, " ")?;
+
+    writer.set_color(base.clone().set_bold(true).set_italic(true))?;
+    write!(writer, "Bold+Italic")?;
+    writer.reset()?;
+    writeln!(writer)
+}
+
 fn write_base_colors(
     writer: &mut impl WriteColor,
     intense: bool,
@@ -74,6 +98,24 @@ fn main() -> anyhow::Result<()> {
     let long_lines = env::args().any(|arg| arg == "--long-lines");
     let short = env::args().any(|arg| arg == "--short");
     let mut writer = Ansi::new(io::stdout());
+
+    if short {
+        writeln!(writer, "Base styles:")?;
+        write_base_styles(&mut writer, &ColorSpec::new(), "     None")?;
+        write_base_styles(&mut writer, ColorSpec::new().set_dimmed(true), "   Dimmed")?;
+        write_base_styles(
+            &mut writer,
+            ColorSpec::new().set_underline(true),
+            "Underline",
+        )?;
+        write_base_styles(
+            &mut writer,
+            ColorSpec::new()
+                .set_fg(Some(Color::Black))
+                .set_bg(Some(Color::White)),
+            "  With bg",
+        )?;
+    }
 
     writeln!(writer, "Base colors:")?;
     write_base_colors(&mut writer, false, long_lines)?;

@@ -11,25 +11,36 @@
 //!
 //! See [`Template`] for examples of usage.
 
-use std::{collections::HashMap, fmt, io::Write};
+use std::{
+    collections::{BTreeSet, HashMap},
+    fmt,
+    io::Write,
+    iter,
+};
 
+use base64::{prelude::BASE64_STANDARD, Engine};
 use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as HandlebarsTemplate};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
+#[cfg(feature = "font-subset")]
+pub use self::subset::{FontSubsetter, SubsettingError};
 use self::{data::CompleteHandlebarsData, helpers::register_helpers};
 pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{write::SvgLine, TermError, Transcript};
+use crate::{write::SvgLine, BoxedError, TermError, Transcript};
 
 mod data;
 mod helpers;
 mod palette;
+#[cfg(feature = "font-subset")]
+mod subset;
 #[cfg(test)]
 mod tests;
 
+const COMMON_HELPERS: &str = include_str!("common.handlebars");
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const PURE_TEMPLATE: &str = include_str!("pure.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
@@ -46,6 +57,91 @@ pub enum LineNumbers {
     /// Use continuous numbering for the lines in all displayed inputs (i.e., ones that
     /// are not [hidden](crate::UserInput::hide())) and outputs.
     Continuous,
+}
+
+/// Representation of a font that can be embedded into SVG via `@font-face` CSS with a data URL `src`.
+#[derive(Debug, Serialize)]
+pub struct EmbeddedFont {
+    /// Family name of the font.
+    pub family_name: String,
+    /// Font metrics.
+    pub metrics: FontMetrics,
+    /// Font faces. Must have at least 1 entry.
+    pub faces: Vec<EmbeddedFontFace>,
+}
+
+/// Representation of a single face of an [`EmbeddedFont`]. Corresponds to a single `@font-face` CSS rule.
+#[derive(Debug, Serialize)]
+pub struct EmbeddedFontFace {
+    /// MIME type for the font, e.g. `font/woff2`.
+    pub mime_type: String,
+    /// Font data. Encoded in base64 when serialized.
+    #[serde(serialize_with = "base64_encode")]
+    pub base64_data: Vec<u8>,
+    /// Determines the `font-weight` selector for the `@font-face` rule.
+    pub is_bold: Option<bool>,
+    /// Determines the `font-style` selector for the `@font-face` rule.
+    pub is_italic: Option<bool>,
+}
+
+impl EmbeddedFontFace {
+    /// Creates a face based on the provided WOFF2 font data. All selectors are set to `None`.
+    pub fn woff2(data: Vec<u8>) -> Self {
+        Self {
+            mime_type: "font/woff2".to_owned(),
+            base64_data: data,
+            is_bold: None,
+            is_italic: None,
+        }
+    }
+}
+
+fn base64_encode<S: Serializer>(data: &[u8], serializer: S) -> Result<S::Ok, S::Error> {
+    let encoded = BASE64_STANDARD.encode(data);
+    encoded.serialize(serializer)
+}
+
+/// Produces an [`EmbeddedFont`] for SVG.
+pub trait FontEmbedder: 'static + fmt::Debug + Send + Sync {
+    /// Errors produced by the embedder.
+    type Error: 'static + Send + Sync;
+
+    /// Performs embedding. This can involve subsetting the font based on the specified chars used in the transcript.
+    ///
+    /// # Errors
+    ///
+    /// May return errors if embedding / subsetting fails.
+    fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error>;
+}
+
+/// Font metrics used in SVG layout.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct FontMetrics {
+    /// Font design units per em. Usually 1,000 or a power of 2 (e.g., 2,048).
+    pub units_per_em: u16,
+    /// Horizontal advance in font design units.
+    pub advance_width: u16,
+    /// Typographic ascent in font design units. Usually positive.
+    pub ascent: i16,
+    /// Typographic descent in font design units. Usually negative.
+    pub descent: i16,
+    /// `letter-spacing` adjustment for the bold font face in em units.
+    pub bold_spacing: f64,
+    /// `letter-spacing` adjustment for the italic font face in em units. Accounts for font advance width
+    /// not matching between the regular and italic faces (e.g., in Roboto Mono), which can lead
+    /// to misaligned terminal columns.
+    pub italic_spacing: f64,
+}
+
+#[derive(Debug)]
+struct BoxedErrorEmbedder<T>(T);
+
+impl<T: FontEmbedder<Error: std::error::Error>> FontEmbedder for BoxedErrorEmbedder<T> {
+    type Error = BoxedError;
+
+    fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
+        self.0.embed_font(used_chars).map_err(Into::into)
+    }
 }
 
 /// Configurable options of a [`Template`].
@@ -95,7 +191,7 @@ pub enum LineNumbers {
 /// );
 /// # anyhow::Ok(())
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. The default value is `720`.
     #[serde(default = "TemplateOptions::default_width")]
@@ -126,6 +222,10 @@ pub struct TemplateOptions {
     /// Line numbering options.
     #[serde(default)]
     pub line_numbers: Option<LineNumbers>,
+    /// *Font embedder* that will embed the font into the SVG file via `@font-face` CSS.
+    /// This guarantees that the SVG will look identical on all platforms.
+    #[serde(skip)]
+    pub font_embedder: Option<Box<dyn FontEmbedder<Error = BoxedError>>>,
 }
 
 impl Default for TemplateOptions {
@@ -139,11 +239,29 @@ impl Default for TemplateOptions {
             scroll: None,
             wrap: Self::default_wrap(),
             line_numbers: None,
+            font_embedder: None,
         }
     }
 }
 
 impl TemplateOptions {
+    /// Sets the font embedder to be used.
+    #[must_use]
+    pub fn with_font_embedder(
+        mut self,
+        embedder: impl FontEmbedder<Error: std::error::Error>,
+    ) -> Self {
+        self.font_embedder = Some(Box::new(BoxedErrorEmbedder(embedder)));
+        self
+    }
+
+    /// Sets the [standard font embedder / subsetter](FontSubsetter).
+    #[cfg(feature = "font-subset")]
+    #[must_use]
+    pub fn with_font_subsetting(self, options: FontSubsetter) -> Self {
+        self.with_font_embedder(options)
+    }
+
     fn default_width() -> usize {
         720
     }
@@ -174,6 +292,34 @@ impl TemplateOptions {
         let rendered_outputs = self.render_outputs(transcript)?;
         let mut has_failures = false;
 
+        let mut used_chars = BTreeSet::new();
+        for interaction in transcript.interactions() {
+            let output = interaction.output().to_plaintext()?;
+            used_chars.extend(output.chars());
+
+            let input = interaction.input();
+            if !input.hidden {
+                let prompt = input.prompt.as_deref();
+                let input_chars = iter::once(input.text.as_str())
+                    .chain(prompt)
+                    .flat_map(str::chars);
+                used_chars.extend(input_chars);
+            }
+        }
+        if self.line_numbers.is_some() {
+            used_chars.extend('0'..='9');
+        }
+        if self.wrap.is_some() {
+            used_chars.insert('»');
+        }
+
+        let embedded_font = self
+            .font_embedder
+            .as_deref()
+            .map(|embedder| embedder.embed_font(used_chars))
+            .transpose()
+            .map_err(TermError::FontEmbedding)?;
+
         let interactions: Vec<_> = transcript
             .interactions()
             .iter()
@@ -198,6 +344,7 @@ impl TemplateOptions {
             interactions,
             options: self,
             has_failures,
+            embedded_font,
         })
     }
 
@@ -430,7 +577,7 @@ impl Default for Template {
 impl Template {
     const STD_CONSTANTS: &'static [(&'static str, u32)] = &[
         ("BLOCK_MARGIN", 6),
-        ("USER_INPUT_PADDING", 4),
+        ("USER_INPUT_PADDING", 2),
         ("WINDOW_PADDING", 10),
         ("LINE_HEIGHT", 18),
         ("WINDOW_FRAME_HEIGHT", 22),
@@ -438,11 +585,8 @@ impl Template {
         ("SCROLLBAR_HEIGHT", 40),
     ];
 
-    const PURE_SVG_CONSTANTS: &'static [(&'static str, u32)] = &[
-        ("USER_INPUT_PADDING", 2), // overrides the std template constant
-        ("LN_WIDTH", 24),
-        ("LN_PADDING", 8),
-    ];
+    const PURE_SVG_CONSTANTS: &'static [(&'static str, u32)] =
+        &[("LN_WIDTH", 24), ("LN_PADDING", 8)];
 
     /// Initializes the default template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
@@ -471,11 +615,14 @@ impl Template {
     }
 
     /// Initializes a custom template.
+    #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
     pub fn custom(template: HandlebarsTemplate, options: TemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         register_helpers(&mut handlebars);
         handlebars.register_template(MAIN_TEMPLATE_NAME, template);
+        let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+        handlebars.register_template("_helpers", helpers);
         Self {
             options,
             handlebars,

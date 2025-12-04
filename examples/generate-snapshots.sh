@@ -12,6 +12,12 @@ ROOT_DIR=$(dirname "$0")
 ROOT_DIR=$(realpath -L "$ROOT_DIR/..")
 TARGET_DIR="$ROOT_DIR/target/debug"
 
+FONT_DIR="$ROOT_DIR/examples/fonts"
+FONT_ROBOTO="$FONT_DIR/RobotoMono-VariableFont_wght.ttf"
+FONT_ROBOTO_ITALIC="$FONT_DIR/RobotoMono-Italic-VariableFont_wght.ttf"
+FONT_FIRA="$FONT_DIR/FiraMono-Regular.ttf"
+FONT_FIRA_BOLD="$FONT_DIR/FiraMono-Bold.ttf"
+
 # Common `term-transcript` CLI args
 TT_ARGS="-T 250ms"
 
@@ -77,7 +83,7 @@ echo "Creating PTY snapshot with failure..."
 (
   cd "$ROOT_DIR"
   term-transcript exec $TT_ARGS --palette gjm8 --pty --window --shell bash \
-    'ls -l Cargo.lock' 'grep -n serge Cargo.lock' 'grep -n serde Cargo.lock' \
+    'ls -l Cargo.lock' 'grep -n serge Cargo.lock' 'grep -m 5 -n serde Cargo.lock' \
     > "$ROOT_DIR/examples/failure-bash-pty.$EXTENSION"
 )
 
@@ -134,3 +140,21 @@ echo "Creating snapshot with custom config..."
 term-transcript exec $TT_ARGS --config-path "$ROOT_DIR/examples/config.toml" \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/custom-config.$EXTENSION"
+
+echo "Creating snapshot with --embed-font (Roboto Mono, var weight)"
+term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
+  --embed-font="$FONT_ROBOTO" \
+  'rainbow --short' \
+  > "$ROOT_DIR/examples/embedded-font.$EXTENSION"
+
+echo "Creating snapshot with --embed-font (Roboto Mono, var weight + italic), --pure-svg"
+term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
+  --embed-font="$FONT_ROBOTO:$FONT_ROBOTO_ITALIC" --pure-svg \
+  'rainbow --short' \
+  > "$ROOT_DIR/examples/embedded-font-pure.$EXTENSION"
+
+echo "Creating snapshot with --embed-font (Fira Mono, regular + bold), --pure-svg"
+term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
+  --embed-font="$FONT_FIRA:$FONT_FIRA_BOLD" --pure-svg \
+  'rainbow --short' \
+  > "$ROOT_DIR/examples/embedded-font-fira.$EXTENSION"

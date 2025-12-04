@@ -1,61 +1,16 @@
-{{!
-  Computes content height based on line count in interactions.
-  Expected hash inputs: `interactions`, `const`.
-}}
-{{~#*inline "compute_content_height"}}
-  {{#scope lines=0 margins=0 displayed_interactions=0}}
-    {{#each interactions}}
-      {{#if (not input.hidden)}}
-        {{lines set=(add (lines) (count_lines input.text))}}
-        {{margins set=(add (margins) 1)}}
-        {{displayed_interactions set=(add (displayed_interactions) 1)}}
-      {{/if}}
-      {{lines set=(add (lines) (len output_svg))}}
-      {{#if (ne 0 (len output_svg))}}
-        {{margins set=(add (margins) 1)}}
-      {{/if}}
-    {{/each}}
-    {{#if (gt (margins) 0)}}
-      {{! The last margin is not displayed. }}
-      {{margins set=(sub (margins) 1)}}
-    {{/if}}
-    {{add (mul (lines) const.LINE_HEIGHT)
-          (mul (margins) const.BLOCK_MARGIN)
-          (mul 2 (displayed_interactions) const.USER_INPUT_PADDING) }}
-  {{/scope}}
-{{/inline~}}
+{{! Load common helpers }}
+{{>_helpers~}}
 
 {{!
-  Computes scroll animation parameters.
-  Expected hash inputs: `content_height`, `const`, `scroll`, `width`
+  Scales font metrics from design units to ems to pixels.
+  Expected hash inputs: `metrics`
 }}
-{{~#*inline "compute_scroll_animation"}}
-  {{#if (gte scroll.max_height content_height)}}
-  {{! No need for scroll animation }}
-    null
-  {{else}}
-    {{#scope
-      steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
-      y_step=0
-      view_box=""
-      scrollbar_y=""
-      sep=""
-    }}
-      {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
-      {{#each (range 0 (add (steps) 1))}}
-        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{min (mul ../scroll.pixels_per_scroll @index) (sub ../content_height ../scroll.max_height)}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
-      {{/each}}
-
-      {
-        "duration": {{mul scroll.interval (steps)}},
-        "view_box": "{{view_box}}",
-        "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
-        "scrollbar_y": "{{scrollbar_y}}"
-      }
-    {{/scope}}
-  {{/if}}
+{{~#*inline "scale_font_metrics"}}
+  {
+    "advance_width": {{mul 14 (div metrics.advance_width metrics.units_per_em)}},
+    "ascent": {{mul 14 (div metrics.ascent metrics.units_per_em)}},
+    "descent": {{mul 14 (div metrics.descent metrics.units_per_em)}}
+  }
 {{/inline~}}
 
 {{! Root template }}
@@ -75,13 +30,9 @@
 {{! CSS definitions }}
 {{~#*inline "styles"}}
 <style>
-  {{~#if additional_styles}}
-
-  {{{additional_styles}}}
-  {{~/if}}
-
+  {{>common_styles_header}}
   .container {
-    font: 14px {{font_family}};
+    font: 14px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: {{const.LINE_HEIGHT}}px;
   }
   .input,.output,.output-bg {
@@ -104,13 +55,11 @@
   .line-numbers { text-anchor: end; fill-opacity: 0.35; user-select: none; }
   {{/if}}
 
-  .bold,.prompt { font-weight: 600; }
-  .italic { font-style: italic; }
-  .underline { text-decoration: underline; }
+  {{>common_font_styles}}
   .dimmed { fill-opacity: 0.7; }
   {{~#if wrap}}
 
-  .hard-br { font-size: 16px; fill-opacity: 0.8; user-select: none; }
+  .hard-br { fill-opacity: 0.6; user-select: none; }
   {{~/if}}
 
   .fg0 { fill: {{ palette.colors.black }}; } .output-bg .fg0 { stroke: {{ palette.colors.black }}; }
@@ -132,19 +81,6 @@
 </style>
 {{/inline~}}
 
-{{! Terminal background }}
-{{~#*inline "background"}}
-<rect width="100%" height="100%" y="{{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}}" rx="4.5" style="fill: {{ palette.colors.black }};" />
-{{~#if window_frame}}
-
-<rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
-<circle cx="17" cy="-9" r="7" style="fill: {{ palette.colors.red }};"/>
-<circle cx="37" cy="-9" r="7" style="fill: {{ palette.colors.yellow }};"/>
-<circle cx="57" cy="-9" r="7" style="fill: {{ palette.colors.green }};"/>
-{{~/if}}
-
-{{/inline~}}
-
 {{~#*inline "content"}}
     <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
       {{~#if (scroll_animation)}}
@@ -155,40 +91,15 @@
       {{~/if}}
 
       {{! Render backgrounds for each input beforehand since they cannot be placed in <text>. }}
-      {{#scope y_pos=0 input_height=0}}
-      <g class="input-bg">
-        {{~#each interactions}}
-        {{~#if (not input.hidden)}}
-        {{~input_height set=(add (mul (count_lines input.text) ../const.LINE_HEIGHT) (mul 2 ../const.USER_INPUT_PADDING))~}}
-
-        <rect x="0" y="{{y_pos}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
-        {{~#if failure~}}
-          <title>This command exited with non-zero code</title>
-        {{~/if~}}
-        </rect>
-        {{~#if failure~}}
-        <rect x="0" y="{{y_pos}}" width="2" height="{{input_height}}" class="input-failure-hl" />
-        <rect x="100%" y="{{y_pos}}" width="2" height="{{input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
-        {{~/if~}}
-        {{~y_pos set=(add (y_pos) (input_height) ../const.BLOCK_MARGIN)~}}
-        {{~/if~}} {{! if (not input.hidden) }}
-        {{~y_pos set=(add (y_pos) (mul ../const.LINE_HEIGHT (len output_svg)))~}}
-        {{~#if (ne (len output_svg) 0)}}
-          {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)}}
-        {{~/if}}
-        {{~/each~}}
-      </g>
-      {{~/scope}}
-      {{#if line_numbers}}
-
-      {{>number_lines}}
-      {{/if}}
-      {{! Render main text }}
       {{#scope
         x_pos=const.WINDOW_PADDING
         input_x_pos=const.WINDOW_PADDING
         y_pos=14
-      }}
+        input_height=0
+        input_bg=""
+        output_bg=""
+        text_fg=""
+      ~}}
       {{~#if line_numbers~}}
         {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
       {{~/if~}}
@@ -196,49 +107,95 @@
         {{input_x_pos set=(x_pos)}}
       {{~/if}}
 
-      {{! The awkward newlines at the end of line <tspan>s are required for the text to be properly copyable }}
-      <text class="container fg7">
-        {{~#each interactions~}}
+      {{~#each interactions}}
+        {{~#if (not input.hidden)}}
+          {{! Render input background. Note that this doesn't change `y_pos`. }}
+          {{~input_height set=(add (mul (count_lines input.text) ../const.LINE_HEIGHT) (mul 2 ../const.USER_INPUT_PADDING))~}}
+          {{~#input_bg append=true ~}}
+            {{! `y_pos` refers to the baseline position, so for input <rect>s we need to subtract the font ascent. }}
+            <rect x="0" y="{{sub (y_pos) 14}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
+            {{~#if failure~}}
+              <title>This command exited with non-zero code</title>
+            {{~/if~}}
+            </rect>
+            {{~#if failure~}}
+            <rect x="0" y="{{sub (y_pos) 14}}" width="2" height="{{input_height}}" class="input-failure-hl" />
+            <rect x="100%" y="{{sub (y_pos) 14}}" width="2" height="{{input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
+            {{~/if~}}
+          {{~/input_bg~}}
+        {{~/if~}} {{! if (not input.hidden) }}
+
+        {{! Render input foreground and advance `y_pos` }}
+        {{! The awkward newlines at the end of line <tspan>s are required for the text to be properly copyable }}
         {{~#if (not input.hidden)~}}
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
         {{~/if~}}
-          <tspan xml:space="preserve"{{#if (not input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}} class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
+        {{~#text_fg append=true ~}}
+        <tspan xml:space="preserve"{{#if (not input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}} class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-          <tspan{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}}>{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
+            <tspan{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}}>{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
 </tspan>
-          {{~#if (not ../input.hidden)~}}
-            {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)}}
-          {{~/if~}}
+            {{~#if (not ../input.hidden)~}}
+              {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)}}
+            {{~/if~}}
           {{~/each~}}
 </tspan>
+        {{~/text_fg~}}
         {{~#if (not input.hidden)~}}
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)}}
         {{~/if~}}
-        <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">
-        {{~#each output_svg}}
-        {{~#if (ne background null)~}}
-        <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{background}}}</tspan>
-        {{~/if~}}
-        <tspan x="{{x_pos}}" y="{{y_pos}}">{{{foreground}}}
-</tspan>
-        {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
-        {{~/each~}}
-        </tspan>
-        {{~#if (gt (len output_svg) 0)~}}
-          {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)~}}
-        {{~/if~}}
-        {{~/each~}}
-      </text>
-      {{/scope}}
-    </svg>
-{{/inline~}}
 
-{{~#*inline "scrollbar"}}
-{{#with (scroll_animation)}}
-<rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
-  <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-</rect>
-{{/with}}
+        {{! Render output backround and text }}
+        {{~#text_fg append=true ~}}
+          <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">
+        {{~/text_fg~}}
+        {{~#each output_svg~}}
+          {{~#if (font_metrics)~}}
+            {{~#each background~}}
+              {{~#with (font_metrics)~}}
+                {{~#output_bg append=true ~}}
+                  <rect x="{{round (add (x_pos) (mul ../start_pos advance_width)) digits=2}}" y="{{round (sub (y_pos) ascent) digits=2}}" width="{{round (mul ../char_width advance_width) digits=2}}" height="{{round (sub ascent descent) digits=2}}"{{{../attrs}}}/>
+                {{~/output_bg~}}
+              {{~/with~}}
+            {{~/each~}}
+          {{~else~}}
+            {{~#if (gt (len background) 0)~}}
+              {{~#text_fg append=true ~}}
+              <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">
+                {{~#scope char_pos=0 ~}}
+                  {{~#each background~}}
+                    {{repeat " " (sub start_pos (char_pos))}}<tspan{{{attrs}}}>{{repeat "█" char_width}}</tspan>
+                    {{~char_pos set=(add start_pos char_width)~}}
+                  {{~/each~}}
+                {{~/scope~}}
+              </tspan>
+              {{~/text_fg~}}
+            {{~/if~}}
+          {{~/if~}}
+
+          {{~#text_fg append=true ~}}
+          <tspan x="{{x_pos}}" y="{{y_pos}}">{{{foreground}}}
+</tspan>
+          {{~/text_fg~}}
+          {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
+        {{~/each~}}
+        {{~#text_fg append=true }}</tspan>{{/text_fg~}}
+        {{~#if (ne (len output_svg) 0)}}
+          {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)}}
+        {{~/if}}
+      {{~/each~}}
+
+      <g class="input-bg">{{{input_bg}}}</g>
+      {{~#if (ne (len (output_bg)) 0)~}}
+        <g class="output-bg">{{{output_bg}}}</g>
+      {{~/if~}}
+      {{#if line_numbers}}
+
+      {{>number_lines}}
+      {{/if}}
+      <text class="container fg7">{{{text_fg}}}</text>
+      {{~/scope}}
+    </svg>
 {{/inline~}}
 
 {{~#*inline "number_lines"~}}
@@ -282,10 +239,14 @@
 {{#scope
   content_height=(eval "compute_content_height" const=const interactions=interactions)
   scroll_animation=null
+  font_metrics=null
   screen_height=0
   height=0
   line_number=1
 }}
+  {{~#if embedded_font~}}
+    {{~font_metrics set=(eval "scale_font_metrics" metrics=embedded_font.metrics)~}}
+  {{~/if~}}
   {{~#if scroll~}}
     {{scroll_animation set=(eval "compute_scroll_animation"
       const=const

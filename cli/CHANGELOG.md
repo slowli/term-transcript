@@ -5,6 +5,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Support font embedding and subsetting with the help of `--embed-font`.
+
 ## 0.4.0-beta.1 - 2024-03-03
 
 ### Added

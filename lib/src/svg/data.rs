@@ -4,7 +4,11 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
+use crate::{
+    svg::{EmbeddedFont, TemplateOptions},
+    write::SvgLine,
+    UserInput,
+};
 
 /// Root data structure sent to the Handlebars template.
 ///
@@ -68,7 +72,7 @@ use crate::{svg::TemplateOptions, write::SvgLine, UserInput};
 ///         },
 ///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
 /// #       "output_svg": [{
-/// #           "background": null,
+/// #           "background": [],
 /// #           "foreground": "Hello, <tspan class=\"fg2\">world</tspan>!",
 /// #       }],
 /// #       // ^ Implementation detail for now
@@ -91,7 +95,17 @@ pub struct HandlebarsData<'r> {
     pub interactions: Vec<SerializedInteraction<'r>>,
     /// Has any of terminal interactions failed?
     pub has_failures: bool,
+    /// A font (usually subset) to be embedded into the generated transcript.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedded_font: Option<EmbeddedFont>,
 }
+
+// 1. font-subset -> term-transcript -> font-subset-cli, ..
+// Problem: different workspaces / repos; meaning that font-subset-cli will depend on 2 `font-subset`s (????)
+// Patching the font-subset dep sort of works, unless term-transcript code needs to be modified
+//
+// 2. same, but font-subset is an optional dep in term-transcript, not used in font-subset-cli
+// (replaced with a local module)
 
 /// Information about software used for rendering (i.e., this crate).
 ///

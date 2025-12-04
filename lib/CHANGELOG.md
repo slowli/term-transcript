@@ -11,13 +11,16 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Support parsing SVG transcripts generated with the pure SVG template. In particular, these transcripts
   are now supported in snapshot testing. The pure SVG template is slightly updated for parsing;
   thus, parsing won't work with transcripts produced with old `term-transcript` versions.
+- Support embedding fonts into the SVG template via `@font-face` CSS rules with a data URL.
+  Provide font subsetting as an extension via the opt-in `font-subset` feature.
 
 ### Changed
 
 - Update `quick-xml` dependency.
-- Bump minimum supported Rust version to 1.82.
+- Bump minimum supported Rust version to 1.83.
 - Align the view box bottom during the last scroll animation frame, so that there's no overscroll.
 - Consistently trim the ending newline for captured outputs.
+- Change the hard break char to `»` so that it is covered by more fonts.
 
 ### Removed
 

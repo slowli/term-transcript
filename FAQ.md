@@ -54,7 +54,7 @@ the `style-src 'unsafe-inline'` permission.
 
 As an example, GitHub does not provide sufficient CSP permissions for the files attached to issues,
 comments, etc. On the other hand, *committed* files are served with adequate permissions;
-they can be linked to using an URL like `https://github.com/$user/$repo/raw/HEAD/path/to/snapshot.svg?sanitize=true`.
+they can be linked to using a URL like `https://github.com/$user/$repo/raw/HEAD/path/to/snapshot.svg?sanitize=true`.
 
 ## Customizing fonts
 
@@ -84,7 +84,9 @@ be used to embed the font family via [data URLs]:
 
 Such embedding, however, typically leads to a huge file size overhead (hundreds of kilobytes)
 unless the fonts are subsetted beforehand (minimized to contain only glyphs necessary
-to render the transcript).
+to render the transcript). Which is exactly the functionality provided by the [`FontEmbedder`] interface
+and its [`FontSubsetter`] implementation (the latter via the `font-subset` feature). If using CLI,
+you can embed fonts with the `--embed-font` flag.
 
 Beware that if a font is included from an external source and the including SVG is hosted
 on a website, it may be subject to CSP restrictions as described [above](#transcripts--content-security-policy).
@@ -93,4 +95,6 @@ on a website, it may be subject to CSP restrictions as described [above](#transc
 [CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
 [`Template`]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.Template.html
 [`TemplateOptions`]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.TemplateOptions.html
+[`FontEmbedder`]: https://slowli.github.io/term-transcript/term_transcript/svg/trait.FontEmbedder.html
+[`FontSubsetter`]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.FontSubsetter.html
 [data URLs]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs
