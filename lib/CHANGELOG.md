@@ -15,7 +15,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 ### Changed
 
 - Update `quick-xml` dependency.
-- Bump minimum supported Rust version to 1.82.
+- Bump minimum supported Rust version to 1.83.
 - Align the view box bottom during the last scroll animation frame, so that there's no overscroll.
 - Consistently trim the ending newline for captured outputs.
 
