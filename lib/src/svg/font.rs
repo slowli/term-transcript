@@ -19,7 +19,7 @@ pub struct EmbeddedFont {
 }
 
 /// Representation of a single face of an [`EmbeddedFont`]. Corresponds to a single `@font-face` CSS rule.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct EmbeddedFontFace {
     /// MIME type for the font, e.g. `font/woff2`.
     pub mime_type: String,
@@ -30,6 +30,19 @@ pub struct EmbeddedFontFace {
     pub is_bold: Option<bool>,
     /// Determines the `font-style` selector for the `@font-face` rule.
     pub is_italic: Option<bool>,
+}
+
+// Make `Debug` representation shorter.
+impl fmt::Debug for EmbeddedFontFace {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("EmbeddedFontFace")
+            .field("mime_type", &self.mime_type)
+            .field("data.len", &self.base64_data.len())
+            .field("is_bold", &self.is_bold)
+            .field("is_italic", &self.is_italic)
+            .finish()
+    }
 }
 
 impl EmbeddedFontFace {

@@ -172,11 +172,15 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
             font_family.push_str(", monospace");
             this.font_family = font_family;
         }
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!(?this, "created template options");
         Ok(this)
     }
 }
 
 impl TemplateArgs {
+    #[cfg_attr(feature = "tracing", tracing::instrument(ret, err))]
     fn read_font_face(path: &Path) -> anyhow::Result<FontFace> {
         let font_bytes = fs::read(path)
             .with_context(|| format!("failed loading font from {}", path.display()))?;

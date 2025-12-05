@@ -73,10 +73,23 @@ impl std::error::Error for SubsettingError {
 }
 
 /// OpenType font face that can be used [for subsetting](FontSubsetter).
-#[derive(Debug)]
 pub struct FontFace {
     inner: OwnedFont,
     advance_width: u16,
+}
+
+// Make `Debug` representation shorter.
+impl fmt::Debug for FontFace {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let font = self.inner.get();
+        formatter
+            .debug_struct("FontFace")
+            .field("family_name", &self.family_name())
+            .field("category", &font.category())
+            .field("variation_axes", &font.variation_axes())
+            .field("metrics", &font.metrics())
+            .finish_non_exhaustive()
+    }
 }
 
 impl FontFace {
@@ -194,6 +207,7 @@ impl FontSubsetter {
     /// # Errors
     ///
     /// Returns an error if parsing font bytes fails.
+    #[cfg_attr(feature = "tracing", tracing::instrument(ret, err))]
     pub fn from_faces(
         first_face: FontFace,
         second_face: Option<FontFace>,
@@ -233,6 +247,9 @@ impl FontSubsetter {
             None => { /* do nothing */ }
         }
 
+        #[cfg(feature = "tracing")]
+        tracing::info!(?metrics, "using font metrics");
+
         Ok(Self {
             family_name,
             metrics,
@@ -245,6 +262,7 @@ impl FontSubsetter {
 impl FontEmbedder for FontSubsetter {
     type Error = SubsettingError;
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(self), ret, err))]
     fn embed_font(&self, mut used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
         used_chars.remove(&'\n');
         let subset = self.regular_face.checked_subset(&used_chars)?;

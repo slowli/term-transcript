@@ -550,10 +550,7 @@ impl Template {
     ///
     /// Returns a Handlebars rendering error, if any. Normally, the only errors could be
     /// related to I/O (e.g., the output cannot be written to a file).
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(skip_all, err, fields(self.options = ?self.options))
-    )]
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, err))]
     pub fn render<W: Write>(
         &self,
         transcript: &Transcript,
@@ -567,6 +564,8 @@ impl Template {
             inner: data,
             constants: &self.constants,
         };
+        #[cfg(feature = "tracing")]
+        tracing::debug!(?data, "using Handlebars data");
 
         #[cfg(feature = "tracing")]
         let _entered = tracing::debug_span!("render_to_write").entered();
