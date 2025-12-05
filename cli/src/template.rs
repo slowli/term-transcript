@@ -10,7 +10,7 @@ use anyhow::Context;
 use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
-    svg::{self, FontSubsetter, ScrollOptions, Template, TemplateOptions, WrapOptions},
+    svg::{self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions, WrapOptions},
     Transcript, UserInput,
 };
 
@@ -160,20 +160,13 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
                 "Only 2 fonts can be embedded at the moment (regular + bold or italic)"
             );
 
-            let first_path = &value.embed_font[0];
-            let font_bytes = fs::read(first_path)
-                .with_context(|| format!("Failed loading font from {}", first_path.display()))?;
-            let aux_font_bytes = value
+            let font_face = TemplateArgs::read_font_face(&value.embed_font[0])?;
+            let aux_font_face = value
                 .embed_font
                 .get(1)
-                .map(|path| {
-                    fs::read(path)
-                        .with_context(|| format!("Failed loading font from {}", path.display()))
-                })
-                .transpose()?
-                .map(Into::into);
-
-            let subsetter = FontSubsetter::new(font_bytes.into(), aux_font_bytes)?;
+                .map(|path| TemplateArgs::read_font_face(path))
+                .transpose()?;
+            let subsetter = FontSubsetter::from_faces(font_face, aux_font_face)?;
             this = this.with_font_subsetting(subsetter);
         } else if let Some(mut font_family) = value.font_family {
             font_family.push_str(", monospace");
@@ -184,6 +177,13 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
 }
 
 impl TemplateArgs {
+    fn read_font_face(path: &Path) -> anyhow::Result<FontFace> {
+        let font_bytes = fs::read(path)
+            .with_context(|| format!("failed loading font from {}", path.display()))?;
+        FontFace::new(font_bytes.into())
+            .with_context(|| format!("invalid font at {}", path.display()))
+    }
+
     pub fn create_input(&self, command: String) -> UserInput {
         let input = UserInput::command(command);
         if self.no_inputs {

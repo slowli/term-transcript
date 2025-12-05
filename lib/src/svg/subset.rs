@@ -72,10 +72,92 @@ impl std::error::Error for SubsettingError {
     }
 }
 
+/// OpenType font face that can be used [for subsetting](FontSubsetter).
+#[derive(Debug)]
+pub struct FontFace {
+    inner: OwnedFont,
+    advance_width: u16,
+}
+
+impl FontFace {
+    /// Reads an OpenType or WOFF2 font. This is effectively a re-export from the `font-subset` crate
+    /// that performs some additional checks ensuring that the font is fit for subsetting.
+    ///
+    /// # Errors
+    ///
+    /// Returns font parsing / validation errors.
+    pub fn new(bytes: Box<[u8]>) -> Result<Self, SubsettingError> {
+        let inner = OwnedFont::new(bytes)?;
+        let advance_width = Self::check(inner.get())?;
+        Ok(Self {
+            inner,
+            advance_width,
+        })
+    }
+
+    fn check(font: &Font<'_>) -> Result<u16, SubsettingError> {
+        let permissions = font.permissions();
+        if !permissions.allow_subsetting {
+            return Err(SubsettingError::NoSubsetting);
+        }
+        if permissions.embed_only_bitmaps {
+            return Err(SubsettingError::NoEmbedding);
+        }
+
+        font.naming()
+            .family
+            .ok_or(SubsettingError::NoFontFamilyName)?;
+        font.metrics()
+            .monospace_advance_width
+            .ok_or(SubsettingError::NotMonospace)
+    }
+
+    fn family_name(&self) -> &str {
+        // `unwrap()` is safe: checked in `check()` when creating `FontFace`
+        self.inner.get().naming().family.unwrap()
+    }
+
+    fn category(&self) -> FontCategory {
+        self.inner.get().category()
+    }
+
+    fn metrics(&self) -> FontMetrics {
+        let metrics = self.inner.get().metrics();
+        FontMetrics {
+            units_per_em: metrics.units_per_em,
+            advance_width: self.advance_width,
+            ascent: metrics.ascent,
+            descent: metrics.descent,
+            bold_spacing: 0.0,
+            italic_spacing: 0.0,
+        }
+    }
+
+    fn letter_spacing(&self, base_metrics: &FontMetrics) -> f64 {
+        let aux_advance_width = self.advance_width;
+        let aux_advance_width = f64::from(aux_advance_width);
+        (f64::from(base_metrics.advance_width) - aux_advance_width)
+            / f64::from(base_metrics.units_per_em)
+    }
+
+    fn checked_subset(&self, chars: &BTreeSet<char>) -> Result<Font<'_>, SubsettingError> {
+        let font = self.inner.get();
+        let missing_chars: String = chars
+            .iter()
+            .copied()
+            .filter(|ch| !font.contains_char(*ch))
+            .collect();
+        if !missing_chars.is_empty() {
+            return Err(SubsettingError::MissingChars(missing_chars));
+        }
+        font.subset(chars).map_err(Into::into)
+    }
+}
+
 #[derive(Debug)]
 enum AuxFontFaces {
-    Bold(OwnedFont),
-    Italic(OwnedFont),
+    Bold(FontFace),
+    Italic(FontFace),
 }
 
 /// Font embedder / subsetter based on the `font-subset` library.
@@ -83,37 +165,44 @@ enum AuxFontFaces {
 pub struct FontSubsetter {
     family_name: String,
     metrics: FontMetrics,
-    regular_face: OwnedFont,
+    regular_face: FontFace,
     additional_faces: Option<AuxFontFaces>,
 }
 
 impl FontSubsetter {
-    /// Initializes the subsetter with the specified font bytes.
+    /// Initializes the subsetter with the specified font.
+    ///
+    /// # Arguments
+    ///
+    /// The font must have regular category. It may be variable (e.g., by weight).
     ///
     /// # Errors
     ///
     /// Returns an error if parsing font bytes fails.
-    pub fn new(
-        font_bytes: Box<[u8]>,
-        second_face: Option<Box<[u8]>>,
+    pub fn new(font: FontFace) -> Result<Self, SubsettingError> {
+        Self::from_faces(font, None)
+    }
+
+    /// Initializes the subsetter with the specified font.
+    ///
+    /// # Arguments
+    ///
+    /// Currently supports at most 2 input fonts. These may correspond to a regular + bold or regular + italic font faces
+    /// (can be provided in any order).
+    /// Each of the provided fonts may be variable (e.g., by weight).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if parsing font bytes fails.
+    pub fn from_faces(
+        first_face: FontFace,
+        second_face: Option<FontFace>,
     ) -> Result<Self, SubsettingError> {
         use self::FontCategory::{Bold, Italic, Regular};
 
-        let first_face = OwnedFont::new(font_bytes)?;
-        let family_name = Self::check(first_face.get())?.to_owned();
-        let mut metrics = Self::convert_metrics(&first_face.get().metrics())?;
-
-        let second_face = second_face
-            .map(|bytes| {
-                let font = OwnedFont::new(bytes)?;
-                Self::check(font.get())?;
-                Ok::<_, SubsettingError>(font)
-            })
-            .transpose()?;
-
-        let first_cat = first_face.get().category();
+        let first_cat = first_face.category();
         let (regular, aux) = if let Some(second) = second_face {
-            let second_cat = second.get().category();
+            let second_cat = second.category();
             match (first_cat, second_cat) {
                 (Regular, Bold) => (first_face, Some(AuxFontFaces::Bold(second))),
                 (Regular, Italic) => (first_face, Some(AuxFontFaces::Italic(second))),
@@ -132,12 +221,14 @@ impl FontSubsetter {
             (first_face, None)
         };
 
+        let family_name = regular.family_name().to_owned();
+        let mut metrics = regular.metrics();
         match &aux {
             Some(AuxFontFaces::Bold(font)) => {
-                metrics.bold_spacing = Self::letter_spacing(&metrics, font.get())?;
+                metrics.bold_spacing = font.letter_spacing(&metrics);
             }
             Some(AuxFontFaces::Italic(font)) => {
-                metrics.italic_spacing = Self::letter_spacing(&metrics, font.get())?;
+                metrics.italic_spacing = font.letter_spacing(&metrics);
             }
             None => { /* do nothing */ }
         }
@@ -149,59 +240,6 @@ impl FontSubsetter {
             additional_faces: aux,
         })
     }
-
-    fn convert_metrics(metrics: &font_subset::FontMetrics) -> Result<FontMetrics, SubsettingError> {
-        Ok(FontMetrics {
-            units_per_em: metrics.units_per_em,
-            advance_width: metrics
-                .monospace_advance_width
-                .ok_or(SubsettingError::NotMonospace)?,
-            ascent: metrics.ascent,
-            descent: metrics.descent,
-            bold_spacing: 0.0,
-            italic_spacing: 0.0,
-        })
-    }
-
-    fn letter_spacing(base_metrics: &FontMetrics, font: &Font<'_>) -> Result<f64, SubsettingError> {
-        let aux_advance_width = font
-            .metrics()
-            .monospace_advance_width
-            .ok_or(SubsettingError::NotMonospace)?;
-        let aux_advance_width = f64::from(aux_advance_width);
-        Ok((f64::from(base_metrics.advance_width) - aux_advance_width)
-            / f64::from(base_metrics.units_per_em))
-    }
-
-    /// Returns the font family name.
-    fn check<'font>(font: &'font Font<'_>) -> Result<&'font str, SubsettingError> {
-        let permissions = font.permissions();
-        if !permissions.allow_subsetting {
-            return Err(SubsettingError::NoSubsetting);
-        }
-        if permissions.embed_only_bitmaps {
-            return Err(SubsettingError::NoEmbedding);
-        }
-
-        font.naming()
-            .family
-            .ok_or(SubsettingError::NoFontFamilyName)
-    }
-
-    fn checked_subset<'a>(
-        font: &Font<'a>,
-        chars: &BTreeSet<char>,
-    ) -> Result<Font<'a>, SubsettingError> {
-        let missing_chars: String = chars
-            .iter()
-            .copied()
-            .filter(|ch| !font.contains_char(*ch))
-            .collect();
-        if !missing_chars.is_empty() {
-            return Err(SubsettingError::MissingChars(missing_chars));
-        }
-        font.subset(chars).map_err(Into::into)
-    }
 }
 
 impl FontEmbedder for FontSubsetter {
@@ -209,11 +247,11 @@ impl FontEmbedder for FontSubsetter {
 
     fn embed_font(&self, mut used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
         used_chars.remove(&'\n');
-        let subset = Self::checked_subset(self.regular_face.get(), &used_chars)?;
+        let subset = self.regular_face.checked_subset(&used_chars)?;
         let mut faces = vec![EmbeddedFontFace::woff2(subset.to_woff2())];
         match &self.additional_faces {
             Some(AuxFontFaces::Bold(face)) => {
-                let subset = Self::checked_subset(face.get(), &used_chars)?;
+                let subset = face.checked_subset(&used_chars)?;
                 faces.push(EmbeddedFontFace {
                     is_bold: Some(true),
                     ..EmbeddedFontFace::woff2(subset.to_woff2())
@@ -221,7 +259,7 @@ impl FontEmbedder for FontSubsetter {
                 faces[0].is_bold = Some(false);
             }
             Some(AuxFontFaces::Italic(face)) => {
-                let subset = Self::checked_subset(face.get(), &used_chars)?;
+                let subset = face.checked_subset(&used_chars)?;
                 faces.push(EmbeddedFontFace {
                     is_italic: Some(true),
                     ..EmbeddedFontFace::woff2(subset.to_woff2())
@@ -252,28 +290,25 @@ mod tests {
         Transcript, UserInput,
     };
 
-    fn roboto_mono() -> Box<[u8]> {
-        fs::read("../examples/fonts/RobotoMono-VariableFont_wght.ttf")
-            .unwrap()
-            .into()
+    fn read_font(path: &str) -> FontFace {
+        let bytes = fs::read(path).unwrap();
+        FontFace::new(bytes.into()).unwrap()
     }
 
-    fn roboto_mono_italic() -> Box<[u8]> {
-        fs::read("../examples/fonts/RobotoMono-Italic-VariableFont_wght.ttf")
-            .unwrap()
-            .into()
+    fn roboto_mono() -> FontFace {
+        read_font("../examples/fonts/RobotoMono-VariableFont_wght.ttf")
     }
 
-    fn fira_mono() -> Box<[u8]> {
-        fs::read("../examples/fonts/FiraMono-Regular.ttf")
-            .unwrap()
-            .into()
+    fn roboto_mono_italic() -> FontFace {
+        read_font("../examples/fonts/RobotoMono-Italic-VariableFont_wght.ttf")
     }
 
-    fn fira_mono_bold() -> Box<[u8]> {
-        fs::read("../examples/fonts/FiraMono-Bold.ttf")
-            .unwrap()
-            .into()
+    fn fira_mono() -> FontFace {
+        read_font("../examples/fonts/FiraMono-Regular.ttf")
+    }
+
+    fn fira_mono_bold() -> FontFace {
+        read_font("../examples/fonts/FiraMono-Bold.ttf")
     }
 
     fn test_subsetting_font(subsetter: FontSubsetter, pure_svg: bool) -> String {
@@ -315,7 +350,7 @@ mod tests {
 
     #[test_casing(2, [false, true])]
     fn subsetting_font(pure_svg: bool) {
-        let subsetter = FontSubsetter::new(roboto_mono(), None).unwrap();
+        let subsetter = FontSubsetter::new(roboto_mono()).unwrap();
         assert_eq!(subsetter.family_name, "Roboto Mono");
         let buffer = test_subsetting_font(subsetter, pure_svg);
 
@@ -339,7 +374,8 @@ mod tests {
     #[test_casing(2, [false, true])]
     #[allow(clippy::float_cmp)] // the entire point
     fn subsetting_font_with_aux_italic_font(pure_svg: bool) {
-        let subsetter = FontSubsetter::new(roboto_mono(), Some(roboto_mono_italic())).unwrap();
+        let subsetter =
+            FontSubsetter::from_faces(roboto_mono(), Some(roboto_mono_italic())).unwrap();
         assert_eq!(subsetter.family_name, "Roboto Mono");
         assert_matches!(&subsetter.additional_faces, Some(AuxFontFaces::Italic(_)));
         assert_eq!(subsetter.metrics.bold_spacing, 0.0);
@@ -365,7 +401,7 @@ mod tests {
     #[test_casing(2, [false, true])]
     #[allow(clippy::float_cmp)] // the entire point
     fn subsetting_font_with_aux_bold_font(pure_svg: bool) {
-        let subsetter = FontSubsetter::new(fira_mono(), Some(fira_mono_bold())).unwrap();
+        let subsetter = FontSubsetter::from_faces(fira_mono(), Some(fira_mono_bold())).unwrap();
         assert_eq!(subsetter.family_name, "Fira Mono");
         assert_matches!(&subsetter.additional_faces, Some(AuxFontFaces::Bold(_)));
         // Fira Mono Bold has the same advance width as the regular font face
