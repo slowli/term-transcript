@@ -104,7 +104,7 @@ fn base64_encode<S: Serializer>(data: &[u8], serializer: S) -> Result<S::Ok, S::
 /// Produces an [`EmbeddedFont`] for SVG.
 pub trait FontEmbedder: 'static + fmt::Debug + Send + Sync {
     /// Errors produced by the embedder.
-    type Error: 'static + Send + Sync;
+    type Error: Into<BoxedError>;
 
     /// Performs embedding. This can involve subsetting the font based on the specified chars used in the transcript.
     ///
@@ -136,7 +136,7 @@ pub struct FontMetrics {
 #[derive(Debug)]
 struct BoxedErrorEmbedder<T>(T);
 
-impl<T: FontEmbedder<Error: std::error::Error>> FontEmbedder for BoxedErrorEmbedder<T> {
+impl<T: FontEmbedder> FontEmbedder for BoxedErrorEmbedder<T> {
     type Error = BoxedError;
 
     fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
@@ -247,10 +247,7 @@ impl Default for TemplateOptions {
 impl TemplateOptions {
     /// Sets the font embedder to be used.
     #[must_use]
-    pub fn with_font_embedder(
-        mut self,
-        embedder: impl FontEmbedder<Error: std::error::Error>,
-    ) -> Self {
+    pub fn with_font_embedder(mut self, embedder: impl FontEmbedder) -> Self {
         self.font_embedder = Some(Box::new(BoxedErrorEmbedder(embedder)));
         self
     }
