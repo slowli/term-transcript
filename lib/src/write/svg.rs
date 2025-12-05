@@ -1,9 +1,9 @@
-use std::{fmt, io, mem, str};
+use std::{fmt, io};
 
 use serde::Serialize;
-use termcolor::{ColorSpec, WriteColor};
+use termcolor::ColorSpec;
 
-use super::{IndexOrRgb, LineBreak, LineSplitter, StyledSpan, WriteLines, WriteStr};
+use super::{IndexOrRgb, LineBreak, StyledLine, StyledSpan};
 
 impl StyledSpan {
     fn for_bg(color: IndexOrRgb, intense: bool, dimmed: bool) -> Self {
@@ -23,19 +23,11 @@ impl StyledSpan {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub(crate) struct SvgLine {
     pub background: Vec<BackgroundSegment>,
     pub foreground: String,
-}
-
-impl SvgLine {
-    fn new(foreground: String, background: Vec<BackgroundSegment>) -> Self {
-        Self {
-            background,
-            foreground,
-        }
-    }
+    pub br: Option<LineBreak>,
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -45,30 +37,17 @@ pub(crate) struct BackgroundSegment {
     attrs: String,
 }
 
-#[derive(Debug)]
-pub(crate) struct SvgWriter {
-    output: Vec<SvgLine>,
-    current_background: Vec<BackgroundSegment>,
-    current_line: String,
-    current_style: Option<ColorSpec>,
-    line_splitter: LineSplitter,
+impl AsMut<String> for SvgLine {
+    fn as_mut(&mut self) -> &mut String {
+        &mut self.foreground
+    }
 }
 
-impl SvgWriter {
-    pub fn new(max_width: Option<usize>) -> Self {
-        Self {
-            output: vec![],
-            current_background: vec![],
-            current_line: String::new(),
-            current_style: None,
-            line_splitter: max_width.map_or_else(LineSplitter::default, LineSplitter::new),
-        }
-    }
-
-    fn write_color(&mut self, spec: ColorSpec, start_pos: usize) -> io::Result<()> {
+impl StyledLine for SvgLine {
+    fn write_color(&mut self, spec: &ColorSpec, start_pos: usize) -> io::Result<()> {
         use fmt::Write as _;
 
-        let mut span = StyledSpan::new(&spec, "fill")?;
+        let mut span = StyledSpan::new(spec, "fill")?;
 
         let mut back_color_class = String::with_capacity(4);
         back_color_class.push_str("bg");
@@ -89,118 +68,41 @@ impl SvgWriter {
         if let Some(color) = back_color {
             let span = StyledSpan::for_bg(color, spec.intense(), spec.dimmed());
             let mut attrs = String::new();
-            span.write_attrs(&mut attrs).unwrap();
-            self.current_background.push(BackgroundSegment {
+            span.write_attrs(&mut attrs);
+            self.background.push(BackgroundSegment {
                 start_pos,
                 char_width: 0,
                 attrs,
             });
         }
 
-        span.write_tag(self, "tspan")?;
-        self.current_style = Some(spec);
+        span.write_tag(&mut self.foreground, "tspan");
         Ok(())
     }
 
-    fn reset_inner(&mut self, line_width: Option<usize>) -> io::Result<()> {
-        if let Some(spec) = &self.current_style {
-            if spec.bg().is_some() {
-                let line_width = line_width.unwrap_or(self.line_splitter.current_width);
-                self.terminate_bg_segment(line_width);
-            }
-            self.current_style = None;
-            self.write_str("</tspan>")?;
+    fn reset_color(&mut self, prev_spec: &ColorSpec, current_width: usize) {
+        if prev_spec.bg().is_some() {
+            let segment = self.background.last_mut().unwrap();
+            segment.char_width = current_width - segment.start_pos;
         }
-        Ok(())
+        self.foreground.push_str("</tspan>");
     }
 
-    fn terminate_bg_segment(&mut self, current_width: usize) {
-        let segment = self.current_background.last_mut().unwrap();
-        segment.char_width = current_width - segment.start_pos;
-    }
-
-    pub fn into_lines(mut self) -> Vec<SvgLine> {
-        if self.line_splitter.current_width > 0 {
-            self.output.push(SvgLine::new(
-                mem::take(&mut self.current_line),
-                mem::take(&mut self.current_background),
-            ));
-        }
-        self.output
-    }
-}
-
-impl WriteStr for SvgWriter {
-    fn write_str(&mut self, s: &str) -> io::Result<()> {
-        self.current_line.write_str(s)
-    }
-}
-
-impl WriteLines for SvgWriter {
-    fn line_splitter_mut(&mut self) -> Option<&mut LineSplitter> {
-        Some(&mut self.line_splitter)
-    }
-
-    fn write_line_break(&mut self, br: LineBreak, char_width: usize) -> io::Result<()> {
-        const HARD_BR: &str = r#"<tspan class="hard-br" dx="5">»</tspan>"#;
-        match br {
-            LineBreak::Hard => self.write_str(HARD_BR)?,
-        }
-        self.write_new_line(char_width)
-    }
-
-    fn write_new_line(&mut self, char_width: usize) -> io::Result<()> {
-        let current_style = self.current_style.clone();
-        self.reset_inner(Some(char_width))?;
-
-        self.output.push(SvgLine::new(
-            mem::take(&mut self.current_line),
-            mem::take(&mut self.current_background),
-        ));
-
-        if let Some(spec) = current_style {
-            self.write_color(spec, 0)?;
-        }
-        Ok(())
-    }
-}
-
-impl io::Write for SvgWriter {
-    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        self.io_write(buffer)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl WriteColor for SvgWriter {
-    fn supports_color(&self) -> bool {
-        true
-    }
-
-    fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        debug_assert!(spec.reset());
-        self.reset()?;
-        if !spec.is_none() {
-            let start_pos = self.line_splitter.current_width;
-            self.write_color(spec.clone(), start_pos)?;
-        }
-        Ok(())
-    }
-
-    fn reset(&mut self) -> io::Result<()> {
-        self.reset_inner(None)
+    fn set_br(&mut self, br: Option<LineBreak>) {
+        self.br = br;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use io::Write as _;
-    use termcolor::Color;
+    use std::io::Write as _;
+
+    use termcolor::{Color, WriteColor as _};
 
     use super::*;
+    use crate::write::GenericWriter;
+
+    type SvgWriter = GenericWriter<SvgLine>;
 
     #[test]
     fn svg_writer_basic_colors() -> anyhow::Result<()> {
@@ -222,6 +124,7 @@ mod tests {
         let SvgLine {
             background,
             foreground,
+            ..
         } = lines.pop().unwrap();
         assert_eq!(
             background,
@@ -251,6 +154,7 @@ mod tests {
         let SvgLine {
             background,
             foreground,
+            ..
         } = lines.pop().unwrap();
         assert!(background.is_empty());
         assert_eq!(foreground, r#"<tspan class="fg12">blue</tspan>"#);
@@ -294,6 +198,7 @@ mod tests {
         let SvgLine {
             background,
             foreground,
+            ..
         } = lines.pop().unwrap();
         assert_eq!(
             background,
@@ -401,10 +306,8 @@ mod tests {
             unreachable!();
         };
         assert!(first.background.is_empty());
-        assert_eq!(
-            first.foreground,
-            "Hello<tspan class=\"hard-br\" dx=\"5\">»</tspan>"
-        );
+        assert_eq!(first.foreground, "Hello");
+        assert_eq!(first.br, Some(LineBreak::Hard));
         assert_eq!(
             second.background,
             [BackgroundSegment {
@@ -415,9 +318,9 @@ mod tests {
         );
         assert_eq!(
             second.foreground,
-            ", <tspan class=\"bold underline fg2 bg7\">wor\
-             <tspan class=\"hard-br\" dx=\"5\">»</tspan></tspan>"
+            ", <tspan class=\"bold underline fg2 bg7\">wor</tspan>"
         );
+        assert_eq!(second.br, Some(LineBreak::Hard));
         assert_eq!(
             third.background,
             [BackgroundSegment {
@@ -428,9 +331,9 @@ mod tests {
         );
         assert_eq!(
             third.foreground,
-            "<tspan class=\"bold underline fg2 bg7\">ld</tspan>! M\
-             <tspan class=\"hard-br\" dx=\"5\">»</tspan>"
+            "<tspan class=\"bold underline fg2 bg7\">ld</tspan>! M"
         );
+        assert_eq!(third.br, Some(LineBreak::Hard));
 
         assert!(lines[3].background.is_empty());
         assert_eq!(lines[3].foreground, "ore&gt;");

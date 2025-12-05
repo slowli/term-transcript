@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::{
     svg::{EmbeddedFont, TemplateOptions},
-    write::SvgLine,
+    write::{HtmlLine, SvgLine},
     UserInput,
 };
 
@@ -162,7 +162,7 @@ pub struct SerializedInteraction<'a> {
     /// User's input.
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
-    pub output_html: String,
+    pub(crate) output_html: Vec<HtmlLine>,
     /// Terminal output in the SVG format.
     pub(crate) output_svg: Vec<SvgLine>,
     /// Exit status of the latest executed program, or `None` if it cannot be determined.

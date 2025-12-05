@@ -30,7 +30,10 @@ pub use self::{
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{write::SvgLine, BoxedError, TermError, Transcript};
+use crate::{
+    write::{HtmlLine, SvgLine},
+    BoxedError, TermError, Transcript,
+};
 
 mod data;
 mod font;
@@ -265,10 +268,11 @@ impl TemplateOptions {
         feature = "tracing",
         tracing::instrument(level = "debug", skip_all, err)
     )]
+    #[allow(clippy::type_complexity)] // FIXME
     fn render_outputs(
         &self,
         transcript: &Transcript,
-    ) -> Result<Vec<(String, Vec<SvgLine>)>, TermError> {
+    ) -> Result<Vec<(Vec<HtmlLine>, Vec<SvgLine>)>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
             WrapOptions::HardBreakAt(width) => *width,
         });
@@ -278,10 +282,9 @@ impl TemplateOptions {
             .iter()
             .map(|interaction| {
                 let output = interaction.output();
-                let mut buffer = String::with_capacity(output.as_ref().len());
-                output.write_as_html(&mut buffer, max_width)?;
+                let html_lines = output.write_as_html(max_width)?;
                 let svg_lines = output.write_as_svg(max_width)?;
-                Ok((buffer, svg_lines))
+                Ok((html_lines, svg_lines))
             })
             .collect()
     }

@@ -2,11 +2,10 @@
 
 use std::{fmt, io};
 
-use termcolor::{ColorSpec, WriteColor};
+use serde::Serialize;
+use termcolor::ColorSpec;
 
-use super::{
-    fmt_to_io_error, IndexOrRgb, LineBreak, LineSplitter, StyledSpan, WriteLines, WriteStr,
-};
+use super::{IndexOrRgb, LineBreak, StyledLine, StyledSpan};
 
 impl StyledSpan {
     fn set_html_bg(&mut self, spec: &ColorSpec) -> io::Result<()> {
@@ -32,91 +31,31 @@ impl StyledSpan {
     }
 }
 
-/// `WriteColor` implementation that renders output as HTML.
-///
-/// **NB.** The implementation relies on `ColorSpec`s supplied to `set_color` always having
-/// `reset()` flag set. This is true for `TermOutputParser`.
-pub(crate) struct HtmlWriter<'a> {
-    output: &'a mut dyn fmt::Write,
-    is_colored: bool,
-    line_splitter: Option<LineSplitter>,
+#[derive(Debug, Default, Serialize)]
+pub(crate) struct HtmlLine {
+    pub html: String,
+    pub br: Option<LineBreak>,
 }
 
-impl<'a> HtmlWriter<'a> {
-    pub fn new(output: &'a mut dyn fmt::Write, max_width: Option<usize>) -> Self {
-        Self {
-            output,
-            is_colored: false,
-            line_splitter: max_width.map(LineSplitter::new),
-        }
+impl AsMut<String> for HtmlLine {
+    fn as_mut(&mut self) -> &mut String {
+        &mut self.html
     }
+}
 
-    fn write_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
+impl StyledLine for HtmlLine {
+    fn write_color(&mut self, spec: &ColorSpec, _start_pos: usize) -> io::Result<()> {
         let mut span = StyledSpan::new(spec, "color")?;
         span.set_html_bg(spec)?;
-        span.write_tag(self, "span")?;
-        Ok(())
-    }
-}
-
-impl WriteStr for HtmlWriter<'_> {
-    fn write_str(&mut self, s: &str) -> io::Result<()> {
-        self.output.write_str(s).map_err(fmt_to_io_error)
-    }
-}
-
-impl WriteLines for HtmlWriter<'_> {
-    fn line_splitter_mut(&mut self) -> Option<&mut LineSplitter> {
-        self.line_splitter.as_mut()
-    }
-
-    fn write_line_break(&mut self, br: LineBreak, _char_width: usize) -> io::Result<()> {
-        self.write_str(br.as_html())
-    }
-
-    fn write_new_line(&mut self, _char_width: usize) -> io::Result<()> {
-        self.write_str("\n")
-    }
-}
-
-impl io::Write for HtmlWriter<'_> {
-    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        self.io_write(buffer)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl WriteColor for HtmlWriter<'_> {
-    fn supports_color(&self) -> bool {
-        true
-    }
-
-    fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        debug_assert!(spec.reset());
-        self.reset()?;
-        if !spec.is_none() {
-            self.write_color(spec)?;
-            self.is_colored = true;
-        }
+        span.write_tag(&mut self.html, "span");
         Ok(())
     }
 
-    fn reset(&mut self) -> io::Result<()> {
-        if self.is_colored {
-            self.is_colored = false;
-            self.write_str("</span>")?;
-        }
-        Ok(())
+    fn reset_color(&mut self, _prev_spec: &ColorSpec, _current_width: usize) {
+        self.html.push_str("</span>");
     }
-}
 
-impl LineBreak {
-    fn as_html(self) -> &'static str {
-        match self {
-            Self::Hard => r#"<b class="hard-br"><br/></b>"#,
-        }
+    fn set_br(&mut self, br: Option<LineBreak>) {
+        self.br = br;
     }
 }

@@ -4,20 +4,22 @@ use termcolor::WriteColor;
 
 use super::*;
 
+type HtmlWriter = GenericWriter<HtmlLine>;
+
 #[test]
 fn html_escaping() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, None);
+    let mut writer = HtmlWriter::new(None);
     write!(writer, "1 < 2 && 4 >= 3")?;
 
-    assert_eq!(buffer, "1 &lt; 2 &amp;&amp; 4 &gt;= 3");
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0].html, "1 &lt; 2 &amp;&amp; 4 &gt;= 3");
     Ok(())
 }
 
 #[test]
 fn html_writer_basic_colors() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, None);
+    let mut writer = HtmlWriter::new(None);
     write!(writer, "Hello, ")?;
     writer.set_color(
         ColorSpec::new()
@@ -30,8 +32,10 @@ fn html_writer_basic_colors() -> anyhow::Result<()> {
     writer.reset()?;
     write!(writer, "!")?;
 
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 1);
     assert_eq!(
-        buffer,
+        lines[0].html,
         r#"Hello, <span class="bold underline fg2 bg7">world</span>!"#
     );
 
@@ -40,21 +44,21 @@ fn html_writer_basic_colors() -> anyhow::Result<()> {
 
 #[test]
 fn html_writer_intense_color() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, None);
+    let mut writer = HtmlWriter::new(None);
 
     writer.set_color(ColorSpec::new().set_intense(true).set_fg(Some(Color::Blue)))?;
     write!(writer, "blue")?;
     writer.reset()?;
 
-    assert_eq!(buffer, r#"<span class="fg12">blue</span>"#);
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0].html, r#"<span class="fg12">blue</span>"#);
     Ok(())
 }
 
 #[test]
 fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, None);
+    let mut writer = HtmlWriter::new(None);
     writer.set_color(
         ColorSpec::new()
             .set_dimmed(true)
@@ -67,8 +71,10 @@ fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
     writer.reset()?;
     write!(writer, "!")?;
 
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 1);
     assert_eq!(
-        buffer,
+        lines[0].html,
         "<span class=\"dimmed fg2 bg7\">Hello, </span><span class=\"fg3\">world</span>!"
     );
 
@@ -77,8 +83,7 @@ fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
 
 #[test]
 fn html_writer_custom_colors() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, None);
+    let mut writer = HtmlWriter::new(None);
     writer.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(5))))?;
     write!(writer, "H")?;
     writer.set_color(ColorSpec::new().set_bg(Some(Color::Ansi256(14))))?;
@@ -91,8 +96,10 @@ fn html_writer_custom_colors() -> anyhow::Result<()> {
     write!(writer, "o")?;
     writer.reset()?;
 
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 1);
     assert_eq!(
-        buffer,
+        lines[0].html,
         "<span class=\"fg5\">H</span>\
              <span class=\"bg14\">e</span>\
              <span style=\"background: #5fd700;\">l</span>\
@@ -123,8 +130,7 @@ fn splitting_lines() {
 
 #[test]
 fn splitting_lines_in_writer() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, Some(5));
+    let mut writer = HtmlWriter::new(Some(5));
 
     write!(writer, "Hello, ")?;
     writer.set_color(
@@ -138,63 +144,77 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
     writer.reset()?;
     write!(writer, "! More>\ntext")?;
 
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 5);
+    assert_eq!(lines[0].html, "Hello");
+    assert_eq!(lines[0].br, Some(LineBreak::Hard));
     assert_eq!(
-        buffer,
-        "Hello<b class=\"hard-br\"><br/></b>, <span class=\"bold underline fg2 bg7\">\
-             wor<b class=\"hard-br\"><br/></b>ld</span>! \
-             M<b class=\"hard-br\"><br/></b>ore&gt;\ntext"
+        lines[1].html,
+        ", <span class=\"bold underline fg2 bg7\">wor</span>"
     );
+    assert_eq!(lines[1].br, Some(LineBreak::Hard));
+    assert_eq!(
+        lines[2].html,
+        "<span class=\"bold underline fg2 bg7\">ld</span>! M"
+    );
+    assert_eq!(lines[2].br, Some(LineBreak::Hard));
+    assert_eq!(lines[3].html, "ore&gt;");
+    assert_eq!(lines[3].br, None);
+    assert_eq!(lines[4].html, "text");
+    assert_eq!(lines[4].br, None);
+
     Ok(())
 }
 
 #[test]
 fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, Some(5));
-
+    let mut writer = HtmlWriter::new(Some(5));
     writeln!(writer, ">>>>>>>")?;
-    assert_eq!(
-        buffer,
-        "&gt;&gt;&gt;&gt;&gt;<b class=\"hard-br\"><br/></b>&gt;&gt;\n"
-    );
 
-    {
-        buffer.clear();
-        let mut writer = HtmlWriter::new(&mut buffer, Some(5));
-        for _ in 0..7 {
-            write!(writer, ">")?;
-        }
-        assert_eq!(
-            buffer,
-            "&gt;&gt;&gt;&gt;&gt;<b class=\"hard-br\"><br/></b>&gt;&gt;"
-        );
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0].html, "&gt;&gt;&gt;&gt;&gt;");
+    assert_eq!(lines[0].br, Some(LineBreak::Hard));
+    assert_eq!(lines[1].html, "&gt;&gt;");
+
+    let mut writer = HtmlWriter::new(Some(5));
+    for _ in 0..7 {
+        write!(writer, ">")?;
     }
+
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0].html, "&gt;&gt;&gt;&gt;&gt;");
+    assert_eq!(lines[0].br, Some(LineBreak::Hard));
+    assert_eq!(lines[1].html, "&gt;&gt;");
     Ok(())
 }
 
 #[test]
 fn splitting_lines_with_newlines() -> anyhow::Result<()> {
-    let mut buffer = String::new();
-    let mut writer = HtmlWriter::new(&mut buffer, Some(5));
+    let mut writer = HtmlWriter::new(Some(5));
 
     for _ in 0..2 {
         writeln!(writer, "< test >")?;
     }
-    assert_eq!(
-        buffer,
-        "&lt; tes<b class=\"hard-br\"><br/></b>t &gt;\n&lt; \
-             tes<b class=\"hard-br\"><br/></b>t &gt;\n"
-    );
 
-    buffer.clear();
-    let mut writer = HtmlWriter::new(&mut buffer, Some(5));
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 4);
+    assert_eq!(lines[0].html, "&lt; tes");
+    assert_eq!(lines[1].html, "t &gt;");
+    assert_eq!(lines[2].html, "&lt; tes");
+    assert_eq!(lines[3].html, "t &gt;");
+
+    let mut writer = HtmlWriter::new(Some(5));
     for _ in 0..2 {
         writeln!(writer, "<< test >>")?;
     }
-    assert_eq!(
-        buffer,
-        "&lt;&lt; te<b class=\"hard-br\"><br/></b>st &gt;&gt;\n\
-             &lt;&lt; te<b class=\"hard-br\"><br/></b>st &gt;&gt;\n"
-    );
+
+    let lines = writer.into_lines();
+    assert_eq!(lines.len(), 4);
+    assert_eq!(lines[0].html, "&lt;&lt; te");
+    assert_eq!(lines[1].html, "st &gt;&gt;");
+    assert_eq!(lines[2].html, "&lt;&lt; te");
+    assert_eq!(lines[3].html, "st &gt;&gt;");
     Ok(())
 }

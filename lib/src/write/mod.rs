@@ -1,23 +1,20 @@
 //! Rendering logic for terminal outputs.
 
-use std::{fmt, io, str};
+use std::{fmt, io, mem, str};
 
-use termcolor::{Color, ColorSpec};
+use serde::Serialize;
+use termcolor::{Color, ColorSpec, WriteColor};
 use unicode_width::UnicodeWidthChar;
+
+pub(crate) use self::html::HtmlLine;
+#[cfg(feature = "svg")]
+pub(crate) use self::svg::SvgLine;
 
 mod html;
 #[cfg(feature = "svg")]
 mod svg;
 #[cfg(test)]
 mod tests;
-
-pub(crate) use self::html::HtmlWriter;
-#[cfg(feature = "svg")]
-pub(crate) use self::svg::{SvgLine, SvgWriter};
-
-fn fmt_to_io_error(err: fmt::Error) -> io::Error {
-    io::Error::other(err)
-}
 
 /// HTML `<span>` / SVG `<tspan>` containing styling info.
 #[derive(Debug)]
@@ -74,98 +71,123 @@ impl StyledSpan {
         }
     }
 
-    fn write_attrs(self, output: &mut impl WriteStr) -> io::Result<()> {
+    fn write_attrs(self, output: &mut String) {
         if !self.classes.is_empty() {
-            output.write_str(" class=\"")?;
+            output.push_str(" class=\"");
             for (i, class) in self.classes.iter().enumerate() {
-                output.write_str(class)?;
+                output.push_str(class);
                 if i + 1 < self.classes.len() {
-                    output.write_str(" ")?;
+                    output.push(' ');
                 }
             }
-            output.write_str("\"")?;
+            output.push('\"');
         }
         if !self.styles.is_empty() {
-            output.write_str(" style=\"")?;
+            output.push_str(" style=\"");
             for (i, style) in self.styles.iter().enumerate() {
-                output.write_str(style)?;
+                output.push_str(style);
                 if i + 1 < self.styles.len() {
-                    output.write_str("; ")?;
+                    output.push_str("; ");
                 }
             }
-            output.write_str(";\"")?;
+            output.push_str(";\"");
+        }
+    }
+
+    fn write_tag(self, output: &mut String, tag: &str) {
+        output.push('<');
+        output.push_str(tag);
+        self.write_attrs(output);
+        output.push('>');
+    }
+}
+
+pub(crate) trait StyledLine: Default + AsMut<String> {
+    fn write_color(&mut self, spec: &ColorSpec, start_pos: usize) -> io::Result<()>;
+    fn reset_color(&mut self, prev_spec: &ColorSpec, current_width: usize);
+    fn set_br(&mut self, br: Option<LineBreak>);
+}
+
+#[derive(Debug)]
+pub(crate) struct GenericWriter<L> {
+    lines: Vec<L>,
+    current_line: L,
+    current_style: Option<ColorSpec>,
+    line_splitter: LineSplitter,
+}
+
+impl<L: StyledLine> GenericWriter<L> {
+    pub fn new(max_width: Option<usize>) -> Self {
+        Self {
+            lines: vec![],
+            current_line: L::default(),
+            current_style: None,
+            line_splitter: max_width.map_or_else(LineSplitter::default, LineSplitter::new),
+        }
+    }
+
+    fn write_color(&mut self, spec: ColorSpec, start_pos: usize) -> io::Result<()> {
+        self.current_line.write_color(&spec, start_pos)?;
+        self.current_style = Some(spec);
+        Ok(())
+    }
+
+    fn reset_inner(&mut self, line_width: Option<usize>) {
+        if let Some(spec) = &self.current_style {
+            let line_width = line_width.unwrap_or(self.line_splitter.current_width);
+            self.current_line.reset_color(spec, line_width);
+            self.current_style = None;
+        }
+    }
+
+    pub fn into_lines(mut self) -> Vec<L> {
+        if self.line_splitter.current_width > 0 {
+            self.lines.push(mem::take(&mut self.current_line));
+        }
+        self.lines
+    }
+
+    fn write_new_line(&mut self, char_width: usize, br: Option<LineBreak>) -> io::Result<()> {
+        let current_style = self.current_style.clone();
+        self.reset_inner(Some(char_width));
+
+        let mut line = mem::take(&mut self.current_line);
+        line.set_br(br);
+        self.lines.push(line);
+
+        if let Some(spec) = current_style {
+            self.write_color(spec, 0)?;
         }
         Ok(())
     }
 
-    fn write_tag(self, output: &mut impl WriteStr, tag: &str) -> io::Result<()> {
-        output.write_str("<")?;
-        output.write_str(tag)?;
-        self.write_attrs(output)?;
-        output.write_str(">")
-    }
-}
-
-/// Analogue of `std::fmt::Write`, but with `io::Error`s.
-trait WriteStr {
-    fn write_str(&mut self, s: &str) -> io::Result<()>;
-}
-
-impl WriteStr for String {
-    fn write_str(&mut self, s: &str) -> io::Result<()> {
-        <Self as fmt::Write>::write_str(self, s).map_err(fmt_to_io_error)
-    }
-}
-
-/// Shared logic between `HtmlWriter` and `SvgWriter`.
-trait WriteLines: WriteStr {
-    fn line_splitter_mut(&mut self) -> Option<&mut LineSplitter>;
-
-    /// Writes a [`LineBreak`] to this writer. The char width of the line preceding the break
-    /// is `char_width`.
-    fn write_line_break(&mut self, br: LineBreak, char_width: usize) -> io::Result<()>;
-
-    /// Writes a newline `\n` to this writer.
-    fn write_new_line(&mut self, char_width: usize) -> io::Result<()>;
-
     /// Writes the specified text displayed to the user that should be subjected to wrapping.
-    #[allow(clippy::option_if_let_else)] // false positive
     fn write_text(&mut self, s: &str) -> io::Result<()> {
-        if let Some(splitter) = self.line_splitter_mut() {
-            let lines = splitter.split_lines(s);
-            self.write_lines(lines)
-        } else {
-            self.write_str(s)
-        }
+        let lines = self.line_splitter.split_lines(s);
+        self.write_lines(lines)
     }
 
     fn write_lines(&mut self, lines: Vec<Line<'_>>) -> io::Result<()> {
         let lines_count = lines.len();
         let it = lines.into_iter().enumerate();
         for (i, line) in it {
-            self.write_str(line.text)?;
-            if let Some(br) = line.br {
-                self.write_line_break(br, line.char_width)?;
-            } else if i + 1 < lines_count {
-                self.write_new_line(line.char_width)?;
+            self.current_line.as_mut().push_str(line.text);
+            if i + 1 < lines_count || line.br.is_some() {
+                self.write_new_line(line.char_width, line.br)?;
             }
         }
         Ok(())
     }
 
     /// Writes the specified HTML `entity` as if it were displayed as a single char.
-    #[allow(clippy::option_if_let_else)] // false positive
     fn write_html_entity(&mut self, entity: &str) -> io::Result<()> {
-        if let Some(splitter) = self.line_splitter_mut() {
-            let lines = splitter.write_as_char(entity);
-            self.write_lines(lines)
-        } else {
-            self.write_str(entity)
-        }
+        let lines = self.line_splitter.write_as_char(entity);
+        self.write_lines(lines)
     }
+}
 
-    /// Implements `io::Write::write()`.
-    fn io_write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+impl<L: StyledLine> io::Write for GenericWriter<L> {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
         let mut last_escape = 0;
         for (i, &byte) in buffer.iter().enumerate() {
             let escaped = match byte {
@@ -185,6 +207,31 @@ trait WriteLines: WriteStr {
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
         self.write_text(saved_str)?;
         Ok(buffer.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<L: StyledLine> WriteColor for GenericWriter<L> {
+    fn supports_color(&self) -> bool {
+        true
+    }
+
+    fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
+        debug_assert!(spec.reset());
+        self.reset()?;
+        if !spec.is_none() {
+            let start_pos = self.line_splitter.current_width;
+            self.write_color(spec.clone(), start_pos)?;
+        }
+        Ok(())
+    }
+
+    fn reset(&mut self) -> io::Result<()> {
+        self.reset_inner(None);
+        Ok(())
     }
 }
 
@@ -347,7 +394,8 @@ struct Line<'a> {
     char_width: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum LineBreak {
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum LineBreak {
     Hard,
 }
