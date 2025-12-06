@@ -7,6 +7,7 @@ use handlebars::{
     RenderErrorReason, Renderable, ScopedJson, StringOutput,
 };
 use serde_json::Value as Json;
+use unicode_width::UnicodeWidthStr;
 
 /// Tries to convert an `f64` number to `i64` without precision loss.
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
@@ -418,6 +419,7 @@ impl HelperDef for LineCounter {
                 "string".to_owned(),
             )
         })?;
+        // FIXME: remove
         let is_html = helper
             .hash_get("format")
             .is_some_and(|format| format.value().as_str() == Some("html"));
@@ -736,8 +738,73 @@ impl HelperDef for TrimHelper {
                 "string".to_owned(),
             )
         })?;
-        let trimmed = val.trim();
+
+        let side = helper
+            .hash_get("side")
+            .map(|val| {
+                val.value().as_str().ok_or_else(|| {
+                    RenderErrorReason::ParamTypeMismatchForName(
+                        Self::NAME,
+                        "side".to_owned(),
+                        "one of `start`, `end`, or `both`".to_owned(),
+                    )
+                })
+            })
+            .transpose()?;
+
+        let trimmed = match side {
+            None | Some("both") => val.trim(),
+            Some("start") => val.trim_start(),
+            Some("end") => val.trim_end(),
+            _ => {
+                let err = RenderErrorReason::ParamTypeMismatchForName(
+                    Self::NAME,
+                    "side".to_owned(),
+                    "one of `start`, `end`, or `both`".to_owned(),
+                );
+                return Err(err.into());
+            }
+        };
         Ok(ScopedJson::Derived(trimmed.into()))
+    }
+}
+
+#[derive(Debug)]
+struct CharWidthHelper;
+
+impl CharWidthHelper {
+    const NAME: &'static str = "char_width";
+}
+
+impl HelperDef for CharWidthHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let val = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let val = val.value().as_str().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "string".to_owned(),
+            )
+        })?;
+
+        let width = val.width();
+        Ok(ScopedJson::Derived(width.into()))
     }
 }
 
@@ -757,6 +824,7 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper(RepeatHelper::NAME, Box::new(RepeatHelper));
     reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
     reg.register_helper(TrimHelper::NAME, Box::new(TrimHelper));
+    reg.register_helper(CharWidthHelper::NAME, Box::new(CharWidthHelper));
 }
 
 #[cfg(test)]

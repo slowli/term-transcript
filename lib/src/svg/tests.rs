@@ -346,6 +346,7 @@ fn rendering_svg_transcript_with_wraps() {
 
     assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
     assert!(buffer.contains("Hello<tspan class=\"hard-br\""), "{buffer}");
+    panic!("{buffer}");
 }
 
 #[test]

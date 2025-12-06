@@ -13,6 +13,49 @@
   }
 {{/inline~}}
 
+{{! Renders an SVG foreground <tspan> }}
+{{~#*inline "svg_tspan"}}
+  {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
+    {{~#scope classes="" styles=""}}
+      {{~#classes append=true}}
+        {{~#if span.bold}} bold{{/if~}}
+        {{~#if span.italic}} italic{{/if~}}
+        {{~#if span.underline}} underline{{/if~}}
+        {{~#if span.dimmed}} dimmed{{/if~}}
+        {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
+        {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
+        {{~#if span.bg}} bg{{span.bg}}{{/if~}}
+      {{/classes~}}
+      {{~classes set=(trim (classes))~}}
+      {{~#styles append=true}}
+        {{~#if (eq (typeof span.fg) "string")}}fill: {{span.fg}};{{/if~}}
+      {{/styles~}}
+      <tspan{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
+    {{~/scope~}}
+  {{~/if~}}
+  {{{span.text}}}{{{svg_suffix}}}
+  {{~#if (gt (len span) 1)~}}
+    </tspan>
+  {{~/if~}}
+{{~/inline~}}
+
+{{! Renders `class` and/or `style` attributes for a background SVG span }}
+{{~#*inline "svg_bg_tspan_attrs"}}
+  {{~#scope classes="" styles=""}}
+    {{~#classes append=true}}
+      {{~#if span.dimmed}} dimmed{{/if~}}
+      {{! Here, we intentionally use the *foreground* class }}
+      {{~#if (eq (typeof span.bg) "number")}} fg{{span.bg}}{{/if~}}
+    {{/classes~}}
+    {{~classes set=(trim (classes))~}}
+
+    {{~#if (eq (typeof span.bg) "string")}}
+      {{~#styles append=true}}stroke: {{span.bg}}; fill: {{span.bg}};{{/styles~}}
+    {{~/if~}}
+    {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
+  {{~/scope~}}
+{{~/inline~}}
+
 {{! Root template }}
 {{~#*inline "root"}}
 <!-- Created with {{{creator.name}}} v{{{creator.version}}} ({{{creator.repo}}}) -->
@@ -149,38 +192,63 @@
         {{~#text_fg append=true ~}}
           <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">
         {{~/text_fg~}}
-        {{~#each output_svg~}}
-          {{~#if (font_metrics)~}}
-            {{~#each background~}}
-              {{~#with (font_metrics)~}}
-                {{~#output_bg append=true ~}}
-                  <rect x="{{round (add (x_pos) (mul ../start_pos advance_width)) digits=2}}" y="{{round (sub (y_pos) ascent) digits=2}}" width="{{round (mul ../char_width advance_width) digits=2}}" height="{{round (sub ascent descent) digits=2}}"{{{../attrs}}}/>
-                {{~/output_bg~}}
+        {{~#each output as |line|~}}
+          {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" ~}}
+          {{~#each line.spans as |span|~}}
+            {{~#line_bg append=true ~}}
+              {{~#with (font_metrics) as |metrics|~}}
+                {{~#if span.bg~}}
+                  <rect x="{{
+                    round (add (x_pos) (mul (char_pos) metrics.advance_width)) digits=2
+                  }}" y="{{
+                    round (sub (y_pos) metrics.ascent) digits=2
+                  }}" width="{{
+                    round (mul (char_width span.text) metrics.advance_width) digits=2
+                  }}" height="{{
+                    round (sub metrics.ascent metrics.descent) digits=2
+                  }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
+                {{~/if~}}
+              {{~else~}}{{! No font metrics }}
+                {{~#if span.bg~}}
+                  <tspan{{{eval ">svg_bg_tspan_attrs" span=span }}}>{{repeat "█" (char_width span.text)}}</tspan>
+                {{~else~}}
+                  {{~repeat " " (char_width span.text)~}}
+                {{~/if~}}
               {{~/with~}}
-            {{~/each~}}
-          {{~else~}}
-            {{~#if (gt (len background) 0)~}}
-              {{~#text_fg append=true ~}}
-              <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">
-                {{~#scope char_pos=0 ~}}
-                  {{~#each background~}}
-                    {{repeat " " (sub start_pos (char_pos))}}<tspan{{{attrs}}}>{{repeat "█" char_width}}</tspan>
-                    {{~char_pos set=(add start_pos char_width)~}}
-                  {{~/each~}}
-                {{~/scope~}}
-              </tspan>
-              {{~/text_fg~}}
+            {{~/line_bg~}}
+            {{! Render span foreground }}
+            {{~#if (and @last line.br)~}}
+              {{~#svg_suffix append=true}}<tspan class="hard-br" dx="5">»</tspan>{{/svg_suffix~}}
             {{~/if~}}
-          {{~/if~}}
+            {{~#line_fg append=true ~}}{{{eval ">svg_tspan" span=span svg_suffix=(svg_suffix)}}}{{/line_fg~}}
+            {{! Update char position on the line }}
+            {{~char_pos set=(add (char_pos) (char_width span.text))~}}
+          {{~else~}}{{! The line may be empty }}
+          {{~/each~}}
 
-          {{~#text_fg append=true ~}}
-          <tspan x="{{x_pos}}" y="{{y_pos}}">{{{foreground}}}
+          {{! Now, append collected `line_fg` / `line_bg` to the overall text }}
+          {{~#if (font_metrics)~}}
+            {{! `line_bg` has collected background <rect>s }}
+            {{~#output_bg append=true}}{{{line_bg}}}{{/output_bg~}}
+          {{~else~}}
+            {{! `line_bg` has collected background <tspan>s. We put them on a separate line with the same starting pos as the main one }}
+            {{~line_bg set=(trim (line_bg) side="end")~}}
+            {{~#text_fg append=true ~}}
+              {{~#if (line_bg)~}}
+                <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{line_bg}}}</tspan>
+              {{~/if~}}
+              {{~#if (line_fg)~}}
+                <tspan x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
 </tspan>
-          {{~/text_fg~}}
+              {{~/if~}}
+            {{~/text_fg~}}
+          {{~/if~}}
+          {{~/scope~}}
           {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
+        {{~else~}}{{! The output may be empty }}
         {{~/each~}}
         {{~#text_fg append=true }}</tspan>{{/text_fg~}}
-        {{~#if (ne (len output_svg) 0)}}
+        {{~#if (ne (len output) 0)}}
           {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)}}
         {{~/if}}
       {{~/each~}}
@@ -220,15 +288,15 @@
       {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
     {{! Number lines in the output }}
-    {{~#each (range 0 (len output_svg))~}}
+    {{~#each (range 0 (len output))~}}
       <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
       {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
     {{~/each~}}
-    {{~#if (gt (len output_svg) 0)~}}
+    {{~#if (gt (len output) 0)~}}
       {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
     {{~#if (ne ../line_numbers "each_output")~}}
-      {{line_number set=(add (line_number) (len output_svg))}}
+      {{line_number set=(add (line_number) (len output))}}
     {{~/if~}}
     {{/each~}}
   </text>

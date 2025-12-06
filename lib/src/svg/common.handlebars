@@ -113,7 +113,6 @@
 
 {{! Renders an HTML span }}
 {{~#*inline "html_span"}}
-  {{~#scope}}{{/scope}}
   {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
     {{~#scope classes="" styles=""}}
     {{~#classes append=true}}
