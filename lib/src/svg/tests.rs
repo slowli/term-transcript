@@ -5,7 +5,10 @@ use std::convert::Infallible;
 use test_casing::test_casing;
 
 use super::*;
-use crate::{ExitStatus, Interaction, UserInput};
+use crate::{
+    write::{IndexOrRgb, Style, StyledSpan},
+    ExitStatus, Interaction, UserInput,
+};
 
 #[test]
 fn rendering_simple_transcript() {
@@ -320,7 +323,7 @@ fn rendering_transcript_with_wraps() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
-    assert!(buffer.contains("<br/>"), "{buffer}");
+    assert!(buffer.contains("class=\"hard-br\""), "{buffer}");
 }
 
 #[test]
@@ -692,4 +695,56 @@ fn embedding_font(pure_svg: bool) {
             "{buffer}"
         );
     }
+}
+
+#[test]
+fn rendering_html_span() {
+    let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+    let mut handlebars = Handlebars::new();
+    register_helpers(&mut handlebars);
+    handlebars.register_template("_helpers", helpers);
+    let data = serde_json::json!({
+        "span": StyledSpan {
+            style: Style::default(),
+            text: "Test".into(),
+        },
+    });
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(rendered, "Test");
+
+    let mut style = Style {
+        bold: true,
+        underline: true,
+        fg: Some(IndexOrRgb::Index(2)),
+        bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
+        ..Style::default()
+    };
+    let data = serde_json::json!({
+        "span": StyledSpan {
+            style,
+            text: "Test".into(),
+        },
+    });
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        "<span class=\"bold underline fg2\" style=\"background: #ccffcc;\">Test</span>"
+    );
+
+    style.bg = None;
+    style.underline = false;
+    let data = serde_json::json!({
+        "span": StyledSpan {
+            style,
+            text: "Test".into(),
+        },
+    });
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(rendered, "<span class=\"bold fg2\">Test</span>");
 }

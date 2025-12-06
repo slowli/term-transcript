@@ -10,8 +10,8 @@
         {{margins set=(add (margins) 1)}}
         {{displayed_interactions set=(add (displayed_interactions) 1)}}
       {{/if}}
-      {{lines set=(add (lines) (count_lines output_html format="html"))}}
-      {{#if (ne 0 (len output_html))}}
+      {{lines set=(add (lines) (len output))}}
+      {{#if (ne 0 (len output))}}
         {{margins set=(add (margins) 1)}}
       {{/if}}
     {{/each}}
@@ -110,3 +110,31 @@
 </rect>
 {{/with}}
 {{/inline~}}
+
+{{! Renders an HTML span }}
+{{~#*inline "html_span"}}
+  {{~#scope}}{{/scope}}
+  {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
+    {{~#scope classes="" styles=""}}
+    {{~#classes append=true}}
+      {{~#if span.bold}} bold{{/if~}}
+      {{~#if span.italic}} italic{{/if~}}
+      {{~#if span.underline}} underline{{/if~}}
+      {{~#if span.dimmed}} dimmed{{/if~}}
+      {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
+      {{~#if (eq (typeof span.bg) "number")}} bg{{span.bg}}{{/if~}}
+    {{/classes~}}
+    {{~classes set=(trim (classes))~}}
+    {{~#styles append=true}}
+      {{~#if (eq (typeof span.fg) "string")}} color: {{span.fg}};{{/if~}}
+      {{~#if (eq (typeof span.bg) "string")}} background: {{span.bg}};{{/if~}}
+    {{/styles~}}
+    {{~styles set=(trim (styles))~}}
+    <span{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
+    {{~/scope~}}
+  {{~/if~}}
+  {{{span.text}}}{{{html_suffix}}}
+  {{~#if (gt (len span) 1)~}}
+    </span>
+  {{~/if~}}
+{{~/inline~}}

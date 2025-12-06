@@ -341,13 +341,19 @@ impl HelperDef for EvalHelper {
         let partial_name = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
-        let partial_name = partial_name.value().as_str().ok_or_else(|| {
+        let mut partial_name = partial_name.value().as_str().ok_or_else(|| {
             RenderErrorReason::ParamTypeMismatchForName(
                 Self::NAME,
                 "0".to_owned(),
                 "string".to_owned(),
             )
         })?;
+
+        let mut is_raw = false;
+        if let Some(name) = partial_name.strip_prefix(">") {
+            is_raw = true;
+            partial_name = name;
+        }
 
         let partial = render_ctx
             .get_partial(partial_name)
@@ -369,8 +375,12 @@ impl HelperDef for EvalHelper {
 
         let mut output = StringOutput::new();
         partial.render(reg, ctx, &mut render_ctx, &mut output)?;
-        let json_string = output.into_string()?;
-        let json: Json = serde_json::from_str(&json_string).map_err(RenderErrorReason::from)?;
+        let output = output.into_string()?;
+        let json: Json = if is_raw {
+            output.into()
+        } else {
+            serde_json::from_str(&output).map_err(RenderErrorReason::from)?
+        };
         Ok(ScopedJson::Derived(json))
     }
 }
@@ -655,6 +665,82 @@ impl HelperDef for RoundHelper {
     }
 }
 
+#[derive(Debug)]
+struct TypeofHelper;
+
+impl TypeofHelper {
+    const NAME: &'static str = "typeof";
+}
+
+impl HelperDef for TypeofHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let val = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let ty = match val.value() {
+            Json::Null => "null",
+            Json::Bool(_) => "bool",
+            Json::Number(_) => "number",
+            Json::String(_) => "string",
+            Json::Array(_) => "array",
+            Json::Object(_) => "object",
+        };
+        Ok(ScopedJson::Derived(ty.into()))
+    }
+}
+
+#[derive(Debug)]
+struct TrimHelper;
+
+impl TrimHelper {
+    const NAME: &'static str = "trim";
+}
+
+impl HelperDef for TrimHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let val = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let val = val.value().as_str().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "string".to_owned(),
+            )
+        })?;
+        let trimmed = val.trim();
+        Ok(ScopedJson::Derived(trimmed.into()))
+    }
+}
+
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("add", Box::new(OpsHelper::Add));
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
@@ -669,6 +755,8 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("scope", Box::new(ScopeHelper));
     reg.register_helper(EvalHelper::NAME, Box::new(EvalHelper));
     reg.register_helper(RepeatHelper::NAME, Box::new(RepeatHelper));
+    reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
+    reg.register_helper(TrimHelper::NAME, Box::new(TrimHelper));
 }
 
 #[cfg(test)]

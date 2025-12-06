@@ -11,91 +11,22 @@ use crate::utils::RgbColor;
 #[cfg(test)]
 mod tests;
 
-/*
-/// HTML `<span>` / SVG `<tspan>` containing styling info.
-#[derive(Debug, Default, Serialize)]
-struct StyledSpan {
-    classes: String,
-    styles: String,
-}
-
-impl StyledSpan {
-    fn new(spec: &ColorSpec, fg_property: &str) -> io::Result<Self> {
-        let mut this = Self::default();
-        if spec.bold() {
-            this.push_class("bold");
-        }
-        if spec.dimmed() {
-            this.push_class("dimmed");
-        }
-        if spec.italic() {
-            this.push_class("italic");
-        }
-        if spec.underline() {
-            this.push_class("underline");
-        }
-
-        if let Some(color) = spec.fg() {
-            let color = IndexOrRgb::new(*color)?;
-            this.set_fg(color, spec.intense(), &[fg_property]);
-        }
-        Ok(this)
-    }
-
-    fn push_class(&mut self, class: &str) {
-        if !self.classes.is_empty() {
-            self.classes.push(' ');
-        }
-        self.classes.push_str(class);
-    }
-
-    fn push_style(&mut self, prop: &str, value: &str) {
-        if !self.styles.is_empty() {
-            self.styles.push_str("; ");
-        }
-        self.styles.push_str(prop);
-        self.styles.push_str(": ");
-        self.styles.push_str(value);
-    }
-
-    fn set_fg(&mut self, color: IndexOrRgb, intense: bool, fg_properties: &[&str]) {
-        use fmt::Write as _;
-
-        let mut fore_color_class = String::with_capacity(4);
-        fore_color_class.push_str("fg");
-        match color {
-            IndexOrRgb::Index(idx) => {
-                let final_idx = if intense { idx | 8 } else { idx };
-                write!(&mut fore_color_class, "{final_idx}").unwrap();
-                // ^-- `unwrap` is safe; writing to a string never fails.
-                self.push_class(&fore_color_class);
-            }
-            IndexOrRgb::Rgb(r, g, b) => {
-                for &property in fg_properties {
-                    self.push_style(property, &format!("#{r:02x}{g:02x}{b:02x}"));
-                }
-            }
-        }
-    }
-}
- */
-
 /// Serializable `ColorSpec` representation.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
 #[allow(clippy::struct_excessive_bools)] // makes serialization simpler
-struct Style {
+pub(crate) struct Style {
     #[serde(skip_serializing_if = "Style::is_false")]
-    bold: bool,
+    pub(crate) bold: bool,
     #[serde(skip_serializing_if = "Style::is_false")]
-    italic: bool,
+    pub(crate) italic: bool,
     #[serde(skip_serializing_if = "Style::is_false")]
-    underline: bool,
+    pub(crate) underline: bool,
     #[serde(skip_serializing_if = "Style::is_false")]
-    dimmed: bool,
+    pub(crate) dimmed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    fg: Option<IndexOrRgb>,
+    pub(crate) fg: Option<IndexOrRgb>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    bg: Option<IndexOrRgb>,
+    pub(crate) bg: Option<IndexOrRgb>,
 }
 
 impl Style {
@@ -129,10 +60,10 @@ impl Style {
 }
 
 #[derive(Debug, Default, PartialEq, Serialize)]
-struct StyledSpan {
+pub(crate) struct StyledSpan {
     #[serde(flatten)]
-    style: Style,
-    text: String,
+    pub(crate) style: Style,
+    pub(crate) text: String,
 }
 
 #[derive(Debug, Default, Serialize)]

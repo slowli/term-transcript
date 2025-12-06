@@ -100,6 +100,8 @@
   }
   {{~/if}}
 
+  .line { display: block; clip-path: inset(0 0 0 0); }
+  .line > span { display: inline-block; }
   .fg0 { color: {{ palette.colors.black }}; } .bg0 { background: {{ palette.colors.black }}; }
   .fg1 { color: {{ palette.colors.red }}; } .bg1 { background: {{ palette.colors.red }}; }
   .fg2 { color: {{ palette.colors.green }}; } .bg2 { background: {{ palette.colors.green }}; }
@@ -141,10 +143,26 @@
               {{~#if ../line_numbers~}}
                 {{~>number_output_lines~}}
                 {{~#if (ne ../line_numbers "each_output")~}}
-                  {{~line_number set=(add (line_number) (count_lines output_html format="html"))~}}
+                  {{~line_number set=(add (line_number) (len output))~}}
                 {{~/if~}}
               {{~/if~}}
-              <pre>{{{output_html}}}</pre></div>
+              <pre>
+              {{~#each output as |line|~}}
+                <span class="line">
+                {{~#each line.spans as |span|~}}
+                  {{~#scope html_suffix="" ~}}
+                    {{~#if (and @last line.br)~}}
+                      {{~#html_suffix append=true}}<b class="hard-br"></b>{{/html_suffix~}}
+                    {{~/if~}}
+                    {{{eval ">html_span" span=span html_suffix=(html_suffix)}}}
+                  {{~/scope~}}
+                {{~else~}}{{! The line may be empty }}
+                {{~/each~}}
+                {{~#if (not @last)}}<br/>{{/if~}}
+                </span>
+              {{~else~}}{{! The output may be empty }}
+              {{~/each~}}
+              </pre></div>
             {{~/each}}
 
           </div>
@@ -163,7 +181,7 @@
 
 {{~#*inline "number_output_lines"}}
 <pre class="line-numbers">
-  {{~#each (range 0 (count_lines output_html format="html"))~}}
+  {{~#each (range 0 (len output))~}}
     {{add this (line_number)}}{{#if @last}}{{else}}<br/>{{/if}}
   {{~/each~}}
 </pre>
