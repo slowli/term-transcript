@@ -2,10 +2,9 @@
 
 use std::{fmt, io};
 
-use serde::Serialize;
 use termcolor::ColorSpec;
 
-use super::{IndexOrRgb, LineBreak, StyledLine, StyledSpan};
+use super::{IndexOrRgb, Styling, StyledSpan, StyledSpan};
 
 impl StyledSpan {
     fn set_html_bg(&mut self, spec: &ColorSpec) -> io::Result<()> {
@@ -19,11 +18,10 @@ impl StyledSpan {
                 let final_idx = if spec.intense() { idx | 8 } else { idx };
                 write!(&mut back_color_class, "{final_idx}").unwrap();
                 // ^-- `unwrap` is safe; writing to a string never fails.
-                self.classes.push(back_color_class);
+                self.push_class(&back_color_class);
             }
             Some(IndexOrRgb::Rgb(r, g, b)) => {
-                self.styles
-                    .push(format!("background: #{r:02x}{g:02x}{b:02x}"));
+                self.push_style("background", &format!("#{r:02x}{g:02x}{b:02x}"));
             }
             None => { /* Do nothing. */ }
         }
@@ -31,31 +29,16 @@ impl StyledSpan {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
-pub(crate) struct HtmlLine {
-    pub html: String,
-    pub br: Option<LineBreak>,
-}
+#[derive(Debug)]
+pub(crate) struct HtmlStyling;
 
-impl AsMut<String> for HtmlLine {
-    fn as_mut(&mut self) -> &mut String {
-        &mut self.html
-    }
-}
-
-impl StyledLine for HtmlLine {
-    fn write_color(&mut self, spec: &ColorSpec, _start_pos: usize) -> io::Result<()> {
-        let mut span = StyledSpan::new(spec, "color")?;
-        span.set_html_bg(spec)?;
-        span.write_tag(&mut self.html, "span");
-        Ok(())
-    }
-
-    fn reset_color(&mut self, _prev_spec: &ColorSpec, _current_width: usize) {
-        self.html.push_str("</span>");
-    }
-
-    fn set_br(&mut self, br: Option<LineBreak>) {
-        self.br = br;
+impl Styling for HtmlStyling {
+    fn styles(spec: &ColorSpec) -> io::Result<StyledSpan> {
+        let mut fg = StyledSpan::new(spec, "color")?;
+        fg.set_html_bg(spec)?;
+        Ok(StyledSpan {
+            fg,
+            ..StyledSpan::default()
+        })
     }
 }

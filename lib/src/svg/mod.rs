@@ -30,10 +30,7 @@ pub use self::{
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{
-    write::{HtmlLine, SvgLine},
-    BoxedError, TermError, Transcript,
-};
+use crate::{write::StyledLine, BoxedError, TermError, Transcript};
 
 mod data;
 mod font;
@@ -240,15 +237,14 @@ impl TemplateOptions {
             .interactions()
             .iter()
             .zip(rendered_outputs)
-            .map(|(interaction, (output_html, output_svg))| {
+            .map(|(interaction, output)| {
                 let failure = interaction
                     .exit_status()
                     .is_some_and(|status| !status.is_success());
                 has_failures = has_failures || failure;
                 SerializedInteraction {
                     input: interaction.input(),
-                    output_html,
-                    output_svg,
+                    output,
                     exit_status: interaction.exit_status().map(|status| status.0),
                     failure,
                 }
@@ -268,11 +264,7 @@ impl TemplateOptions {
         feature = "tracing",
         tracing::instrument(level = "debug", skip_all, err)
     )]
-    #[allow(clippy::type_complexity)] // FIXME
-    fn render_outputs(
-        &self,
-        transcript: &Transcript,
-    ) -> Result<Vec<(Vec<HtmlLine>, Vec<SvgLine>)>, TermError> {
+    fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<Vec<StyledLine>>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
             WrapOptions::HardBreakAt(width) => *width,
         });
@@ -280,12 +272,7 @@ impl TemplateOptions {
         transcript
             .interactions
             .iter()
-            .map(|interaction| {
-                let output = interaction.output();
-                let html_lines = output.write_as_html(max_width)?;
-                let svg_lines = output.write_as_svg(max_width)?;
-                Ok((html_lines, svg_lines))
-            })
+            .map(|interaction| interaction.output().to_lines(max_width))
             .collect()
     }
 }

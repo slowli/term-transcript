@@ -4,22 +4,29 @@ use termcolor::WriteColor;
 
 use super::*;
 
-type HtmlWriter = GenericWriter<HtmlLine>;
+impl From<&str> for StyledSpan {
+    fn from(text: &str) -> Self {
+        Self {
+            style: Style::default(),
+            text: text.into(),
+        }
+    }
+}
 
 #[test]
 fn html_escaping() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(None);
+    let mut writer = LineWriter::new(None);
     write!(writer, "1 < 2 && 4 >= 3")?;
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 1);
-    assert_eq!(lines[0].html, "1 &lt; 2 &amp;&amp; 4 &gt;= 3");
+    assert_eq!(lines[0].spans, ["1 &lt; 2 &amp;&amp; 4 &gt;= 3".into()]);
     Ok(())
 }
 
 #[test]
 fn html_writer_basic_colors() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(None);
+    let mut writer = LineWriter::new(None);
     write!(writer, "Hello, ")?;
     writer.set_color(
         ColorSpec::new()
@@ -35,8 +42,21 @@ fn html_writer_basic_colors() -> anyhow::Result<()> {
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 1);
     assert_eq!(
-        lines[0].html,
-        r#"Hello, <span class="bold underline fg2 bg7">world</span>!"#
+        lines[0].spans,
+        [
+            "Hello, ".into(),
+            StyledSpan {
+                style: Style {
+                    bold: true,
+                    underline: true,
+                    fg: Some(IndexOrRgb::Index(2)),
+                    bg: Some(IndexOrRgb::Index(7)),
+                    ..Style::default()
+                },
+                text: "world".into(),
+            },
+            "!".into(),
+        ]
     );
 
     Ok(())
@@ -44,7 +64,7 @@ fn html_writer_basic_colors() -> anyhow::Result<()> {
 
 #[test]
 fn html_writer_intense_color() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(None);
+    let mut writer = LineWriter::new(None);
 
     writer.set_color(ColorSpec::new().set_intense(true).set_fg(Some(Color::Blue)))?;
     write!(writer, "blue")?;
@@ -52,13 +72,22 @@ fn html_writer_intense_color() -> anyhow::Result<()> {
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 1);
-    assert_eq!(lines[0].html, r#"<span class="fg12">blue</span>"#);
+    assert_eq!(
+        lines[0].spans,
+        [StyledSpan {
+            style: Style {
+                fg: Some(IndexOrRgb::Index(12)),
+                ..Style::default()
+            },
+            text: "blue".into(),
+        }]
+    );
     Ok(())
 }
 
 #[test]
 fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(None);
+    let mut writer = LineWriter::new(None);
     writer.set_color(
         ColorSpec::new()
             .set_dimmed(true)
@@ -74,8 +103,26 @@ fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 1);
     assert_eq!(
-        lines[0].html,
-        "<span class=\"dimmed fg2 bg7\">Hello, </span><span class=\"fg3\">world</span>!"
+        lines[0].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    dimmed: true,
+                    fg: Some(IndexOrRgb::Index(2)),
+                    bg: Some(IndexOrRgb::Index(7)),
+                    ..Style::default()
+                },
+                text: "Hello, ".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(3)),
+                    ..Style::default()
+                },
+                text: "world".into(),
+            },
+            "!".into(),
+        ]
     );
 
     Ok(())
@@ -83,7 +130,7 @@ fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
 
 #[test]
 fn html_writer_custom_colors() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(None);
+    let mut writer = LineWriter::new(None);
     writer.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(5))))?;
     write!(writer, "H")?;
     writer.set_color(ColorSpec::new().set_bg(Some(Color::Ansi256(14))))?;
@@ -99,12 +146,44 @@ fn html_writer_custom_colors() -> anyhow::Result<()> {
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 1);
     assert_eq!(
-        lines[0].html,
-        "<span class=\"fg5\">H</span>\
-             <span class=\"bg14\">e</span>\
-             <span style=\"background: #5fd700;\">l</span>\
-             <span style=\"color: #ff00d7;\">l</span>\
-             <span style=\"background: #bcbcbc;\">o</span>"
+        lines[0].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(5)),
+                    ..Style::default()
+                },
+                text: "H".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    bg: Some(IndexOrRgb::Index(14)),
+                    ..Style::default()
+                },
+                text: "e".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    bg: Some(IndexOrRgb::Rgb("#5fd700".parse()?)),
+                    ..Style::default()
+                },
+                text: "l".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Rgb("#ff00d7".parse()?)),
+                    ..Style::default()
+                },
+                text: "l".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    bg: Some(IndexOrRgb::Rgb("#bcbcbc".parse()?)),
+                    ..Style::default()
+                },
+                text: "o".into(),
+            },
+        ]
     );
     Ok(())
 }
@@ -130,7 +209,7 @@ fn splitting_lines() {
 
 #[test]
 fn splitting_lines_in_writer() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(Some(5));
+    let mut writer = LineWriter::new(Some(5));
 
     write!(writer, "Hello, ")?;
     writer.set_color(
@@ -146,21 +225,45 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 5);
-    assert_eq!(lines[0].html, "Hello");
+    assert_eq!(lines[0].spans, ["Hello".into()]);
     assert_eq!(lines[0].br, Some(LineBreak::Hard));
     assert_eq!(
-        lines[1].html,
-        ", <span class=\"bold underline fg2 bg7\">wor</span>"
+        lines[1].spans,
+        [
+            ", ".into(),
+            StyledSpan {
+                style: Style {
+                    bold: true,
+                    underline: true,
+                    fg: Some(IndexOrRgb::Index(2)),
+                    bg: Some(IndexOrRgb::Index(7)),
+                    ..Style::default()
+                },
+                text: "wor".into(),
+            }
+        ]
     );
     assert_eq!(lines[1].br, Some(LineBreak::Hard));
     assert_eq!(
-        lines[2].html,
-        "<span class=\"bold underline fg2 bg7\">ld</span>! M"
+        lines[2].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    bold: true,
+                    underline: true,
+                    fg: Some(IndexOrRgb::Index(2)),
+                    bg: Some(IndexOrRgb::Index(7)),
+                    ..Style::default()
+                },
+                text: "ld".into(),
+            },
+            "! M".into(),
+        ]
     );
     assert_eq!(lines[2].br, Some(LineBreak::Hard));
-    assert_eq!(lines[3].html, "ore&gt;");
+    assert_eq!(lines[3].spans, ["ore&gt;".into()]);
     assert_eq!(lines[3].br, None);
-    assert_eq!(lines[4].html, "text");
+    assert_eq!(lines[4].spans, ["text".into()]);
     assert_eq!(lines[4].br, None);
 
     Ok(())
@@ -168,31 +271,31 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
 
 #[test]
 fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(Some(5));
+    let mut writer = LineWriter::new(Some(5));
     writeln!(writer, ">>>>>>>")?;
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 2);
-    assert_eq!(lines[0].html, "&gt;&gt;&gt;&gt;&gt;");
+    assert_eq!(lines[0].spans, ["&gt;&gt;&gt;&gt;&gt;".into()]);
     assert_eq!(lines[0].br, Some(LineBreak::Hard));
-    assert_eq!(lines[1].html, "&gt;&gt;");
+    assert_eq!(lines[1].spans, ["&gt;&gt;".into()]);
 
-    let mut writer = HtmlWriter::new(Some(5));
+    let mut writer = LineWriter::new(Some(5));
     for _ in 0..7 {
         write!(writer, ">")?;
     }
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 2);
-    assert_eq!(lines[0].html, "&gt;&gt;&gt;&gt;&gt;");
+    assert_eq!(lines[0].spans, ["&gt;&gt;&gt;&gt;&gt;".into()]);
     assert_eq!(lines[0].br, Some(LineBreak::Hard));
-    assert_eq!(lines[1].html, "&gt;&gt;");
+    assert_eq!(lines[1].spans, ["&gt;&gt;".into()]);
     Ok(())
 }
 
 #[test]
 fn splitting_lines_with_newlines() -> anyhow::Result<()> {
-    let mut writer = HtmlWriter::new(Some(5));
+    let mut writer = LineWriter::new(Some(5));
 
     for _ in 0..2 {
         writeln!(writer, "< test >")?;
@@ -200,21 +303,21 @@ fn splitting_lines_with_newlines() -> anyhow::Result<()> {
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 4);
-    assert_eq!(lines[0].html, "&lt; tes");
-    assert_eq!(lines[1].html, "t &gt;");
-    assert_eq!(lines[2].html, "&lt; tes");
-    assert_eq!(lines[3].html, "t &gt;");
+    assert_eq!(lines[0].spans, ["&lt; tes".into()]);
+    assert_eq!(lines[1].spans, ["t &gt;".into()]);
+    assert_eq!(lines[2].spans, ["&lt; tes".into()]);
+    assert_eq!(lines[3].spans, ["t &gt;".into()]);
 
-    let mut writer = HtmlWriter::new(Some(5));
+    let mut writer = LineWriter::new(Some(5));
     for _ in 0..2 {
         writeln!(writer, "<< test >>")?;
     }
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 4);
-    assert_eq!(lines[0].html, "&lt;&lt; te");
-    assert_eq!(lines[1].html, "st &gt;&gt;");
-    assert_eq!(lines[2].html, "&lt;&lt; te");
-    assert_eq!(lines[3].html, "st &gt;&gt;");
+    assert_eq!(lines[0].spans, ["&lt;&lt; te".into()]);
+    assert_eq!(lines[1].spans, ["st &gt;&gt;".into()]);
+    assert_eq!(lines[2].spans, ["&lt;&lt; te".into()]);
+    assert_eq!(lines[3].spans, ["st &gt;&gt;".into()]);
     Ok(())
 }

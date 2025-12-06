@@ -1,21 +1,15 @@
-use std::{fmt, io};
+use std::{io};
 
-use serde::Serialize;
 use termcolor::ColorSpec;
 
-use super::{IndexOrRgb, LineBreak, StyledLine, StyledSpan};
+use super::{IndexOrRgb, StyledSpan, StyledSpan, Styling};
 
 impl StyledSpan {
     fn for_bg(color: IndexOrRgb, intense: bool, dimmed: bool) -> Self {
-        let classes = if dimmed {
-            vec!["dimmed".to_owned()]
-        } else {
-            vec![]
-        };
-        let mut this = Self {
-            classes,
-            styles: vec![],
-        };
+        let mut this = Self::default();
+        if dimmed {
+            this.push_class("dimmed");
+        }
         this.set_fg(color, intense, &["fill", "stroke"]);
         // ^ Ideally, we'd want to add `stroke: context-fill` to the `.output-bg` selector.
         // Unfortunately, it's not supported by all viewers.
@@ -23,31 +17,14 @@ impl StyledSpan {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
-pub(crate) struct SvgLine {
-    pub background: Vec<BackgroundSegment>,
-    pub foreground: String,
-    pub br: Option<LineBreak>,
-}
+#[derive(Debug)]
+pub(crate) struct SvgStyling;
 
-#[derive(Debug, PartialEq, Serialize)]
-pub(crate) struct BackgroundSegment {
-    start_pos: usize,
-    char_width: usize,
-    attrs: String,
-}
-
-impl AsMut<String> for SvgLine {
-    fn as_mut(&mut self) -> &mut String {
-        &mut self.foreground
-    }
-}
-
-impl StyledLine for SvgLine {
-    fn write_color(&mut self, spec: &ColorSpec, start_pos: usize) -> io::Result<()> {
-        use fmt::Write as _;
-
-        let mut span = StyledSpan::new(spec, "fill")?;
+impl Styling for SvgStyling {
+    fn styles(spec: &ColorSpec) -> io::Result<StyledSpan> {
+        use std::fmt::Write as _;
+        
+        let mut fg = StyledSpan::new(spec, "fill")?;
 
         let mut back_color_class = String::with_capacity(4);
         back_color_class.push_str("bg");
@@ -57,39 +34,19 @@ impl StyledLine for SvgLine {
                 let final_idx = if spec.intense() { idx | 8 } else { idx };
                 write!(&mut back_color_class, "{final_idx}").unwrap();
                 // ^-- `unwrap` is safe; writing to a string never fails.
-                span.classes.push(back_color_class);
+                fg.push_class(&back_color_class);
             }
             Some(IndexOrRgb::Rgb(r, g, b)) => {
                 write!(&mut back_color_class, "#{r:02x}{g:02x}{b:02x}").unwrap();
-                span.classes.push(back_color_class);
+                fg.push_class(&back_color_class);
             }
             None => { /* Do nothing. */ }
         }
-        if let Some(color) = back_color {
-            let span = StyledSpan::for_bg(color, spec.intense(), spec.dimmed());
-            let mut attrs = String::new();
-            span.write_attrs(&mut attrs);
-            self.background.push(BackgroundSegment {
-                start_pos,
-                char_width: 0,
-                attrs,
-            });
-        }
-
-        span.write_tag(&mut self.foreground, "tspan");
-        Ok(())
-    }
-
-    fn reset_color(&mut self, prev_spec: &ColorSpec, current_width: usize) {
-        if prev_spec.bg().is_some() {
-            let segment = self.background.last_mut().unwrap();
-            segment.char_width = current_width - segment.start_pos;
-        }
-        self.foreground.push_str("</tspan>");
-    }
-
-    fn set_br(&mut self, br: Option<LineBreak>) {
-        self.br = br;
+        Ok(StyledSpan {
+            fg,
+            bg: back_color.map(|color| StyledSpan::for_bg(color, spec.intense(), spec.dimmed())),
+            text: String::new(),
+        })
     }
 }
 
