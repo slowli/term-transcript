@@ -122,8 +122,8 @@ impl TextReadingState {
 
                 let tag_name = tag.name();
                 let is_tspan = tag_name.as_ref() == b"tspan";
-                if is_tspan && Self::is_bg_line(tag.attributes())? {
-                    self.bg_line_level = Some(self.open_tags);
+                if tag_name.as_ref() == b"text" && Self::is_bg_line(tag.attributes())? {
+                    self.bg_line_level = Some(self.open_tags - 1);
                     return Ok(None);
                 } else if is_tspan {
                     // Check for the hard line break <tspan>. We mustn't add its contents to the text,

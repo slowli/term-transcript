@@ -129,7 +129,7 @@
           {{! Render input background. Note that this doesn't change `y_pos`. }}
           {{~input_height set=(add (mul (count_lines input.text) ../const.LINE_HEIGHT) (mul 2 ../const.USER_INPUT_PADDING))~}}
           {{~#input_bg append=true ~}}
-            {{! `y_pos` refers to the baseline position, so for input <rect>s we need to subtract the font ascent. }}
+            {{! `y_pos` refers to the baseline position, so for input <rect>s we need to subtract the font ascent. FIXME: incorrect in general? }}
             <rect x="0" y="{{sub (y_pos) 14}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
             {{~#if failure~}}
               <title>This command exited with non-zero code</title>
@@ -143,20 +143,20 @@
         {{~/if~}} {{! if (not input.hidden) }}
 
         {{! Render input foreground and advance `y_pos` }}
-        {{! The awkward newlines at the end of line <tspan>s are required for the text to be properly copyable }}
+        {{! The awkward newlines at the end of line <text>s are required for the text to be properly copyable }}
         {{~#if (not input.hidden)~}}
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
         {{~/if~}}
         {{~#text_fg append=true ~}}
-        <tspan xml:space="preserve"{{#if (not input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}} class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
+        <g xml:space="preserve" class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <tspan{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}}>{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
-</tspan>
+            <text{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}}>{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
+</text>
             {{~#if (not ../input.hidden)~}}
               {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)}}
             {{~/if~}}
           {{~/each~}}
-</tspan>
+</g>
         {{~/text_fg~}}
         {{~#if (not input.hidden)~}}
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)}}
@@ -164,7 +164,7 @@
 
         {{! Render output backround and text }}
         {{~#text_fg append=true ~}}
-          <tspan xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output">
+          <g xml:space="preserve" class="output">
         {{~/text_fg~}}
         {{~#each output as |line|~}}
           {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" ~}}
@@ -209,7 +209,7 @@
             {{~line_bg set=(trim (line_bg) side="end")~}}
             {{~#text_fg append=true ~}}
               {{~#if (line_bg)~}}
-                <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{line_bg}}}</tspan>
+                <text x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{line_bg}}}</text>
               {{~/if~}}
             {{~/text_fg~}}
           {{~/if~}}
@@ -217,15 +217,16 @@
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
-              <tspan x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
-</tspan>
+              {{! Here and in other places, we clip the features outside }}
+              <text x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
+</text>
             {{~/if~}}
           {{~/text_fg~}}
           {{~/scope~}}
           {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
         {{~else~}}{{! The output may be empty }}
         {{~/each~}}
-        {{~#text_fg append=true }}</tspan>{{/text_fg~}}
+        {{~#text_fg append=true }}</g>{{/text_fg~}}
         {{~#if (ne (len output) 0)}}
           {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)}}
         {{~/if}}
@@ -239,7 +240,7 @@
 
       {{>number_lines}}
       {{/if~}}
-      <text class="container fg7">{{{text_fg}}}</text>
+      <g class="container fg7">{{{text_fg}}}</g>
       {{~/scope~}}
     </svg>
 {{/inline~}}

@@ -41,13 +41,13 @@ const PURE_SVG: &[u8] = br#"
 <svg viewBox="0 0 720 138" width="720" height="138" xmlns="http://www.w3.org/2000/svg">
   <svg x="0" y="10" width="720" height="118" viewBox="0 0 720 118">
     <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect></g>
-    <text class="container fg7"><tspan xml:space="preserve" class="input"><tspan x="10" y="16"><tspan class="prompt">$</tspan> ls -al --color&#x3D;always
-</tspan></tspan><tspan xml:space="preserve" class="output"><tspan x="10" y="42">total 28
-</tspan><tspan x="10" y="60">drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <tspan class="fg4">.</tspan>
-</tspan><tspan x="10" y="78" class="output-bg">                                         <tspan class="fg2">__</tspan></tspan><tspan x="10" y="78">drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <tspan class="fg4 bg2">..</tspan>
-</tspan><tspan x="10" y="96">-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock
-</tspan><tspan x="10" y="114">
-</tspan></tspan></text>
+    <g class="container fg7"><g xml:space="preserve" class="input"><text x="10" y="16"><tspan class="prompt">$</tspan> ls -al --color&#x3D;always
+</text></g><g xml:space="preserve" class="output"><text x="10" y="42">total 28
+</text><text x="10" y="60">drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <tspan class="fg4">.</tspan>
+</text><text x="10" y="78" class="output-bg"><tspan class="fg2">__</tspan>                                       <tspan class="fg2">__</tspan></text><text x="10" y="78">drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <tspan class="fg4 bg2">..</tspan>
+</text><text x="10" y="96">-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock
+</text><text x="10" y="114">
+</text></g></g>
   </svg>
 </svg>
 "#;
@@ -68,9 +68,10 @@ fn reading_file(file_contents: &[u8]) {
     assert!(plaintext.starts_with("total 28\ndrwxr-xr-x"));
     assert!(plaintext.contains("4096 Apr 18 12:54 .\n"));
     assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
+    assert!(!plaintext.contains("__"), "{plaintext}");
 
     let color_spans = &interaction.output.color_spans;
-    assert_eq!(color_spans.len(), 5); // 2 colored regions + 3 surrounding areas
+    assert_eq!(color_spans.len(), 5, "{color_spans:#?}"); // 2 colored regions + 3 surrounding areas
 }
 
 #[test]
@@ -381,12 +382,12 @@ fn parser_errors_on_unknown_entity() {
 fn reading_pure_svg_with_hard_breaks() {
     const SVG: &str = r#"
 <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-  <text class="container fg7"><tspan xml:space="preserve" x="10" y="16" class="input"><tspan x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
-</tspan></tspan><tspan xml:space="preserve" x="42" y="42" class="output"><tspan x="42" y="42"><tspan class="bold">Roboto Mono</tspan> <tspan class="dimmed">Regular</tspan>
-</tspan><tspan x="42" y="60"><tspan class="bold">License:</tspan> This Font Software is licensed under the SIL Open Font License, Version<tspan class="hard-br" rotate="45" dx=".1em" dy="-.2em">↓</tspan>
-</tspan><tspan x="42" y="78"> 1.1. This license is available with a FAQ at: https://openfontlicense.org
-</tspan></tspan>
-  </text>
+  <g class="container fg7"><g xml:space="preserve" class="input"><text x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
+</text></g><g xml:space="preserve" class="output"><text x="42" y="42"><tspan class="bold">Roboto Mono</tspan> <tspan class="dimmed">Regular</tspan>
+</text><text x="42" y="60"><tspan class="bold">License:</tspan> This Font Software is licensed under the SIL Open Font License, Version<tspan class="hard-br" dx="5">&gt;</tspan>
+</text><text x="42" y="78"> 1.1. This license is available with a FAQ at: https://openfontlicense.org
+</text></g>
+  </g>
 </svg>"#;
 
     let transcript = Transcript::from_svg(SVG.as_bytes()).unwrap();
@@ -406,11 +407,11 @@ fn reading_pure_svg_with_hard_breaks() {
 fn reading_pure_svg_with_styled_hard_breaks() {
     const SVG: &str = r#"
 <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-  <text class="container fg7"><tspan xml:space="preserve" x="10" y="16" class="input"><tspan x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
-</tspan></tspan><tspan xml:space="preserve" x="42" y="42" class="output"><tspan x="42" y="60"><tspan class="bold">License:</tspan> <tspan class="fg3">don't know<tspan class="hard-br" rotate="45" dx=".1em" dy="-.2em">↓</tspan></tspan>
-</tspan><tspan x="42" y="78"><tspan class="fg3"> lol</tspan>
-</tspan></tspan>
-  </text>
+  <g class="container fg7"><g xml:space="preserve" class="input"><text x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
+</text></g><g xml:space="preserve" class="output"><text x="42" y="60"><tspan class="bold">License:</tspan> <tspan class="fg3">don't know<tspan class="hard-br" dx="5">&gt;</tspan></tspan>
+</text><text x="42" y="78"><tspan class="fg3"> lol</tspan>
+</text></g>
+  </g>
 </svg>"#;
 
     let transcript = Transcript::from_svg(SVG.as_bytes()).unwrap();

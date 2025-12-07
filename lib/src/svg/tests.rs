@@ -58,13 +58,14 @@ fn rendering_simple_transcript_to_pure_svg() {
 
     let top_svg = "<svg viewBox=\"0 0 720 118\"";
     assert!(buffer.contains(top_svg), "{buffer}");
-    let first_input_text = r#"<tspan xml:space="preserve" x="10" y="16" class="input">"#;
+    let first_input_text = r#"<g xml:space="preserve" class="input"><text x="10" y="16">"#;
     assert!(buffer.contains(first_input_text), "{buffer}");
-    let first_output_text = r#"<tspan xml:space="preserve" x="10" y="42" class="output">"#;
+    let first_output_text = r#"<g xml:space="preserve" class="output"><text x="10" y="42">"#;
     assert!(buffer.contains(first_output_text), "{buffer}");
-    let second_input_text = r#"<tspan xml:space="preserve" x="10" y="68" class="input">"#;
+    let second_input_text = r#"<g xml:space="preserve" class="input"><text x="10" y="68">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_text = r#"<tspan xml:space="preserve" x="10" y="94" class="output">"#;
+    let second_output_text =
+        r#"<g xml:space="preserve" class="output"><text x="10" y="94" class="output-bg">"#;
     assert!(buffer.contains(second_output_text), "{buffer}");
 }
 
@@ -116,7 +117,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
     // No background for input should be displayed.
     assert!(buffer.contains(r#"<g class="input-bg"></g>"#), "{buffer}");
-    let output_span = r#"<tspan xml:space="preserve" x="10" y="14" class="output">"#;
+    let output_span = r#"<g xml:space="preserve" class="output"><text x="10" y="14">"#;
     assert!(buffer.contains(output_span), "{buffer}");
     assert!(!buffer.contains(r#"class="input""#), "{buffer}");
 }
@@ -140,9 +141,9 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     assert!(buffer.contains(top_svg), "{buffer}");
     let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22""#;
     assert!(buffer.contains(second_input_bg), "{buffer}");
-    let second_input_text = r#"<tspan xml:space="preserve" x="10" y="44" class="input">"#;
+    let second_input_text = r#"<g xml:space="preserve" class="input"><text x="10" y="44">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_bg = r#"<tspan x="10" y="70" class="output-bg">"#;
+    let second_output_bg = r#"<text x="10" y="70" class="output-bg">"#;
     assert!(buffer.contains(second_output_bg), "{buffer}");
 }
 
@@ -546,11 +547,11 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
         <tspan x=\"34\" y=\"126\">6</tspan>";
     assert!(buffer.contains(line_numbers), "{buffer}");
 
-    let first_output = r#"<tspan xml:space="preserve" x="42" y="84" class="output">"#;
+    let first_output = r#"<g xml:space="preserve" class="output"><text x="42" y="14">"#;
     assert!(buffer.contains(first_output), "{buffer}");
-    let second_output = r#"<tspan x="42" y="102">"#;
+    let second_output = r#"<text x="42" y="102">"#;
     assert!(buffer.contains(second_output), "{buffer}");
-    let third_output = r#"<tspan xml:space="preserve" x="42" y="126" class="output">"#;
+    let third_output = r#"<g xml:space="preserve" class="output"><text x="42" y="126">"#;
     assert!(buffer.contains(third_output), "{buffer}");
 }
 
