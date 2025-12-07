@@ -1,6 +1,6 @@
 {{!
   Computes content height based on line count in interactions.
-  Expected hash inputs: `interactions`, `const`.
+  Expected hash inputs: `interactions`, `const`, `line_height`.
 }}
 {{~#*inline "compute_content_height"}}
   {{#scope lines=0 margins=0 displayed_interactions=0}}
@@ -19,7 +19,7 @@
     {{! The last margin is not displayed. }}
       {{margins set=(sub (margins) 1)}}
     {{/if}}
-    {{add (mul (lines) const.LINE_HEIGHT)
+    {{add (mul (lines) line_height)
           (mul (margins) const.BLOCK_MARGIN)
           (mul (displayed_interactions) (mul 2 const.USER_INPUT_PADDING)) }}
   {{/scope}}
@@ -163,3 +163,31 @@
     </tspan>
   {{~/if~}}
 {{~/inline~}}
+
+{{!
+  Scales font metrics from design units to ems to pixels.
+  Expected hash inputs: `metrics`, `font_size`
+}}
+{{~#*inline "scale_font_metrics"}}
+  {
+  "advance_width": {{mul font_size (div metrics.advance_width metrics.units_per_em)}},
+  "ascent": {{mul font_size (div metrics.ascent metrics.units_per_em)}},
+  "descent": {{mul font_size (div metrics.descent metrics.units_per_em)}}
+  }
+{{/inline~}}
+
+{{! Sets `line_height` based on font metrics (if supplied) or the user-provided value }}
+{{~#*inline "set_line_height"}}
+  {{~#if (eq (line_height) null) ~}}
+    {{#if embedded_font}}
+      {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
+        {{~line_height set=(round (sub metrics.ascent metrics.descent) digits=1)~}}
+      {{~/with~}}
+      {{~else~}}
+      {{~line_height set=16.8 ~}}{{! Set to a somewhat reasonable default (1.2 * font_size) }}
+    {{~/if~}}
+    {{~else~}}
+    {{! Scale line height according to the font size }}
+    {{~line_height set=(round (mul (line_height) const.FONT_SIZE) digits=1)~}}
+  {{~/if~}}
+{{/inline~}}

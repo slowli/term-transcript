@@ -126,6 +126,8 @@ pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. The default value is `720`.
     #[serde(default = "TemplateOptions::default_width")]
     pub width: usize,
+    /// Line height relative to the font size.
+    pub line_height: Option<f64>,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     #[serde(default)]
     pub palette: Palette,
@@ -162,6 +164,7 @@ impl Default for TemplateOptions {
     fn default() -> Self {
         Self {
             width: Self::default_width(),
+            line_height: None,
             palette: Palette::default(),
             additional_styles: String::new(),
             font_family: Self::default_font_family(),
@@ -496,7 +499,7 @@ impl Template {
         ("BLOCK_MARGIN", 6),
         ("USER_INPUT_PADDING", 2),
         ("WINDOW_PADDING", 10),
-        ("LINE_HEIGHT", 18),
+        ("FONT_SIZE", 14),
         ("WINDOW_FRAME_HEIGHT", 22),
         ("SCROLLBAR_RIGHT_OFFSET", 7),
         ("SCROLLBAR_HEIGHT", 40),

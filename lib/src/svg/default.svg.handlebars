@@ -22,7 +22,7 @@
 
 {{! NB. The warning text should fit in one 80-char line to not potentially overflow the viewbox. }}
 {{~#*inline "unsupported_error"}}
-<text x="10" y="{{const.LINE_HEIGHT}}" style="font: 14px monospace; fill: {{ palette.colors.red }};">
+<text x="10" y="{{line_height}}" style="font: {{const.FONT_SIZE}}px monospace; fill: {{ palette.colors.red }};">
   HTML embedding not supported.
   Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
 </text>
@@ -35,12 +35,12 @@
   .container {
     padding: 0 {{const.WINDOW_PADDING}}px;
     color: {{ palette.colors.white }};
-    line-height: {{const.LINE_HEIGHT}}px;
+    line-height: {{line_height}}px;
   }
   .container pre {
     padding: 0;
     margin: 0;
-    font: 14px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
+    font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: inherit;
   }
   .input {
@@ -188,12 +188,18 @@
 
 {{! Main logic }}
 {{#scope
-  content_height=(eval "compute_content_height" const=const interactions=interactions)
+  content_height=0
   scroll_animation=null
   screen_height=0
   height=0
+  line_height=line_height
   line_number=1
 }}
+  {{~>set_line_height ~}}
+  {{~content_height set=(round
+    (eval "compute_content_height" const=const line_height=(line_height) interactions=interactions)
+    digits=1
+  )~}}
   {{~#if scroll~}}
     {{scroll_animation set=(eval "compute_scroll_animation"
       const=const
