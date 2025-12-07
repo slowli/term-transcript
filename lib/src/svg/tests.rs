@@ -748,3 +748,76 @@ fn rendering_html_span() {
         .unwrap();
     assert_eq!(rendered, "<span class=\"bold fg2\">Test</span>");
 }
+
+#[test]
+fn rendering_svg_tspan() {
+    let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+    let mut handlebars = Handlebars::new();
+    register_helpers(&mut handlebars);
+    handlebars.register_template("_helpers", helpers);
+    let data = serde_json::json!({
+        "span": StyledSpan {
+            style: Style::default(),
+            text: "Test".into(),
+        },
+    });
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .unwrap();
+    assert_eq!(rendered, "Test");
+
+    let mut style = Style {
+        bold: true,
+        underline: true,
+        fg: Some(IndexOrRgb::Index(2)),
+        bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
+        ..Style::default()
+    };
+    let data = serde_json::json!({
+        "span": StyledSpan {
+            style,
+            text: "Test".into(),
+        },
+    });
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        "<tspan class=\"bold underline fg2 bg#ccffcc\">Test</tspan>"
+    );
+
+    style.bg = Some(IndexOrRgb::Index(0));
+    style.underline = false;
+    style.dimmed = true;
+    let data = serde_json::json!({
+        "span": StyledSpan {
+            style,
+            text: "Test".into(),
+        },
+    });
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        "<tspan class=\"bold dimmed fg2 bg0\">Test</tspan>"
+    );
+
+    style.fg = Some(IndexOrRgb::Rgb("#c0ffee".parse().unwrap()));
+    style.bg = None;
+    style.dimmed = false;
+    let data = serde_json::json!({
+        "span": StyledSpan {
+            style,
+            text: "Test".into(),
+        },
+    });
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        "<tspan class=\"bold\" style=\"fill: #c0ffee;\">Test</tspan>"
+    );
+}
