@@ -68,7 +68,7 @@ pub(crate) struct StyledSpan {
 
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct StyledLine {
-    spans: Vec<StyledSpan>,
+    pub(crate) spans: Vec<StyledSpan>,
     br: Option<LineBreak>,
 }
 
