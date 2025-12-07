@@ -24,7 +24,7 @@
         {{~#if span.dimmed}} dimmed{{/if~}}
         {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
         {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
-        {{~#if span.bg}} bg{{span.bg}}{{/if~}}
+        {{~#if (ne (typeof span.bg) "null")}} bg{{span.bg}}{{/if~}}
       {{/classes~}}
       {{~classes set=(trim (classes))~}}
       {{~#styles append=true}}
@@ -50,7 +50,7 @@
     {{~classes set=(trim (classes))~}}
 
     {{~#if (eq (typeof span.bg) "string")}}
-      {{~#styles append=true}}stroke: {{span.bg}}; fill: {{span.bg}};{{/styles~}}
+      {{~#styles append=true}}fill: {{span.bg}}; stroke: {{span.bg}};{{/styles~}}
     {{~/if~}}
     {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
   {{~/scope~}}
@@ -197,7 +197,7 @@
           {{~#each line.spans as |span|~}}
             {{~#line_bg append=true ~}}
               {{~#with (font_metrics) as |metrics|~}}
-                {{~#if span.bg~}}
+                {{~#if (ne (typeof span.bg) "null")~}}
                   <rect x="{{
                     round (add (x_pos) (mul (char_pos) metrics.advance_width)) digits=2
                   }}" y="{{
@@ -209,7 +209,7 @@
                   }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
                 {{~/if~}}
               {{~else~}}{{! No font metrics }}
-                {{~#if span.bg~}}
+                {{~#if (ne (typeof span.bg) "null")~}}
                   <tspan{{{eval ">svg_bg_tspan_attrs" span=span }}}>{{repeat "█" (char_width span.text)}}</tspan>
                 {{~else~}}
                   {{~repeat " " (char_width span.text)~}}
@@ -226,7 +226,7 @@
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
 
-          {{! Now, append collected `line_fg` / `line_bg` to the overall text }}
+          {{! Append collected `line_bg` to the overall text }}
           {{~#if (font_metrics)~}}
             {{! `line_bg` has collected background <rect>s }}
             {{~#output_bg append=true}}{{{line_bg}}}{{/output_bg~}}
@@ -237,12 +237,16 @@
               {{~#if (line_bg)~}}
                 <tspan x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{line_bg}}}</tspan>
               {{~/if~}}
-              {{~#if (line_fg)~}}
-                <tspan x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
-</tspan>
-              {{~/if~}}
             {{~/text_fg~}}
           {{~/if~}}
+
+          {{! Append collected `line_fg` to the overall text }}
+          {{~#text_fg append=true ~}}
+            {{~#if (line_fg)~}}
+              <tspan x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
+</tspan>
+            {{~/if~}}
+          {{~/text_fg~}}
           {{~/scope~}}
           {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
         {{~else~}}{{! The output may be empty }}
@@ -260,9 +264,9 @@
       {{#if line_numbers}}
 
       {{>number_lines}}
-      {{/if}}
+      {{/if~}}
       <text class="container fg7">{{{text_fg}}}</text>
-      {{~/scope}}
+      {{~/scope~}}
     </svg>
 {{/inline~}}
 

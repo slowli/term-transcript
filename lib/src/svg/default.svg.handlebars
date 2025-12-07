@@ -158,7 +158,10 @@
                   {{~/scope~}}
                 {{~else~}}{{! The line may be empty }}
                 {{~/each~}}
-                {{~#if (not @last)}}<br/>{{/if~}}
+                {{! Add a newline in order to make the text correctly copyable }}
+                {{~#if (not @last)}}
+
+                {{/if~}}
                 </span>
               {{~else~}}{{! The output may be empty }}
               {{~/each~}}
