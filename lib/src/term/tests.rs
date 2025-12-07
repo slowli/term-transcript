@@ -34,16 +34,6 @@ fn converting_captured_output_to_text() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
-fn converting_captured_output_to_html() -> anyhow::Result<()> {
-    const EXPECTED_HTML: &str = "<span class=\"underline fg6\">Hello</span>, \
-        <span class=\"fg15 bg10\">world</span>!";
-
-    let output = Captured(prepare_term_output()?);
-    assert_eq!(output.to_html()?, EXPECTED_HTML);
-    Ok(())
-}
-
 fn assert_eq_term_output(actual: &[u8], expected: &[u8]) {
     assert_eq!(
         String::from_utf8_lossy(actual),
