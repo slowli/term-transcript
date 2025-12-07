@@ -90,10 +90,14 @@ fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (Te
     reproduced.add_interaction(UserInput::command("test"), actual_capture);
 
     let mut out: Vec<u8> = vec![];
-    let stats = TestConfig::new(ShellOptions::default())
-        .with_match_kind(MatchKind::Precise)
-        .compare_transcripts(&mut NoColor::new(&mut out), &parsed, &reproduced)
-        .unwrap();
+    let stats = compare_transcripts(
+        &mut NoColor::new(&mut out),
+        &parsed,
+        &reproduced,
+        MatchKind::Precise,
+        false,
+    )
+    .unwrap();
     (stats, String::from_utf8(out).unwrap())
 }
 
