@@ -77,7 +77,7 @@
     font-style: {{#if is_italic}}italic{{else}}normal{{/if}};
   {{/if}}
 }
-{{~/each~}}
+{{/each~}}
 {{~else~}}
 {{~/with~}}
 {{/inline~}}
@@ -140,28 +140,25 @@
 
 {{! Renders an SVG foreground <tspan> }}
 {{~#*inline "svg_tspan"}}
-  {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
-    {{~#scope classes="" styles=""}}
-      {{~#classes append=true}}
-        {{~#if span.bold}} bold{{/if~}}
-        {{~#if span.italic}} italic{{/if~}}
-        {{~#if span.underline}} underline{{/if~}}
-        {{~#if span.dimmed}} dimmed{{/if~}}
-        {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
-        {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
-        {{~#if (ne (typeof span.bg) "null")}} bg{{span.bg}}{{/if~}}
-      {{/classes~}}
-      {{~classes set=(trim (classes))~}}
-      {{~#styles append=true}}
-        {{~#if (eq (typeof span.fg) "string")}}fill: {{span.fg}};{{/if~}}
-      {{/styles~}}
-      <tspan{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
-    {{~/scope~}}
-  {{~/if~}}
-  {{{span.text}}}
-  {{~#if (gt (len span) 1)~}}
-    </tspan>
-  {{~/if~}}
+  {{! Unlike HTML <span>s, we render <tspan>s even without styles, because otherwise
+     `dominant-baseline: middle` applied to the parent <text> leads to non-wrapped portion of texts fly away in Firefox.
+  }}
+  {{~#scope classes="" styles=""}}
+    {{~#classes append=true}}
+      {{~#if span.bold}} bold{{/if~}}
+      {{~#if span.italic}} italic{{/if~}}
+      {{~#if span.underline}} underline{{/if~}}
+      {{~#if span.dimmed}} dimmed{{/if~}}
+      {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
+      {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
+      {{~#if (ne (typeof span.bg) "null")}} bg{{span.bg}}{{/if~}}
+    {{/classes~}}
+    {{~classes set=(trim (classes))~}}
+    {{~#styles append=true}}
+      {{~#if (eq (typeof span.fg) "string")}}fill: {{span.fg}};{{/if~}}
+    {{/styles~}}
+    <tspan{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>{{{span.text}}}</tspan>
+  {{~/scope~}}
 {{~/inline~}}
 
 {{!
