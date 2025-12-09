@@ -61,7 +61,7 @@ pub(crate) struct TemplateArgs {
         long,
         conflicts_with_all = [
             "palette", "line_numbers", "window_frame", "additional_styles", "font_family", "width",
-            "scroll", "hard_wrap", "no_wrap",
+            "scroll", "hard_wrap", "no_wrap", "line_height",
         ]
     )]
     config_path: Option<PathBuf>,
@@ -92,6 +92,10 @@ pub(crate) struct TemplateArgs {
         value_delimiter = ':'
     )]
     embed_font: Vec<PathBuf>,
+    /// Line height to use relative to the font size. If not specified, the value will be obtained
+    /// from the font metrics (if a font is embedded), or set to 1.2 otherwise.
+    #[arg(long, value_name = "RATIO")]
+    line_height: Option<f64>,
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
     #[arg(long, default_value = "720")]
@@ -136,6 +140,7 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
     fn try_from(value: TemplateArgs) -> Result<Self, Self::Error> {
         let mut this = Self {
             width: value.width,
+            line_height: value.line_height,
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,
