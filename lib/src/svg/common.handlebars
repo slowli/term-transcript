@@ -66,15 +66,14 @@
 {{~/if~}}
 {{~#with embedded_font~}}
 {{~#each faces}}
-
 @font-face {
   font-family: "{{../family_name}}";
   src: url("data:{{mime_type}};base64,{{{base64_data}}}");
   {{#if (ne is_bold null)}}
-    font-weight: {{#if is_bold}}bold{{else}}normal{{/if}};
+  font-weight: {{#if is_bold}}bold{{else}}normal{{/if}};
   {{/if}}
   {{#if (ne is_italic null)}}
-    font-style: {{#if is_italic}}italic{{else}}normal{{/if}};
+  font-style: {{#if is_italic}}italic{{else}}normal{{/if}};
   {{/if}}
 }
 {{/each~}}
