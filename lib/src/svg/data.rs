@@ -1,6 +1,6 @@
 //! Data provided to Handlebars templates.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use serde::Serialize;
 
@@ -156,7 +156,7 @@ impl Default for CreatorData {
 /// [colors]: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 /// [`white-space`]: https://developer.mozilla.org/en-US/docs/Web/CSS/white-space
 /// [Hard breaks]: crate::svg::WrapOptions::HardBreakAt
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 #[non_exhaustive]
 pub struct SerializedInteraction<'a> {
     /// User's input.
@@ -169,6 +169,17 @@ pub struct SerializedInteraction<'a> {
     pub exit_status: Option<i32>,
     /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?
     pub failure: bool,
+}
+
+impl fmt::Debug for SerializedInteraction<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SerializedInteraction")
+            .field("input", &self.input)
+            .field("output.line_count", &self.output_svg.len())
+            .field("exit_status", &self.exit_status)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Serialize)]

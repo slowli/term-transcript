@@ -83,11 +83,21 @@ enum Command {
 
 impl Command {
     fn run(self) -> anyhow::Result<()> {
+        #[cfg(feature = "tracing")]
+        tracing::debug!(?self, "running command");
+
         match self {
             Self::Capture { command, template } => {
+                #[cfg(feature = "tracing")]
+                let _entered = tracing::info_span!("capture").entered();
+
                 let mut transcript = Transcript::new();
                 let mut term_output = vec![];
+                #[cfg(feature = "tracing")]
+                tracing::info!("capturing stdin");
                 io::stdin().read_to_end(&mut term_output)?;
+                #[cfg(feature = "tracing")]
+                tracing::info!(output.len = term_output.len(), "captured stdin");
 
                 let mut term_output = String::from_utf8(term_output)
                     .map_err(|err| err.utf8_error())
@@ -98,6 +108,8 @@ impl Command {
                 }
 
                 transcript.add_interaction(template.create_input(command), term_output);
+                #[cfg(feature = "tracing")]
+                tracing::info!("rendering transcript");
                 template.render(&transcript)?;
             }
 
@@ -106,6 +118,9 @@ impl Command {
                 inputs,
                 template,
             } => {
+                #[cfg(feature = "tracing")]
+                let _entered = tracing::info_span!("exec").entered();
+
                 let inputs = inputs.into_iter().map(|input| template.create_input(input));
                 let transcript = shell.create_transcript(inputs)?;
                 template.render(&transcript)?;
@@ -118,6 +133,9 @@ impl Command {
                 verbose,
                 color,
             } => {
+                #[cfg(feature = "tracing")]
+                let _entered = tracing::info_span!("test").entered();
+
                 let match_kind = if precise {
                     MatchKind::Precise
                 } else {
@@ -169,6 +187,13 @@ impl Command {
     ) -> anyhow::Result<TestStats> {
         let svg = BufReader::new(File::open(svg_path)?);
         let transcript = Transcript::from_svg(svg)?;
+        #[cfg(feature = "tracing")]
+        tracing::info!(
+            ?svg_path,
+            transcript.len = transcript.interactions().len(),
+            "parsed transcript"
+        );
+
         test_config
             .test_transcript_for_stats(&transcript)
             .map(|(stats, _)| stats)
@@ -209,6 +234,7 @@ impl Command {
         writeln!(out)
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn print_file(svg_path: &Path, color: ColorPreference) -> anyhow::Result<()> {
         let transcript = if svg_path.as_os_str() == "-" {
             let svg = BufReader::new(io::stdin());
@@ -217,6 +243,12 @@ impl Command {
             let svg = BufReader::new(File::open(svg_path)?);
             Transcript::from_svg(svg)?
         };
+        #[cfg(feature = "tracing")]
+        tracing::info!(
+            ?svg_path,
+            transcript.len = transcript.interactions().len(),
+            "parsed transcript"
+        );
 
         let color = ColorChoice::from(color);
         let out = StandardStream::stdout(color);
@@ -335,12 +367,11 @@ impl FullTestStats {
 
 #[cfg(feature = "tracing")]
 fn setup_tracing() {
-    use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter, FmtSubscriber};
+    use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
     FmtSubscriber::builder()
         .pretty()
         .with_writer(io::stderr)
-        .with_span_events(FmtSpan::CLOSE)
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 }

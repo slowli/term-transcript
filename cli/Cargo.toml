@@ -22,6 +22,7 @@ humantime.workspace = true
 serde_json.workspace = true
 termcolor.workspace = true
 toml.workspace = true
+tracing = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"], optional = true }
 
 term-transcript = { workspace = true, features = ["font-subset"] }
@@ -34,4 +35,4 @@ default = []
 # Enables capturing output via pseudo-terminal (PTY).
 portable-pty = ["term-transcript/portable-pty"]
 # Enables tracing for main operations.
-tracing = ["tracing-subscriber", "term-transcript/tracing"]
+tracing = ["dep:tracing", "dep:tracing-subscriber", "term-transcript/tracing"]
