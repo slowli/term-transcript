@@ -27,7 +27,7 @@
     .italic { font-style: italic; letter-spacing: 0.0132em; }
     .underline { text-decoration: underline; }
     .dimmed { fill-opacity: 0.7; }
-    .hard-br { fill-opacity: 0.6; user-select: none; }
+    .hard-br { font-weight: bold; fill-opacity: 0.6; user-select: none; }
     .fg0 { fill: #1c1c1c; } .output-bg .fg0 { stroke: #1c1c1c; }
     .fg1 { fill: #ff005b; } .output-bg .fg1 { stroke: #ff005b; }
     .fg2 { fill: #cee318; } .output-bg .fg2 { stroke: #cee318; }
@@ -48,17 +48,17 @@
   <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
     <svg x="0" y="10" width="720" height="226" viewBox="0 0 720 226">
 <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect></g><g class="output-bg"><rect x="134.42" y="99.33" width="58.81" height="18.46" class="fg7"/><rect x="201.63" y="99.33" width="33.61" height="18.46" class="fg7"/><rect x="243.63" y="99.33" width="50.41" height="18.46" class="fg7"/><rect x="302.44" y="99.33" width="92.42" height="18.46" class="fg7"/><rect x="42.0" y="189.33" width="42.01" height="18.46" class="fg0"/><rect x="92.41" y="189.33" width="33.61" height="18.46" class="fg4"/><rect x="134.42" y="189.33" width="42.01" height="18.46" class="fg2"/><rect x="184.82" y="189.33" width="25.2" height="18.46" class="fg1"/><rect x="218.43" y="189.33" width="33.61" height="18.46" class="fg6"/><rect x="260.44" y="189.33" width="58.81" height="18.46" class="fg5"/><rect x="327.65" y="189.33" width="50.41" height="18.46" class="fg3"/><rect x="42.0" y="207.33" width="42.01" height="18.46" class="fg8"/><rect x="92.41" y="207.33" width="33.61" height="18.46" class="fg12"/><rect x="134.42" y="207.33" width="42.01" height="18.46" class="fg10"/><rect x="184.82" y="207.33" width="25.2" height="18.46" class="fg9"/><rect x="218.43" y="207.33" width="33.61" height="18.46" class="fg14"/><rect x="260.44" y="207.33" width="58.81" height="18.46" class="fg13"/><rect x="327.65" y="207.33" width="50.41" height="18.46" class="fg11"/></g>
-      <text class="container fg7 line-numbers"><tspan x="34" y="16">1</tspan><tspan x="34" y="42">2</tspan><tspan x="34" y="60">3</tspan><tspan x="34" y="78">4</tspan><tspan x="34" y="96">5</tspan><tspan x="34" y="114">6</tspan><tspan x="34" y="132">7</tspan><tspan x="34" y="150">8</tspan><tspan x="34" y="168">9</tspan><tspan x="34" y="186">10</tspan><tspan x="34" y="204">11</tspan><tspan x="34" y="222">12</tspan></text>      <text class="container fg7"><tspan xml:space="preserve" x="42" y="16" class="input"><tspan x="42" y="16"><tspan class="prompt">$</tspan> rainbow --short
-</tspan></tspan><tspan xml:space="preserve" x="42" y="42" class="output"><tspan x="42" y="42">Base styles:
-</tspan><tspan x="42" y="60">     None: Regular <tspan class="bold">Bold</tspan> <tspan class="italic">Italic</tspan> <tspan class="bold italic">Bold+Italic</tspan>
-</tspan><tspan x="42" y="78">   Dimmed: <tspan class="dimmed">Regular</tspan> <tspan class="bold dimmed">Bold</tspan> <tspan class="dimmed italic">Italic</tspan> <tspan class="bold dimmed italic">Bold+Italic</tspan>
-</tspan><tspan x="42" y="96">Underline: <tspan class="underline">Regular</tspan> <tspan class="bold underline">Bold</tspan> <tspan class="italic underline">Italic</tspan> <tspan class="bold italic underline">Bold+Italic</tspan>
-</tspan><tspan x="42" y="114">  With bg: <tspan class="fg0 bg7">Regular</tspan> <tspan class="bold fg0 bg7">Bold</tspan> <tspan class="italic fg0 bg7">Italic</tspan> <tspan class="bold italic fg0 bg7">Bold+Italic</tspan>
-</tspan><tspan x="42" y="132">Base colors:
-</tspan><tspan x="42" y="150"><tspan class="underline fg0">black</tspan> <tspan class="fg4">blue</tspan> <tspan class="underline fg2">green</tspan> <tspan class="fg1">red</tspan> <tspan class="underline fg6">cyan</tspan> <tspan class="fg5">magenta</tspan> <tspan class="underline fg3">yellow</tspan> 
-</tspan><tspan x="42" y="168"><tspan class="fg8">black</tspan> <tspan class="underline fg12">blue</tspan> <tspan class="fg10">green</tspan> <tspan class="underline fg9">red</tspan> <tspan class="fg14">cyan</tspan> <tspan class="underline fg13">magenta</tspan> <tspan class="fg11">yellow</tspan> 
-</tspan><tspan x="42" y="186">Base colors (bg):
-</tspan><tspan x="42" y="204"><tspan class="fg7 bg0">black</tspan> <tspan class="fg7 bg4">blue</tspan> <tspan class="fg7 bg2">green</tspan> <tspan class="fg7 bg1">red</tspan> <tspan class="fg7 bg6">cyan</tspan> <tspan class="fg7 bg5">magenta</tspan> <tspan class="fg7 bg3">yellow</tspan> 
-</tspan><tspan x="42" y="222"><tspan class="fg15 bg8">black</tspan> <tspan class="fg15 bg12">blue</tspan> <tspan class="fg15 bg10">green</tspan> <tspan class="fg15 bg9">red</tspan> <tspan class="fg15 bg14">cyan</tspan> <tspan class="fg15 bg13">magenta</tspan> <tspan class="fg15 bg11">yellow</tspan> 
-</tspan></tspan></text>    </svg>
+      <text class="container fg7 line-numbers"><tspan x="34" y="16">1</tspan><tspan x="34" y="42">2</tspan><tspan x="34" y="60">3</tspan><tspan x="34" y="78">4</tspan><tspan x="34" y="96">5</tspan><tspan x="34" y="114">6</tspan><tspan x="34" y="132">7</tspan><tspan x="34" y="150">8</tspan><tspan x="34" y="168">9</tspan><tspan x="34" y="186">10</tspan><tspan x="34" y="204">11</tspan><tspan x="34" y="222">12</tspan></text><g class="container fg7"><g class="input"><text xml:space="preserve" x="42" y="16"><tspan class="prompt">$</tspan> rainbow --short
+</text></g><g class="output"><text xml:space="preserve" x="42" y="42">Base styles:
+</text><text xml:space="preserve" x="42" y="60">     None: Regular <tspan class="bold">Bold</tspan> <tspan class="italic">Italic</tspan> <tspan class="bold italic">Bold+Italic</tspan>
+</text><text xml:space="preserve" x="42" y="78">   Dimmed: <tspan class="dimmed">Regular</tspan> <tspan class="bold dimmed">Bold</tspan> <tspan class="italic dimmed">Italic</tspan> <tspan class="bold italic dimmed">Bold+Italic</tspan>
+</text><text xml:space="preserve" x="42" y="96">Underline: <tspan class="underline">Regular</tspan> <tspan class="bold underline">Bold</tspan> <tspan class="italic underline">Italic</tspan> <tspan class="bold italic underline">Bold+Italic</tspan>
+</text><text xml:space="preserve" x="42" y="114">  With bg: <tspan class="fg0 bg7">Regular</tspan> <tspan class="bold fg0 bg7">Bold</tspan> <tspan class="italic fg0 bg7">Italic</tspan> <tspan class="bold italic fg0 bg7">Bold+Italic</tspan>
+</text><text xml:space="preserve" x="42" y="132">Base colors:
+</text><text xml:space="preserve" x="42" y="150"><tspan class="underline fg0">black</tspan> <tspan class="fg4">blue</tspan> <tspan class="underline fg2">green</tspan> <tspan class="fg1">red</tspan> <tspan class="underline fg6">cyan</tspan> <tspan class="fg5">magenta</tspan> <tspan class="underline fg3">yellow</tspan> 
+</text><text xml:space="preserve" x="42" y="168"><tspan class="fg8">black</tspan> <tspan class="underline fg12">blue</tspan> <tspan class="fg10">green</tspan> <tspan class="underline fg9">red</tspan> <tspan class="fg14">cyan</tspan> <tspan class="underline fg13">magenta</tspan> <tspan class="fg11">yellow</tspan> 
+</text><text xml:space="preserve" x="42" y="186">Base colors (bg):
+</text><text xml:space="preserve" x="42" y="204"><tspan class="fg7 bg0">black</tspan> <tspan class="fg7 bg4">blue</tspan> <tspan class="fg7 bg2">green</tspan> <tspan class="fg7 bg1">red</tspan> <tspan class="fg7 bg6">cyan</tspan> <tspan class="fg7 bg5">magenta</tspan> <tspan class="fg7 bg3">yellow</tspan> 
+</text><text xml:space="preserve" x="42" y="222"><tspan class="fg15 bg8">black</tspan> <tspan class="fg15 bg12">blue</tspan> <tspan class="fg15 bg10">green</tspan> <tspan class="fg15 bg9">red</tspan> <tspan class="fg15 bg14">cyan</tspan> <tspan class="fg15 bg13">magenta</tspan> <tspan class="fg15 bg11">yellow</tspan> 
+</text></g></g></svg>
 </svg>

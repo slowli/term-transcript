@@ -28,12 +28,14 @@
         .dimmed { opacity: 0.7; }
         .hard-br {
           position: relative;
-          margin-left: 5px;
+          margin-left: 8px;
         }
         .hard-br:before {
           content: '»';
           opacity: 0.6;
         }
+        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line > span { display: inline-block; }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
         .fg2 { color: #cee318; } .bg2 { background: #cee318; }
@@ -56,11 +58,11 @@
         <foreignObject width="720" height="150">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input"><pre><span class="prompt">$</span> yellow intense bold green cucumber</pre></div>
-            <div class="output"><pre><span class="fg3">yellow</span> <span class="fg11">intense</span> <span class="bold fg11">bold</span> <span class="bold fg10">green</span> <span class="bold fg10">cucumber</span></pre></div>
+            <div class="output"><pre><span class="line"><span class="fg3">yellow</span> <span class="fg11">intense</span> <span class="bold fg11">bold</span> <span class="bold fg10">green</span> <span class="bold fg10">cucumber</span></span></pre></div>
             <div class="input"><pre><span class="prompt">$</span> neutral #fa4 underline #c0ffee</pre></div>
-            <div class="output"><pre>neutral <span style="color: #ffaa44;">#fa4</span> <span class="underline" style="color: #ffaa44;">underline</span> <span class="underline" style="color: #c0ffee;">#c0ffee</span></pre></div>
+            <div class="output"><pre><span class="line">neutral <span style="color: #ffaa44;">#fa4</span> <span class="underline" style="color: #ffaa44;">underline</span> <span class="underline" style="color: #c0ffee;">#c0ffee</span></span></pre></div>
             <div class="input"><pre><span class="prompt">$</span> #9f4010 (brown) italic</pre></div>
-            <div class="output"><pre><span style="color: #9f4010;">#9f4010</span> <span style="color: #9f4010;">(brown)</span> <span class="italic" style="color: #9f4010;">italic</span></pre></div>
+            <div class="output"><pre><span class="line"><span style="color: #9f4010;">#9f4010</span> <span style="color: #9f4010;">(brown)</span> <span class="italic" style="color: #9f4010;">italic</span></span></pre></div>
           </div>
         </foreignObject>
       </svg>
