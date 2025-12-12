@@ -148,9 +148,9 @@
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
         {{~/if~}}
         {{~#text_fg append=true ~}}
-        <g xml:space="preserve" class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
+        <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <text{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}}>{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
+            <text xml:space="preserve"{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}}>{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
 </text>
             {{~#if (not ../input.hidden)~}}
               {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)}}
@@ -164,7 +164,7 @@
 
         {{! Render output backround and text }}
         {{~#text_fg append=true ~}}
-          <g xml:space="preserve" class="output">
+          <g class="output">
         {{~/text_fg~}}
         {{~#each output as |line|~}}
           {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" ~}}
@@ -209,7 +209,7 @@
             {{~line_bg set=(trim (line_bg) side="end")~}}
             {{~#text_fg append=true ~}}
               {{~#if (line_bg)~}}
-                <text x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{line_bg}}}</text>
+                <text xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{line_bg}}}</text>
               {{~/if~}}
             {{~/text_fg~}}
           {{~/if~}}
@@ -217,8 +217,7 @@
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
-              {{! Here and in other places, we clip the features outside }}
-              <text x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
+              <text xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
 </text>
             {{~/if~}}
           {{~/text_fg~}}
