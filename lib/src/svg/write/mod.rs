@@ -69,6 +69,7 @@ pub(crate) struct StyledSpan {
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct StyledLine {
     pub(crate) spans: Vec<StyledSpan>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     br: Option<LineBreak>,
 }
 
