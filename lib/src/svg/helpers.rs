@@ -419,15 +419,8 @@ impl HelperDef for LineCounter {
                 "string".to_owned(),
             )
         })?;
-        // FIXME: remove
-        let is_html = helper
-            .hash_get("format")
-            .is_some_and(|format| format.value().as_str() == Some("html"));
 
         let mut lines = bytecount::count(string.as_bytes(), b'\n');
-        if is_html {
-            lines += string.matches("<br/>").count();
-        }
         if !string.is_empty() && !string.ends_with('\n') {
             lines += 1;
         }
@@ -1054,17 +1047,15 @@ mod tests {
 
     #[test]
     fn line_counter() {
-        let template = r#"
-            {{count_lines text}}, {{count_lines text format="html"}}
-        "#;
-        let text = "test\ntest<br/>test";
+        let template = "{{count_lines text}}";
+        let text = "test\ntest test";
 
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars.register_helper("count_lines", Box::new(LineCounter));
         let data = serde_json::json!({ "text": text });
         let rendered = handlebars.render_template(template, &data).unwrap();
-        assert_eq!(rendered.trim(), "2, 3");
+        assert_eq!(rendered.trim(), "2");
     }
 
     #[test]
