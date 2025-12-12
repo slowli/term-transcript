@@ -92,7 +92,7 @@
 
   .hard-br {
     position: relative;
-    margin-left: 5px;
+    margin-left: 8px;
   }
   .hard-br:before {
     content: '»';
@@ -150,14 +150,10 @@
               {{~#each output as |line|~}}
                 <span class="line">
                 {{~#each line.spans as |span|~}}
-                  {{~#scope html_suffix="" ~}}
-                    {{~#if (and @last line.br)~}}
-                      {{~#html_suffix append=true}}<b class="hard-br"></b>{{/html_suffix~}}
-                    {{~/if~}}
-                    {{{eval ">html_span" span=span html_suffix=(html_suffix)}}}
-                  {{~/scope~}}
+                    {{{eval ">html_span" span=span}}}
                 {{~else~}}{{! The line may be empty }}
                 {{~/each~}}
+                {{~#if line.br}}<b class="hard-br"></b>{{/if~}}
                 {{! Add a newline in order to make the text correctly copyable }}
                 {{~#if (not @last)}}
 

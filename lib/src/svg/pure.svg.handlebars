@@ -76,7 +76,7 @@
   .dimmed { fill-opacity: 0.7; }
   {{~#if wrap}}
 
-  .hard-br { fill-opacity: 0.6; user-select: none; }
+  .hard-br { font-weight: bold; fill-opacity: 0.6; user-select: none; }
   {{~/if}}
 
   .fg0 { fill: {{ palette.colors.black }}; } .output-bg .fg0 { stroke: {{ palette.colors.black }}; }
@@ -191,14 +191,14 @@
               {{~/with~}}
             {{~/line_bg~}}
             {{! Render span foreground }}
-            {{~#if (and @last line.br)~}}
-              {{~#svg_suffix append=true}}<tspan class="hard-br" dx="5">»</tspan>{{/svg_suffix~}}
-            {{~/if~}}
-            {{~#line_fg append=true ~}}{{{eval ">svg_tspan" span=span svg_suffix=(svg_suffix)}}}{{/line_fg~}}
+            {{~#line_fg append=true ~}}{{{eval ">svg_tspan" span=span}}}{{/line_fg~}}
             {{! Update char position on the line }}
             {{~char_pos set=(add (char_pos) (char_width span.text))~}}
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
+          {{~#if line.br~}}
+            {{~#line_fg append=true}}<tspan class="hard-br" dx="8">»</tspan>{{/line_fg~}}
+          {{~/if~}}
 
           {{! Append collected `line_bg` to the overall text }}
           {{~#if (font_metrics)~}}

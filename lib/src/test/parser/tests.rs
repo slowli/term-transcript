@@ -408,7 +408,7 @@ fn reading_pure_svg_with_styled_hard_breaks() {
     const SVG: &str = r#"
 <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
   <g class="container fg7"><g xml:space="preserve" class="input"><text x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
-</text></g><g xml:space="preserve" class="output"><text x="42" y="60"><tspan class="bold">License:</tspan> <tspan class="fg3">don't know<tspan class="hard-br" dx="5">&gt;</tspan></tspan>
+</text></g><g xml:space="preserve" class="output"><text x="42" y="60"><tspan class="bold">License:</tspan> <tspan class="fg3">don't know</tspan><tspan class="hard-br" dx="5">&gt;</tspan>
 </text><text x="42" y="78"><tspan class="fg3"> lol</tspan>
 </text></g>
   </g>

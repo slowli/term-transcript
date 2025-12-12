@@ -125,14 +125,13 @@ impl TextReadingState {
                 if tag_name.as_ref() == b"text" && Self::is_bg_line(tag.attributes())? {
                     self.bg_line_level = Some(self.open_tags - 1);
                     return Ok(None);
-                } else if is_tspan {
-                    // Check for the hard line break <tspan>. We mustn't add its contents to the text,
-                    // and instead gobble the following '\n'.
-                    let classes = parse_classes(tag.attributes())?;
-                    if extract_base_class(&classes) == b"hard-br" {
-                        self.hard_br = Some(HardBreak::Active);
-                        return Ok(None);
-                    }
+                }
+                // Check for the hard line break <tspan> or <b>. We mustn't add its contents to the text,
+                // and instead gobble the following '\n'.
+                let classes = parse_classes(tag.attributes())?;
+                if extract_base_class(&classes) == b"hard-br" {
+                    self.hard_br = Some(HardBreak::Active);
+                    return Ok(None);
                 }
 
                 if tag_name.as_ref() == b"span" || is_tspan {
