@@ -2,7 +2,9 @@
   Example of a custom Handlebars template for use with `term-transcript`.
   This template renders an HTML document with collapsible interaction sections.
 }}
-{{! CSS definitions: colors. This is taken verbatim from the default template. }}
+{{! Import misc helpers to the scope. }}
+{{>_helpers}}
+{{! CSS definitions: colors. }}
 {{~#*inline "styles_colors"}}
 :root {
   {{~#each palette.colors}}
@@ -96,7 +98,17 @@
           </h2>
           <div id="term-output-{{@index}}" class="accordion-collapse collapse show" aria-labelledby="user-input-{{@index}}">
             <div class="accordion-body p-0 pt-2">
-              <pre class="term-output mb-0">{{{output_html}}}</pre>
+              <pre class="term-output mb-0">
+              {{~#each output as |line|~}}
+                {{~#each line.spans as |span|~}}
+                  {{! Invoke the `html_span` helper used by the default template. }}
+                  {{{eval ">html_span" span=span html_suffix=""}}}
+                {{~else~}}{{! The line may be empty }}
+                {{~/each}}
+                {{! Add a newline in order to make the text correctly copyable }}
+
+              {{/each~}}
+              </pre>
             </div>
           </div>
         </div>

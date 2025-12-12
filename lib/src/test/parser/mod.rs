@@ -424,8 +424,8 @@ impl ParserState {
                     if tag.name().as_ref() == b"div" {
                         Self::verify_container_attrs(tag.attributes())?;
                         self.set_state(Self::EncounteredContainer);
-                    } else if tag.name().as_ref() == b"text"
-                        && Self::is_text_container(tag.attributes())?
+                    } else if tag.name().as_ref() == b"g"
+                        && Self::is_svg_container(tag.attributes())?
                     {
                         self.set_state(Self::EncounteredContainer);
                     }
@@ -536,7 +536,7 @@ impl ParserState {
         }
     }
 
-    fn is_text_container(attributes: Attributes<'_>) -> Result<bool, ParseError> {
+    fn is_svg_container(attributes: Attributes<'_>) -> Result<bool, ParseError> {
         let classes = parse_classes(attributes)?;
         Ok(extract_base_class(&classes) == b"container")
     }

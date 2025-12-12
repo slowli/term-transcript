@@ -58,7 +58,10 @@ use std::{env, ffi::OsStr};
 
 use termcolor::ColorChoice;
 
-pub use self::parser::{LocatedParseError, ParseError, Parsed};
+pub use self::{
+    config_impl::compare_transcripts,
+    parser::{LocatedParseError, ParseError, Parsed},
+};
 #[cfg(feature = "svg")]
 use crate::svg::Template;
 use crate::{traits::SpawnShell, ShellOptions, Transcript};

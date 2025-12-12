@@ -1,11 +1,9 @@
 //! Test for color diffs.
 
-#![allow(clippy::non_ascii_literal)]
-
 use termcolor::NoColor;
 
 use super::*;
-use crate::write::HtmlWriter;
+use crate::svg::write::{LineWriter, Style, StyledSpan};
 
 #[test]
 fn getting_spans_basics() {
@@ -187,17 +185,77 @@ fn highlighting_diff_on_text() {
         ],
     };
 
-    let mut buffer = String::new();
-    let mut out = HtmlWriter::new(&mut buffer, None);
+    let mut out = LineWriter::new(None);
     color_diff
         .highlight_text(&mut out, "Hello, world!", &color_spans)
         .unwrap();
+    let lines = out.into_lines();
+    assert_eq!(lines.len(), 2);
     assert_eq!(
-        buffer,
-        "<span class=\"fg1\">&gt; </span>He<span class=\"fg2\">llo, world!</span>\n\
-         <span class=\"fg1\">&gt; </span><span class=\"fg7 bg1\">^^</span>\
-         <span class=\"fg0 bg3\">!!</span><span class=\"fg7 bg1\">^</span>     \
-         <span class=\"fg7 bg1\">^</span>\n"
+        lines[0].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "&gt; ".into(),
+            },
+            "He".into(),
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(2)),
+                    ..Style::default()
+                },
+                text: "llo, world!".into(),
+            },
+        ]
+    );
+
+    assert_eq!(
+        lines[1].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "&gt; ".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(7)),
+                    bg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "^^".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(0)),
+                    bg: Some(IndexOrRgb::Index(3)),
+                    ..Style::default()
+                },
+                text: "!!".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(7)),
+                    bg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "^".into(),
+            },
+            "     ".into(),
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(7)),
+                    bg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "^".into(),
+            },
+        ]
     );
 }
 
@@ -220,16 +278,68 @@ fn spans_on_multiple_lines() {
         differing_spans: vec![diff_span(9, 3)],
     };
 
-    let mut buffer = String::new();
-    let mut out = HtmlWriter::new(&mut buffer, None);
+    let mut out = LineWriter::new(None);
     color_diff
         .highlight_text(&mut out, "Hello,\nworld!", &color_spans)
         .unwrap();
+
+    let lines = out.into_lines();
+    assert_eq!(lines.len(), 3);
     assert_eq!(
-        buffer,
-        "= <span class=\"fg2\">Hello,</span>\n\
-         <span class=\"fg1\">&gt; </span><span class=\"fg2\">wo</span>rld!\n\
-         <span class=\"fg1\">&gt; </span>  <span class=\"fg7 bg1\">^^^</span>\n"
+        lines[0].spans,
+        [
+            "= ".into(),
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(2)),
+                    ..Style::default()
+                },
+                text: "Hello,".into(),
+            },
+        ]
+    );
+
+    assert_eq!(
+        lines[1].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "&gt; ".into(),
+            },
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(2)),
+                    ..Style::default()
+                },
+                text: "wo".into(),
+            },
+            "rld!".into(),
+        ]
+    );
+
+    assert_eq!(
+        lines[2].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "&gt; ".into(),
+            },
+            "  ".into(),
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(7)),
+                    bg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "^^^".into(),
+            },
+        ]
     );
 }
 
@@ -256,18 +366,71 @@ fn spans_with_multiple_sequential_line_breaks() {
         differing_spans: vec![diff_span(10, 3)],
     };
 
-    let mut buffer = String::new();
-    let mut out = HtmlWriter::new(&mut buffer, None);
+    let mut out = LineWriter::new(None);
     color_diff
         .highlight_text(&mut out, "Hello,\n\nworld!", &color_spans)
         .unwrap();
 
+    let lines = out.into_lines();
+    assert_eq!(lines.len(), 4);
+
     assert_eq!(
-        buffer,
-        "= <span class=\"fg2\">Hello,</span>\n\
-         = \n\
-         <span class=\"fg1\">&gt; </span>wo<span class=\"fg2\">rld!</span>\n\
-         <span class=\"fg1\">&gt; </span>  <span class=\"fg7 bg1\">^^^</span>\n"
+        lines[0].spans,
+        [
+            "= ".into(),
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(2)),
+                    ..Style::default()
+                },
+                text: "Hello,".into(),
+            },
+        ]
+    );
+
+    assert_eq!(lines[1].spans, ["= ".into()]);
+
+    assert_eq!(
+        lines[2].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "&gt; ".into(),
+            },
+            "wo".into(),
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(2)),
+                    ..Style::default()
+                },
+                text: "rld!".into(),
+            },
+        ]
+    );
+
+    assert_eq!(
+        lines[3].spans,
+        [
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "&gt; ".into(),
+            },
+            "  ".into(),
+            StyledSpan {
+                style: Style {
+                    fg: Some(IndexOrRgb::Index(7)),
+                    bg: Some(IndexOrRgb::Index(1)),
+                    ..Style::default()
+                },
+                text: "^^^".into(),
+            },
+        ]
     );
 }
 

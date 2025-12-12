@@ -13,9 +13,10 @@ use tempfile::tempdir;
 use term_transcript::PtyCommand;
 use term_transcript::{
     svg::{NamedPalette, Template, TemplateOptions},
-    test::{MatchKind, TestConfig, TestOutputConfig, UpdateMode},
+    test::{compare_transcripts, MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ExitStatus, ShellOptions, Transcript, UserInput,
 };
+use termcolor::NoColor;
 use test_casing::{decorate, decorators::Retry, test_casing, Product};
 use tracing::{subscriber::DefaultGuard, Subscriber};
 use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
@@ -100,6 +101,26 @@ fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     let rendered = rendered.replace("\r\n", "\n");
     let snapshot = snapshot.replace("\r\n", "\n");
     pretty_assertions::assert_eq!(rendered, snapshot);
+
+    // Check that parsing SVG files doesn't lose information.
+    let snapshot_reader = if pure_svg {
+        read_pure_snapshot()?
+    } else {
+        read_main_snapshot()?
+    };
+    let parsed = Transcript::from_svg(snapshot_reader)?;
+    let mut buffer = vec![];
+    let stats = compare_transcripts(
+        &mut NoColor::new(&mut buffer),
+        &parsed,
+        &transcript,
+        MatchKind::Precise,
+        false,
+    )?;
+    if stats.errors(MatchKind::Precise) > 0 {
+        panic!("{}", String::from_utf8_lossy(&buffer));
+    }
+
     Ok(())
 }
 

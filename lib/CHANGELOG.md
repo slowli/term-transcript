@@ -20,7 +20,9 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Bump minimum supported Rust version to 1.83.
 - Align the view box bottom during the last scroll animation frame, so that there's no overscroll.
 - Consistently trim the ending newline for captured outputs.
-- Change the hard break char to `»` so that it is covered by more fonts.
+- Change the hard break char to `»` so that it is covered by more fonts. Do not style the hard break as the surrounding text.
+- Change the output data provided to templates. Instead of pre-rendered HTML and SVG data, a template is now provided
+  with an array of lines, each consisting of styled text spans.
 
 ### Removed
 

@@ -10,7 +10,11 @@ use unicode_width::UnicodeWidthStr;
 #[cfg(test)]
 mod tests;
 
-use crate::{term::TermOutputParser, write::IndexOrRgb, TermError};
+use crate::{
+    term::TermOutputParser,
+    utils::{IndexOrRgb, RgbColor},
+    TermError,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ColorSpan {
@@ -99,7 +103,7 @@ impl ColorSpansWriter {
             Color::Ansi256(7) => Color::White,
 
             Color::Ansi256(index) if index >= 16 => match IndexOrRgb::indexed_color(index) {
-                IndexOrRgb::Rgb(r, g, b) => Color::Rgb(r, g, b),
+                IndexOrRgb::Rgb(RgbColor(r, g, b)) => Color::Rgb(r, g, b),
                 IndexOrRgb::Index(_) => color,
             },
 

@@ -4,9 +4,9 @@ use std::{collections::HashMap, fmt};
 
 use serde::Serialize;
 
+use super::write::StyledLine;
 use crate::{
     svg::{EmbeddedFont, TemplateOptions},
-    write::SvgLine,
     UserInput,
 };
 
@@ -70,12 +70,13 @@ use crate::{
 ///             "prompt": "$",
 ///             "hidden": false,
 ///         },
-///         "output_html": "Hello, <span class=\"fg2\">world</span>!",
-/// #       "output_svg": [{
-/// #           "background": [],
-/// #           "foreground": "Hello, <tspan class=\"fg2\">world</tspan>!",
-/// #       }],
-/// #       // ^ Implementation detail for now
+///         "output": [{
+///             "spans": [
+///                 { "text": "Hello, " },
+///                 { "text": "world", "fg": 2 },
+///                 { "text": "!" },
+///             ],
+///         }],
 ///         "failure": false,
 ///         "exit_status": null,
 ///     }]
@@ -133,38 +134,13 @@ impl Default for CreatorData {
 }
 
 /// Serializable version of [`Interaction`](crate::Interaction).
-///
-/// # HTML output
-///
-/// An interaction contains rendered HTML for the output with styles applied
-/// to the relevant segments as `<span>`s. The styles are signalled using `class`es
-/// and inline `style`s:
-///
-/// - `fg0`–`fg15` classes specify the foreground color being
-///   0th–15th [base terminal color][colors]. `fg0`–`fg7` are ordinary colors,
-///   and `fg8`–`fg15` are intense variations.
-/// - Likewise, `bg0`–`bg15` classes specify the background color as one of the base terminal
-///   colors.
-/// - Remaining indexed colors and 24-bit colors have a definite value, and thus are signalled
-///   via an inline `style` (e.g., `color: #c0ffee` or `background: #c0ffee`).
-/// - `bold`, `italic`, `underline`, `dimmed` classes correspond to the corresponding text styles.
-/// - [Hard breaks], if they are enabled, are represented by `<b class="hard-br"><br/></b>`.
-///
-/// The rendered HTML is assumed to be included into a container that preserves whitespace,
-/// i.e., has [`white-space`] CSS property set to `pre`. An example of such container is `<pre>`.
-///
-/// [colors]: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
-/// [`white-space`]: https://developer.mozilla.org/en-US/docs/Web/CSS/white-space
-/// [Hard breaks]: crate::svg::WrapOptions::HardBreakAt
 #[derive(Serialize)]
 #[non_exhaustive]
 pub struct SerializedInteraction<'a> {
     /// User's input.
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
-    pub output_html: String,
-    /// Terminal output in the SVG format.
-    pub(crate) output_svg: Vec<SvgLine>,
+    pub(crate) output: Vec<StyledLine>,
     /// Exit status of the latest executed program, or `None` if it cannot be determined.
     pub exit_status: Option<i32>,
     /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?
@@ -176,7 +152,7 @@ impl fmt::Debug for SerializedInteraction<'_> {
         formatter
             .debug_struct("SerializedInteraction")
             .field("input", &self.input)
-            .field("output.line_count", &self.output_svg.len())
+            .field("output.line_count", &self.output.len())
             .field("exit_status", &self.exit_status)
             .finish_non_exhaustive()
     }

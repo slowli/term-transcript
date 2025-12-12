@@ -23,14 +23,19 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "font-subset")]
 pub use self::subset::{FontFace, FontSubsetter, SubsettingError};
-use self::{data::CompleteHandlebarsData, font::BoxedErrorEmbedder, helpers::register_helpers};
+use self::{
+    data::CompleteHandlebarsData,
+    font::BoxedErrorEmbedder,
+    helpers::register_helpers,
+    write::{LineWriter, StyledLine},
+};
 pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     font::{EmbeddedFont, EmbeddedFontFace, FontEmbedder, FontMetrics},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{write::SvgLine, BoxedError, TermError, Transcript};
+use crate::{term::TermOutputParser, BoxedError, Captured, TermError, Transcript};
 
 mod data;
 mod font;
@@ -40,11 +45,20 @@ mod palette;
 mod subset;
 #[cfg(test)]
 mod tests;
+pub(crate) mod write;
 
 const COMMON_HELPERS: &str = include_str!("common.handlebars");
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const PURE_TEMPLATE: &str = include_str!("pure.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
+
+impl Captured {
+    fn to_lines(&self, wrap_width: Option<usize>) -> Result<Vec<StyledLine>, TermError> {
+        let mut writer = LineWriter::new(wrap_width);
+        TermOutputParser::new(&mut writer).parse(self.as_ref().as_bytes())?;
+        Ok(writer.into_lines())
+    }
+}
 
 /// Line numbering options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,15 +251,14 @@ impl TemplateOptions {
             .interactions()
             .iter()
             .zip(rendered_outputs)
-            .map(|(interaction, (output_html, output_svg))| {
+            .map(|(interaction, output)| {
                 let failure = interaction
                     .exit_status()
                     .is_some_and(|status| !status.is_success());
                 has_failures = has_failures || failure;
                 SerializedInteraction {
                     input: interaction.input(),
-                    output_html,
-                    output_svg,
+                    output,
                     exit_status: interaction.exit_status().map(|status| status.0),
                     failure,
                 }
@@ -265,10 +278,7 @@ impl TemplateOptions {
         feature = "tracing",
         tracing::instrument(level = "debug", skip_all, err)
     )]
-    fn render_outputs(
-        &self,
-        transcript: &Transcript,
-    ) -> Result<Vec<(String, Vec<SvgLine>)>, TermError> {
+    fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<Vec<StyledLine>>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
             WrapOptions::HardBreakAt(width) => *width,
         });
@@ -276,13 +286,7 @@ impl TemplateOptions {
         transcript
             .interactions
             .iter()
-            .map(|interaction| {
-                let output = interaction.output();
-                let mut buffer = String::with_capacity(output.as_ref().len());
-                output.write_as_html(&mut buffer, max_width)?;
-                let svg_lines = output.write_as_svg(max_width)?;
-                Ok((buffer, svg_lines))
-            })
+            .map(|interaction| interaction.output().to_lines(max_width))
             .collect()
     }
 }
