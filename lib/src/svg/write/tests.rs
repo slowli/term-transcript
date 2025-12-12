@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use termcolor::WriteColor;
+use termcolor::{Color, WriteColor};
 
 use super::*;
 

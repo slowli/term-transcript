@@ -177,7 +177,6 @@ mod term;
 pub mod test;
 pub mod traits;
 mod utils;
-mod write;
 
 pub(crate) type BoxedError = Box<dyn std::error::Error + Send + Sync>;
 

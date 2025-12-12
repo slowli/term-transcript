@@ -3,6 +3,8 @@
 use std::{borrow::Cow, fmt::Write as WriteStr, io, str};
 
 #[cfg(any(feature = "svg", feature = "test"))]
+pub(crate) use self::rgb_color::IndexOrRgb;
+#[cfg(any(feature = "svg", feature = "test"))]
 pub use self::rgb_color::RgbColor;
 #[cfg(feature = "svg")]
 pub use self::rgb_color::RgbColorParseError;
@@ -143,6 +145,73 @@ mod rgb_color {
                 Ok(Self(r, g, b))
             } else {
                 Err(RgbColorParseError::IncorrectLen(s.len()))
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    #[cfg_attr(feature = "svg", derive(serde::Serialize))]
+    #[cfg_attr(feature = "svg", serde(untagged))]
+    pub(crate) enum IndexOrRgb {
+        Index(u8),
+        Rgb(RgbColor),
+    }
+
+    impl IndexOrRgb {
+        #[cfg(feature = "svg")]
+        #[allow(clippy::match_wildcard_for_single_variants)]
+        // ^-- `Color` is an old-school non-exhaustive enum
+        pub(crate) fn new(color: termcolor::Color) -> std::io::Result<Self> {
+            use termcolor::Color;
+
+            Ok(match color {
+                Color::Black => Self::index(0),
+                Color::Red => Self::index(1),
+                Color::Green => Self::index(2),
+                Color::Yellow => Self::index(3),
+                Color::Blue => Self::index(4),
+                Color::Magenta => Self::index(5),
+                Color::Cyan => Self::index(6),
+                Color::White => Self::index(7),
+                Color::Ansi256(idx) => Self::indexed_color(idx),
+                Color::Rgb(r, g, b) => Self::Rgb(RgbColor(r, g, b)),
+                _ => return Err(std::io::Error::other("Unsupported color")),
+            })
+        }
+
+        fn index(value: u8) -> Self {
+            debug_assert!(value < 16);
+            Self::Index(value)
+        }
+
+        pub(crate) fn indexed_color(index: u8) -> Self {
+            match index {
+                0..=15 => Self::index(index),
+
+                16..=231 => {
+                    let index = index - 16;
+                    let r = Self::color_cube_color(index / 36);
+                    let g = Self::color_cube_color((index / 6) % 6);
+                    let b = Self::color_cube_color(index % 6);
+                    Self::Rgb(RgbColor(r, g, b))
+                }
+
+                _ => {
+                    let gray = 10 * (index - 232) + 8;
+                    Self::Rgb(RgbColor(gray, gray, gray))
+                }
+            }
+        }
+
+        fn color_cube_color(index: u8) -> u8 {
+            match index {
+                0 => 0,
+                1 => 0x5f,
+                2 => 0x87,
+                3 => 0xaf,
+                4 => 0xd7,
+                5 => 0xff,
+                _ => unreachable!(),
             }
         }
     }

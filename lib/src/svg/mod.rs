@@ -23,14 +23,19 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "font-subset")]
 pub use self::subset::{FontFace, FontSubsetter, SubsettingError};
-use self::{data::CompleteHandlebarsData, font::BoxedErrorEmbedder, helpers::register_helpers};
+use self::{
+    data::CompleteHandlebarsData,
+    font::BoxedErrorEmbedder,
+    helpers::register_helpers,
+    write::{LineWriter, StyledLine},
+};
 pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     font::{EmbeddedFont, EmbeddedFontFace, FontEmbedder, FontMetrics},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::utils::{RgbColor, RgbColorParseError};
-use crate::{write::StyledLine, BoxedError, TermError, Transcript};
+use crate::{term::TermOutputParser, BoxedError, Captured, TermError, Transcript};
 
 mod data;
 mod font;
@@ -40,11 +45,20 @@ mod palette;
 mod subset;
 #[cfg(test)]
 mod tests;
+pub(crate) mod write;
 
 const COMMON_HELPERS: &str = include_str!("common.handlebars");
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const PURE_TEMPLATE: &str = include_str!("pure.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
+
+impl Captured {
+    fn to_lines(&self, wrap_width: Option<usize>) -> Result<Vec<StyledLine>, TermError> {
+        let mut writer = LineWriter::new(wrap_width);
+        TermOutputParser::new(&mut writer).parse(self.as_ref().as_bytes())?;
+        Ok(writer.into_lines())
+    }
+}
 
 /// Line numbering options.
 #[derive(Debug, Clone, Serialize, Deserialize)]

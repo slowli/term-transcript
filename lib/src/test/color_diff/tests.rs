@@ -1,11 +1,9 @@
 //! Test for color diffs.
 
-#![allow(clippy::non_ascii_literal)]
-
 use termcolor::NoColor;
 
 use super::*;
-use crate::write::{LineWriter, Style, StyledSpan};
+use crate::svg::write::{LineWriter, Style, StyledSpan};
 
 #[test]
 fn getting_spans_basics() {

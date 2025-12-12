@@ -4,11 +4,11 @@ use std::convert::Infallible;
 
 use test_casing::test_casing;
 
-use super::*;
-use crate::{
-    write::{IndexOrRgb, Style, StyledSpan},
-    ExitStatus, Interaction, UserInput,
+use super::{
+    write::{Style, StyledSpan},
+    *,
 };
+use crate::{utils::IndexOrRgb, ExitStatus, Interaction, UserInput};
 
 #[test]
 fn rendering_simple_transcript() {

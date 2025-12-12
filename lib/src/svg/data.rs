@@ -4,9 +4,9 @@ use std::{collections::HashMap, fmt};
 
 use serde::Serialize;
 
+use super::write::StyledLine;
 use crate::{
     svg::{EmbeddedFont, TemplateOptions},
-    write::StyledLine,
     UserInput,
 };
 

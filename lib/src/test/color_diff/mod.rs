@@ -10,7 +10,11 @@ use unicode_width::UnicodeWidthStr;
 #[cfg(test)]
 mod tests;
 
-use crate::{term::TermOutputParser, utils::RgbColor, write::IndexOrRgb, TermError};
+use crate::{
+    term::TermOutputParser,
+    utils::{IndexOrRgb, RgbColor},
+    TermError,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ColorSpan {

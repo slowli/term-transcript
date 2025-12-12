@@ -4,7 +4,6 @@ use termcolor::NoColor;
 
 use crate::{
     utils::{normalize_newlines, WriteAdapter},
-    write::{LineWriter, StyledLine},
     TermError,
 };
 
@@ -38,12 +37,6 @@ impl From<String> for Captured {
 }
 
 impl Captured {
-    pub(crate) fn to_lines(&self, wrap_width: Option<usize>) -> Result<Vec<StyledLine>, TermError> {
-        let mut writer = LineWriter::new(wrap_width);
-        TermOutputParser::new(&mut writer).parse(self.0.as_bytes())?;
-        Ok(writer.into_lines())
-    }
-
     fn write_as_plaintext(&self, output: &mut dyn WriteStr) -> Result<(), TermError> {
         let mut plaintext_writer = NoColor::new(WriteAdapter::new(output));
         TermOutputParser::new(&mut plaintext_writer).parse(self.0.as_bytes())
