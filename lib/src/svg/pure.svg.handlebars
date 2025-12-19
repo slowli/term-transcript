@@ -138,9 +138,8 @@
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
             <text xml:space="preserve"{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}"{{/if}}>
-              {{~#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan><tspan> {{/if~}}
+              {{~#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if~}}
               {{this}}
-              {{~#if @first}}</tspan>{{/if}}
 </text>
             {{~#if (not ../input.hidden)~}}
               {{~y_pos set=(add (y_pos) (line_height))}}

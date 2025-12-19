@@ -364,7 +364,7 @@ fn rendering_svg_transcript_with_wraps() {
 
     assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
     assert!(
-        buffer.contains(r#"<tspan>Hello</tspan><tspan class="hard-br" dx="8">»</tspan>"#),
+        buffer.contains(r#"Hello<tspan class="hard-br" dx="8">»</tspan>"#),
         "{buffer}"
     );
 }
@@ -788,7 +788,7 @@ fn rendering_svg_tspan() {
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
         .unwrap();
-    assert_eq!(rendered, "<tspan>Test</tspan>");
+    assert_eq!(rendered, "Test");
 
     let mut style = Style {
         bold: true,
