@@ -179,10 +179,10 @@
       {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
         {{~line_height set=(round (sub metrics.ascent metrics.descent) digits=1)~}}
       {{~/with~}}
-      {{~else~}}
+    {{~else~}}
       {{~line_height set=16.8 ~}}{{! Set to a somewhat reasonable default (1.2 * font_size) }}
     {{~/if~}}
-    {{~else~}}
+  {{~else~}}
     {{! Scale line height according to the font size }}
     {{~line_height set=(round (mul (line_height) const.FONT_SIZE) digits=1)~}}
   {{~/if~}}
