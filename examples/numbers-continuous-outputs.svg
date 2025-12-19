@@ -6,7 +6,7 @@
         .container {
           padding: 0 10px;
           color: #cccccc;
-          line-height: 18px;
+          line-height: 19.6px;
         }
         .container pre {
           padding: 0;
@@ -66,8 +66,8 @@
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #0c0c0c;"/>
       <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 224 720 342" dur="20.0s" repeatCount="indefinite" calcMode="discrete" />
-        <foreignObject width="720" height="566">
+        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 260 720 342;0 272 720 342" dur="24s" repeatCount="indefinite" calcMode="discrete" />
+        <foreignObject width="720" height="614">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
             <div class="output"><pre class="line-numbers">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17</pre><pre><span class="line">Base colors:
@@ -103,10 +103,10 @@
         </foreignObject>
       </svg>
       <rect class="scrollbar" x="713" y="10" width="5" height="40">
-        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 60;0 120;0 181;0 241;0 302" dur="20.0s" repeatCount="indefinite" calcMode="discrete" />
+        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 50.333333333333336;0 100.66666666666667;0 151;0 201.33333333333334;0 251.66666666666669;0 302" dur="24s" repeatCount="indefinite" calcMode="discrete" />
       </rect>
     </g>
-    <text x="10" y="18" style="font: 14px monospace; fill: #c50f1f;">
+    <text x="10" y="19.6" style="font: 14px monospace; fill: #c50f1f;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>

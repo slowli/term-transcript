@@ -1,12 +1,12 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 168" width="720" height="168" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 162" width="720" height="162" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
         .container {
           padding: 0 10px;
           color: #e5e5e5;
-          line-height: 18px;
+          line-height: 16.8px;
         }
         .container pre {
           padding: 0;
@@ -34,12 +34,14 @@
         .dimmed { opacity: 0.7; }
         .hard-br {
           position: relative;
-          margin-left: 5px;
+          margin-left: 8px;
         }
         .hard-br:before {
           content: '»';
           opacity: 0.6;
         }
+        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line > span { display: inline-block; }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
         .fg2 { color: #cee318; } .bg2 { background: #cee318; }
@@ -62,20 +64,20 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="126" viewBox="0 0 720 126">
-        <foreignObject width="720" height="126">
+      <svg x="0" y="10" width="720" height="120" viewBox="0 0 720 120">
+        <foreignObject width="720" height="120">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input input-failure" data-exit-status="127" title="This command exited with non-zero code"><pre><span class="prompt">$</span> ./non-existing-command</pre></div>
-            <div class="output"><pre>sh: 1: ./non-existing-command: not found</pre></div>
+            <div class="output"><pre><span class="line">sh: 1: ./non-existing-command: not found</span></pre></div>
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> [ -x non-existing-file ]</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> [ -x non-existing-file ] || echo &quot;File is not there!&quot;</pre></div>
-            <div class="output"><pre>File is not there!</pre></div>
+            <div class="output"><pre><span class="line">File is not there!</span></pre></div>
           </div>
         </foreignObject>
       </svg>
     </g>
-    <text x="10" y="18" style="font: 14px monospace; fill: #ff005b;">
+    <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>

@@ -4,6 +4,7 @@ use std::{
     fs::{self, File},
     io, mem,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use anyhow::Context;
@@ -52,6 +53,36 @@ impl From<LineNumbers> for svg::LineNumbers {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum LineHeight {
+    Ratio(f64),
+    Pixels(f64),
+}
+
+impl LineHeight {
+    fn as_ratio(self) -> f64 {
+        const FONT_SIZE: f64 = 14.0;
+
+        match self {
+            Self::Ratio(val) => val,
+            Self::Pixels(val) => val / FONT_SIZE,
+        }
+    }
+}
+
+impl FromStr for LineHeight {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some(val) = s.strip_suffix("px") {
+            let val = val.trim();
+            Ok(Self::Pixels(val.parse()?))
+        } else {
+            Ok(Self::Ratio(s.parse()?))
+        }
+    }
+}
+
 #[derive(Debug, Args)]
 pub(crate) struct TemplateArgs {
     /// Path to the configuration TOML file.
@@ -95,7 +126,7 @@ pub(crate) struct TemplateArgs {
     /// Line height to use relative to the font size. If not specified, the value will be obtained
     /// from the font metrics (if a font is embedded), or set to 1.2 otherwise.
     #[arg(long, value_name = "RATIO")]
-    line_height: Option<f64>,
+    line_height: Option<LineHeight>,
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
     #[arg(long, default_value = "720")]
@@ -140,7 +171,7 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
     fn try_from(value: TemplateArgs) -> Result<Self, Self::Error> {
         let mut this = Self {
             width: value.width,
-            line_height: value.line_height,
+            line_height: value.line_height.map(LineHeight::as_ratio),
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,

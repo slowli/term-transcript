@@ -1,12 +1,12 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 240" width="720" height="240" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 229.2" width="720" height="229.2" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
         .container {
           padding: 0 10px;
           color: #e5e5e5;
-          line-height: 18px;
+          line-height: 16.8px;
         }
         .container pre {
           padding: 0;
@@ -34,12 +34,14 @@
         .dimmed { opacity: 0.7; }
         .hard-br {
           position: relative;
-          margin-left: 5px;
+          margin-left: 8px;
         }
         .hard-br:before {
           content: '»';
           opacity: 0.6;
         }
+        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line > span { display: inline-block; }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
         .fg2 { color: #cee318; } .bg2 { background: #cee318; }
@@ -62,24 +64,24 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="198" viewBox="0 0 720 198">
-        <foreignObject width="720" height="198">
+      <svg x="0" y="10" width="720" height="187.2" viewBox="0 0 720 187.2">
+        <foreignObject width="720" height="187.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
-            <div class="output"><pre>-rwxrwxrwx 1 alex alex 43994 Nov 25 11:14 <span class="fg2">Cargo.lock</span></pre></div>
+            <div class="output"><pre><span class="line">-rwxrwxrwx 1 alex alex 44148 Dec  5 11:07 <span class="fg2">Cargo.lock</span></span></pre></div>
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> grep -m 5 -n serde Cargo.lock</pre></div>
-            <div class="output"><pre><span class="fg2">410</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-<span class="fg2">411</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
-<span class="fg2">934</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
-<span class="fg2">939</span><span class="fg6">:</span> "<span class="fg1">serde</span>_core",
-<span class="fg2">940</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",</pre></div>
+            <div class="output"><pre><span class="line"><span class="fg2">411</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
+</span><span class="line"><span class="fg2">412</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
+</span><span class="line"><span class="fg2">935</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
+</span><span class="line"><span class="fg2">940</span><span class="fg6">:</span> "<span class="fg1">serde</span>_core",
+</span><span class="line"><span class="fg2">941</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",</span></pre></div>
           </div>
         </foreignObject>
       </svg>
     </g>
-    <text x="10" y="18" style="font: 14px monospace; fill: #ff005b;">
+    <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>

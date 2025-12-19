@@ -1,8 +1,9 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 332.4" width="720" height="332.4" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 354.4" width="720" height="354.4" xmlns="http://www.w3.org/2000/svg">
   <style>
-    .container {
-      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+
+    @import url(https://code.cdn.mozilla.net/fonts/fira.css);  .container {
+      font: 14px Fira Mono, Consolas, Liberation Mono, Menlo, monospace;
       line-height: 16.8px;
     }
     .input,.output,.output-bg {
@@ -33,7 +34,11 @@
     .fg14 { fill: #63e7f0; } .output-bg .fg14 { stroke: #63e7f0; }
     .fg15 { fill: #f3f3f3; } .output-bg .fg15 { stroke: #f3f3f3; }
   </style>
-  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
+  <rect width="100%" height="100%" y="-22" rx="4.5" style="fill: #1c1c1c;"/>
+  <rect width="100%" height="26" y="-22" clip-path="inset(0 0 -10 0 round 4.5)" style="fill: #fff; fill-opacity: 0.1;"/>
+  <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
+  <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
+  <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
     <svg x="0" y="10" width="720" height="312.4" viewBox="0 0 720 312.4">
 <g class="input-bg"><rect x="0" y="0" width="100%" height="20.8"></rect></g><g class="container fg7"><g class="input"><text xml:space="preserve" x="10" y="14.9"><tspan class="prompt">$</tspan><tspan> rainbow</tspan>
 </text></g><g class="output"><text xml:space="preserve" x="10" y="39.7" clip-path="view-box xywh(0 26.8px 100% 16.8px)"><tspan>Base colors:</tspan>

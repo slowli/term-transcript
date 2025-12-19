@@ -34,11 +34,12 @@ term-transcript exec -T 250ms --pure-svg --palette gjm8 rainbow
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette powershell \
+term-transcript exec -T 250ms --palette powershell --line-height=18px \
   --pty --window --scroll rainbow 'rainbow --long-lines'
 ```
 
-Note the `--pty` flag to use a pseudo-terminal for capture instead of default pipes.
+Note the `--pty` flag to use a pseudo-terminal for capture instead of default pipes,
+and an increased line height.
 
 ## Configuring console size
 
@@ -94,6 +95,7 @@ Generating command:
 ```shell
 term-transcript exec -T 250ms --scroll --palette powershell \
   --line-numbers continuous-outputs \
+  --line-height=1.4 \
   rainbow 'rainbow --short'
 ```
 
@@ -126,6 +128,7 @@ Generating command:
 ```shell
 term-transcript exec -T 250ms --palette gjm8 \
   --line-numbers continuous \
+  --line-height 18px \
   'rainbow --long-lines'
 ```
 
@@ -172,6 +175,10 @@ term-transcript exec -T 250ms --palette gjm8 --window \
   --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow
 ```
 
+The same snapshot rendered with pure SVG:
+
+![Snapshot with Fira Mono font and pure SVG](fira-pure.svg)
+
 [CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
 
 ### Embedding custom fonts
@@ -199,6 +206,7 @@ It is possible to embed the italic font face as well by specifying 2 paths for `
 ```shell
 term-transcript exec -T 250ms --palette gjm8 \
   --line-numbers continuous \
+  --line-height=1.4 \
   --embed-font="$ROBOTO_MONO_PATH:$ROBOTO_MONO_ITALIC_PATH" \
   --pure-svg \
   'rainbow --short'

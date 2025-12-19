@@ -44,6 +44,7 @@ term-transcript exec $TT_ARGS --pure-svg --palette gjm8 rainbow \
 
 echo "Creating animated rainbow snapshot..."
 term-transcript exec $TT_ARGS --palette powershell --scroll --pty --window \
+  --line-height=18px \
   rainbow 'rainbow --long-lines' \
   > "$ROOT_DIR/examples/animated.$EXTENSION"
 
@@ -106,6 +107,7 @@ term-transcript exec $TT_ARGS --scroll --palette xterm --pure-svg \
 
 echo "Creating snapshot with --line-numbers continuous-outputs"
 term-transcript exec $TT_ARGS --scroll --palette powershell --line-numbers continuous-outputs \
+  --line-height=1.4 \
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/numbers-continuous-outputs.$EXTENSION"
 
@@ -121,11 +123,13 @@ term-transcript exec $TT_ARGS --pure-svg --scroll --palette gjm8 --line-numbers 
 
 echo "Creating snapshot with --line-numbers and long lines"
 term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
+  --line-height=18px \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/numbers-long.$EXTENSION"
 
 echo "Creating snapshot with --line-numbers and long lines (pure SVG)"
 term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
+  --line-height=18px \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/numbers-long-pure.$EXTENSION"
 
@@ -135,6 +139,10 @@ term-transcript exec $TT_ARGS --palette gjm8 --window \
   --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
   --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow \
   > "$ROOT_DIR/examples/fira.$EXTENSION"
+term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --window \
+  --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
+  --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow \
+  > "$ROOT_DIR/examples/fira-pure.$EXTENSION"
 
 echo "Creating snapshot with custom config..."
 term-transcript exec $TT_ARGS --config-path "$ROOT_DIR/examples/config.toml" \
@@ -148,13 +156,14 @@ term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
   > "$ROOT_DIR/examples/embedded-font.$EXTENSION"
 
 echo "Creating snapshot with --embed-font (Roboto Mono, var weight + italic), --pure-svg"
-term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
-  --embed-font="$FONT_ROBOTO:$FONT_ROBOTO_ITALIC" --pure-svg \
+term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
+  --line-height=1.4 \
+  --embed-font="$FONT_ROBOTO:$FONT_ROBOTO_ITALIC" \
   'rainbow --short' \
   > "$ROOT_DIR/examples/embedded-font-pure.$EXTENSION"
 
 echo "Creating snapshot with --embed-font (Fira Mono, regular + bold), --pure-svg"
-term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
-  --embed-font="$FONT_FIRA:$FONT_FIRA_BOLD" --pure-svg \
+term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
+  --embed-font="$FONT_FIRA:$FONT_FIRA_BOLD" \
   'rainbow --short' \
   > "$ROOT_DIR/examples/embedded-font-fira.$EXTENSION"
