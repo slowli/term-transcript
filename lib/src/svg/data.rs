@@ -35,6 +35,7 @@ use crate::{
 ///         "repo": "https://github.com/slowli/term-transcript",
 ///     },
 ///     "width": 720,
+///     "line_height": null,
 ///     "palette": {
 ///         "colors": {
 ///             "black": "#282936",
