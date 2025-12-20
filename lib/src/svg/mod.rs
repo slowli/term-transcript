@@ -126,8 +126,14 @@ pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. The default value is `720`.
     #[serde(default = "TemplateOptions::default_width")]
     pub width: usize,
-    /// Line height relative to the font size.
+    /// Line height relative to the font size. If not specified, will be taken from font metrics (if a font is embedded),
+    /// or set to 1.2 otherwise.
     pub line_height: Option<f64>,
+    /// Advance width of a font relative to the font size (i.e., in em units). If not specified, will be taken from font metrics (if a font is embedded),
+    /// or set to 0.6 otherwise.
+    ///
+    /// For now, advance width is only applied to the pure SVG template.
+    pub advance_width: Option<f64>,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     #[serde(default)]
     pub palette: Palette,
@@ -165,6 +171,7 @@ impl Default for TemplateOptions {
         Self {
             width: Self::default_width(),
             line_height: None,
+            advance_width: None,
             palette: Palette::default(),
             additional_styles: String::new(),
             font_family: Self::default_font_family(),

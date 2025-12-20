@@ -110,6 +110,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     let options = TemplateOptions {
         window_frame: true,
         line_height: Some(18.0 / 14.0),
+        advance_width: Some(0.575), // slightly decreased value
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
@@ -122,7 +123,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
     // No background for input should be displayed.
     assert!(buffer.contains(r#"<g class="input-bg"></g>"#), "{buffer}");
-    let output_span = r#"<g class="output"><text xml:space="preserve" x="10" y="13.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 0px 100% 18px)">"#;
+    let output_span = r#"<g class="output"><text xml:space="preserve" x="10" y="13.5" textLength="112.7" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 0px 100% 18px)">"#;
     assert!(buffer.contains(output_span), "{buffer}");
     assert!(!buffer.contains(r#"class="input""#), "{buffer}");
 }

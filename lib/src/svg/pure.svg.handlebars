@@ -256,13 +256,13 @@
   {{~/scope~}}
 {{~/inline~}}
 
-{{! Main logic. FIXME: allow configuring advance width }}
+{{! Main logic }}
 {{#scope
   content_height=0
   scroll_animation=null
   font_metrics=null
   line_height=line_height
-  advance_width=8.4
+  advance_width=advance_width
   adjust_text_length=true
   text_y_offset=0
   screen_height=0
@@ -277,8 +277,11 @@
   {{~#if embedded_font~}}
     {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
       {{~font_metrics set=metrics~}}
-      {{~advance_width set=metrics.advance_width~}}
-      {{~adjust_text_length set=false~}}
+      {{! Do not overwrite the advance width if one is supplied by the user }}
+      {{~#if (eq (advance_width) null)~}}
+        {{~advance_width set=metrics.advance_width~}}
+        {{~adjust_text_length set=false~}}
+      {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
         and the ascent, i.e. (line_height + ascent + descent) / 2.
@@ -286,6 +289,12 @@
       {{~text_y_offset set=(div (add (line_height) metrics.ascent metrics.descent) 2)~}}
     {{~/with~}}
   {{~else~}}
+    {{~#if (eq (advance_width) null)~}}
+      {{~advance_width set=8.4~}} {{! Set to a reasonable default: 0.6em }}
+    {{~else~}}
+      {{! Scale advance width from ems to pixels }}
+      {{~advance_width set=(mul (advance_width) const.FONT_SIZE)~}}
+    {{~/if~}}
     {{! Use the above formula with heuristic values: ascent ~ 1em, descent ~ -0.3em. Hence, their sum is ~0.65em or ~9px. }}
     {{~text_y_offset set=(div (add (line_height) 9) 2)~}}
   {{~/if~}}
