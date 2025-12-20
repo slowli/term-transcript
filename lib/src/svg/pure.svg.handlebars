@@ -40,12 +40,12 @@
     font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: {{round (line_height) digits=2}}px;
   }
-  .input,.output,.output-bg {
+  .input,.output {
     white-space: pre;
   }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
   .input-hidden { display: none; }
-  .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.5; }
+  .output-bg { stroke-width: 0.5; }
   {{~#if has_failures}}
 
   .input-bg .input-failure { fill: #ff0041; fill-opacity: 0.15; }
@@ -159,25 +159,17 @@
           {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" ~}}
           {{~#each line.spans as |span|~}}
             {{~#line_bg append=true ~}}
-              {{~#with (font_metrics) as |metrics|~}}
-                {{~#if (ne (typeof span.bg) "null")~}}
-                  <rect x="{{
-                    round (add (x_pos) (mul (char_pos) metrics.advance_width)) digits=2
-                  }}" y="{{
-                    round (y_pos) digits=2
-                  }}" width="{{
-                    round (mul (char_width span.text) metrics.advance_width) digits=2
-                  }}" height="{{
-                    round (line_height) digits=2
-                  }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
-                {{~/if~}}
-              {{~else~}}{{! No font metrics }}
-                {{~#if (ne (typeof span.bg) "null")~}}
-                  <tspan{{{eval ">svg_bg_tspan_attrs" span=span }}}>{{repeat "█" (char_width span.text)}}</tspan>
-                {{~else~}}
-                  {{~repeat " " (char_width span.text)~}}
-                {{~/if~}}
-              {{~/with~}}
+              {{~#if (ne (typeof span.bg) "null")~}}
+                <rect x="{{
+                  round (add (x_pos) (mul (char_pos) (advance_width))) digits=2
+                }}" y="{{
+                  round (y_pos) digits=2
+                }}" width="{{
+                  round (mul (char_width span.text) (advance_width)) digits=2
+                }}" height="{{
+                  round (line_height) digits=2
+                }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
+              {{~/if~}}
             {{~/line_bg~}}
             {{! Render span foreground }}
             {{~#line_fg append=true ~}}{{{eval ">svg_tspan" span=span}}}{{/line_fg~}}
@@ -189,29 +181,18 @@
             {{~#line_fg append=true}}<tspan class="hard-br" dx="8">»</tspan>{{/line_fg~}}
           {{~/if~}}
 
-          {{! Append collected `line_bg` to the overall text }}
-          {{~#if (font_metrics)~}}
-            {{! `line_bg` has collected background <rect>s }}
-            {{~#output_bg append=true}}{{{line_bg}}}{{/output_bg~}}
-          {{~else~}}
-            {{! `line_bg` has collected background <tspan>s. We put them on a separate line with the same starting pos as the main one }}
-            {{~line_bg set=(trim (line_bg) side="end")~}}
-            {{~#text_fg append=true ~}}
-              {{~#if (line_bg)~}}
-                {{! Clip the line vertically so that lines don't visually overlap }}
-                <text xml:space="preserve" x="{{x_pos}}" y="{{
-                  round (add (y_pos) (text_y_offset)) digits=2
-                }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)" class="output-bg">{{{line_bg}}}</text>
-              {{~/if~}}
-            {{~/text_fg~}}
-          {{~/if~}}
+          {{! Append collected `line_bg` to the overall background }}
+          {{~#output_bg append=true}}{{{line_bg}}}{{/output_bg~}}
 
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
               <text xml:space="preserve" x="{{x_pos}}" y="{{
                 round (add (y_pos) (text_y_offset)) digits=2
-              }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)">{{{line_fg}}}
+              }}" {{#if (adjust_text_length)~}}
+                {{! We add 1 to char_pos because the newline char is apparently counted as a non-zero width char }}
+                textLength="{{round (mul (advance_width) (add (char_pos) 1)) digits=2}}" lengthAdjust="spacingAndGlyphs" {{/if~}}
+              clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)">{{{line_fg}}}
 </text>
             {{~/if~}}
           {{~/text_fg~}}
@@ -275,12 +256,14 @@
   {{~/scope~}}
 {{~/inline~}}
 
-{{! Main logic }}
+{{! Main logic. FIXME: allow configuring advance width }}
 {{#scope
   content_height=0
   scroll_animation=null
   font_metrics=null
   line_height=line_height
+  advance_width=8.4
+  adjust_text_length=true
   text_y_offset=0
   screen_height=0
   height=0
@@ -294,6 +277,8 @@
   {{~#if embedded_font~}}
     {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
       {{~font_metrics set=metrics~}}
+      {{~advance_width set=metrics.advance_width~}}
+      {{~adjust_text_length set=false~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
         and the ascent, i.e. (line_height + ascent + descent) / 2.

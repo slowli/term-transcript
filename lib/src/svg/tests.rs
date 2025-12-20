@@ -64,11 +64,11 @@ fn rendering_simple_transcript_to_pure_svg() {
     assert!(buffer.contains(top_svg), "{buffer}");
     let first_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="15.5">"#;
     assert!(buffer.contains(first_input_text), "{buffer}");
-    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="41.5" clip-path="view-box xywh(0 28px 100% 18px)">"#;
+    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="41.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 28px 100% 18px)">"#;
     assert!(buffer.contains(first_output_text), "{buffer}");
     let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="67.5">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="93.5" clip-path="view-box xywh(0 80px 100% 18px)" class="output-bg">"#;
+    let second_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="93.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 80px 100% 18px)">"#;
     assert!(buffer.contains(second_output_text), "{buffer}");
 }
 
@@ -122,7 +122,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
     // No background for input should be displayed.
     assert!(buffer.contains(r#"<g class="input-bg"></g>"#), "{buffer}");
-    let output_span = r#"<g class="output"><text xml:space="preserve" x="10" y="13.5" clip-path="view-box xywh(0 0px 100% 18px)">"#;
+    let output_span = r#"<g class="output"><text xml:space="preserve" x="10" y="13.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 0px 100% 18px)">"#;
     assert!(buffer.contains(output_span), "{buffer}");
     assert!(!buffer.contains(r#"class="input""#), "{buffer}");
 }
@@ -152,7 +152,7 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     assert!(buffer.contains(second_input_bg), "{buffer}");
     let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="43.5">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_bg = r#"<text xml:space="preserve" x="10" y="69.5" clip-path="view-box xywh(0 56px 100% 18px)" class="output-bg">"#;
+    let second_output_bg = r#"<text xml:space="preserve" x="10" y="69.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 56px 100% 18px)">"#;
     assert!(buffer.contains(second_output_bg), "{buffer}");
 }
 
