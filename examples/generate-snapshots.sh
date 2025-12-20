@@ -129,7 +129,7 @@ term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
 
 echo "Creating snapshot with --line-numbers and long lines (pure SVG)"
 term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
-  --line-height=18px \
+  --line-height=18px --advance-width=7.8px \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/numbers-long-pure.$EXTENSION"
 
@@ -165,5 +165,6 @@ term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuou
 echo "Creating snapshot with --embed-font (Fira Mono, regular + bold), --pure-svg"
 term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
   --embed-font="$FONT_FIRA:$FONT_FIRA_BOLD" \
+  --advance-width=8.6px \
   'rainbow --short' \
   > "$ROOT_DIR/examples/embedded-font-fira.$EXTENSION"
