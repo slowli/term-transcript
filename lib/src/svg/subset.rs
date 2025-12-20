@@ -375,14 +375,12 @@ mod tests {
         if pure_svg {
             // Check some background boxes.
             assert!(
-                buffer.contains(
-                    r#"<rect x="10.0" y="27.33" width="8.4" height="18.46" class="fg4"/>"#
-                ),
+                buffer.contains(r#"<rect x="10" y="28.5" width="8.4" height="18.5" class="fg4"/>"#),
                 "{buffer}"
             );
             assert!(
                 buffer.contains(
-                    r#"<rect x="127.62" y="27.33" width="8.4" height="18.46" class="fg4"/>"#
+                    r#"<rect x="127.62" y="28.5" width="8.4" height="18.5" class="fg4"/>"#
                 ),
                 "{buffer}"
             );

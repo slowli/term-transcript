@@ -15,7 +15,7 @@ fn to_i64(value: f64) -> Option<i64> {
     const MAX_ACCURATE_VALUE: f64 = (1_i64 << 53) as f64;
     const MIN_ACCURATE_VALUE: f64 = -(1_i64 << 53) as f64;
 
-    if (MIN_ACCURATE_VALUE..=MAX_ACCURATE_VALUE).contains(&value) {
+    if value.fract() == 0.0 && (MIN_ACCURATE_VALUE..=MAX_ACCURATE_VALUE).contains(&value) {
         Some(value as i64)
     } else {
         None
@@ -294,7 +294,7 @@ impl HelperDef for OpsHelper {
                 .iter()
                 .map(|param| param.value().as_f64().unwrap());
             let mut acc = self.accumulate_f64(values);
-            let acc: Json = if let Some(rounding) = helper.hash_get("round") {
+            if let Some(rounding) = helper.hash_get("round") {
                 if matches!(rounding.value(), Json::Bool(true)) {
                     acc = acc.round();
                 } else if rounding.value().as_str() == Some("up") {
@@ -302,12 +302,10 @@ impl HelperDef for OpsHelper {
                 } else if rounding.value().as_str() == Some("down") {
                     acc = acc.floor();
                 }
-                // Try to present the value as `i64` (this could be beneficial for other helpers).
-                // If this doesn't work, present it as an original floating-point value.
-                to_i64(acc).map_or_else(|| acc.into(), Into::into)
-            } else {
-                acc.into()
-            };
+            }
+            // Try to present the value as `i64` (this could be beneficial for other helpers).
+            // If this doesn't work, present it as an original floating-point value.
+            let acc: Json = to_i64(acc).map_or_else(|| acc.into(), Into::into);
             Ok(ScopedJson::Derived(acc))
         } else {
             let message = "all args must be numbers";
@@ -643,18 +641,10 @@ impl HelperDef for RoundHelper {
             clippy::cast_sign_loss
         )]
         // ^ Partially guarded by checks; the remaining precision loss is OK
-        let rounded: Json = if digits == 0 {
-            let rounded = val.round();
-            if rounded >= 0.0 && rounded <= u64::MAX as f64 {
-                (rounded as u64).into()
-            } else if rounded >= i64::MIN as f64 {
-                (rounded as i64).into()
-            } else {
-                rounded.into()
-            }
-        } else {
+        let rounded: Json = {
             let pow10 = 10.0_f64.powi(digits.try_into().unwrap());
-            ((val * pow10).round() / pow10).into()
+            let rounded = (val * pow10).round() / pow10;
+            to_i64(rounded).map_or_else(|| rounded.into(), Into::into)
         };
         Ok(ScopedJson::Derived(rounded))
     }

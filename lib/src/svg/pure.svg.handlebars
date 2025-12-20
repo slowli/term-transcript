@@ -1,18 +1,6 @@
 {{! Load common helpers }}
 {{>_helpers~}}
 
-{{!
-  Scales font metrics from design units to ems to pixels.
-  Expected hash inputs: `metrics`
-}}
-{{~#*inline "scale_font_metrics"}}
-  {
-    "advance_width": {{mul 14 (div metrics.advance_width metrics.units_per_em)}},
-    "ascent": {{mul 14 (div metrics.ascent metrics.units_per_em)}},
-    "descent": {{mul 14 (div metrics.descent metrics.units_per_em)}}
-  }
-{{/inline~}}
-
 {{! Renders `class` and/or `style` attributes for a background SVG span }}
 {{~#*inline "svg_bg_tspan_attrs"}}
   {{~#scope classes="" styles=""}}
@@ -49,8 +37,8 @@
 <style>
   {{>common_styles_header}}
   .container {
-    font: 14px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
-    line-height: {{const.LINE_HEIGHT}}px;
+    font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
+    line-height: {{round (line_height) digits=2}}px;
   }
   .input,.output,.output-bg {
     white-space: pre;
@@ -111,7 +99,7 @@
       {{#scope
         x_pos=const.WINDOW_PADDING
         input_x_pos=const.WINDOW_PADDING
-        y_pos=14
+        y_pos=0
         input_height=0
         input_bg=""
         output_bg=""
@@ -126,37 +114,38 @@
 
       {{~#each interactions}}
         {{~#if (not input.hidden)}}
-          {{! Render input background. Note that this doesn't change `y_pos`. }}
-          {{~input_height set=(add (mul (count_lines input.text) ../const.LINE_HEIGHT) (mul 2 ../const.USER_INPUT_PADDING))~}}
+          {{! Render input background }}
+          {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
+          {{~input_height set=(round (add (mul (count_lines input.text) (line_height)) (mul 2 ../const.USER_INPUT_PADDING)) digits=1)~}}
           {{~#input_bg append=true ~}}
-            {{! `y_pos` refers to the baseline position, so for input <rect>s we need to subtract the font ascent. FIXME: incorrect in general? }}
-            <rect x="0" y="{{sub (y_pos) 14}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
+            {{! `y_pos` refers to the too of the text line, so for <rect>s we need to subtract the top margin }}
+            {{~#scope top_y=(round (sub (y_pos) ../const.USER_INPUT_PADDING) digits=2)~}}
+            <rect x="0" y="{{top_y}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
             {{~#if failure~}}
               <title>This command exited with non-zero code</title>
             {{~/if~}}
             </rect>
             {{~#if failure~}}
-            <rect x="0" y="{{sub (y_pos) 14}}" width="2" height="{{input_height}}" class="input-failure-hl" />
-            <rect x="100%" y="{{sub (y_pos) 14}}" width="2" height="{{input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
+            <rect x="0" y="{{top_y}}" width="2" height="{{input_height}}" class="input-failure-hl" />
+            <rect x="100%" y="{{top_y}}" width="2" height="{{input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
             {{~/if~}}
+            {{~/scope~}}
           {{~/input_bg~}}
         {{~/if~}} {{! if (not input.hidden) }}
 
-        {{! Render input foreground and advance `y_pos` }}
         {{! The awkward newlines at the end of line <text>s are required for the text to be properly copyable }}
-        {{~#if (not input.hidden)~}}
-          {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
-        {{~/if~}}
         {{~#text_fg append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <text xml:space="preserve"{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{y_pos}}"{{/if}}>{{#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if}}{{this}}
+            <text xml:space="preserve"{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}"{{/if}}>
+              {{~#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if~}}
+              {{this}}
 </text>
             {{~#if (not ../input.hidden)~}}
-              {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)}}
+              {{~y_pos set=(add (y_pos) (line_height))}}
             {{~/if~}}
           {{~/each~}}
-</g>
+        </g>
         {{~/text_fg~}}
         {{~#if (not input.hidden)~}}
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)}}
@@ -175,11 +164,11 @@
                   <rect x="{{
                     round (add (x_pos) (mul (char_pos) metrics.advance_width)) digits=2
                   }}" y="{{
-                    round (sub (y_pos) metrics.ascent) digits=2
+                    round (y_pos) digits=2
                   }}" width="{{
                     round (mul (char_width span.text) metrics.advance_width) digits=2
                   }}" height="{{
-                    round (sub metrics.ascent metrics.descent) digits=2
+                    round (line_height) digits=2
                   }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
                 {{~/if~}}
               {{~else~}}{{! No font metrics }}
@@ -209,7 +198,10 @@
             {{~line_bg set=(trim (line_bg) side="end")~}}
             {{~#text_fg append=true ~}}
               {{~#if (line_bg)~}}
-                <text xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}" class="output-bg">{{{line_bg}}}</text>
+                {{! Clip the line vertically so that lines don't visually overlap }}
+                <text xml:space="preserve" x="{{x_pos}}" y="{{
+                  round (add (y_pos) (text_y_offset)) digits=2
+                }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)" class="output-bg">{{{line_bg}}}</text>
               {{~/if~}}
             {{~/text_fg~}}
           {{~/if~}}
@@ -217,12 +209,14 @@
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
-              <text xml:space="preserve" x="{{x_pos}}" y="{{y_pos}}">{{{line_fg}}}
+              <text xml:space="preserve" x="{{x_pos}}" y="{{
+                round (add (y_pos) (text_y_offset)) digits=2
+              }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)">{{{line_fg}}}
 </text>
             {{~/if~}}
           {{~/text_fg~}}
           {{~/scope~}}
-          {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
+          {{~y_pos set=(add (y_pos) (line_height))~}}
         {{~else~}}{{! The output may be empty }}
         {{~/each~}}
         {{~#text_fg append=true }}</g>{{/text_fg~}}
@@ -247,28 +241,28 @@
 {{~#*inline "number_lines"~}}
   {{~#scope
     x_pos=(add const.WINDOW_PADDING const.LN_WIDTH)
-    y_pos=14
+    y_pos=0
     line_number=1
   ~}}
-  <text class="container fg7 line-numbers">
+  <g class="container fg7 line-numbers">
     {{~#each interactions}}
     {{~#if (not input.hidden)}}
       {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
       {{~#if (eq ../line_numbers "continuous")}}
         {{~#each (range 0 (count_lines input.text))~}}
-          <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
-          {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
+          <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{add this (line_number)}}</text>
+          {{~y_pos set=(add (y_pos) (line_height))~}}
         {{~/each~}}
         {{~line_number set=(add (line_number) (count_lines input.text))~}}
       {{~else~}}
-        {{~y_pos set=(add (y_pos) (mul (count_lines input.text) ../const.LINE_HEIGHT))~}}
+        {{~y_pos set=(add (y_pos) (mul (count_lines input.text) (line_height)))~}}
       {{~/if~}}
       {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
     {{! Number lines in the output }}
     {{~#each (range 0 (len output))~}}
-      <tspan x="{{x_pos}}" y="{{y_pos}}">{{add this (line_number)}}</tspan>
-      {{~y_pos set=(add (y_pos) ../../const.LINE_HEIGHT)~}}
+      <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{add this (line_number)}}</text>
+      {{~y_pos set=(add (y_pos) (line_height))~}}
     {{~/each~}}
     {{~#if (gt (len output) 0)~}}
       {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)~}}
@@ -277,21 +271,38 @@
       {{line_number set=(add (line_number) (len output))}}
     {{~/if~}}
     {{/each~}}
-  </text>
+  </g>
   {{~/scope~}}
 {{~/inline~}}
 
 {{! Main logic }}
 {{#scope
-  content_height=(eval "compute_content_height" const=const interactions=interactions)
+  content_height=0
   scroll_animation=null
   font_metrics=null
+  line_height=line_height
+  text_y_offset=0
   screen_height=0
   height=0
   line_number=1
 }}
+  {{~>set_line_height ~}}
+  {{~content_height set=(round
+    (eval "compute_content_height" const=const line_height=(line_height) interactions=interactions)
+    digits=1
+  )~}}
   {{~#if embedded_font~}}
-    {{~font_metrics set=(eval "scale_font_metrics" metrics=embedded_font.metrics)~}}
+    {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
+      {{~font_metrics set=metrics~}}
+      {{!
+        Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
+        and the ascent, i.e. (line_height + ascent + descent) / 2.
+      }}
+      {{~text_y_offset set=(div (add (line_height) metrics.ascent metrics.descent) 2)~}}
+    {{~/with~}}
+  {{~else~}}
+    {{! Use the above formula with heuristic values: ascent ~ 1em, descent ~ -0.3em. Hence, their sum is ~0.65em or ~9px. }}
+    {{~text_y_offset set=(div (add (line_height) 9) 2)~}}
   {{~/if~}}
   {{~#if scroll~}}
     {{scroll_animation set=(eval "compute_scroll_animation"

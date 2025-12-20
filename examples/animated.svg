@@ -60,7 +60,7 @@
       <circle cx="37" cy="-9" r="7" style="fill: #c19c00;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #13a10e;"/>
       <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 260 720 342;0 312 720 342;0 364 720 342;0 368 720 342" dur="32.0s" repeatCount="indefinite" calcMode="discrete" />
+        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 260 720 342;0 312 720 342;0 364 720 342;0 368 720 342" dur="32s" repeatCount="indefinite" calcMode="discrete" />
         <foreignObject width="720" height="710">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
@@ -105,7 +105,7 @@
         </foreignObject>
       </svg>
       <rect class="scrollbar" x="713" y="10" width="5" height="40">
-        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 37;0 75;0 113;0 151;0 188;0 226;0 264;0 302" dur="32.0s" repeatCount="indefinite" calcMode="discrete" />
+        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 37.75;0 75.5;0 113.25;0 151;0 188.75;0 226.5;0 264.25;0 302" dur="32s" repeatCount="indefinite" calcMode="discrete" />
       </rect>
     </g>
     <text x="10" y="18" style="font: 14px monospace; fill: #c50f1f;">

@@ -51,21 +51,24 @@ fn rendering_simple_transcript_to_pure_svg() {
     );
 
     let mut buffer = vec![];
-    Template::pure_svg(TemplateOptions::default())
+    let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
+        ..TemplateOptions::default()
+    };
+    Template::pure_svg(options)
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
 
     let top_svg = "<svg viewBox=\"0 0 720 118\"";
     assert!(buffer.contains(top_svg), "{buffer}");
-    let first_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="16">"#;
+    let first_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="15.5">"#;
     assert!(buffer.contains(first_input_text), "{buffer}");
-    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="42">"#;
+    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="41.5" clip-path="view-box xywh(0 28px 100% 18px)">"#;
     assert!(buffer.contains(first_output_text), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="68">"#;
+    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="67.5">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_text =
-        r#"<g class="output"><text xml:space="preserve" x="10" y="94" class="output-bg">"#;
+    let second_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="93.5" clip-path="view-box xywh(0 80px 100% 18px)" class="output-bg">"#;
     assert!(buffer.contains(second_output_text), "{buffer}");
 }
 
@@ -79,6 +82,7 @@ fn rendering_transcript_with_hidden_input() {
 
     let options = TemplateOptions {
         window_frame: true,
+        line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
@@ -105,6 +109,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
 
     let options = TemplateOptions {
         window_frame: true,
+        line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
@@ -117,7 +122,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
     // No background for input should be displayed.
     assert!(buffer.contains(r#"<g class="input-bg"></g>"#), "{buffer}");
-    let output_span = r#"<g class="output"><text xml:space="preserve" x="10" y="14">"#;
+    let output_span = r#"<g class="output"><text xml:space="preserve" x="10" y="13.5" clip-path="view-box xywh(0 0px 100% 18px)">"#;
     assert!(buffer.contains(output_span), "{buffer}");
     assert!(!buffer.contains(r#"class="input""#), "{buffer}");
 }
@@ -132,7 +137,11 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     );
 
     let mut buffer = vec![];
-    Template::pure_svg(TemplateOptions::default())
+    let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
+        ..TemplateOptions::default()
+    };
+    Template::pure_svg(options)
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -141,9 +150,9 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     assert!(buffer.contains(top_svg), "{buffer}");
     let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22""#;
     assert!(buffer.contains(second_input_bg), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="44">"#;
+    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="43.5">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_bg = r#"<text xml:space="preserve" x="10" y="70" class="output-bg">"#;
+    let second_output_bg = r#"<text xml:space="preserve" x="10" y="69.5" clip-path="view-box xywh(0 56px 100% 18px)" class="output-bg">"#;
     assert!(buffer.contains(second_output_bg), "{buffer}");
 }
 
@@ -191,7 +200,11 @@ fn rendering_pure_svg_transcript_with_failure() {
     transcript.add_existing_interaction(interaction);
 
     let mut buffer = vec![];
-    Template::pure_svg(TemplateOptions::default())
+    let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
+        ..TemplateOptions::default()
+    };
+    Template::pure_svg(options)
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -259,6 +272,7 @@ fn rendering_transcript_with_animation() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
         scroll: Some(ScrollOptions {
             max_height: 240,
             pixels_per_scroll: 52,
@@ -287,6 +301,7 @@ fn rendering_pure_svg_transcript_with_animation() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
         scroll: Some(ScrollOptions {
             max_height: 240,
             pixels_per_scroll: 52,
@@ -315,6 +330,7 @@ fn rendering_transcript_with_wraps() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
         wrap: Some(WrapOptions::HardBreakAt(5)),
         ..TemplateOptions::default()
     };
@@ -337,6 +353,7 @@ fn rendering_svg_transcript_with_wraps() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
         wrap: Some(WrapOptions::HardBreakAt(5)),
         ..TemplateOptions::default()
     };
@@ -346,7 +363,10 @@ fn rendering_svg_transcript_with_wraps() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
-    assert!(buffer.contains("Hello<tspan class=\"hard-br\""), "{buffer}");
+    assert!(
+        buffer.contains(r#"Hello<tspan class="hard-br" dx="8">»</tspan>"#),
+        "{buffer}"
+    );
 }
 
 #[test]
@@ -395,6 +415,7 @@ fn rendering_pure_svg_transcript_with_line_numbers() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
         line_numbers: Some(LineNumbers::EachOutput),
         ..TemplateOptions::default()
     };
@@ -404,11 +425,11 @@ fn rendering_pure_svg_transcript_with_line_numbers() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(".line-numbers {"), "{buffer}");
-    let first_output_ln = r#"<tspan x="34" y="42">1</tspan>"#;
+    let first_output_ln = r#"<text x="34" y="41.5">1</text>"#;
     assert!(buffer.contains(first_output_ln), "{buffer}");
-    let second_output_ln1 = r#"<tspan x="34" y="94">1</tspan>"#;
+    let second_output_ln1 = r#"<text x="34" y="93.5">1</text>"#;
     assert!(buffer.contains(second_output_ln1), "{buffer}");
-    let second_output_ln2 = r#"<tspan x="34" y="112">2</tspan>"#;
+    let second_output_ln2 = r#"<text x="34" y="111.5">2</text>"#;
     assert!(buffer.contains(second_output_ln2), "{buffer}");
 }
 
@@ -529,6 +550,7 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
@@ -539,19 +561,19 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
 
     let input_bg = r#"<g class="input-bg"><rect x="0" y="24" width="100%" height="40"></rect></g>"#;
     assert!(buffer.contains(input_bg), "{buffer}");
-    let line_numbers = "<tspan x=\"34\" y=\"14\">1</tspan>\
-        <tspan x=\"34\" y=\"40\">2</tspan>\
-        <tspan x=\"34\" y=\"58\">3</tspan>\
-        <tspan x=\"34\" y=\"84\">4</tspan>\
-        <tspan x=\"34\" y=\"102\">5</tspan>\
-        <tspan x=\"34\" y=\"126\">6</tspan>";
+    let line_numbers = "<text x=\"34\" y=\"13.5\">1</text>\
+        <text x=\"34\" y=\"39.5\">2</text>\
+        <text x=\"34\" y=\"57.5\">3</text>\
+        <text x=\"34\" y=\"83.5\">4</text>\
+        <text x=\"34\" y=\"101.5\">5</text>\
+        <text x=\"34\" y=\"125.5\">6</text>";
     assert!(buffer.contains(line_numbers), "{buffer}");
 
-    let first_output = r#"<g class="output"><text xml:space="preserve" x="42" y="14">"#;
+    let first_output = r#"<g class="output"><text xml:space="preserve" x="42" y="13.5""#;
     assert!(buffer.contains(first_output), "{buffer}");
-    let second_output = r#"<text xml:space="preserve" x="42" y="102">"#;
+    let second_output = r#"<text xml:space="preserve" x="42" y="101.5""#;
     assert!(buffer.contains(second_output), "{buffer}");
-    let third_output = r#"<g class="output"><text xml:space="preserve" x="42" y="126">"#;
+    let third_output = r#"<g class="output"><text xml:space="preserve" x="42" y="125.5""#;
     assert!(buffer.contains(third_output), "{buffer}");
 }
 
@@ -569,6 +591,7 @@ fn rendering_pure_svg_transcript_with_input_line_numbers() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
@@ -577,12 +600,12 @@ fn rendering_pure_svg_transcript_with_input_line_numbers() {
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
 
-    let line_numbers = "<tspan x=\"34\" y=\"16\">1</tspan>\
-            <tspan x=\"34\" y=\"42\">2</tspan>\
-            <tspan x=\"34\" y=\"68\">3</tspan>\
-            <tspan x=\"34\" y=\"86\">4</tspan>\
-            <tspan x=\"34\" y=\"112\">5</tspan>\
-            <tspan x=\"34\" y=\"130\">6</tspan>";
+    let line_numbers = "<text x=\"34\" y=\"15.5\">1</text>\
+            <text x=\"34\" y=\"41.5\">2</text>\
+            <text x=\"34\" y=\"67.5\">3</text>\
+            <text x=\"34\" y=\"85.5\">4</text>\
+            <text x=\"34\" y=\"111.5\">5</text>\
+            <text x=\"34\" y=\"129.5\">6</text>";
     assert!(buffer.contains(line_numbers), "{buffer}");
 }
 
@@ -692,7 +715,7 @@ fn embedding_font(pure_svg: bool) {
 
     if pure_svg {
         assert!(
-            buffer.contains(r#"<rect x="18.4" y="27.3" width="25.2" height="19.6" class="fg4"/>"#),
+            buffer.contains(r#"<rect x="18.4" y="29.6" width="25.2" height="19.6" class="fg4"/>"#),
             "{buffer}"
         );
     }

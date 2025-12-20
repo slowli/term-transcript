@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 376" width="720" height="376" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 354.4" width="720" height="354.4" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
@@ -7,7 +7,7 @@
         @import url(https://code.cdn.mozilla.net/fonts/fira.css);  .container {
           padding: 0 10px;
           color: #e5e5e5;
-          line-height: 18px;
+          line-height: 16.8px;
         }
         .container pre {
           padding: 0;
@@ -59,8 +59,8 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="334" viewBox="0 0 720 334">
-        <foreignObject width="720" height="334">
+      <svg x="0" y="10" width="720" height="312.4" viewBox="0 0 720 312.4">
+        <foreignObject width="720" height="312.4">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
             <div class="output"><pre><span class="line">Base colors:
@@ -84,7 +84,7 @@
         </foreignObject>
       </svg>
     </g>
-    <text x="10" y="18" style="font: 14px monospace; fill: #ff005b;">
+    <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>
