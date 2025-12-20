@@ -62,13 +62,13 @@ fn rendering_simple_transcript_to_pure_svg() {
 
     let top_svg = "<svg viewBox=\"0 0 720 118\"";
     assert!(buffer.contains(top_svg), "{buffer}");
-    let first_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="15.5" textLength="58.8" lengthAdjust="spacingAndGlyphs">"#;
+    let first_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="15.5" textLength="56" lengthAdjust="spacingAndGlyphs">"#;
     assert!(buffer.contains(first_input_text), "{buffer}");
-    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="41.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 28px 100% 18px)">"#;
+    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="41.5" textLength="112" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 28px 100% 18px)">"#;
     assert!(buffer.contains(first_output_text), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="67.5" textLength="109.2" lengthAdjust="spacingAndGlyphs">"#;
+    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="67.5" textLength="104" lengthAdjust="spacingAndGlyphs">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="93.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 80px 100% 18px)">"#;
+    let second_output_text = r#"<g class="output"><text xml:space="preserve" x="10" y="93.5" textLength="112" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 80px 100% 18px)">"#;
     assert!(buffer.contains(second_output_text), "{buffer}");
 }
 
@@ -151,9 +151,9 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     assert!(buffer.contains(top_svg), "{buffer}");
     let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22""#;
     assert!(buffer.contains(second_input_bg), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="43.5" textLength="109.2" lengthAdjust="spacingAndGlyphs">"#;
+    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10" y="43.5" textLength="104" lengthAdjust="spacingAndGlyphs">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_bg = r#"<text xml:space="preserve" x="10" y="69.5" textLength="117.6" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 56px 100% 18px)">"#;
+    let second_output_bg = r#"<text xml:space="preserve" x="10" y="69.5" textLength="112" lengthAdjust="spacingAndGlyphs" clip-path="view-box xywh(0 56px 100% 18px)">"#;
     assert!(buffer.contains(second_output_bg), "{buffer}");
 }
 
@@ -365,7 +365,7 @@ fn rendering_svg_transcript_with_wraps() {
 
     assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
     assert!(
-        buffer.contains(r#"<g class="container fg7 hard-br"><text x="60" y="41.5">»</text><text x="60" y="59.5">»</text></g>"#),
+        buffer.contains(r#"<g class="container fg7 hard-br"><text x="58" y="41.5">»</text><text x="58" y="59.5">»</text></g>"#),
         "{buffer}"
     );
 }

@@ -130,7 +130,7 @@ pub struct TemplateOptions {
     /// or set to 1.2 otherwise.
     pub line_height: Option<f64>,
     /// Advance width of a font relative to the font size (i.e., in em units). If not specified, will be taken from font metrics (if a font is embedded),
-    /// or set to 0.6 otherwise.
+    /// or set to 8px (~0.57em) otherwise.
     ///
     /// For now, advance width is only applied to the pure SVG template.
     pub advance_width: Option<f64>,

@@ -317,7 +317,7 @@
     {{~/with~}}
   {{~else~}}
     {{~#if (eq (advance_width) null)~}}
-      {{~advance_width set=8.4~}} {{! Set to a reasonable default: 0.6em }}
+      {{~advance_width set=8~}} {{! Set to a reasonable default: ~0.57em }}
     {{~else~}}
       {{! Scale advance width from ems to pixels }}
       {{~advance_width set=(mul (advance_width) const.FONT_SIZE)~}}
