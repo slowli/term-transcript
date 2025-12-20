@@ -104,6 +104,7 @@
         input_bg=""
         output_bg=""
         text_fg=""
+        hard_breaks=""
       ~}}
       {{~#if line_numbers~}}
         {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
@@ -137,7 +138,23 @@
         {{~#text_fg append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <text xml:space="preserve"{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}"{{/if}}>
+            <text xml:space="preserve"
+              {{~#if (not ../input.hidden)}} x="{{
+                  input_x_pos
+                }}" y="{{
+                  round (add (y_pos) (text_y_offset)) digits=2
+                }}"
+                {{~#if (adjust_text_length)~}}
+                  {{#scope line_char_width=(add (char_width this) 1)~}}
+                    {{~#if @first~}}
+                      {{! Add prompt width + 1 space char }}
+                      {{~line_char_width set=(add (line_char_width) (char_width ../input.prompt) 1)~}}
+                    {{~/if}} textLength="{{
+                      round (mul (advance_width) (line_char_width)) digits=2
+                    }}" lengthAdjust="spacingAndGlyphs"
+                  {{~/scope~}}
+                {{~/if~}}
+              {{~/if}}>
               {{~#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if~}}
               {{this}}
 </text>
@@ -178,7 +195,13 @@
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
           {{~#if line.br~}}
-            {{~#line_fg append=true}}<tspan class="hard-br" dx="8">»</tspan>{{/line_fg~}}
+            {{~#hard_breaks append=true~}}
+              <text x="{{
+                round (add (x_pos) 8 (mul (advance_width) (char_pos))) digits=2
+              }}" y="{{
+                round (add (y_pos) (text_y_offset)) digits=2
+              }}">»</text>
+            {{~/hard_breaks~}}
           {{~/if~}}
 
           {{! Append collected `line_bg` to the overall background }}
@@ -214,6 +237,7 @@
 
       {{>number_lines}}
       {{/if~}}
+      {{~#if (hard_breaks)}}<g class="container fg7 hard-br">{{{hard_breaks}}}</g>{{/if~}}
       <g class="container fg7">{{{text_fg}}}</g>
       {{~/scope~}}
     </svg>
@@ -281,6 +305,9 @@
       {{~#if (eq (advance_width) null)~}}
         {{~advance_width set=metrics.advance_width~}}
         {{~adjust_text_length set=false~}}
+      {{~else~}}
+        {{! Scale advance width from ems to pixels }}
+        {{~advance_width set=(mul (advance_width) ../const.FONT_SIZE)~}}
       {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
