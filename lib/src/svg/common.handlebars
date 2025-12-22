@@ -83,8 +83,8 @@
 
 {{! Common font styling }}
 {{~#*inline "common_font_styles"}}
-.bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
-.italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
+.bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round (add sp (letter_spacing_ems)) digits=4}}em;{{else}}{{/with}} }
+.italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round (add sp (letter_spacing_ems)) digits=4}}em;{{else}}{{/with}} }
 .underline { text-decoration: underline; }
 {{/inline~}}
 

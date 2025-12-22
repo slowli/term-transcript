@@ -39,6 +39,9 @@
   .container {
     font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: {{round (line_height) digits=2}}px;
+    {{#if (letter_spacing_ems)}}
+    letter-spacing: {{round (letter_spacing_ems) digits=4}}em;
+    {{/if}}
   }
   .input,.output {
     white-space: pre;
@@ -300,6 +303,7 @@
   line_height=line_height
   advance_width=advance_width
   adjust_text_length=true
+  letter_spacing_ems=0
   text_y_offset=0
   screen_height=0
   height=0
@@ -313,13 +317,13 @@
   {{~#if embedded_font~}}
     {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
       {{~font_metrics set=metrics~}}
-      {{! Do not overwrite the advance width if one is supplied by the user }}
+      {{~adjust_text_length set=false~}} {{! The text width will be adjusted via `letter-spacing` if necessary }}
       {{~#if (eq (advance_width) null)~}}
         {{~advance_width set=metrics.advance_width~}}
-        {{~adjust_text_length set=false~}}
       {{~else~}}
         {{! Scale advance width from ems to pixels }}
         {{~advance_width set=(mul (advance_width) ../const.FONT_SIZE)~}}
+        {{~letter_spacing_ems set=(div (sub (advance_width) metrics.advance_width) ../const.FONT_SIZE)~}}
       {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
