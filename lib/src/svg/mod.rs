@@ -133,6 +133,7 @@ pub struct TemplateOptions {
     /// or set to 8px (~0.57em) otherwise.
     ///
     /// For now, advance width is only applied to the pure SVG template.
+    // FIXME: extract to pure SVG options?
     pub advance_width: Option<f64>,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     #[serde(default)]

@@ -138,22 +138,25 @@
         {{~#text_fg append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <text xml:space="preserve"
-              {{~#if (not ../input.hidden)}} x="{{
-                  input_x_pos
-                }}" y="{{
+            <text xml:space="preserve" x="{{#if (not ../input.hidden)~}}
+                {{~#if (adjust_text_length)~}}
+                  {{~#scope full_line=this internal_char_pos=0~}}
+                  {{~#if @first~}}
+                    {{~full_line set=(concat ../input.prompt " " this)~}}
+                  {{~/if~}}
+                  {{~#each (split_into_chars (full_line)) as |ch|~}}
+                    {{~round (add (input_x_pos) (mul (internal_char_pos) (advance_width))) digits=2~}}
+                    {{~#if (not @last)~}}
+                      {{~print " "~}}
+                    {{~/if~}}
+                    {{~internal_char_pos set=(add (internal_char_pos) (char_width ch))~}}
+                  {{~/each~}}
+                  {{~/scope~}}
+                {{~else~}}
+                  {{input_x_pos}}
+                {{~/if}}" y="{{
                   round (add (y_pos) (text_y_offset)) digits=2
                 }}"
-                {{~#if (adjust_text_length)~}}
-                  {{#scope line_char_width=(add (char_width this) 1)~}}
-                    {{~#if @first~}}
-                      {{! Add prompt width + 1 space char }}
-                      {{~line_char_width set=(add (line_char_width) (char_width ../input.prompt) 1)~}}
-                    {{~/if}} textLength="{{
-                      round (mul (advance_width) (line_char_width)) digits=2
-                    }}" lengthAdjust="spacingAndGlyphs"
-                  {{~/scope~}}
-                {{~/if~}}
               {{~/if}}>
               {{~#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if~}}
               {{this}}
@@ -173,7 +176,7 @@
           <g class="output">
         {{~/text_fg~}}
         {{~#each output as |line|~}}
-          {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" ~}}
+          {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" glyph_x_pos="" ~}}
           {{~#each line.spans as |span|~}}
             {{~#line_bg append=true ~}}
               {{~#if (ne (typeof span.bg) "null")~}}
@@ -190,6 +193,18 @@
             {{~/line_bg~}}
             {{! Render span foreground }}
             {{~#line_fg append=true ~}}{{{eval ">svg_tspan" span=span}}}{{/line_fg~}}
+            {{! Render x positions of all chars in the span }}
+            {{~#if (adjust_text_length)~}}
+              {{~#scope internal_char_pos=(char_pos)~}}
+              {{~#glyph_x_pos append=true ~}}
+                {{~#each (split_into_chars span.text) as |ch|~}}
+                  {{~round (add (x_pos) (mul (internal_char_pos) (advance_width))) digits=2~}}
+                  {{~print " "~}}
+                  {{~internal_char_pos set=(add (internal_char_pos) (char_width ch))~}}
+                {{~/each~}}
+              {{~/glyph_x_pos~}}
+              {{~/scope~}}
+            {{~/if~}}
             {{! Update char position on the line }}
             {{~char_pos set=(add (char_pos) (char_width span.text))~}}
           {{~else~}}{{! The line may be empty }}
@@ -210,12 +225,9 @@
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
-              <text xml:space="preserve" x="{{x_pos}}" y="{{
+              <text xml:space="preserve" x="{{#if (glyph_x_pos)}}{{trim (glyph_x_pos)}}{{else}}{{x_pos}}{{/if}}" y="{{
                 round (add (y_pos) (text_y_offset)) digits=2
-              }}" {{#if (adjust_text_length)~}}
-                {{! We add 1 to char_pos because the newline char is apparently counted as a non-zero width char }}
-                textLength="{{round (mul (advance_width) (add (char_pos) 1)) digits=2}}" lengthAdjust="spacingAndGlyphs" {{/if~}}
-              clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)">{{{line_fg}}}
+              }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)">{{{line_fg}}}
 </text>
             {{~/if~}}
           {{~/text_fg~}}
