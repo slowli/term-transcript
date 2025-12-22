@@ -50,7 +50,7 @@
           content: '»';
           opacity: 0.6;
         }
-        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line { display: block; }
         .line > span { display: inline-block; }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
