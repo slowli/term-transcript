@@ -228,9 +228,13 @@
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
+              {{!
+                The `y` coordinate in `clip-path` is specified in ems, because specifying it in pixels on Safari / WebKit
+                leads to incorrect clip boxes during scaling.
+              }}
               <text xml:space="preserve" x="{{#if (glyph_x_pos)}}{{trim (glyph_x_pos)}}{{else}}{{x_pos}}{{/if}}" y="{{
                 round (add (y_pos) (text_y_offset)) digits=2
-              }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)">{{{line_fg}}}
+              }}" clip-path="view-box xywh(0 {{round (div (y_pos) ../../const.FONT_SIZE) digits=1}}em 100% {{line_height}}px)">{{{line_fg}}}
 </text>
             {{~/if~}}
           {{~/text_fg~}}
