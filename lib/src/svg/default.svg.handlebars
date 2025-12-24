@@ -69,10 +69,17 @@
 <style>
   {{>common_styles_header}}
   .viewport {
+    {{!
+      Absolute position is required in Safari / WebKit in order to render semi-transparent spans correctly; otherwise,
+      they have incorrect positions. In turn, absolute positioning inside SVG seems bugged on Safari as well; the `top` coordinate
+      is computed relative to the *top-level* SVG viewbox, not the enclosing one as in other browsers.
+      Correspondingly, we adjust `foreignObject` position if the window frame is displayed, so that both Safari and other browsers
+      position `viewport` in the same way.
+    }}
     position: absolute;
     width: 100%;
     height: {{screen_height}}px;
-    top: {{const.WINDOW_PADDING}}px;
+    top: {{#if window_frame}}{{add const.WINDOW_PADDING const.WINDOW_FRAME_HEIGHT}}{{else}}{{const.WINDOW_PADDING}}{{/if}}px;
     overflow: hidden;
   }
   {{#with (scroll_animation) as |anim|}}
@@ -185,7 +192,11 @@
 
 {{~#*inline "content"}}
       <svg width="{{width}}" height="{{add (screen_height) const.WINDOW_PADDING}}" viewBox="0 0 {{width}} {{add (screen_height) const.WINDOW_PADDING}}">
-        <foreignObject width="{{width}}" height="{{add (screen_height) const.WINDOW_PADDING}}">
+        <foreignObject width="{{width}}" {{#if window_frame~}}
+          height="{{add (screen_height) const.WINDOW_PADDING const.WINDOW_FRAME_HEIGHT}}" y="-{{const.WINDOW_FRAME_HEIGHT}}"
+        {{~else~}}
+          height="{{add (screen_height) const.WINDOW_PADDING}}"
+        {{~/if}}>
           <div xmlns="http://www.w3.org/1999/xhtml" class="viewport"><div class="container">
             {{~#each interactions}}
 
