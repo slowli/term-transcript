@@ -95,10 +95,7 @@
   .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / 30%); }
   {{~#if wrap}}
 
-  .hard-br {
-    position: relative;
-    margin-left: 8px;
-  }
+  .hard-br { margin-left: 8px; }
   .hard-br:before {
     content: '»';
     color: color-mix(in hsl, currentColor 60%, {{ palette.colors.black }} 40%);
