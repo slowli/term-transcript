@@ -11,9 +11,6 @@
       {{>background}}
 
       {{~>content}}
-      {{~#if (scroll_animation)}}
-      {{>scrollbar}}
-      {{/if}}
     </g>
     {{>unsupported_error}}
   </switch>
@@ -28,14 +25,83 @@
 </text>
 {{/inline~}}
 
+{{!
+  Computes scroll animation parameters.
+  Expected hash inputs: `content_height`, `const`, `scroll`
+
+  We use different ways to animate scrolling in this template and the pure SVG template because
+  animation via <animate> for HTML content inside SVG leads to visual artifacts in Safari / WebKit.
+}}
+{{~#*inline "compute_scroll_animation"}}
+  {{#if (gte scroll.max_height content_height)}}
+  {{! No need for scroll animation }}
+    null
+  {{else}}
+    {{#scope
+      scroll_height=(sub content_height scroll.max_height)
+      steps=(add (div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up") 1)
+    }}
+      {
+        "scroll": [
+          {{#each (range 0 (steps)) as |step_idx|}}
+            {{#scope pos=(min (scroll_height) (mul ../scroll.pixels_per_scroll step_idx))}}
+            {
+              "key": {{round (mul 100 (div step_idx (steps))) digits=2}},
+              "top": {{sub 0 (pos)}},
+              {{! Map from the viewport scroll range to the scrollbar range }}
+              "bar_top": {{round
+                (mul (div (pos) (scroll_height)) (sub ../scroll.max_height ../const.SCROLLBAR_HEIGHT))
+                digits=1
+              }}
+            }
+            {{/scope}}
+            {{#if (not @last)}},{{/if}}
+          {{/each}}
+        ],
+        "duration": {{mul scroll.interval (steps)}}
+      }
+    {{/scope}}
+  {{/if}}
+{{/inline~}}
+
 {{! CSS definitions }}
 {{~#*inline "styles"}}
 <style>
   {{>common_styles_header}}
+  .viewport {
+    position: absolute;
+    width: 100%;
+    height: {{screen_height}}px;
+    top: {{const.WINDOW_PADDING}}px;
+    overflow: hidden;
+  }
+  {{#with (scroll_animation) as |anim|}}
+  @keyframes scroll {
+    {{#each anim.scroll as |keyframe|}}
+    {{keyframe.key}}% { top: {{keyframe.top}}px; }
+    {{/each}}
+  }
+  @keyframes scrollbar {
+    {{#each anim.scroll as |keyframe|}}
+    {{keyframe.key}}% { top: {{keyframe.bar_top}}px; }
+    {{/each}}
+  }
+  .scrollbar {
+    background: rgba(255, 255, 255, 0.35);
+    position: absolute;
+    width: 5px; height: {{../const.SCROLLBAR_HEIGHT}}px;
+    right: {{../const.SCROLLBAR_RIGHT_OFFSET}}px; top: 0;
+    animation: {{anim.duration}}s steps(1, jump-end) 0s infinite scrollbar;
+  }
+  {{~else}}{{/with}}
   .container {
     padding: 0 {{const.WINDOW_PADDING}}px;
     color: {{ palette.colors.white }};
     line-height: {{line_height}}px;
+    position: relative;
+    {{#with (scroll_animation) as |anim|}}
+    animation: {{anim.duration}}s steps(1, jump-end) 0s infinite scroll;
+    {{~else}}{{/with}}
   }
   .container pre {
     padding: 0;
@@ -81,10 +147,6 @@
     background: rgba(255, 0, 65, 0.15);
   }
   {{/if}}
-  {{~#if (scroll_animation)}}
-
-  .scrollbar { fill: #fff; fill-opacity: 0.35; }
-  {{~/if}}
 
   {{>common_font_styles}}
   .dimmed { opacity: 0.7; }
@@ -122,16 +184,9 @@
 {{/inline~}}
 
 {{~#*inline "content"}}
-      <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
-        {{~#if (scroll_animation)}}
-        {{~#with (scroll_animation)}}
-
-        <animate attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-        {{~/with}}
-        {{~/if}}
-
-        <foreignObject width="{{width}}" height="{{content_height}}">
-          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+      <svg width="{{width}}" height="{{add (screen_height) const.WINDOW_PADDING}}" viewBox="0 0 {{width}} {{add (screen_height) const.WINDOW_PADDING}}">
+        <foreignObject width="{{width}}" height="{{add (screen_height) const.WINDOW_PADDING}}">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="viewport"><div class="container">
             {{~#each interactions}}
 
             <div class="input{{#if failure}} input-failure{{/if}}{{#if input.hidden}} input-hidden{{/if}}"
@@ -164,7 +219,7 @@
               </pre></div>
             {{~/each}}
 
-          </div>
+          </div>{{#if (scroll_animation)}}<div class="scrollbar"></div>{{/if}}</div>
         </foreignObject>
       </svg>
 {{/inline~}}
@@ -205,7 +260,6 @@
     {{scroll_animation set=(eval "compute_scroll_animation"
       const=const
       scroll=scroll
-      width=width
       content_height=(content_height)
     )}}
   {{~/if~}}

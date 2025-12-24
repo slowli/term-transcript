@@ -25,39 +25,6 @@
   {{/scope}}
 {{/inline~}}
 
-{{!
-  Computes scroll animation parameters.
-  Expected hash inputs: `content_height`, `const`, `scroll`, `width`
-}}
-{{~#*inline "compute_scroll_animation"}}
-  {{#if (gte scroll.max_height content_height)}}
-  {{! No need for scroll animation }}
-    null
-  {{else}}
-    {{#scope
-      steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
-      y_step=0
-      view_box=""
-      scrollbar_y=""
-      sep=""
-    }}
-      {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
-      {{#each (range 0 (add (steps) 1))}}
-        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{min (mul ../scroll.pixels_per_scroll @index) (sub ../content_height ../scroll.max_height)}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
-      {{/each}}
-
-      {
-        "duration": {{mul scroll.interval (steps)}},
-        "view_box": "{{view_box}}",
-        "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
-        "scrollbar_y": "{{scrollbar_y}}"
-      }
-    {{/scope}}
-  {{/if}}
-{{/inline~}}
-
 {{! Common styles header, e.g. `@font-face`s }}
 {{~#*inline "common_styles_header"}}
 {{~#if additional_styles}}
@@ -99,15 +66,6 @@
 <circle cx="57" cy="-9" r="7" style="fill: {{ palette.colors.green }};"/>
 {{~/if}}
 
-{{/inline~}}
-
-{{! Scrollbar + its animation }}
-{{~#*inline "scrollbar"}}
-{{#with (scroll_animation)}}
-<rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
-  <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-</rect>
-{{/with}}
 {{/inline~}}
 
 {{! Renders an HTML span }}
