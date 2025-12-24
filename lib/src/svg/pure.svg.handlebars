@@ -93,9 +93,8 @@
     <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
       {{~#with (scroll_animation)}}
 
-      <animate attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+      <animate id="scroll" attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
       {{~else}}{{/with}}
-
       {{! Render backgrounds for each input beforehand since they cannot be placed in <text>. }}
       {{#scope
         x_pos=const.WINDOW_PADDING

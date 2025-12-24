@@ -63,7 +63,6 @@
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
       <svg x="0" y="10" width="720" height="187.2" viewBox="0 0 720 187.2">
-
         <foreignObject width="720" height="187.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>

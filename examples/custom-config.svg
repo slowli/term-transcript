@@ -70,8 +70,7 @@
       <circle cx="37" cy="-9" r="7" style="fill: #c18f41;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #8f9a52;"/>
       <svg x="0" y="10" width="929" height="300" viewBox="0 0 929 300">
-        <animate attributeName="viewBox" values="0 0 929 300;0 18 929 300;0 36 929 300;0 54 929 300;0 55.8 929 300" dur="6s" repeatCount="indefinite" calcMode="discrete" />
-
+        <animate id="scroll" attributeName="viewBox" values="0 0 929 300;0 18 929 300;0 36 929 300;0 54 929 300;0 55.8 929 300" dur="6s" repeatCount="indefinite" calcMode="discrete" />
         <foreignObject width="929" height="355.8">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
@@ -96,9 +95,9 @@
           </div>
         </foreignObject>
       </svg>
-          <rect class="scrollbar" x="917" y="10" width="5" height="40">
-            <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 83.9;0 167.7;0 251.6;0 260" dur="6s" repeatCount="indefinite" calcMode="discrete" />
-          </rect>
+      <rect class="scrollbar" x="917" y="10" width="5" height="40">
+        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 83.9;0 167.7;0 251.6;0 260" begin="scroll.begin" dur="6s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
     </g>
     <text x="10" y="18.2" style="font: 14px monospace; fill: #b85651;">
       HTML embedding not supported.

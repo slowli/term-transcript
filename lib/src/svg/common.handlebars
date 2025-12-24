@@ -108,9 +108,9 @@
 {{! Scrollbar + its animation }}
 {{~#*inline "scrollbar"}}
   {{#with (scroll_animation)}}
-    <rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{../const.SCROLLBAR_HEIGHT}}">
-      <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-    </rect>
+<rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{../const.SCROLLBAR_HEIGHT}}">
+  <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" begin="scroll.begin" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+</rect>
   {{/with}}
 {{/inline~}}
 
