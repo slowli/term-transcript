@@ -123,7 +123,8 @@ pub enum LineNumbers {
 /// ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Width of the rendered terminal window in pixels. The default value is `720`.
+    /// Width of the rendered terminal window in pixels. Excludes the line numbers width if line
+    /// numbering is enabled. The default value is `720`.
     #[serde(default = "TemplateOptions::default_width")]
     pub width: usize,
     /// Line height relative to the font size. If not specified, will be taken from font metrics (if a font is embedded),
@@ -509,12 +510,11 @@ impl Template {
         ("WINDOW_PADDING", 10),
         ("FONT_SIZE", 14),
         ("WINDOW_FRAME_HEIGHT", 22),
+        ("LN_WIDTH", 22),
+        ("LN_PADDING", 7),
         ("SCROLLBAR_RIGHT_OFFSET", 7),
         ("SCROLLBAR_HEIGHT", 40),
     ];
-
-    const PURE_SVG_CONSTANTS: &'static [(&'static str, u32)] =
-        &[("LN_WIDTH", 24), ("LN_PADDING", 8)];
 
     /// Initializes the default template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
@@ -533,11 +533,7 @@ impl Template {
         let template =
             HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");
         Self {
-            constants: Self::STD_CONSTANTS
-                .iter()
-                .chain(Self::PURE_SVG_CONSTANTS)
-                .copied()
-                .collect(),
+            constants: Self::STD_CONSTANTS.iter().copied().collect(),
             ..Self::custom(template, options)
         }
     }

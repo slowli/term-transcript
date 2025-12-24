@@ -351,6 +351,7 @@
   text_y_offset=0
   screen_height=0
   height=0
+  width=width
   line_number=1
 }}
   {{~>set_line_height ~}}
@@ -401,6 +402,10 @@
   {{~height set=(add (screen_height) (mul const.WINDOW_PADDING 2))~}}
   {{~#if window_frame~}}
     {{height set=(add (height) const.WINDOW_FRAME_HEIGHT)}}
+  {{~/if~}}
+  {{~#if line_numbers~}}
+    {{! Adjust width to take line numbers into account }}
+    {{~width set=(add (width) const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
 {{>root~}} {{! <-- All rendering happens here }}
 {{/scope}}
