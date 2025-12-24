@@ -123,6 +123,7 @@
       {{~#if span.italic}} italic{{/if~}}
       {{~#if span.underline}} underline{{/if~}}
       {{~#if span.dimmed}} dimmed{{/if~}}
+      {{~#if (and span.dimmed (ne (typeof span.bg) "null"))}} dimmed-bg{{/if~}}
       {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
       {{~#if (eq (typeof span.bg) "number")}} bg{{span.bg}}{{/if~}}
     {{/classes~}}
@@ -135,7 +136,11 @@
     <span{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
     {{~/scope~}}
   {{~/if~}}
-  {{{span.text}}}
+  {{!
+    If dimmed, enclose text in an additional span to apply pseudo-opacity effects based on `currentColor` and/or
+    by having a semi-transparent background; see .dimmed CSS. Using `opacity` or filters doesn't work in Safari.
+  }}
+  {{#if span.dimmed}}<span>{{/if}}{{{span.text}}}{{#if span.dimmed}}</span>{{/if}}
   {{~#if (gt (len span) 1)~}}
     </span>
   {{~/if~}}

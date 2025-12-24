@@ -69,7 +69,7 @@
     width: {{const.LN_WIDTH}}px;
     text-align: right;
     padding-right: {{const.LN_PADDING}}px;
-    opacity: 0.35;
+    color: color-mix(in hsl, currentColor 35%, {{ palette.colors.black }} 65%);
     user-select: none;
   }
   {{/if}}
@@ -87,7 +87,12 @@
   {{~/if}}
 
   {{>common_font_styles}}
-  .dimmed { opacity: 0.7; }
+  {{!
+    The dimmed-related complexity is motivated by Safari quirks; it doesn't render HTML-in-SVG with any filters
+    (incl. opacity) correctly.
+  }}
+  .dimmed > span { color: color-mix(in hsl, currentColor 70%, {{ palette.colors.black }} 30%); }
+  .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / 30%); }
   {{~#if wrap}}
 
   .hard-br {
@@ -96,7 +101,7 @@
   }
   .hard-br:before {
     content: '»';
-    opacity: 0.6;
+    color: color-mix(in hsl, currentColor 60%, {{ palette.colors.black }} 40%);
   }
   {{~/if}}
 
