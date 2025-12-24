@@ -29,22 +29,26 @@
   {{else}}
     {{#scope
       steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
-      y_step=0
+      scroll_height=(sub content_height scroll.max_height)
+      pos=0
       view_box=""
       scrollbar_y=""
       sep=""
     }}
-      {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
       {{#each (range 0 (add (steps) 1))}}
+        {{~pos set=(min (scroll_height) (mul ../scroll.pixels_per_scroll @index))~}}
         {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{min (mul ../scroll.pixels_per_scroll @index) (sub ../content_height ../scroll.max_height)}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
+        {{#view_box}}"{{view_box}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
+        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{round
+          (mul (div (pos) (scroll_height)) (sub ../scroll.max_height ../const.SCROLLBAR_HEIGHT))
+          digits=1
+        }}"{{/scrollbar_y}}
       {{/each}}
 
       {
         "duration": {{mul scroll.interval (steps)}},
         "view_box": "{{view_box}}",
-        "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
+        "scrollbar_x": {{sub width (add const.SCROLLBAR_RIGHT_OFFSET 5)}}, {{! 5 is scrollbar width }}
         "scrollbar_y": "{{scrollbar_y}}"
       }
     {{/scope}}
@@ -54,7 +58,7 @@
 {{! Scrollbar + its animation }}
 {{~#*inline "scrollbar"}}
   {{#with (scroll_animation)}}
-    <rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
+    <rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{../const.SCROLLBAR_HEIGHT}}">
       <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
     </rect>
   {{/with}}
@@ -181,7 +185,7 @@
         {{~#text_fg append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <text xml:space="preserve" x="{{#if (not ../input.hidden)~}}
+            <text xml:space="preserve" {{#if (not ../input.hidden)}}x="
                 {{~#if (adjust_text_length)~}}
                   {{~#scope full_line=this internal_char_pos=0~}}
                   {{~#if @first~}}
@@ -386,11 +390,15 @@
     {{! Use the above formula with heuristic values: ascent ~ 1em, descent ~ -0.3em. Hence, their sum is ~0.65em or ~9px. }}
     {{~text_y_offset set=(div (add (line_height) 9) 2)~}}
   {{~/if~}}
+  {{~#if line_numbers~}}
+    {{! Adjust width to take line numbers into account }}
+    {{~width set=(add (width) const.LN_WIDTH const.LN_PADDING)~}}
+  {{~/if~}}
   {{~#if scroll~}}
     {{scroll_animation set=(eval "compute_scroll_animation"
       const=const
       scroll=scroll
-      width=width
+      width=(width)
       content_height=(content_height)
     )}}
   {{~/if~}}
@@ -402,10 +410,6 @@
   {{~height set=(add (screen_height) (mul const.WINDOW_PADDING 2))~}}
   {{~#if window_frame~}}
     {{height set=(add (height) const.WINDOW_FRAME_HEIGHT)}}
-  {{~/if~}}
-  {{~#if line_numbers~}}
-    {{! Adjust width to take line numbers into account }}
-    {{~width set=(add (width) const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
 {{>root~}} {{! <-- All rendering happens here }}
 {{/scope}}
