@@ -93,7 +93,7 @@ fn rendering_transcript_with_hidden_input() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(r#"viewBox="0 -22 720 60""#), "{buffer}");
-    assert!(buffer.contains(r#"viewBox="0 0 720 28""#), "{buffer}");
+    assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
     assert!(
         buffer.contains(r#"<div class="input input-hidden">"#),
         "{buffer}"
@@ -288,17 +288,9 @@ fn rendering_transcript_with_animation() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
-    assert!(buffer.contains("@keyframes scroll {"), "{buffer}");
-    let expected_keyframes = [
-        "0% { top: 0px; }",
-        "20% { top: -52px; }",
-        "40% { top: -104px; }",
-        "60% { top: -156px; }",
-        "80% { top: -184px; }",
-    ];
-    for keyframe in expected_keyframes {
-        assert!(buffer.contains(keyframe), "{buffer}");
-    }
+    assert!(buffer.contains("<animateTransform"), "{buffer}");
+    let expected_view_boxes = "0 0 720 240;0 52 720 240;0 104 720 240;0 156 720 240;0 184 720 240";
+    assert!(buffer.contains(expected_view_boxes), "{buffer}");
 }
 
 #[test_casing(2, [false, true])]
