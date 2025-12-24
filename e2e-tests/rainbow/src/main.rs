@@ -32,12 +32,17 @@ fn write_base_styles(writer: &mut impl WriteColor, base: &ColorSpec, name: &str)
     writer.reset()?;
     write!(writer, " ")?;
 
-    writer.set_color(base.clone().set_bold(true))?;
+    writer.set_color(base.clone().set_bold(true).set_fg(Some(Color::Green)))?;
     write!(writer, "Bold")?;
     writer.reset()?;
     write!(writer, " ")?;
 
-    writer.set_color(base.clone().set_italic(true))?;
+    writer.set_color(
+        base.clone()
+            .set_italic(true)
+            .set_fg(Some(Color::Yellow))
+            .set_bg(Some(Color::Magenta)),
+    )?;
     write!(writer, "Italic")?;
     writer.reset()?;
     write!(writer, " ")?;
