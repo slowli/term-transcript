@@ -1,12 +1,22 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 390" width="720" height="390" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 749 390" width="749" height="390" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
+        .viewport {
+          position: absolute;
+          width: 100%;
+          height: 370px;
+          top: 10px;
+          overflow: hidden;
+        }
+
         .container {
           padding: 0 10px;
           color: #e5e5e5;
           line-height: 18px;
+          position: relative;
+
         }
         .container pre {
           padding: 0;
@@ -27,9 +37,9 @@
         .output > pre { flex-grow: 1; }
         pre.line-numbers {
           flex-grow: 0;
-          width: 1.5rem;
+          width: 22px;
           text-align: right;
-          padding-right: .5rem;
+          padding-right: 7px;
           opacity: 0.35;
           user-select: none;
         }
@@ -46,7 +56,7 @@
           content: '»';
           opacity: 0.6;
         }
-        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line { display: block; }
         .line > span { display: inline-block; }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
@@ -66,9 +76,9 @@
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
-      <svg x="0" y="10" width="720" height="370" viewBox="0 0 720 370">
-        <foreignObject width="720" height="370">
-          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+      <svg width="749" height="380" viewBox="0 0 749 380">
+        <foreignObject width="749" height="380">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="viewport"><div class="container">
             <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
             <div class="output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20</pre><pre><span class="line">Base colors:
 </span><span class="line"><span class="underline fg0">black</span> <span class="italic fg0">black/italic</span> <span class="fg4">blue</span> <span class="italic underline fg4">blue/italic</span> <span class="underline fg2">green</span> <span class="italic fg2">green/italic</span> <span class="fg1">red</span> <span class="italic underline fg1">red/italic</span> <span class="underline fg6">cyan</span> <span class="italic fg6">cyan/</span><b class="hard-br"></b>
@@ -89,7 +99,7 @@
 </span><span class="line"><span style="color: #080808;">!</span><span class="bold fg7" style="background: #080808;">?</span><span style="color: #121212;">!</span><span class="bold fg7" style="background: #121212;">?</span><span style="color: #1c1c1c;">!</span><span class="bold fg7" style="background: #1c1c1c;">?</span><span style="color: #262626;">!</span><span class="bold fg7" style="background: #262626;">?</span><span style="color: #303030;">!</span><span class="bold fg7" style="background: #303030;">?</span><span style="color: #3a3a3a;">!</span><span class="bold fg7" style="background: #3a3a3a;">?</span><span style="color: #444444;">!</span><span class="bold fg7" style="background: #444444;">?</span><span style="color: #4e4e4e;">!</span><span class="bold fg7" style="background: #4e4e4e;">?</span><span style="color: #585858;">!</span><span class="bold fg7" style="background: #585858;">?</span><span style="color: #626262;">!</span><span class="bold fg7" style="background: #626262;">?</span><span style="color: #6c6c6c;">!</span><span class="bold fg7" style="background: #6c6c6c;">?</span><span style="color: #767676;">!</span><span class="bold fg7" style="background: #767676;">?</span><span style="color: #808080;">!</span><span class="bold fg0" style="background: #808080;">?</span><span style="color: #8a8a8a;">!</span><span class="bold fg0" style="background: #8a8a8a;">?</span><span style="color: #949494;">!</span><span class="bold fg0" style="background: #949494;">?</span><span style="color: #9e9e9e;">!</span><span class="bold fg0" style="background: #9e9e9e;">?</span><span style="color: #a8a8a8;">!</span><span class="bold fg0" style="background: #a8a8a8;">?</span><span style="color: #b2b2b2;">!</span><span class="bold fg0" style="background: #b2b2b2;">?</span><span style="color: #bcbcbc;">!</span><span class="bold fg0" style="background: #bcbcbc;">?</span><span style="color: #c6c6c6;">!</span><span class="bold fg0" style="background: #c6c6c6;">?</span><span style="color: #d0d0d0;">!</span><span class="bold fg0" style="background: #d0d0d0;">?</span><span style="color: #dadada;">!</span><span class="bold fg0" style="background: #dadada;">?</span><span style="color: #e4e4e4;">!</span><span class="bold fg0" style="background: #e4e4e4;">?</span><span style="color: #eeeeee;">!</span><span class="bold fg0" style="background: #eeeeee;">?</span>
 </span><span class="line">24-bit colors:
 </span><span class="line"><span style="color: #ffbbdd;">pink</span> <span style="color: #ffaa44;">orange</span> <span style="color: #9f4010;">brown</span> <span style="color: #10889f;">teal</span> </span></pre></div>
-          </div>
+          </div></div>
         </foreignObject>
       </svg>
     </g>

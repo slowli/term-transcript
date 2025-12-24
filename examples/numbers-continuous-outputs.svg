@@ -1,12 +1,46 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 362" width="720" height="362" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 749 362" width="749" height="362" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
+        .viewport {
+          position: absolute;
+          width: 100%;
+          height: 342px;
+          top: 10px;
+          overflow: hidden;
+        }
+        @keyframes scroll {
+          0% { top: 0px; }
+          14.29% { top: -52px; }
+          28.57% { top: -104px; }
+          42.86% { top: -156px; }
+          57.14% { top: -208px; }
+          71.43% { top: -260px; }
+          85.71% { top: -272px; }
+        }
+        @keyframes scrollbar {
+          0% { top: 0px; }
+          14.29% { top: 57.7px; }
+          28.57% { top: 115.5px; }
+          42.86% { top: 173.2px; }
+          57.14% { top: 230.9px; }
+          71.43% { top: 288.7px; }
+          85.71% { top: 302px; }
+        }
+        .scrollbar {
+          background: rgba(255, 255, 255, 0.35);
+          position: absolute;
+          width: 5px; height: 40px;
+          right: 7px; top: 0;
+          animation: 28s steps(1, jump-end) 0s infinite scrollbar;
+        }
         .container {
           padding: 0 10px;
           color: #cccccc;
           line-height: 19.6px;
+          position: relative;
+          animation: 28s steps(1, jump-end) 0s infinite scroll;
         }
         .container pre {
           padding: 0;
@@ -25,14 +59,13 @@
         .output > pre { flex-grow: 1; }
         pre.line-numbers {
           flex-grow: 0;
-          width: 1.5rem;
+          width: 22px;
           text-align: right;
-          padding-right: .5rem;
+          padding-right: 7px;
           opacity: 0.35;
           user-select: none;
         }
 
-        .scrollbar { fill: #fff; fill-opacity: 0.35; }
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
         .underline { text-decoration: underline; }
@@ -45,7 +78,7 @@
           content: '»';
           opacity: 0.6;
         }
-        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line { display: block; }
         .line > span { display: inline-block; }
         .fg0 { color: #0c0c0c; } .bg0 { background: #0c0c0c; }
         .fg1 { color: #c50f1f; } .bg1 { background: #c50f1f; }
@@ -65,10 +98,9 @@
         .fg15 { color: #f2f2f2; } .bg15 { background: #f2f2f2; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #0c0c0c;"/>
-      <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 260 720 342;0 272 720 342" dur="24s" repeatCount="indefinite" calcMode="discrete" />
-        <foreignObject width="720" height="614">
-          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+      <svg width="749" height="352" viewBox="0 0 749 352">
+        <foreignObject width="749" height="352">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="viewport"><div class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
             <div class="output"><pre class="line-numbers">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17</pre><pre><span class="line">Base colors:
 </span><span class="line"><span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
@@ -99,12 +131,9 @@
 </span><span class="line">Base colors (bg):
 </span><span class="line"><span class="fg7 bg0">black</span> <span class="fg7 bg4">blue</span> <span class="fg7 bg2">green</span> <span class="fg7 bg1">red</span> <span class="fg7 bg6">cyan</span> <span class="fg7 bg5">magenta</span> <span class="fg7 bg3">yellow</span> 
 </span><span class="line"><span class="fg15 bg8">black</span> <span class="fg15 bg12">blue</span> <span class="fg15 bg10">green</span> <span class="fg15 bg9">red</span> <span class="fg15 bg14">cyan</span> <span class="fg15 bg13">magenta</span> <span class="fg15 bg11">yellow</span> </span></pre></div>
-          </div>
+          </div><div class="scrollbar"></div></div>
         </foreignObject>
       </svg>
-      <rect class="scrollbar" x="713" y="10" width="5" height="40">
-        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 50.333333333333336;0 100.66666666666667;0 151;0 201.33333333333334;0 251.66666666666669;0 302" dur="24s" repeatCount="indefinite" calcMode="discrete" />
-      </rect>
     </g>
     <text x="10" y="19.6" style="font: 14px monospace; fill: #c50f1f;">
       HTML embedding not supported.
