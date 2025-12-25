@@ -13,7 +13,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   thus, parsing won't work with transcripts produced with old `term-transcript` versions.
 - Support embedding fonts into the SVG template via `@font-face` CSS rules with a data URL.
   Provide font subsetting as an extension via the opt-in `font-subset` feature.
-- Allow configuring line height for both HTML-in-SVG and pure SVG templates.
+- Allow configuring line height and char (advance) width for both HTML-in-SVG and pure SVG templates.
 
 ### Changed
 
@@ -25,7 +25,13 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Change the output data provided to templates. Instead of pre-rendered HTML and SVG data, a template is now provided
   with an array of lines, each consisting of styled text spans.
 - Decrease the default line height to 1.2 (i.e., 16.8px); previously, it was 18px (i.e., ~1.29).
-- Change the way background works for HTML-in-SVG so that it always has the full line height.
+- Change the way background fill works for HTML-in-SVG so that it always has the full line height.
+
+### Fixed
+
+- Fix background fill for pure SVG, so that it doesn't rely on full block chars. Correspondingly, it now works
+  even if these chars are not present in the selected fonts.
+- Fix most compatibility issues with Safari / iOS WebView.
 
 ### Removed
 
