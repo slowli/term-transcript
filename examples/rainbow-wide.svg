@@ -52,7 +52,7 @@
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
-      <svg x="0" y="10" width="900" height="329.2" viewBox="0 0 900 329.2">
+      <svg x="0" y="10" width="900" height="329.2" viewBox="0 0 900 329.2" overflow="hidden">
         <foreignObject width="900" height="329.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>

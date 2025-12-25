@@ -57,7 +57,7 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="312.4" viewBox="0 0 720 312.4">
+      <svg x="0" y="10" width="720" height="312.4" viewBox="0 0 720 312.4" overflow="hidden">
         <foreignObject width="720" height="312.4">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>

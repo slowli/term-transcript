@@ -28,6 +28,7 @@
   {{~>content}}
   {{~#if (scroll_animation)}}
   {{>scrollbar}}
+  {{>scroll_animation}}
   {{/if}}
 </svg>
 {{/inline~}}
@@ -90,12 +91,7 @@
 {{/inline~}}
 
 {{~#*inline "content"}}
-    <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
-      {{~#with (scroll_animation)}}
-
-      <animate id="scroll" attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-      {{~else}}{{/with}}
-      {{! Render backgrounds for each input beforehand since they cannot be placed in <text>. }}
+    <svg{{#if (scroll_animation)}} id="scroll-container"{{/if}} x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
       {{#scope
         x_pos=const.WINDOW_PADDING
         input_x_pos=const.WINDOW_PADDING
@@ -119,7 +115,7 @@
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
           {{~input_height set=(round (add (mul (count_lines input.text) (line_height)) (mul 2 ../const.USER_INPUT_PADDING)) digits=1)~}}
           {{~#input_bg append=true ~}}
-            {{! `y_pos` refers to the too of the text line, so for <rect>s we need to subtract the top margin }}
+            {{! `y_pos` refers to the top of the text line, so for <rect>s we need to subtract the top margin }}
             {{~#scope top_y=(round (sub (y_pos) ../const.USER_INPUT_PADDING) digits=2)~}}
             <rect x="0" y="{{top_y}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
             {{~#if failure~}}

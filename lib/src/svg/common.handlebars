@@ -89,28 +89,37 @@
         {{~pos set=(min (scroll_height) (mul ../scroll.pixels_per_scroll @index))~}}
         {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
         {{#view_box}}"{{view_box}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{round
-          (mul (div (pos) (scroll_height)) (sub ../scroll.max_height ../const.SCROLLBAR_HEIGHT))
+        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}{{round
+          (add
+            (mul (div (pos) (scroll_height)) (sub ../scroll.max_height ../const.SCROLLBAR_HEIGHT))
+            ../const.WINDOW_PADDING
+          )
           digits=1
         }}"{{/scrollbar_y}}
       {{/each}}
 
       {
-      "duration": {{mul scroll.interval (steps)}},
-      "view_box": "{{view_box}}",
-      "scrollbar_x": {{sub width (add const.SCROLLBAR_RIGHT_OFFSET 5)}}, {{! 5 is scrollbar width }}
-      "scrollbar_y": "{{scrollbar_y}}"
+        "duration": {{mul scroll.interval (steps)}},
+        "view_box": "{{view_box}}",
+        "scrollbar_x": {{sub width (add const.SCROLLBAR_RIGHT_OFFSET 5)}}, {{! 5 is scrollbar width }}
+        "scrollbar_y": "{{scrollbar_y}}"
       }
     {{/scope}}
   {{/if}}
 {{/inline~}}
 
-{{! Scrollbar + its animation }}
+{{! Scrollbar }}
 {{~#*inline "scrollbar"}}
   {{#with (scroll_animation)}}
-<rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{../const.SCROLLBAR_HEIGHT}}">
-  <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" begin="scroll.begin" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-</rect>
+<rect id="scrollbar" class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{../const.SCROLLBAR_HEIGHT}}" />
+  {{/with}}
+{{/inline~}}
+
+{{! Scrolling animations }}
+{{~#*inline "scroll_animation"}}
+  {{#with (scroll_animation)}}
+<animate id="scroll" href="#scroll-container" attributeName="viewBox" values="{{view_box}}" begin="0s" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+<animate href="#scrollbar" attributeName="y" values="{{scrollbar_y}}" begin="scroll.begin" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
   {{/with}}
 {{/inline~}}
 

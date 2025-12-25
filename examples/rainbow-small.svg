@@ -53,8 +53,7 @@
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
-      <svg x="0" y="10" width="450" height="180" viewBox="0 0 450 180">
-        <animate id="scroll" attributeName="viewBox" values="0 0 450 180;0 52 450 180;0 104 450 180;0 156 450 180;0 208 450 180;0 233.2 450 180" dur="20s" repeatCount="indefinite" calcMode="discrete" />
+      <svg id="scroll-container" x="0" y="10" width="450" height="180" viewBox="0 0 450 180" overflow="hidden">
         <foreignObject width="450" height="413.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
@@ -84,9 +83,9 @@
           </div>
         </foreignObject>
       </svg>
-      <rect class="scrollbar" x="438" y="10" width="5" height="40">
-        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 31.2;0 62.4;0 93.7;0 124.9;0 140" begin="scroll.begin" dur="20s" repeatCount="indefinite" calcMode="discrete" />
-      </rect>
+      <rect id="scrollbar" class="scrollbar" x="438" y="10" width="5" height="40" />
+      <animate id="scroll" href="#scroll-container" attributeName="viewBox" values="0 0 450 180;0 52 450 180;0 104 450 180;0 156 450 180;0 208 450 180;0 233.2 450 180" begin="0s" dur="20s" repeatCount="indefinite" calcMode="discrete" />
+      <animate href="#scrollbar" attributeName="y" values="10;41.2;72.4;103.7;134.9;150" begin="scroll.begin" dur="20s" repeatCount="indefinite" calcMode="discrete" />
     </g>
     <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
       HTML embedding not supported.

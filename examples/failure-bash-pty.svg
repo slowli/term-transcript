@@ -62,11 +62,11 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="187.2" viewBox="0 0 720 187.2">
+      <svg x="0" y="10" width="720" height="187.2" viewBox="0 0 720 187.2" overflow="hidden">
         <foreignObject width="720" height="187.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
-            <div class="output"><pre><span class="line">-rwxrwxrwx 1 alex alex 44148 Dec 24 20:55 <span class="fg2">Cargo.lock</span></span></pre></div>
+            <div class="output"><pre><span class="line">-rwxrwxrwx 1 alex alex 44148 Dec 25 10:02 <span class="fg2">Cargo.lock</span></span></pre></div>
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> grep -m 5 -n serde Cargo.lock</pre></div>

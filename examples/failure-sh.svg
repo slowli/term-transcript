@@ -62,7 +62,7 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="120" viewBox="0 0 720 120">
+      <svg x="0" y="10" width="720" height="120" viewBox="0 0 720 120" overflow="hidden">
         <foreignObject width="720" height="120">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input input-failure" data-exit-status="127" title="This command exited with non-zero code"><pre><span class="prompt">$</span> ./non-existing-command</pre></div>

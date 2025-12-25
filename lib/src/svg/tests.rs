@@ -288,7 +288,8 @@ fn rendering_transcript_with_animation() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
-    assert!(buffer.contains("<animateTransform"), "{buffer}");
+    let animate_tag = r##"<animate id="scroll" href="#scroll-container" attributeName="viewBox""##;
+    assert!(buffer.contains(animate_tag), "{buffer}");
     let expected_view_boxes = "0 0 720 240;0 52 720 240;0 104 720 240;0 156 720 240;0 184 720 240";
     assert!(buffer.contains(expected_view_boxes), "{buffer}");
 }
@@ -323,7 +324,8 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
         r#"viewBox="0 0 720 260""#
     };
     assert!(buffer.contains(view_box), "{buffer}");
-    assert!(buffer.contains("<animateTransform"), "{buffer}");
+    let animate_tag = r##"<animate id="scroll" href="#scroll-container" attributeName="viewBox""##;
+    assert!(buffer.contains(animate_tag), "{buffer}");
     let expected_view_boxes = if line_numbers {
         "0 0 749 240;0 52 749 240;0 104 749 240;0 156 749 240;0 184 749 240"
     } else {
