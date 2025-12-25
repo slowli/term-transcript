@@ -28,6 +28,7 @@
   {{~>content}}
   {{~#if (scroll_animation)}}
   {{>scrollbar}}
+  {{>scroll_animation}}
   {{/if}}
 </svg>
 {{/inline~}}
@@ -39,13 +40,16 @@
   .container {
     font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: {{round (line_height) digits=2}}px;
+    {{#if (letter_spacing_ems)}}
+    letter-spacing: {{round (letter_spacing_ems) digits=4}}em;
+    {{/if}}
   }
-  .input,.output,.output-bg {
+  .input,.output {
     white-space: pre;
   }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
   .input-hidden { display: none; }
-  .output-bg { user-select: none; text-rendering: geometricPrecision; stroke-width: 0.5; }
+  .output-bg { stroke-width: 0.5; }
   {{~#if has_failures}}
 
   .input-bg .input-failure { fill: #ff0041; fill-opacity: 0.15; }
@@ -87,15 +91,7 @@
 {{/inline~}}
 
 {{~#*inline "content"}}
-    <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
-      {{~#if (scroll_animation)}}
-      {{~#with (scroll_animation)}}
-
-      <animate attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-      {{~/with}}
-      {{~/if}}
-
-      {{! Render backgrounds for each input beforehand since they cannot be placed in <text>. }}
+    <svg{{#if (scroll_animation)}} id="scroll-container"{{/if}} x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
       {{#scope
         x_pos=const.WINDOW_PADDING
         input_x_pos=const.WINDOW_PADDING
@@ -104,6 +100,7 @@
         input_bg=""
         output_bg=""
         text_fg=""
+        hard_breaks=""
       ~}}
       {{~#if line_numbers~}}
         {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
@@ -118,7 +115,7 @@
           {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
           {{~input_height set=(round (add (mul (count_lines input.text) (line_height)) (mul 2 ../const.USER_INPUT_PADDING)) digits=1)~}}
           {{~#input_bg append=true ~}}
-            {{! `y_pos` refers to the too of the text line, so for <rect>s we need to subtract the top margin }}
+            {{! `y_pos` refers to the top of the text line, so for <rect>s we need to subtract the top margin }}
             {{~#scope top_y=(round (sub (y_pos) ../const.USER_INPUT_PADDING) digits=2)~}}
             <rect x="0" y="{{top_y}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
             {{~#if failure~}}
@@ -137,7 +134,26 @@
         {{~#text_fg append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <text xml:space="preserve"{{#if (not ../input.hidden)}} x="{{input_x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}"{{/if}}>
+            <text xml:space="preserve" {{#if (not ../input.hidden)}}x="
+                {{~#if (adjust_text_length)~}}
+                  {{~#scope full_line=this internal_char_pos=0~}}
+                  {{~#if @first~}}
+                    {{~full_line set=(concat ../input.prompt " " this)~}}
+                  {{~/if~}}
+                  {{~#each (split_into_chars (full_line)) as |ch|~}}
+                    {{~round (add (input_x_pos) (mul (internal_char_pos) (advance_width))) digits=2~}}
+                    {{~#if (not @last)~}}
+                      {{~print " "~}}
+                    {{~/if~}}
+                    {{~internal_char_pos set=(add (internal_char_pos) (char_width ch))~}}
+                  {{~/each~}}
+                  {{~/scope~}}
+                {{~else~}}
+                  {{input_x_pos}}
+                {{~/if}}" y="{{
+                  round (add (y_pos) (text_y_offset)) digits=2
+                }}"
+              {{~/if}}>
               {{~#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if~}}
               {{this}}
 </text>
@@ -156,62 +172,62 @@
           <g class="output">
         {{~/text_fg~}}
         {{~#each output as |line|~}}
-          {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" ~}}
+          {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" glyph_x_pos="" ~}}
           {{~#each line.spans as |span|~}}
             {{~#line_bg append=true ~}}
-              {{~#with (font_metrics) as |metrics|~}}
-                {{~#if (ne (typeof span.bg) "null")~}}
-                  <rect x="{{
-                    round (add (x_pos) (mul (char_pos) metrics.advance_width)) digits=2
-                  }}" y="{{
-                    round (y_pos) digits=2
-                  }}" width="{{
-                    round (mul (char_width span.text) metrics.advance_width) digits=2
-                  }}" height="{{
-                    round (line_height) digits=2
-                  }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
-                {{~/if~}}
-              {{~else~}}{{! No font metrics }}
-                {{~#if (ne (typeof span.bg) "null")~}}
-                  <tspan{{{eval ">svg_bg_tspan_attrs" span=span }}}>{{repeat "█" (char_width span.text)}}</tspan>
-                {{~else~}}
-                  {{~repeat " " (char_width span.text)~}}
-                {{~/if~}}
-              {{~/with~}}
+              {{~#if (ne (typeof span.bg) "null")~}}
+                <rect x="{{
+                  round (add (x_pos) (mul (char_pos) (advance_width))) digits=2
+                }}" y="{{
+                  round (y_pos) digits=2
+                }}" width="{{
+                  round (mul (char_width span.text) (advance_width)) digits=2
+                }}" height="{{
+                  round (line_height) digits=2
+                }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
+              {{~/if~}}
             {{~/line_bg~}}
             {{! Render span foreground }}
             {{~#line_fg append=true ~}}{{{eval ">svg_tspan" span=span}}}{{/line_fg~}}
+            {{! Render x positions of all chars in the span }}
+            {{~#if (adjust_text_length)~}}
+              {{~#scope internal_char_pos=(char_pos)~}}
+              {{~#glyph_x_pos append=true ~}}
+                {{~#each (split_into_chars span.text) as |ch|~}}
+                  {{~round (add (x_pos) (mul (internal_char_pos) (advance_width))) digits=2~}}
+                  {{~print " "~}}
+                  {{~internal_char_pos set=(add (internal_char_pos) (char_width ch))~}}
+                {{~/each~}}
+              {{~/glyph_x_pos~}}
+              {{~/scope~}}
+            {{~/if~}}
             {{! Update char position on the line }}
             {{~char_pos set=(add (char_pos) (char_width span.text))~}}
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
           {{~#if line.br~}}
-            {{~#line_fg append=true}}<tspan class="hard-br" dx="8">»</tspan>{{/line_fg~}}
+            {{~#hard_breaks append=true~}}
+              <text x="{{
+                round (add (x_pos) 8 (mul (advance_width) (char_pos))) digits=2
+              }}" y="{{
+                round (add (y_pos) (text_y_offset)) digits=2
+              }}">»</text>
+            {{~/hard_breaks~}}
           {{~/if~}}
 
-          {{! Append collected `line_bg` to the overall text }}
-          {{~#if (font_metrics)~}}
-            {{! `line_bg` has collected background <rect>s }}
-            {{~#output_bg append=true}}{{{line_bg}}}{{/output_bg~}}
-          {{~else~}}
-            {{! `line_bg` has collected background <tspan>s. We put them on a separate line with the same starting pos as the main one }}
-            {{~line_bg set=(trim (line_bg) side="end")~}}
-            {{~#text_fg append=true ~}}
-              {{~#if (line_bg)~}}
-                {{! Clip the line vertically so that lines don't visually overlap }}
-                <text xml:space="preserve" x="{{x_pos}}" y="{{
-                  round (add (y_pos) (text_y_offset)) digits=2
-                }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)" class="output-bg">{{{line_bg}}}</text>
-              {{~/if~}}
-            {{~/text_fg~}}
-          {{~/if~}}
+          {{! Append collected `line_bg` to the overall background }}
+          {{~#output_bg append=true}}{{{line_bg}}}{{/output_bg~}}
 
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
-              <text xml:space="preserve" x="{{x_pos}}" y="{{
+              {{!
+                The `y` coordinate in `clip-path` is specified in ems, because specifying it in pixels on Safari / WebKit
+                leads to incorrect clip boxes during scaling.
+              }}
+              <text xml:space="preserve" x="{{#if (glyph_x_pos)}}{{trim (glyph_x_pos)}}{{else}}{{x_pos}}{{/if}}" y="{{
                 round (add (y_pos) (text_y_offset)) digits=2
-              }}" clip-path="view-box xywh(0 {{round (y_pos) digits=2}}px 100% {{line_height}}px)">{{{line_fg}}}
+              }}" clip-path="view-box xywh(0 {{round (div (y_pos) ../../const.FONT_SIZE) digits=1}}em 100% {{line_height}}px)">{{{line_fg}}}
 </text>
             {{~/if~}}
           {{~/text_fg~}}
@@ -233,6 +249,7 @@
 
       {{>number_lines}}
       {{/if~}}
+      {{~#if (hard_breaks)}}<g class="container fg7 hard-br">{{{hard_breaks}}}</g>{{/if~}}
       <g class="container fg7">{{{text_fg}}}</g>
       {{~/scope~}}
     </svg>
@@ -281,9 +298,13 @@
   scroll_animation=null
   font_metrics=null
   line_height=line_height
+  advance_width=advance_width
+  adjust_text_length=true
+  letter_spacing_ems=0
   text_y_offset=0
   screen_height=0
   height=0
+  width=width
   line_number=1
 }}
   {{~>set_line_height ~}}
@@ -294,6 +315,14 @@
   {{~#if embedded_font~}}
     {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
       {{~font_metrics set=metrics~}}
+      {{~adjust_text_length set=false~}} {{! The text width will be adjusted via `letter-spacing` if necessary }}
+      {{~#if (eq (advance_width) null)~}}
+        {{~advance_width set=metrics.advance_width~}}
+      {{~else~}}
+        {{! Scale advance width from ems to pixels }}
+        {{~advance_width set=(mul (advance_width) ../const.FONT_SIZE)~}}
+        {{~letter_spacing_ems set=(div (sub (advance_width) metrics.advance_width) ../const.FONT_SIZE)~}}
+      {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
         and the ascent, i.e. (line_height + ascent + descent) / 2.
@@ -301,14 +330,24 @@
       {{~text_y_offset set=(div (add (line_height) metrics.ascent metrics.descent) 2)~}}
     {{~/with~}}
   {{~else~}}
+    {{~#if (eq (advance_width) null)~}}
+      {{~advance_width set=8~}} {{! Set to a reasonable default: ~0.57em }}
+    {{~else~}}
+      {{! Scale advance width from ems to pixels }}
+      {{~advance_width set=(mul (advance_width) const.FONT_SIZE)~}}
+    {{~/if~}}
     {{! Use the above formula with heuristic values: ascent ~ 1em, descent ~ -0.3em. Hence, their sum is ~0.65em or ~9px. }}
     {{~text_y_offset set=(div (add (line_height) 9) 2)~}}
+  {{~/if~}}
+  {{~#if line_numbers~}}
+    {{! Adjust width to take line numbers into account }}
+    {{~width set=(add (width) const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
   {{~#if scroll~}}
     {{scroll_animation set=(eval "compute_scroll_animation"
       const=const
       scroll=scroll
-      width=width
+      width=(width)
       content_height=(content_height)
     )}}
   {{~/if~}}

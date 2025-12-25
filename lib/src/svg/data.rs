@@ -36,6 +36,7 @@ use crate::{
 ///     },
 ///     "width": 720,
 ///     "line_height": null,
+///     "advance_width": null,
 ///     "palette": {
 ///         "colors": {
 ///             "black": "#282936",

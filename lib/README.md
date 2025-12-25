@@ -86,6 +86,16 @@ A snapshot of the same example with the scrolling animation and window frame:
 - PTY support for Windows is shaky. It requires a somewhat recent Windows version 
   (Windows 10 from October 2018 or newer), and may work incorrectly even for the recent versions.
 
+### Browser issues
+
+#### Safari / iOS WebView
+
+- For the default (HTML-in-SVG) template, Safari floors the font line height to an integer value
+  (e.g., to 16px for the default 1.2em = 16.8px line height). As a workaround, set the line height to an integer value
+  (e.g., 17px or 18px).
+- For pure SVG, Safari doesn't [skip ink](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/text-decoration-skip-ink)
+  when drawing underlines.
+
 ## Alternatives / similar tools
 
 - [`insta`](https://crates.io/crates/insta) is a generic snapshot testing library, which

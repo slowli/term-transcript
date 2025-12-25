@@ -791,6 +791,118 @@ impl HelperDef for CharWidthHelper {
     }
 }
 
+#[derive(Debug)]
+struct ConcatHelper;
+
+impl ConcatHelper {
+    const NAME: &'static str = "concat";
+}
+
+impl HelperDef for ConcatHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let concat = helper
+            .params()
+            .iter()
+            .try_fold(String::new(), |mut acc, param| {
+                let val = param.value().as_str().ok_or_else(|| {
+                    RenderErrorReason::ParamTypeMismatchForName(
+                        Self::NAME,
+                        "0".to_owned(),
+                        "string".to_owned(),
+                    )
+                })?;
+                acc += val;
+                Ok::<_, RenderErrorReason>(acc)
+            })?;
+        Ok(ScopedJson::Derived(concat.into()))
+    }
+}
+
+#[derive(Debug)]
+struct SplitIntoCharsHelper;
+
+impl SplitIntoCharsHelper {
+    const NAME: &'static str = "split_into_chars";
+}
+
+impl HelperDef for SplitIntoCharsHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let val = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let val = val.value().as_str().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "string".to_owned(),
+            )
+        })?;
+        let chars: Vec<_> = val.chars().map(|ch| Json::String(ch.into())).collect();
+        Ok(ScopedJson::Derived(chars.into()))
+    }
+}
+
+#[derive(Debug)]
+struct PrintHelper;
+
+impl PrintHelper {
+    const NAME: &'static str = "print";
+}
+
+impl HelperDef for PrintHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(helper.params = ?helper.params())
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let val = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        Ok(val.try_get_constant_value().map_or_else(
+            || ScopedJson::Derived(val.value().clone()),
+            ScopedJson::Constant,
+        ))
+    }
+}
+
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("add", Box::new(OpsHelper::Add));
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
@@ -808,6 +920,9 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
     reg.register_helper(TrimHelper::NAME, Box::new(TrimHelper));
     reg.register_helper(CharWidthHelper::NAME, Box::new(CharWidthHelper));
+    reg.register_helper(SplitIntoCharsHelper::NAME, Box::new(SplitIntoCharsHelper));
+    reg.register_helper(PrintHelper::NAME, Box::new(PrintHelper));
+    reg.register_helper(ConcatHelper::NAME, Box::new(ConcatHelper));
 }
 
 #[cfg(test)]

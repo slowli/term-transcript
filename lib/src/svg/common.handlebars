@@ -25,39 +25,6 @@
   {{/scope}}
 {{/inline~}}
 
-{{!
-  Computes scroll animation parameters.
-  Expected hash inputs: `content_height`, `const`, `scroll`, `width`
-}}
-{{~#*inline "compute_scroll_animation"}}
-  {{#if (gte scroll.max_height content_height)}}
-  {{! No need for scroll animation }}
-    null
-  {{else}}
-    {{#scope
-      steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
-      y_step=0
-      view_box=""
-      scrollbar_y=""
-      sep=""
-    }}
-      {{y_step set=(div (sub scroll.max_height const.SCROLLBAR_HEIGHT) (steps))}}
-      {{#each (range 0 (add (steps) 1))}}
-        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{min (mul ../scroll.pixels_per_scroll @index) (sub ../content_height ../scroll.max_height)}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}0 {{mul (y_step) @index round="nearest"}}"{{/scrollbar_y}}
-      {{/each}}
-
-      {
-        "duration": {{mul scroll.interval (steps)}},
-        "view_box": "{{view_box}}",
-        "scrollbar_x": {{sub width const.SCROLLBAR_RIGHT_OFFSET}},
-        "scrollbar_y": "{{scrollbar_y}}"
-      }
-    {{/scope}}
-  {{/if}}
-{{/inline~}}
-
 {{! Common styles header, e.g. `@font-face`s }}
 {{~#*inline "common_styles_header"}}
 {{~#if additional_styles}}
@@ -83,8 +50,8 @@
 
 {{! Common font styling }}
 {{~#*inline "common_font_styles"}}
-.bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
-.italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
+.bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round (add sp (letter_spacing_ems)) digits=4}}em;{{else}}{{/with}} }
+.italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round (add sp (letter_spacing_ems)) digits=4}}em;{{else}}{{/with}} }
 .underline { text-decoration: underline; }
 {{/inline~}}
 
@@ -101,13 +68,59 @@
 
 {{/inline~}}
 
-{{! Scrollbar + its animation }}
+{{!
+  Computes scroll animation parameters.
+  Expected hash inputs: `content_height`, `const`, `scroll`, `width`
+}}
+{{~#*inline "compute_scroll_animation"}}
+  {{#if (gte scroll.max_height content_height)}}
+  {{! No need for scroll animation }}
+    null
+  {{else}}
+    {{#scope
+      steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
+      scroll_height=(sub content_height scroll.max_height)
+      pos=0
+      view_box=""
+      scrollbar_y=""
+      sep=""
+    }}
+      {{#each (range 0 (add (steps) 1))}}
+        {{~pos set=(min (scroll_height) (mul ../scroll.pixels_per_scroll @index))~}}
+        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
+        {{#view_box}}"{{view_box}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
+        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}{{round
+          (add
+            (mul (div (pos) (scroll_height)) (sub ../scroll.max_height ../const.SCROLLBAR_HEIGHT))
+            ../const.WINDOW_PADDING
+          )
+          digits=1
+        }}"{{/scrollbar_y}}
+      {{/each}}
+
+      {
+        "duration": {{mul scroll.interval (steps)}},
+        "view_box": "{{view_box}}",
+        "scrollbar_x": {{sub width (add const.SCROLLBAR_RIGHT_OFFSET 5)}}, {{! 5 is scrollbar width }}
+        "scrollbar_y": "{{scrollbar_y}}"
+      }
+    {{/scope}}
+  {{/if}}
+{{/inline~}}
+
+{{! Scrollbar }}
 {{~#*inline "scrollbar"}}
-{{#with (scroll_animation)}}
-<rect class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="40">
-  <animateTransform attributeName="transform" attributeType="XML" type="translate" values="{{scrollbar_y}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-</rect>
-{{/with}}
+  {{#with (scroll_animation)}}
+<rect id="scrollbar" class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{../const.SCROLLBAR_HEIGHT}}" />
+  {{/with}}
+{{/inline~}}
+
+{{! Scrolling animations }}
+{{~#*inline "scroll_animation"}}
+  {{#with (scroll_animation)}}
+<animate id="scroll" href="#scroll-container" attributeName="viewBox" values="{{view_box}}" begin="0s" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+<animate href="#scrollbar" attributeName="y" values="{{scrollbar_y}}" begin="scroll.begin" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
+  {{/with}}
 {{/inline~}}
 
 {{! Renders an HTML span }}
@@ -119,6 +132,7 @@
       {{~#if span.italic}} italic{{/if~}}
       {{~#if span.underline}} underline{{/if~}}
       {{~#if span.dimmed}} dimmed{{/if~}}
+      {{~#if (and span.dimmed (ne (typeof span.bg) "null"))}} dimmed-bg{{/if~}}
       {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
       {{~#if (eq (typeof span.bg) "number")}} bg{{span.bg}}{{/if~}}
     {{/classes~}}
@@ -131,7 +145,11 @@
     <span{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
     {{~/scope~}}
   {{~/if~}}
-  {{{span.text}}}
+  {{!
+    If dimmed, enclose text in an additional span to apply pseudo-opacity effects based on `currentColor` and/or
+    by having a semi-transparent background; see .dimmed CSS. Using `opacity` or filters doesn't work in Safari.
+  }}
+  {{#if span.dimmed}}<span>{{/if}}{{{span.text}}}{{#if span.dimmed}}</span>{{/if}}
   {{~#if (gt (len span) 1)~}}
     </span>
   {{~/if~}}

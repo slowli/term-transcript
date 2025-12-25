@@ -147,9 +147,7 @@ impl FontFace {
     }
 
     fn letter_spacing(&self, base_metrics: &FontMetrics) -> f64 {
-        let aux_advance_width = self.advance_width;
-        let aux_advance_width = f64::from(aux_advance_width);
-        (f64::from(base_metrics.advance_width) - aux_advance_width)
+        (f64::from(base_metrics.advance_width) - f64::from(self.advance_width))
             / f64::from(base_metrics.units_per_em)
     }
 

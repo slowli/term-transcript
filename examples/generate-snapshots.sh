@@ -9,7 +9,7 @@ set -e
 EXTENSION=new.svg
 
 ROOT_DIR=$(dirname "$0")
-ROOT_DIR=$(realpath -L "$ROOT_DIR/..")
+ROOT_DIR=$(realpath "$ROOT_DIR/..")
 TARGET_DIR="$ROOT_DIR/target/debug"
 
 FONT_DIR="$ROOT_DIR/examples/fonts"
@@ -19,7 +19,8 @@ FONT_FIRA="$FONT_DIR/FiraMono-Regular.ttf"
 FONT_FIRA_BOLD="$FONT_DIR/FiraMono-Bold.ttf"
 
 # Common `term-transcript` CLI args
-TT_ARGS="-T 250ms"
+TT_ARGS=${TT_ARGS:-"-T 250ms"}
+echo "Using common args: $TT_ARGS"
 
 (
   cd "$ROOT_DIR"
@@ -32,7 +33,7 @@ if [[ ! -x "$TARGET_DIR/term-transcript" ]]; then
   exit 1
 fi
 
-export PATH=$PATH:$TARGET_DIR
+export PATH=$TARGET_DIR:$PATH
 
 echo "Creating rainbow snapshot..."
 term-transcript exec $TT_ARGS --palette gjm8 rainbow \
@@ -129,7 +130,7 @@ term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
 
 echo "Creating snapshot with --line-numbers and long lines (pure SVG)"
 term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
-  --line-height=18px \
+  --line-height=18px --advance-width=7.8px \
   'rainbow --long-lines' \
   > "$ROOT_DIR/examples/numbers-long-pure.$EXTENSION"
 
@@ -165,5 +166,6 @@ term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuou
 echo "Creating snapshot with --embed-font (Fira Mono, regular + bold), --pure-svg"
 term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
   --embed-font="$FONT_FIRA:$FONT_FIRA_BOLD" \
+  --advance-width=8.6px \
   'rainbow --short' \
   > "$ROOT_DIR/examples/embedded-font-fira.$EXTENSION"

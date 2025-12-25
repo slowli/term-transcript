@@ -123,11 +123,19 @@ pub enum LineNumbers {
 /// ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TemplateOptions {
-    /// Width of the rendered terminal window in pixels. The default value is `720`.
+    /// Width of the rendered terminal window in pixels. Excludes the line numbers width if line
+    /// numbering is enabled. The default value is `720`.
     #[serde(default = "TemplateOptions::default_width")]
     pub width: usize,
-    /// Line height relative to the font size.
+    /// Line height relative to the font size. If not specified, will be taken from font metrics (if a font is embedded),
+    /// or set to 1.2 otherwise.
     pub line_height: Option<f64>,
+    /// Advance width of a font relative to the font size (i.e., in em units). If not specified, will be taken from font metrics (if a font is embedded),
+    /// or set to 8px (~0.57em) otherwise.
+    ///
+    /// For now, advance width is only applied to the pure SVG template.
+    // FIXME: extract to pure SVG options?
+    pub advance_width: Option<f64>,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     #[serde(default)]
     pub palette: Palette,
@@ -165,6 +173,7 @@ impl Default for TemplateOptions {
         Self {
             width: Self::default_width(),
             line_height: None,
+            advance_width: None,
             palette: Palette::default(),
             additional_styles: String::new(),
             font_family: Self::default_font_family(),
@@ -501,12 +510,11 @@ impl Template {
         ("WINDOW_PADDING", 10),
         ("FONT_SIZE", 14),
         ("WINDOW_FRAME_HEIGHT", 22),
+        ("LN_WIDTH", 22),
+        ("LN_PADDING", 7),
         ("SCROLLBAR_RIGHT_OFFSET", 7),
         ("SCROLLBAR_HEIGHT", 40),
     ];
-
-    const PURE_SVG_CONSTANTS: &'static [(&'static str, u32)] =
-        &[("LN_WIDTH", 24), ("LN_PADDING", 8)];
 
     /// Initializes the default template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
@@ -525,11 +533,7 @@ impl Template {
         let template =
             HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");
         Self {
-            constants: Self::STD_CONSTANTS
-                .iter()
-                .chain(Self::PURE_SVG_CONSTANTS)
-                .copied()
-                .collect(),
+            constants: Self::STD_CONSTANTS.iter().copied().collect(),
             ..Self::custom(template, options)
         }
     }

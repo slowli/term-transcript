@@ -422,7 +422,7 @@ impl ParserState {
             Self::EncounteredSvgTag => {
                 if let Event::Start(tag) = event {
                     if tag.name().as_ref() == b"div" {
-                        Self::verify_container_attrs(tag.attributes())?;
+                        Self::verify_viewport_attrs(tag.attributes())?;
                         self.set_state(Self::EncounteredContainer);
                     } else if tag.name().as_ref() == b"g"
                         && Self::is_svg_container(tag.attributes())?
@@ -504,7 +504,7 @@ impl ParserState {
         feature = "tracing",
         tracing::instrument(level = "debug", skip_all, err)
     )]
-    fn verify_container_attrs(attributes: Attributes<'_>) -> Result<(), ParseError> {
+    fn verify_viewport_attrs(attributes: Attributes<'_>) -> Result<(), ParseError> {
         const HTML_NS: &[u8] = b"http://www.w3.org/1999/xhtml";
 
         let mut has_ns_attribute = false;
@@ -520,7 +520,9 @@ impl ParserState {
                     has_ns_attribute = true;
                 }
                 b"class" => {
-                    if attr.value.as_ref() != b"container" {
+                    // Older versions had `div.container` as the top-level HTML element; now, it's wrapped
+                    // in `div.viewport`.
+                    if ![b"viewport" as &[u8], b"container"].contains(&attr.value.as_ref()) {
                         return Err(ParseError::InvalidContainer);
                     }
                     has_class_attribute = true;

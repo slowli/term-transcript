@@ -54,12 +54,12 @@ impl From<LineNumbers> for svg::LineNumbers {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum LineHeight {
+enum CssLength {
     Ratio(f64),
     Pixels(f64),
 }
 
-impl LineHeight {
+impl CssLength {
     fn as_ratio(self) -> f64 {
         const FONT_SIZE: f64 = 14.0;
 
@@ -70,7 +70,7 @@ impl LineHeight {
     }
 }
 
-impl FromStr for LineHeight {
+impl FromStr for CssLength {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -92,7 +92,7 @@ pub(crate) struct TemplateArgs {
         long,
         conflicts_with_all = [
             "palette", "line_numbers", "window_frame", "additional_styles", "font_family", "width",
-            "scroll", "hard_wrap", "no_wrap", "line_height",
+            "scroll", "hard_wrap", "no_wrap", "line_height", "advance_width",
         ]
     )]
     config_path: Option<PathBuf>,
@@ -125,8 +125,14 @@ pub(crate) struct TemplateArgs {
     embed_font: Vec<PathBuf>,
     /// Line height to use relative to the font size. If not specified, the value will be obtained
     /// from the font metrics (if a font is embedded), or set to 1.2 otherwise.
-    #[arg(long, value_name = "RATIO")]
-    line_height: Option<LineHeight>,
+    /// Can be specified either as a fraction like 1.2, or as a value in pixels like '18px'.
+    #[arg(long, value_name = "CSS_LEN")]
+    line_height: Option<CssLength>,
+    /// Advance width to use relative to the font size. If not specified, the value will be obtained
+    /// from the font metrics (if a font is embedded), or set to 8px (~0.57em) otherwise.
+    /// Can be specified either as a fraction like 0.6, or as a value in pixels like '8.5px'.
+    #[arg(long, value_name = "CSS_LEN", requires = "pure_svg")]
+    advance_width: Option<CssLength>,
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
     #[arg(long, default_value = "720")]
@@ -171,7 +177,8 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
     fn try_from(value: TemplateArgs) -> Result<Self, Self::Error> {
         let mut this = Self {
             width: value.width,
-            line_height: value.line_height.map(LineHeight::as_ratio),
+            line_height: value.line_height.map(CssLength::as_ratio),
+            advance_width: value.advance_width.map(CssLength::as_ratio),
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,

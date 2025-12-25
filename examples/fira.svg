@@ -26,16 +26,14 @@
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
         .underline { text-decoration: underline; }
-        .dimmed { opacity: 0.7; }
-        .hard-br {
-          position: relative;
-          margin-left: 8px;
-        }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #1c1c1c 30%); }
+        .dimmed-bg > span { background: rgb(from #1c1c1c r g b / 30%); }
+        .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
-          opacity: 0.6;
+          color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
         }
-        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line { display: block; }
         .line > span { display: inline-block; }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
@@ -59,7 +57,7 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="312.4" viewBox="0 0 720 312.4">
+      <svg x="0" y="10" width="720" height="312.4" viewBox="0 0 720 312.4" overflow="hidden">
         <foreignObject width="720" height="312.4">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>

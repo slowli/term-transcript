@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 362" width="720" height="362" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 749 362" width="749" height="362" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
@@ -25,10 +25,10 @@
         .output > pre { flex-grow: 1; }
         pre.line-numbers {
           flex-grow: 0;
-          width: 1.5rem;
+          width: 22px;
           text-align: right;
-          padding-right: .5rem;
-          opacity: 0.35;
+          padding-right: 7px;
+          color: color-mix(in hsl, currentColor 35%, #0c0c0c 65%);
           user-select: none;
         }
 
@@ -36,16 +36,14 @@
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
         .underline { text-decoration: underline; }
-        .dimmed { opacity: 0.7; }
-        .hard-br {
-          position: relative;
-          margin-left: 8px;
-        }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #0c0c0c 30%); }
+        .dimmed-bg > span { background: rgb(from #0c0c0c r g b / 30%); }
+        .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
-          opacity: 0.6;
+          color: color-mix(in hsl, currentColor 60%, #0c0c0c 40%);
         }
-        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line { display: block; }
         .line > span { display: inline-block; }
         .fg0 { color: #0c0c0c; } .bg0 { background: #0c0c0c; }
         .fg1 { color: #c50f1f; } .bg1 { background: #c50f1f; }
@@ -65,9 +63,8 @@
         .fg15 { color: #f2f2f2; } .bg15 { background: #f2f2f2; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #0c0c0c;"/>
-      <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
-        <animate attributeName="viewBox" values="0 0 720 342;0 52 720 342;0 104 720 342;0 156 720 342;0 208 720 342;0 260 720 342;0 272 720 342" dur="24s" repeatCount="indefinite" calcMode="discrete" />
-        <foreignObject width="720" height="614">
+      <svg id="scroll-container" x="0" y="10" width="749" height="342" viewBox="0 0 749 342" overflow="hidden">
+        <foreignObject width="749" height="614">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
             <div class="output"><pre class="line-numbers">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17</pre><pre><span class="line">Base colors:
@@ -89,10 +86,10 @@
 </span><span class="line"><span style="color: #ffbbdd;">pink</span> <span style="color: #ffaa44;">orange</span> <span style="color: #9f4010;">brown</span> <span style="color: #10889f;">teal</span> </span></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow --short</pre></div>
             <div class="output"><pre class="line-numbers">18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28</pre><pre><span class="line">Base styles:
-</span><span class="line">     None: Regular <span class="bold">Bold</span> <span class="italic">Italic</span> <span class="bold italic">Bold+Italic</span>
-</span><span class="line">   Dimmed: <span class="dimmed">Regular</span> <span class="bold dimmed">Bold</span> <span class="italic dimmed">Italic</span> <span class="bold italic dimmed">Bold+Italic</span>
-</span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline">Bold</span> <span class="italic underline">Italic</span> <span class="bold italic underline">Bold+Italic</span>
-</span><span class="line">  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg0 bg7">Bold</span> <span class="italic fg0 bg7">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
+</span><span class="line">     None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic">Bold+Italic</span>
+</span><span class="line">   Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed"><span>Bold+Italic</span></span>
+</span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline">Bold+Italic</span>
+</span><span class="line">  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
 </span><span class="line">Base colors:
 </span><span class="line"><span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
 </span><span class="line"><span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 
@@ -102,9 +99,9 @@
           </div>
         </foreignObject>
       </svg>
-      <rect class="scrollbar" x="713" y="10" width="5" height="40">
-        <animateTransform attributeName="transform" attributeType="XML" type="translate" values="0 0;0 50.333333333333336;0 100.66666666666667;0 151;0 201.33333333333334;0 251.66666666666669;0 302" dur="24s" repeatCount="indefinite" calcMode="discrete" />
-      </rect>
+      <rect id="scrollbar" class="scrollbar" x="737" y="10" width="5" height="40" />
+      <animate id="scroll" href="#scroll-container" attributeName="viewBox" values="0 0 749 342;0 52 749 342;0 104 749 342;0 156 749 342;0 208 749 342;0 260 749 342;0 272 749 342" begin="0s" dur="24s" repeatCount="indefinite" calcMode="discrete" />
+      <animate href="#scrollbar" attributeName="y" values="10;67.7;125.5;183.2;240.9;298.7;312" begin="scroll.begin" dur="24s" repeatCount="indefinite" calcMode="discrete" />
     </g>
     <text x="10" y="19.6" style="font: 14px monospace; fill: #c50f1f;">
       HTML embedding not supported.

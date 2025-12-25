@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 252" width="720" height="252" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 749 252" width="749" height="252" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
@@ -31,26 +31,24 @@
         .output > pre { flex-grow: 1; }
         pre.line-numbers {
           flex-grow: 0;
-          width: 1.5rem;
+          width: 22px;
           text-align: right;
-          padding-right: .5rem;
-          opacity: 0.35;
+          padding-right: 7px;
+          color: color-mix(in hsl, currentColor 35%, #1c1c1c 65%);
           user-select: none;
         }
 
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
         .underline { text-decoration: underline; }
-        .dimmed { opacity: 0.7; }
-        .hard-br {
-          position: relative;
-          margin-left: 8px;
-        }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #1c1c1c 30%); }
+        .dimmed-bg > span { background: rgb(from #1c1c1c r g b / 30%); }
+        .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
-          opacity: 0.6;
+          color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
         }
-        .line { display: block; clip-path: inset(0 0 0 0); }
+        .line { display: block; }
         .line > span { display: inline-block; }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
@@ -70,15 +68,15 @@
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
-      <svg x="0" y="10" width="720" height="232" viewBox="0 0 720 232">
-        <foreignObject width="720" height="232">
+      <svg x="0" y="10" width="749" height="232" viewBox="0 0 749 232" overflow="hidden">
+        <foreignObject width="749" height="232">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --short</pre></div>
             <div class="output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12</pre><pre><span class="line">Base styles:
-</span><span class="line">     None: Regular <span class="bold">Bold</span> <span class="italic">Italic</span> <span class="bold italic">Bold+Italic</span>
-</span><span class="line">   Dimmed: <span class="dimmed">Regular</span> <span class="bold dimmed">Bold</span> <span class="italic dimmed">Italic</span> <span class="bold italic dimmed">Bold+Italic</span>
-</span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline">Bold</span> <span class="italic underline">Italic</span> <span class="bold italic underline">Bold+Italic</span>
-</span><span class="line">  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg0 bg7">Bold</span> <span class="italic fg0 bg7">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
+</span><span class="line">     None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic">Bold+Italic</span>
+</span><span class="line">   Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed"><span>Bold+Italic</span></span>
+</span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline">Bold+Italic</span>
+</span><span class="line">  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
 </span><span class="line">Base colors:
 </span><span class="line"><span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
 </span><span class="line"><span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 

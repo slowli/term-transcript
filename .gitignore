@@ -3,3 +3,7 @@ target
 
 # IDE
 .idea
+
+# New snapshots
+*.new.svg
+*.new.html

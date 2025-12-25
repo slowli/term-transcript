@@ -13,6 +13,7 @@
       {{~>content}}
       {{~#if (scroll_animation)}}
       {{>scrollbar}}
+      {{>scroll_animation}}
       {{/if}}
     </g>
     {{>unsupported_error}}
@@ -66,10 +67,10 @@
   .output > pre { flex-grow: 1; }
   pre.line-numbers {
     flex-grow: 0;
-    width: 1.5rem;
+    width: {{const.LN_WIDTH}}px;
     text-align: right;
-    padding-right: .5rem;
-    opacity: 0.35;
+    padding-right: {{const.LN_PADDING}}px;
+    color: color-mix(in hsl, currentColor 35%, {{ palette.colors.black }} 65%);
     user-select: none;
   }
   {{/if}}
@@ -87,20 +88,22 @@
   {{~/if}}
 
   {{>common_font_styles}}
-  .dimmed { opacity: 0.7; }
+  {{!
+    The dimmed-related complexity is motivated by Safari quirks; it doesn't render HTML-in-SVG with any filters
+    (incl. opacity) correctly.
+  }}
+  .dimmed > span { color: color-mix(in hsl, currentColor 70%, {{ palette.colors.black }} 30%); }
+  .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / 30%); }
   {{~#if wrap}}
 
-  .hard-br {
-    position: relative;
-    margin-left: 8px;
-  }
+  .hard-br { margin-left: 8px; }
   .hard-br:before {
     content: '»';
-    opacity: 0.6;
+    color: color-mix(in hsl, currentColor 60%, {{ palette.colors.black }} 40%);
   }
   {{~/if}}
 
-  .line { display: block; clip-path: inset(0 0 0 0); }
+  .line { display: block; }
   .line > span { display: inline-block; }
   .fg0 { color: {{ palette.colors.black }}; } .bg0 { background: {{ palette.colors.black }}; }
   .fg1 { color: {{ palette.colors.red }}; } .bg1 { background: {{ palette.colors.red }}; }
@@ -122,14 +125,7 @@
 {{/inline~}}
 
 {{~#*inline "content"}}
-      <svg x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
-        {{~#if (scroll_animation)}}
-        {{~#with (scroll_animation)}}
-
-        <animate attributeName="viewBox" values="{{view_box}}" dur="{{duration}}s" repeatCount="indefinite" calcMode="discrete" />
-        {{~/with}}
-        {{~/if}}
-
+      <svg{{#if (scroll_animation)}} id="scroll-container"{{/if}} x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}" overflow="hidden">
         <foreignObject width="{{width}}" height="{{content_height}}">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             {{~#each interactions}}
@@ -192,7 +188,9 @@
   scroll_animation=null
   screen_height=0
   height=0
+  width=width
   line_height=line_height
+  letter_spacing_ems=0
   line_number=1
 }}
   {{~>set_line_height ~}}
@@ -200,11 +198,15 @@
     (eval "compute_content_height" const=const line_height=(line_height) interactions=interactions)
     digits=1
   )~}}
+  {{~#if line_numbers~}}
+    {{! Adjust width to take line numbers into account }}
+    {{~width set=(add (width) const.LN_WIDTH const.LN_PADDING)~}}
+  {{~/if~}}
   {{~#if scroll~}}
     {{scroll_animation set=(eval "compute_scroll_animation"
       const=const
       scroll=scroll
-      width=width
+      width=(width)
       content_height=(content_height)
     )}}
   {{~/if~}}
