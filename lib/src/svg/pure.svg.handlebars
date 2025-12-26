@@ -40,13 +40,8 @@
   .container {
     font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: {{round (line_height) digits=2}}px;
-    {{#if (letter_spacing_ems)}}
-    letter-spacing: {{round (letter_spacing_ems) digits=4}}em;
-    {{/if}}
   }
-  .input,.output {
-    white-space: pre;
-  }
+  text { white-space: pre; }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
   .input-hidden { display: none; }
   .output-bg { stroke-width: 0.5; }
@@ -134,29 +129,19 @@
         {{~#text_fg append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <text xml:space="preserve" {{#if (not ../input.hidden)}}x="
-                {{~#if (adjust_text_length)~}}
-                  {{~#scope full_line=this internal_char_pos=0~}}
-                  {{~#if @first~}}
-                    {{~full_line set=(concat ../input.prompt " " this)~}}
-                  {{~/if~}}
-                  {{~#each (split_into_chars (full_line)) as |ch|~}}
-                    {{~round (add (input_x_pos) (mul (internal_char_pos) (advance_width))) digits=2~}}
-                    {{~#if (not @last)~}}
-                      {{~print " "~}}
-                    {{~/if~}}
-                    {{~internal_char_pos set=(add (internal_char_pos) (char_width ch))~}}
-                  {{~/each~}}
-                  {{~/scope~}}
-                {{~else~}}
-                  {{input_x_pos}}
-                {{~/if}}" y="{{
-                  round (add (y_pos) (text_y_offset)) digits=2
-                }}"
-              {{~/if}}>
-              {{~#if @first}}<tspan class="prompt">{{../input.prompt}}</tspan> {{/if~}}
-              {{this}}
-</text>
+            <g transform="translate({{input_x_pos}} {{
+              round (add (y_pos) (text_y_offset)) digits=2
+            }})">{{#scope text_x_offset=0 sp="" ~}}
+              {{~#if @first~}}
+                {{~text_x_offset set=(round (mul (char_width ../input.prompt) (advance_width)) digits=2)~}}
+                {{~sp set=" "~}}
+                <text class="prompt"{{#if (adjust_text_length)}} textLength="{{text_x_offset}}"{{/if}}>{{../input.prompt}}</text>
+              {{~/if~}}
+              <text x="{{text_x_offset}}"{{#if (adjust_text_length)}} textLength="{{
+                round (mul (add (char_width this) (char_width (sp))) (advance_width)) digits=2
+              }}"{{/if}}>{{sp}}{{this}}</text>
+            {{~/scope}}<text>
+</text></g>
             {{~#if (not ../input.hidden)~}}
               {{~y_pos set=(add (y_pos) (line_height))}}
             {{~/if~}}
@@ -172,7 +157,7 @@
           <g class="output">
         {{~/text_fg~}}
         {{~#each output as |line|~}}
-          {{~#scope char_pos=0 line_fg="" line_bg="" svg_suffix="" glyph_x_pos="" ~}}
+          {{~#scope char_pos=0 line_fg="" line_bg="" ~}}
           {{~#each line.spans as |span|~}}
             {{~#line_bg append=true ~}}
               {{~#if (ne (typeof span.bg) "null")~}}
@@ -188,19 +173,17 @@
               {{~/if~}}
             {{~/line_bg~}}
             {{! Render span foreground }}
-            {{~#line_fg append=true ~}}{{{eval ">svg_tspan" span=span}}}{{/line_fg~}}
-            {{! Render x positions of all chars in the span }}
-            {{~#if (adjust_text_length)~}}
-              {{~#scope internal_char_pos=(char_pos)~}}
-              {{~#glyph_x_pos append=true ~}}
-                {{~#each (split_into_chars span.text) as |ch|~}}
-                  {{~round (add (x_pos) (mul (internal_char_pos) (advance_width))) digits=2~}}
-                  {{~print " "~}}
-                  {{~internal_char_pos set=(add (internal_char_pos) (char_width ch))~}}
-                {{~/each~}}
-              {{~/glyph_x_pos~}}
-              {{~/scope~}}
-            {{~/if~}}
+            {{~#line_fg append=true ~}}
+              <text x="{{
+                round (mul (char_pos) (advance_width)) digits=2
+              }}"{{#if (and (adjust_text_length) (gt (char_width span.text) 1))}} textLength="{{
+                round (mul (char_width span.text) (advance_width)) digits=2
+              }}"{{/if}}{{{eval ">svg_tspan_attrs" span=span}}}>{{span.text}}</text>
+              {{~#if @last~}}
+              <text>
+</text>
+              {{~/if~}}
+            {{~/line_fg~}}
             {{! Update char position on the line }}
             {{~char_pos set=(add (char_pos) (char_width span.text))~}}
           {{~else~}}{{! The line may be empty }}
@@ -221,14 +204,9 @@
           {{! Append collected `line_fg` to the overall text }}
           {{~#text_fg append=true ~}}
             {{~#if (line_fg)~}}
-              {{!
-                The `y` coordinate in `clip-path` is specified in ems, because specifying it in pixels on Safari / WebKit
-                leads to incorrect clip boxes during scaling.
-              }}
-              <text xml:space="preserve" x="{{#if (glyph_x_pos)}}{{trim (glyph_x_pos)}}{{else}}{{x_pos}}{{/if}}" y="{{
+              <g transform="translate({{x_pos}} {{
                 round (add (y_pos) (text_y_offset)) digits=2
-              }}" clip-path="view-box xywh(0 {{round (div (y_pos) ../../const.FONT_SIZE) digits=1}}em 100% {{line_height}}px)">{{{line_fg}}}
-</text>
+              }})" clip-path="xywh(0 0 100% {{line_height}}px)">{{{line_fg}}}</g>
             {{~/if~}}
           {{~/text_fg~}}
           {{~/scope~}}
@@ -300,7 +278,6 @@
   line_height=line_height
   advance_width=advance_width
   adjust_text_length=true
-  letter_spacing_ems=0
   text_y_offset=0
   screen_height=0
   height=0
@@ -315,13 +292,12 @@
   {{~#if embedded_font~}}
     {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
       {{~font_metrics set=metrics~}}
-      {{~adjust_text_length set=false~}} {{! The text width will be adjusted via `letter-spacing` if necessary }}
       {{~#if (eq (advance_width) null)~}}
         {{~advance_width set=metrics.advance_width~}}
+        {{~adjust_text_length set=false~}}
       {{~else~}}
         {{! Scale advance width from ems to pixels }}
         {{~advance_width set=(mul (advance_width) ../const.FONT_SIZE)~}}
-        {{~letter_spacing_ems set=(div (sub (advance_width) metrics.advance_width) ../const.FONT_SIZE)~}}
       {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
