@@ -178,7 +178,7 @@
                 round (mul (char_pos) (advance_width)) digits=2
               }}"{{#if (and (adjust_text_length) (gt (char_width span.text) 1))}} textLength="{{
                 round (mul (char_width span.text) (advance_width)) digits=2
-              }}"{{/if}}{{{eval ">svg_tspan_attrs" span=span}}}>{{span.text}}</text>
+              }}"{{/if}}{{>svg_tspan_attrs span}}>{{span.text}}</text>
               {{~#if @last~}}
               <text>
 </text>

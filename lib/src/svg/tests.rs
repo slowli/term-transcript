@@ -806,11 +806,9 @@ fn rendering_svg_tspan() {
     let mut handlebars = Handlebars::new();
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style: Style::default(),
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style: Style::default(),
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
@@ -824,11 +822,9 @@ fn rendering_svg_tspan() {
         bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
@@ -838,11 +834,9 @@ fn rendering_svg_tspan() {
     style.bg = Some(IndexOrRgb::Index(0));
     style.underline = false;
     style.dimmed = true;
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
@@ -852,11 +846,9 @@ fn rendering_svg_tspan() {
     style.fg = Some(IndexOrRgb::Rgb("#c0ffee".parse().unwrap()));
     style.bg = None;
     style.dimmed = false;
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)

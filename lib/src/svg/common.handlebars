@@ -158,19 +158,19 @@
 {{! Renders an SVG foreground <tspan> styling attributes (class and/or style) }}
 {{~#*inline "svg_tspan_attrs"}}
   {{~#scope classes="" styles=""}}
-  {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
+  {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
       {{~#classes append=true}}
-        {{~#if span.bold}} bold{{/if~}}
-        {{~#if span.italic}} italic{{/if~}}
-        {{~#if span.underline}} underline{{/if~}}
-        {{~#if span.dimmed}} dimmed{{/if~}}
-        {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
+        {{~#if bold}} bold{{/if~}}
+        {{~#if italic}} italic{{/if~}}
+        {{~#if underline}} underline{{/if~}}
+        {{~#if dimmed}} dimmed{{/if~}}
+        {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
         {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
-        {{~#if (ne (typeof span.bg) "null")}} bg{{span.bg}}{{/if~}}
+        {{~#if (ne (typeof bg) "null")}} bg{{bg}}{{/if~}}
       {{/classes~}}
       {{~classes set=(trim (classes))~}}
       {{~#styles append=true}}
-        {{~#if (eq (typeof span.fg) "string")}}fill: {{span.fg}};{{/if~}}
+        {{~#if (eq (typeof fg) "string")}}fill: {{fg}};{{/if~}}
       {{/styles~}}
   {{~/if~}}
   {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
