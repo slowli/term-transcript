@@ -199,7 +199,7 @@ fn highlighting_diff_on_text() {
                     fg: Some(IndexOrRgb::Index(1)),
                     ..Style::default()
                 },
-                text: "&gt; ".into(),
+                text: "> ".into(),
             },
             "He".into(),
             StyledSpan {
@@ -220,7 +220,7 @@ fn highlighting_diff_on_text() {
                     fg: Some(IndexOrRgb::Index(1)),
                     ..Style::default()
                 },
-                text: "&gt; ".into(),
+                text: "> ".into(),
             },
             StyledSpan {
                 style: Style {
@@ -307,7 +307,7 @@ fn spans_on_multiple_lines() {
                     fg: Some(IndexOrRgb::Index(1)),
                     ..Style::default()
                 },
-                text: "&gt; ".into(),
+                text: "> ".into(),
             },
             StyledSpan {
                 style: Style {
@@ -328,7 +328,7 @@ fn spans_on_multiple_lines() {
                     fg: Some(IndexOrRgb::Index(1)),
                     ..Style::default()
                 },
-                text: "&gt; ".into(),
+                text: "> ".into(),
             },
             "  ".into(),
             StyledSpan {
@@ -398,7 +398,7 @@ fn spans_with_multiple_sequential_line_breaks() {
                     fg: Some(IndexOrRgb::Index(1)),
                     ..Style::default()
                 },
-                text: "&gt; ".into(),
+                text: "> ".into(),
             },
             "wo".into(),
             StyledSpan {
@@ -419,7 +419,7 @@ fn spans_with_multiple_sequential_line_breaks() {
                     fg: Some(IndexOrRgb::Index(1)),
                     ..Style::default()
                 },
-                text: "&gt; ".into(),
+                text: "> ".into(),
             },
             "  ".into(),
             StyledSpan {

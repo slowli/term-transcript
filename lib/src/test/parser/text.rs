@@ -121,7 +121,7 @@ impl TextReadingState {
                 }
 
                 let tag_name = tag.name();
-                let is_tspan = tag_name.as_ref() == b"tspan";
+                // FIXME: remove bg line logic (no longer necessary)
                 if tag_name.as_ref() == b"text" && Self::is_bg_line(tag.attributes())? {
                     self.bg_line_level = Some(self.open_tags - 1);
                     return Ok(None);
@@ -134,7 +134,7 @@ impl TextReadingState {
                     return Ok(None);
                 }
 
-                if tag_name.as_ref() == b"span" || is_tspan {
+                if Self::is_text_span(tag_name.as_ref()) {
                     let color_spec = Self::parse_color_from_span(&tag)?;
                     if !color_spec.is_none() {
                         self.color_spans_writer
@@ -156,9 +156,7 @@ impl TextReadingState {
                     return Ok(None);
                 }
 
-                let tag_name = tag.name();
-                let is_tspan = tag_name.as_ref() == b"tspan";
-                if tag.name().as_ref() == b"span" || is_tspan {
+                if Self::is_text_span(tag.name().as_ref()) {
                     // FIXME: check embedded color specs (should never be produced).
                     self.color_spans_writer
                         .reset()
@@ -179,6 +177,10 @@ impl TextReadingState {
             _ => { /* Do nothing */ }
         }
         Ok(None)
+    }
+
+    fn is_text_span(tag: &[u8]) -> bool {
+        matches!(tag, b"span" | b"tspan" | b"text")
     }
 
     fn push_text(&mut self, text: &str) {
