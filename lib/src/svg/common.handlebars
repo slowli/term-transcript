@@ -125,21 +125,21 @@
 
 {{! Renders an HTML span }}
 {{~#*inline "html_span"}}
-  {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
+  {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
     {{~#scope classes="" styles=""}}
     {{~#classes append=true}}
-      {{~#if span.bold}} bold{{/if~}}
-      {{~#if span.italic}} italic{{/if~}}
-      {{~#if span.underline}} underline{{/if~}}
-      {{~#if span.dimmed}} dimmed{{/if~}}
-      {{~#if (and span.dimmed (ne (typeof span.bg) "null"))}} dimmed-bg{{/if~}}
-      {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
-      {{~#if (eq (typeof span.bg) "number")}} bg{{span.bg}}{{/if~}}
+      {{~#if bold}} bold{{/if~}}
+      {{~#if italic}} italic{{/if~}}
+      {{~#if underline}} underline{{/if~}}
+      {{~#if dimmed}} dimmed{{/if~}}
+      {{~#if (and dimmed (ne (typeof bg) "null"))}} dimmed-bg{{/if~}}
+      {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
+      {{~#if (eq (typeof bg) "number")}} bg{{bg}}{{/if~}}
     {{/classes~}}
     {{~classes set=(trim (classes))~}}
     {{~#styles append=true}}
-      {{~#if (eq (typeof span.fg) "string")}} color: {{span.fg}};{{/if~}}
-      {{~#if (eq (typeof span.bg) "string")}} background: {{span.bg}};{{/if~}}
+      {{~#if (eq (typeof fg) "string")}} color: {{fg}};{{/if~}}
+      {{~#if (eq (typeof bg) "string")}} background: {{bg}};{{/if~}}
     {{/styles~}}
     {{~styles set=(trim (styles))~}}
     <span{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
@@ -149,8 +149,8 @@
     If dimmed, enclose text in an additional span to apply pseudo-opacity effects based on `currentColor` and/or
     by having a semi-transparent background; see .dimmed CSS. Using `opacity` or filters doesn't work in Safari.
   }}
-  {{#if span.dimmed}}<span>{{/if}}{{{span.text}}}{{#if span.dimmed}}</span>{{/if}}
-  {{~#if (gt (len span) 1)~}}
+  {{#if dimmed}}<span>{{/if}}{{text}}{{#if dimmed}}</span>{{/if}}
+  {{~#if (gt (len this) 1)~}}
     </span>
   {{~/if~}}
 {{~/inline~}}

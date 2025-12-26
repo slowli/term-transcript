@@ -102,7 +102,7 @@
               {{~#each output as |line|~}}
                 {{~#each line.spans as |span|~}}
                   {{! Invoke the `html_span` helper used by the default template. }}
-                  {{{eval ">html_span" span=span html_suffix=""}}}
+                  {{~>html_span span~}}
                 {{~else~}}{{! The line may be empty }}
                 {{~/each}}
                 {{! Add a newline in order to make the text correctly copyable }}

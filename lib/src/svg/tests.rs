@@ -17,6 +17,10 @@ fn rendering_simple_transcript() {
         UserInput::command("test"),
         "Hello, \u{1b}[32mworld\u{1b}[0m!",
     );
+    transcript.add_interaction(
+        UserInput::command("test --arg && true"),
+        "Hello, \u{1b}[31m\u{1b}[42m<world>\u{1b}[0m!",
+    );
 
     let mut buffer = vec![];
     Template::new(TemplateOptions::default())
@@ -36,6 +40,11 @@ fn rendering_simple_transcript() {
 
     assert!(!buffer.contains("input-failure"));
     assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
+
+    let second_input_span = "test --arg &amp;&amp; true";
+    assert!(buffer.contains(second_input_span), "{buffer}");
+    let second_output_span = r#"<span class="fg1 bg2">&lt;world&gt;</span>"#;
+    assert!(buffer.contains(second_output_span), "{buffer}");
 }
 
 #[test]
@@ -46,8 +55,8 @@ fn rendering_simple_transcript_to_pure_svg() {
         "Hello, \u{1b}[32mworld\u{1b}[0m!",
     );
     transcript.add_interaction(
-        UserInput::command("test --arg"),
-        "Hello, \u{1b}[31m\u{1b}[42mworld\u{1b}[0m!",
+        UserInput::command("test --arg && true"),
+        "Hello, \u{1b}[31m\u{1b}[42m<world>\u{1b}[0m!",
     );
 
     let mut buffer = vec![];
@@ -64,6 +73,9 @@ fn rendering_simple_transcript_to_pure_svg() {
     assert!(buffer.contains(top_svg), "{buffer}");
     let first_input_text = r#"<g class="input"><g transform="translate(10 15.5)">"#;
     assert!(buffer.contains(first_input_text), "{buffer}");
+    let second_input_span = r#"<text x="8" textLength="152"> test --arg &amp;&amp; true</text"#;
+    assert!(buffer.contains(second_input_span), "{buffer}");
+
     let first_output_text =
         r#"<g class="output"><g transform="translate(10 41.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(first_output_text), "{buffer}");
@@ -72,6 +84,8 @@ fn rendering_simple_transcript_to_pure_svg() {
     let second_output_text =
         r#"<g class="output"><g transform="translate(10 93.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(second_output_text), "{buffer}");
+    let second_output_span = r#"<text x="56" textLength="56" class="fg1 bg2">&lt;world&gt;</text>"#;
+    assert!(buffer.contains(second_output_span), "{buffer}");
 }
 
 #[test]
@@ -746,11 +760,9 @@ fn rendering_html_span() {
     let mut handlebars = Handlebars::new();
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style: Style::default(),
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style: Style::default(),
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -764,11 +776,9 @@ fn rendering_html_span() {
         bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -780,11 +790,9 @@ fn rendering_html_span() {
 
     style.bg = None;
     style.underline = false;
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
