@@ -62,14 +62,15 @@ fn rendering_simple_transcript_to_pure_svg() {
 
     let top_svg = "<svg viewBox=\"0 0 720 118\"";
     assert!(buffer.contains(top_svg), "{buffer}");
-    let first_input_text =
-        r#"<g class="input"><text xml:space="preserve" x="10 18 26 34 42 50" y="15.5">"#;
+    let first_input_text = r#"<g class="input"><g transform="translate(10 15.5)">"#;
     assert!(buffer.contains(first_input_text), "{buffer}");
-    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98 106" y="41.5" clip-path="view-box xywh(0 2em 100% 18px)">"#;
+    let first_output_text =
+        r#"<g class="output"><g transform="translate(10 41.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(first_output_text), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98" y="67.5">"#;
+    let second_input_text = r#"<g class="input"><g transform="translate(10 67.5)">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_text = r#"<g class="output"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98 106" y="93.5" clip-path="view-box xywh(0 5.7em 100% 18px)">"#;
+    let second_output_text =
+        r#"<g class="output"><g transform="translate(10 93.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(second_output_text), "{buffer}");
 }
 
@@ -124,7 +125,8 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
     // No background for input should be displayed.
     assert!(buffer.contains(r#"<g class="input-bg"></g>"#), "{buffer}");
-    let output_span = r#"<g class="output"><text xml:space="preserve" x="10 18.05 26.1 34.15 42.2 50.25 58.3 66.35 74.4 82.45 90.5 98.55 106.6" y="13.5" clip-path="view-box xywh(0 0em 100% 18px)">"#;
+    let output_span =
+        r#"<g class="output"><g transform="translate(10 13.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(output_span), "{buffer}");
     assert!(!buffer.contains(r#"class="input""#), "{buffer}");
 }
@@ -152,10 +154,11 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     assert!(buffer.contains(top_svg), "{buffer}");
     let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22""#;
     assert!(buffer.contains(second_input_bg), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98" y="43.5">"#;
+    let second_input_text = r#"<g class="input"><g transform="translate(10 43.5)">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_bg = r#"<text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98 106" y="69.5" clip-path="view-box xywh(0 4em 100% 18px)">"#;
-    assert!(buffer.contains(second_output_bg), "{buffer}");
+    let second_output_text =
+        r#"<g class="output"><g transform="translate(10 69.5)" clip-path="xywh(0 0 100% 18px)">"#;
+    assert!(buffer.contains(second_output_text), "{buffer}");
 }
 
 #[test]
@@ -583,11 +586,13 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
         <text x=\"32\" y=\"125.5\">6</text>";
     assert!(buffer.contains(line_numbers), "{buffer}");
 
-    let first_output = r#"<g class="output"><text xml:space="preserve" x="39 47 55 63 71 79 87 95 103 111 119 127 135" y="13.5""#;
+    let first_output =
+        r#"<g class="output"><g transform="translate(39 13.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(first_output), "{buffer}");
-    let second_output = r#"<text xml:space="preserve" x="39 47 55 63 71 79" y="101.5""#;
+    let second_output = r#"<g transform="translate(39 101.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(second_output), "{buffer}");
-    let third_output = r#"<g class="output"><text xml:space="preserve" x="39 47 55 63 71 79 87 95 103 111 119 127 135" y="125.5""#;
+    let third_output =
+        r#"<g class="output"><g transform="translate(39 125.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(third_output), "{buffer}");
 }
 
@@ -800,9 +805,9 @@ fn rendering_svg_tspan() {
         },
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(rendered, "Test");
+    assert_eq!(rendered, "");
 
     let mut style = Style {
         bold: true,
@@ -818,12 +823,9 @@ fn rendering_svg_tspan() {
         },
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(
-        rendered,
-        "<tspan class=\"bold underline fg2 bg#ccffcc\">Test</tspan>"
-    );
+    assert_eq!(rendered, " class=\"bold underline fg2 bg#ccffcc\"");
 
     style.bg = Some(IndexOrRgb::Index(0));
     style.underline = false;
@@ -835,12 +837,9 @@ fn rendering_svg_tspan() {
         },
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(
-        rendered,
-        "<tspan class=\"bold dimmed fg2 bg0\">Test</tspan>"
-    );
+    assert_eq!(rendered, " class=\"bold dimmed fg2 bg0\"");
 
     style.fg = Some(IndexOrRgb::Rgb("#c0ffee".parse().unwrap()));
     style.bg = None;
@@ -852,10 +851,7 @@ fn rendering_svg_tspan() {
         },
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(
-        rendered,
-        "<tspan class=\"bold\" style=\"fill: #c0ffee;\">Test</tspan>"
-    );
+    assert_eq!(rendered, " class=\"bold\" style=\"fill: #c0ffee;\"");
 }
