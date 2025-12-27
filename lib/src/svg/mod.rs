@@ -310,37 +310,66 @@ impl TemplateOptions {
 /// the console will be scrolled vertically by [`Self::pixels_per_scroll`]
 /// with the interval of [`Self::interval`] seconds between every frame.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-// FIXME: fill in defaults during deserialization
+#[cfg_attr(test, derive(PartialEq))]
 pub struct ScrollOptions {
     /// Maximum height of the console, in pixels. The default value allows to fit 19 lines
     /// of text into the view with the default template (potentially, slightly less because
     /// of vertical margins around user inputs).
+    #[serde(default = "ScrollOptions::default_max_height")]
     pub max_height: usize,
     /// Minimum scrollbar height in pixels. The default value is 14px (1em).
+    #[serde(default = "ScrollOptions::default_min_scrollbar_height")]
     pub min_scrollbar_height: usize,
     /// Number of pixels moved each scroll. Default value is 52 (~3 lines of text with the default template).
+    #[serde(default = "ScrollOptions::default_pixels_per_scroll")]
     pub pixels_per_scroll: usize,
     /// Interval between keyframes in seconds. The default value is `4`.
-    pub interval: f32,
+    #[serde(default = "ScrollOptions::default_interval")]
+    pub interval: f64,
     /// Threshold to elide the penultimate scroll keyframe, relative to `pixels_per_scroll`.
     /// If the last scroll keyframe would scroll the view by less than this value (which can happen because
     /// the last scroll always aligns the scrolled view bottom with the viewport bottom), it will be
     /// combined with the penultimate keyframe.
     ///
     /// The threshold must be in [0, 1). 0 means never eliding the penultimate keyframe. The default value is 0.25.
+    #[serde(default = "ScrollOptions::default_elision_threshold")]
     pub elision_threshold: f64,
 }
 
 impl Default for ScrollOptions {
     fn default() -> Self {
-        const DEFAULT_LINE_HEIGHT: usize = 18; // from the default template
-        Self {
-            max_height: DEFAULT_LINE_HEIGHT * 19,
-            min_scrollbar_height: 14,
-            pixels_per_scroll: 52,
-            interval: 4.0,
-            elision_threshold: 0.25,
-        }
+        Self::DEFAULT
+    }
+}
+
+impl ScrollOptions {
+    /// Default options.
+    pub const DEFAULT: Self = Self {
+        max_height: Self::default_max_height(),
+        min_scrollbar_height: Self::default_min_scrollbar_height(),
+        pixels_per_scroll: Self::default_pixels_per_scroll(),
+        interval: Self::default_interval(),
+        elision_threshold: Self::default_elision_threshold(),
+    };
+
+    const fn default_max_height() -> usize {
+        18 * 19
+    }
+
+    const fn default_min_scrollbar_height() -> usize {
+        14
+    }
+
+    const fn default_pixels_per_scroll() -> usize {
+        52
+    }
+
+    const fn default_interval() -> f64 {
+        4.0
+    }
+
+    const fn default_elision_threshold() -> f64 {
+        0.25
     }
 }
 

@@ -11,6 +11,27 @@ use super::{
 use crate::{utils::IndexOrRgb, ExitStatus, Interaction, UserInput};
 
 #[test]
+fn parsing_scroll_options() {
+    let json = serde_json::json!({});
+    let options: ScrollOptions = serde_json::from_value(json).unwrap();
+    assert_eq!(options, ScrollOptions::DEFAULT);
+
+    let json = serde_json::json!({
+        "pixels_per_scroll": 40,
+        "elision_threshold": 0.1,
+    });
+    let options: ScrollOptions = serde_json::from_value(json).unwrap();
+    assert_eq!(
+        options,
+        ScrollOptions {
+            pixels_per_scroll: 40,
+            elision_threshold: 0.1,
+            ..ScrollOptions::DEFAULT
+        }
+    );
+}
+
+#[test]
 fn rendering_simple_transcript() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(

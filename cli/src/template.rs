@@ -1,10 +1,12 @@
 //! Templating-related command-line args.
 
 use std::{
+    fmt,
     fs::{self, File},
     io, mem,
     path::{Path, PathBuf},
     str::FromStr,
+    time::Duration,
 };
 
 use anyhow::Context;
@@ -93,6 +95,15 @@ impl FromStr for CssLength {
     }
 }
 
+impl fmt::Display for CssLength {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Pixels(val) => write!(formatter, "{val}px"),
+            Self::Ems(val) => write!(formatter, "{val}em"),
+        }
+    }
+}
+
 #[derive(Debug, Args)]
 pub(crate) struct TemplateArgs {
     /// Path to the configuration TOML file.
@@ -153,13 +164,18 @@ pub(crate) struct TemplateArgs {
     // FIXME: use CssLen?
     scroll: Option<Option<usize>>,
     /// Interval between keyframes in the scrolling animation.
-    #[arg(long, value_name = "TIME", default_value = "4s", requires = "scroll")]
+    #[arg(
+        long,
+        value_name = "TIME",
+        default_value_t = Duration::from_secs_f64(ScrollOptions::DEFAULT.interval).into(),
+        requires = "scroll"
+    )]
     scroll_interval: humantime::Duration,
     /// Length scrolled in each keyframe.
     #[arg(
         long,
         value_name = "CSS_LEN",
-        default_value = "52px",
+        default_value_t = CssLength::Pixels(ScrollOptions::DEFAULT.pixels_per_scroll as f64),
         requires = "scroll"
     )]
     scroll_len: CssLength,
@@ -172,7 +188,7 @@ pub(crate) struct TemplateArgs {
     #[arg(
         long,
         value_name = "RATIO",
-        default_value_t = 0.25,
+        default_value_t = ScrollOptions::DEFAULT.elision_threshold,
         requires = "scroll"
     )]
     scroll_elision_threshold: f64,
@@ -224,7 +240,7 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
                     if let Some(max_height) = max_height {
                         options.max_height = max_height;
                     }
-                    options.interval = value.scroll_interval.as_secs_f32();
+                    options.interval = value.scroll_interval.as_secs_f64();
 
                     let mut scroll_len = value.scroll_len.as_pixels();
                     if scroll_len.fract() != 0.0 {
