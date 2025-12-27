@@ -406,6 +406,13 @@ fn scrollbar_animation_elision() {
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
 
+        let expected_duration = if elision_threshold > 0.0 {
+            r#"dur="9s""#
+        } else {
+            r#"dur="12s""#
+        };
+        assert!(buffer.contains(expected_duration), "{buffer}");
+
         let expected_view_boxes = if elision_threshold > 0.0 {
             "0 0 720 240;0 58 720 240;0 116 720 240;0 184 720 240"
         } else {
