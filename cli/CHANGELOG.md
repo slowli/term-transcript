@@ -8,6 +8,9 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 ### Added
 
 - Support font embedding and subsetting with the help of `--embed-font`.
+- Support configuring more scroll options via `--scroll-interval` (interval between keyframes),
+  `--scroll-len` (length of a single scroll animation) and `--scroll-elision-threshold`
+  (threshold for eliding the penultimate scroll keyframe if the last scroll is small).
 
 ## 0.4.0-beta.1 - 2024-03-03
 
