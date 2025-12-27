@@ -15,14 +15,14 @@ pub(crate) struct TermOutputParser<'a, W> {
 }
 
 impl<'a, W: WriteColor> TermOutputParser<'a, W> {
-    pub fn new(writer: &'a mut W) -> Self {
+    pub(crate) fn new(writer: &'a mut W) -> Self {
         Self {
             writer,
             color_spec: ColorSpec::new(),
         }
     }
 
-    pub fn parse(&mut self, term_output: &[u8]) -> Result<(), TermError> {
+    pub(crate) fn parse(&mut self, term_output: &[u8]) -> Result<(), TermError> {
         let lines: Vec<_> = term_output.split(|&ch| ch == b'\n').collect();
         let line_count = lines.len();
 

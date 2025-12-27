@@ -36,11 +36,11 @@ impl fmt::Debug for StatusCheck {
 }
 
 impl StatusCheck {
-    pub fn command(&self) -> &str {
+    pub(crate) fn command(&self) -> &str {
         &self.command
     }
 
-    pub fn check(&self, response: &Captured) -> Option<ExitStatus> {
+    pub(crate) fn check(&self, response: &Captured) -> Option<ExitStatus> {
         (self.response_checker)(response)
     }
 }

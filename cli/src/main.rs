@@ -170,7 +170,7 @@ impl Command {
                             totals.errors += stats.errors(match_kind);
                         }
                         Err(err) => {
-                            Self::report_failure(&out, svg_path, err)?;
+                            Self::report_failure(&out, svg_path, &err)?;
                             totals.failures += 1;
                         }
                     }
@@ -225,7 +225,11 @@ impl Command {
         writeln!(out, "...")
     }
 
-    fn report_failure(out: &StandardStream, svg_path: &Path, err: anyhow::Error) -> io::Result<()> {
+    fn report_failure(
+        out: &StandardStream,
+        svg_path: &Path,
+        err: &anyhow::Error,
+    ) -> io::Result<()> {
         let mut out = out.lock();
         out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
         write!(out, "Error testing file ")?;

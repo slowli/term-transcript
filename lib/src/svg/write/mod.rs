@@ -123,7 +123,7 @@ pub(crate) struct LineWriter {
 }
 
 impl LineWriter {
-    pub fn new(max_width: Option<usize>) -> Self {
+    pub(crate) fn new(max_width: Option<usize>) -> Self {
         Self {
             lines: vec![],
             current_line: StyledLine::default(),
@@ -145,7 +145,7 @@ impl LineWriter {
         }
     }
 
-    pub fn into_lines(mut self) -> Vec<StyledLine> {
+    pub(crate) fn into_lines(mut self) -> Vec<StyledLine> {
         if self.line_splitter.current_width > 0 {
             self.lines.push(mem::take(&mut self.current_line).trimmed());
         }

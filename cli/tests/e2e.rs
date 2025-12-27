@@ -1,3 +1,5 @@
+//! End-to-end CLI tests.
+
 #![cfg(unix)]
 
 use std::{

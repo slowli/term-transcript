@@ -15,7 +15,7 @@ pub(crate) struct WriteAdapter<'a> {
 }
 
 impl<'a> WriteAdapter<'a> {
-    pub fn new(output: &'a mut dyn WriteStr) -> Self {
+    pub(crate) fn new(output: &'a mut dyn WriteStr) -> Self {
         Self { inner: output }
     }
 }

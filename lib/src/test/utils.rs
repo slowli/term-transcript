@@ -30,7 +30,7 @@ pub(super) struct IndentingWriter<W> {
 }
 
 impl<W: Write> IndentingWriter<W> {
-    pub fn new(writer: W, padding: &'static [u8]) -> Self {
+    pub(super) fn new(writer: W, padding: &'static [u8]) -> Self {
         Self {
             inner: writer,
             padding,
@@ -108,7 +108,7 @@ pub(super) enum ColorPrintlnWriter {
 }
 
 impl ColorPrintlnWriter {
-    pub fn new(color_choice: ColorChoice) -> Self {
+    pub(super) fn new(color_choice: ColorChoice) -> Self {
         let is_ansi = match color_choice {
             ColorChoice::Never => false,
             ColorChoice::Always | ColorChoice::AlwaysAnsi => true,
@@ -184,7 +184,7 @@ mod tests {
         static OUTPUT_CAPTURE: RefCell<Vec<u8>> = RefCell::default();
     }
 
-    pub fn print_to_buffer(args: fmt::Arguments<'_>) {
+    pub(super) fn print_to_buffer(args: fmt::Arguments<'_>) {
         OUTPUT_CAPTURE.with(|capture| {
             let mut lock = capture.borrow_mut();
             lock.write_fmt(args).ok();

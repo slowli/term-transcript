@@ -30,6 +30,9 @@ term-transcript = { workspace = true, features = ["font-subset"] }
 [dev-dependencies]
 tempfile.workspace = true
 
+[lints]
+workspace = true
+
 [features]
 default = []
 # Enables capturing output via pseudo-terminal (PTY).

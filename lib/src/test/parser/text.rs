@@ -50,11 +50,11 @@ impl Default for TextReadingState {
 }
 
 impl TextReadingState {
-    pub fn is_empty(&self) -> bool {
+    pub(super) fn is_empty(&self) -> bool {
         self.plaintext_buffer.is_empty()
     }
 
-    pub fn open_tags(&self) -> usize {
+    pub(super) fn open_tags(&self) -> usize {
         self.open_tags
     }
 
@@ -64,7 +64,7 @@ impl TextReadingState {
 
     // We only retain `<span>` tags in the HTML since they are the only ones containing color info.
     #[allow(clippy::too_many_lines)]
-    pub fn process(
+    pub(super) fn process(
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,

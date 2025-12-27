@@ -90,6 +90,7 @@ pub(crate) struct ShellArgs {
     /// PTY size can be specified by providing row and column count in a string like 19x80.
     #[cfg(feature = "portable-pty")]
     #[arg(long)]
+    #[allow(clippy::option_option)] // required by `clap`
     pty: Option<Option<PtySize>>,
 
     /// Shell command without args (they are supplied separately). If omitted,
@@ -103,6 +104,7 @@ pub(crate) struct ShellArgs {
 
     /// Arguments to supply to the shell command.
     #[arg(name = "args", long, short = 'a')]
+    #[allow(clippy::struct_field_names)] // matter of taste
     shell_args: Vec<OsString>,
 
     /// Timeout for I/O operations in milliseconds.
@@ -116,7 +118,7 @@ pub(crate) struct ShellArgs {
 }
 
 impl ShellArgs {
-    pub fn into_std_options(self) -> ShellOptions<Echoing<Command>> {
+    pub(crate) fn into_std_options(self) -> ShellOptions<Echoing<Command>> {
         let (options, exit_code_check) = if let Some(shell) = self.shell {
             let exit_code_check = ExitCodeCheck::detect(&shell);
             let mut command = Command::new(shell);
@@ -170,7 +172,7 @@ impl ShellArgs {
     }
 
     #[cfg(feature = "portable-pty")]
-    pub fn create_transcript(
+    pub(crate) fn create_transcript(
         self,
         inputs: impl IntoIterator<Item = UserInput>,
     ) -> io::Result<Transcript> {

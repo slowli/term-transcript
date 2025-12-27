@@ -45,6 +45,9 @@ tracing-capture.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 version-sync.workspace = true
 
+[lints]
+workspace = true
+
 [features]
 default = ["pretty_assertions", "svg", "test"]
 # Rendering terminal transcripts into SVG snapshots

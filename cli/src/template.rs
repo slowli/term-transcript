@@ -108,10 +108,11 @@ impl fmt::Display for CssLength {
 }
 
 #[derive(Debug, Args)]
+#[allow(clippy::struct_excessive_bools)] // required by `clap`
 pub(crate) struct TemplateArgs {
     /// Path to the configuration TOML file.
     ///
-    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for the configuration format.
+    /// See <https://slowli.github.io/term-transcript/term_transcript/svg/> for the configuration format.
     #[arg(
         long,
         conflicts_with_all = [
@@ -164,7 +165,7 @@ pub(crate) struct TemplateArgs {
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
     /// If not specified, the default height is sufficient to fit 19 lines with the default template.
     #[arg(long, value_name = "HEIGHT")]
-    // FIXME: use CssLen?
+    #[allow(clippy::option_option)] // required by `clap`
     scroll: Option<Option<NonZeroUsize>>,
     /// Interval between keyframes in the scrolling animation.
     #[arg(
@@ -217,7 +218,7 @@ pub(crate) struct TemplateArgs {
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
     ///
-    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for docs on templating.
+    /// See <https://slowli.github.io/term-transcript/term_transcript/svg/> for docs on templating.
     #[arg(long = "tpl")]
     template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.
@@ -251,14 +252,23 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
                         tracing::warn!(scroll_len, "scroll length is not integer, rounding");
                         scroll_len = scroll_len.round();
                     }
-                    // We only check the validity of the `as usize` conversion; other checks will be performed further.
-                    anyhow::ensure!(scroll_len >= 0.0, "negative scroll length");
-                    anyhow::ensure!(
-                        scroll_len <= usize::MAX as f64,
-                        "scroll length is too large"
-                    );
-                    options.pixels_per_scroll = NonZeroUsize::new(scroll_len as usize)
-                        .context("scroll length must be positive")?;
+                    // We only check the validity of the `as usize` conversion; other checks will be performed during options validation.
+                    #[allow(
+                        // OK for the threshold check
+                        clippy::cast_precision_loss,
+                        // Doesn't happen because of previous checks
+                        clippy::cast_sign_loss,
+                        clippy::cast_possible_truncation
+                    )]
+                    {
+                        anyhow::ensure!(scroll_len >= 0.0, "negative scroll length");
+                        anyhow::ensure!(
+                            scroll_len <= usize::MAX as f64,
+                            "scroll length is too large"
+                        );
+                        options.pixels_per_scroll = NonZeroUsize::new(scroll_len as usize)
+                            .context("scroll length must be positive")?;
+                    }
 
                     options.elision_threshold = value.scroll_elision_threshold;
                     anyhow::Ok(options)
@@ -339,7 +349,7 @@ impl TemplateArgs {
             Template::new(options).into()
         };
 
-        Ok(ProcessedTemplateArgs { out_path, template })
+        Ok(ProcessedTemplateArgs { template, out_path })
     }
 
     fn load_template(template_path: &Path) -> anyhow::Result<HandlebarsTemplate> {
@@ -378,7 +388,7 @@ pub(crate) struct ProcessedTemplateArgs {
 }
 
 impl ProcessedTemplateArgs {
-    pub fn render(self, transcript: &Transcript) -> anyhow::Result<()> {
+    pub(crate) fn render(self, transcript: &Transcript) -> anyhow::Result<()> {
         let template = match self.template {
             TemplateOrOptions::Template(template) => template,
             TemplateOrOptions::Options(options) => {
