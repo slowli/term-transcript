@@ -6,7 +6,7 @@ set -e
 
 # Extension for created snapshots. Especially important for the CLI test snapshot
 # (some details are manually added to it).
-EXTENSION=new.svg
+EXTENSION=svg
 
 ROOT_DIR=$(dirname "$0")
 ROOT_DIR=$(realpath "$ROOT_DIR/..")
@@ -108,17 +108,19 @@ term-transcript exec $TT_ARGS --scroll --palette xterm --pure-svg \
 
 echo "Creating snapshot with --line-numbers continuous-outputs"
 term-transcript exec $TT_ARGS --scroll --palette powershell --line-numbers continuous-outputs \
-  --line-height=1.4 \
+  --line-height=1.4em \
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/numbers-continuous-outputs.$EXTENSION"
 
 echo "Creating snapshot with --line-numbers continuous"
-term-transcript exec $TT_ARGS --scroll --palette gjm8 --line-numbers continuous \
+term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
+  --scroll --scroll-interval 2s --scroll-len 2em \
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/numbers-continuous.$EXTENSION"
 
 echo "Creating snapshot with --line-numbers continuous (pure SVG)"
-term-transcript exec $TT_ARGS --pure-svg --scroll --palette gjm8 --line-numbers continuous \
+term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
+  --scroll --scroll-interval 2s --scroll-len 2em \
   rainbow 'rainbow --short' \
   > "$ROOT_DIR/examples/numbers-continuous-pure.$EXTENSION"
 
@@ -158,7 +160,7 @@ term-transcript exec $TT_ARGS --palette gjm8 --line-numbers continuous \
 
 echo "Creating snapshot with --embed-font (Roboto Mono, var weight + italic), --pure-svg"
 term-transcript exec $TT_ARGS --pure-svg --palette gjm8 --line-numbers continuous \
-  --line-height=1.4 \
+  --line-height=1.4em \
   --embed-font="$FONT_ROBOTO:$FONT_ROBOTO_ITALIC" \
   'rainbow --short' \
   > "$ROOT_DIR/examples/embedded-font-pure.$EXTENSION"
