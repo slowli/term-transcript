@@ -18,6 +18,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 # Public dependencies (present in the public API).
+anyhow.workspace = true
 quick-xml = { workspace = true, optional = true }
 handlebars = { workspace = true, optional = true }
 portable-pty = { workspace = true, optional = true }
@@ -36,7 +37,6 @@ termcolor.workspace = true
 unicode-width.workspace = true
 
 [dev-dependencies]
-anyhow.workspace = true
 assert_matches.workspace = true
 doc-comment.workspace = true
 test-casing.workspace = true

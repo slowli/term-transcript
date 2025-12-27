@@ -16,8 +16,11 @@ use std::{
     fmt,
     io::Write,
     iter,
+    num::NonZeroUsize,
+    ops,
 };
 
+use anyhow::Context;
 use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as HandlebarsTemplate};
 use serde::{Deserialize, Serialize};
 
@@ -122,12 +125,11 @@ pub enum LineNumbers {
 /// # anyhow::Ok(())
 /// ```
 #[derive(Debug, Serialize, Deserialize)]
-// FIXME: validation
 pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. Excludes the line numbers width if line
     /// numbering is enabled. The default value is `720`.
     #[serde(default = "TemplateOptions::default_width")]
-    pub width: usize,
+    pub width: NonZeroUsize,
     /// Line height relative to the font size. If not specified, will be taken from font metrics (if a font is embedded),
     /// or set to 1.2 otherwise.
     pub line_height: Option<f64>,
@@ -188,6 +190,45 @@ impl Default for TemplateOptions {
 }
 
 impl TemplateOptions {
+    fn validate(&self) -> anyhow::Result<()> {
+        if let Some(line_height) = self.line_height {
+            anyhow::ensure!(line_height > 0.0, "line_height must be positive");
+            #[cfg(feature = "tracing")]
+            if line_height > 2.0 {
+                tracing::warn!(
+                    line_height,
+                    "line_height is too large, the produced SVG may look broken"
+                );
+            }
+        }
+
+        if let Some(advance_width) = self.advance_width {
+            anyhow::ensure!(advance_width > 0.0, "advance_width must be positive");
+            #[cfg(feature = "tracing")]
+            if advance_width > 0.7 {
+                tracing::warn!(
+                    advance_width,
+                    "advance_width is too large, the produced SVG may look broken"
+                );
+            }
+            #[cfg(feature = "tracing")]
+            if advance_width < 0.5 {
+                tracing::warn!(
+                    advance_width,
+                    "advance_width is too small, the produced SVG may look broken"
+                );
+            }
+        }
+
+        if let Some(scroll_options) = &self.scroll {
+            scroll_options
+                .validate()
+                .context("invalid scroll options")?;
+        }
+
+        Ok(())
+    }
+
     /// Sets the font embedder to be used.
     #[must_use]
     pub fn with_font_embedder(mut self, embedder: impl FontEmbedder) -> Self {
@@ -202,8 +243,8 @@ impl TemplateOptions {
         self.with_font_embedder(options)
     }
 
-    fn default_width() -> usize {
-        720
+    const fn default_width() -> NonZeroUsize {
+        NonZeroUsize::new(720).unwrap()
     }
 
     fn default_font_family() -> String {
@@ -215,17 +256,20 @@ impl TemplateOptions {
         Some(WrapOptions::default())
     }
 
-    /// Generates data for rendering.
+    /// Validates these options. This is equivalent to using [`TryInto`].
     ///
     /// # Errors
     ///
-    /// Returns an error if output cannot be rendered to HTML (e.g., it contains invalid
-    /// SGR sequences).
+    /// Returns an error if options are invalid.
+    pub fn validated(self) -> anyhow::Result<Valid<Self>> {
+        self.try_into()
+    }
+
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(level = "debug", skip(transcript), err)
     )]
-    pub fn render_data<'s>(
+    fn render_data<'s>(
         &'s self,
         transcript: &'s Transcript,
     ) -> Result<HandlebarsData<'s>, TermError> {
@@ -293,7 +337,7 @@ impl TemplateOptions {
     )]
     fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<Vec<StyledLine>>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
-            WrapOptions::HardBreakAt(width) => *width,
+            WrapOptions::HardBreakAt(width) => width.get(),
         });
 
         transcript
@@ -316,13 +360,13 @@ pub struct ScrollOptions {
     /// of text into the view with the default template (potentially, slightly less because
     /// of vertical margins around user inputs).
     #[serde(default = "ScrollOptions::default_max_height")]
-    pub max_height: usize,
+    pub max_height: NonZeroUsize,
     /// Minimum scrollbar height in pixels. The default value is 14px (1em).
     #[serde(default = "ScrollOptions::default_min_scrollbar_height")]
-    pub min_scrollbar_height: usize,
+    pub min_scrollbar_height: NonZeroUsize,
     /// Number of pixels moved each scroll. Default value is 52 (~3 lines of text with the default template).
     #[serde(default = "ScrollOptions::default_pixels_per_scroll")]
-    pub pixels_per_scroll: usize,
+    pub pixels_per_scroll: NonZeroUsize,
     /// Interval between keyframes in seconds. The default value is `4`.
     #[serde(default = "ScrollOptions::default_interval")]
     pub interval: f64,
@@ -352,16 +396,16 @@ impl ScrollOptions {
         elision_threshold: Self::default_elision_threshold(),
     };
 
-    const fn default_max_height() -> usize {
-        18 * 19
+    const fn default_max_height() -> NonZeroUsize {
+        NonZeroUsize::new(18 * 19).unwrap()
     }
 
-    const fn default_min_scrollbar_height() -> usize {
-        14
+    const fn default_min_scrollbar_height() -> NonZeroUsize {
+        NonZeroUsize::new(14).unwrap()
     }
 
-    const fn default_pixels_per_scroll() -> usize {
-        52
+    const fn default_pixels_per_scroll() -> NonZeroUsize {
+        NonZeroUsize::new(52).unwrap()
     }
 
     const fn default_interval() -> f64 {
@@ -370,6 +414,22 @@ impl ScrollOptions {
 
     const fn default_elision_threshold() -> f64 {
         0.25
+    }
+
+    fn validate(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(self.interval > 0.0, "interval must be positive");
+        anyhow::ensure!(
+            self.elision_threshold >= 0.0 && self.elision_threshold < 1.0,
+            "elision_threshold must be in [0, 1)"
+        );
+
+        anyhow::ensure!(
+            self.min_scrollbar_height < self.max_height,
+            "min_scrollbar_height={} must be lesser than max_height={}",
+            self.min_scrollbar_height,
+            self.max_height
+        );
+        Ok(())
     }
 }
 
@@ -380,12 +440,56 @@ impl ScrollOptions {
 pub enum WrapOptions {
     /// Perform a hard break at the specified width of output. The [`Default`] implementation
     /// returns this variant with width 80.
-    HardBreakAt(usize),
+    HardBreakAt(NonZeroUsize),
 }
 
 impl Default for WrapOptions {
     fn default() -> Self {
-        Self::HardBreakAt(80)
+        Self::HardBreakAt(NonZeroUsize::new(80).unwrap())
+    }
+}
+
+/// Valid wrapper for [`TemplateOptions`]. The only way to construct this wrapper is to convert
+/// [`TemplateOptions`] via [`validated()`](TemplateOptions::validated()) or [`TryInto`].
+#[derive(Debug, Clone)]
+pub struct Valid<T>(T);
+
+impl<T> ops::Deref for Valid<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl TryFrom<TemplateOptions> for Valid<TemplateOptions> {
+    type Error = anyhow::Error;
+
+    fn try_from(options: TemplateOptions) -> Result<Self, Self::Error> {
+        options.validate()?;
+        Ok(Self(options))
+    }
+}
+
+impl<T> Valid<T> {
+    /// Unwraps the contained data.
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+impl Valid<TemplateOptions> {
+    /// Generates data for rendering.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if output cannot be rendered to HTML (e.g., it contains invalid
+    /// SGR sequences).
+    pub fn render_data<'s>(
+        &'s self,
+        transcript: &'s Transcript,
+    ) -> Result<HandlebarsData<'s>, TermError> {
+        self.0.render_data(transcript)
     }
 }
 
@@ -541,7 +645,7 @@ impl fmt::Debug for Template {
 
 impl Default for Template {
     fn default() -> Self {
-        Self::new(TemplateOptions::default())
+        Self::new(Valid(TemplateOptions::default()))
     }
 }
 
@@ -559,7 +663,7 @@ impl Template {
 
     /// Initializes the default template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
-    pub fn new(options: TemplateOptions) -> Self {
+    pub fn new(options: Valid<TemplateOptions>) -> Self {
         let template = HandlebarsTemplate::compile(DEFAULT_TEMPLATE)
             .expect("Default template should be valid");
         Self {
@@ -570,7 +674,7 @@ impl Template {
 
     /// Initializes the pure SVG template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
-    pub fn pure_svg(options: TemplateOptions) -> Self {
+    pub fn pure_svg(options: Valid<TemplateOptions>) -> Self {
         let template =
             HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");
         Self {
@@ -581,7 +685,7 @@ impl Template {
 
     /// Initializes a custom template.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
-    pub fn custom(template: HandlebarsTemplate, options: TemplateOptions) -> Self {
+    pub fn custom(template: HandlebarsTemplate, options: Valid<TemplateOptions>) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         register_helpers(&mut handlebars);
@@ -589,7 +693,7 @@ impl Template {
         let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
         handlebars.register_template("_helpers", helpers);
         Self {
-            options,
+            options: options.0,
             handlebars,
             constants: HashMap::new(),
         }

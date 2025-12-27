@@ -69,7 +69,7 @@ fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
 
     // 2. Render the transcript into SVG.
     let mut svg_buffer = vec![];
-    let options = TemplateOptions::default();
+    let options = TemplateOptions::default().validated()?;
     let template = if pure_svg {
         Template::pure_svg(options)
     } else {
@@ -166,9 +166,9 @@ fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow
 
     let mut svg_buffer = vec![];
     let template = if pure_svg {
-        Template::pure_svg(TemplateOptions::default())
+        Template::pure_svg(TemplateOptions::default().validated()?)
     } else {
-        Template::new(TemplateOptions::default())
+        Template::default()
     };
     template.render(&transcript, &mut svg_buffer)?;
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
@@ -342,7 +342,7 @@ fn cmd_shell_with_utf8_output_in_pty() {
     assert!(output.lines().all(|line| !line.ends_with('\r')));
 
     // Check that the captured output can be rendered.
-    Template::new(TemplateOptions::default())
+    Template::default()
         .render(&transcript, &mut vec![])
         .unwrap();
 }

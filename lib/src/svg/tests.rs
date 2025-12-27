@@ -24,11 +24,53 @@ fn parsing_scroll_options() {
     assert_eq!(
         options,
         ScrollOptions {
-            pixels_per_scroll: 40,
+            pixels_per_scroll: NonZeroUsize::new(40).unwrap(),
             elision_threshold: 0.1,
             ..ScrollOptions::DEFAULT
         }
     );
+}
+
+#[test]
+fn validating_options() {
+    // Default options must be valid.
+    TemplateOptions::default().validate().unwrap();
+
+    let bogus_options = TemplateOptions {
+        line_height: Some(-1.0),
+        ..TemplateOptions::default()
+    };
+    let err = bogus_options.validate().unwrap_err().to_string();
+    assert!(err.contains("line_height"), "{err}");
+
+    let bogus_options = TemplateOptions {
+        advance_width: Some(-1.0),
+        ..TemplateOptions::default()
+    };
+    let err = bogus_options.validate().unwrap_err().to_string();
+    assert!(err.contains("advance_width"), "{err}");
+
+    let bogus_options = TemplateOptions {
+        scroll: Some(ScrollOptions {
+            interval: -1.0,
+            ..ScrollOptions::default()
+        }),
+        ..TemplateOptions::default()
+    };
+    let err = format!("{:#}", bogus_options.validate().unwrap_err());
+    assert!(err.contains("interval"), "{err}");
+
+    for elision_threshold in [-1.0, 1.0] {
+        let bogus_options = TemplateOptions {
+            scroll: Some(ScrollOptions {
+                elision_threshold,
+                ..ScrollOptions::default()
+            }),
+            ..TemplateOptions::default()
+        };
+        let err = format!("{:#}", bogus_options.validate().unwrap_err());
+        assert!(err.contains("elision_threshold"), "{err}");
+    }
 }
 
 #[test]
@@ -44,7 +86,7 @@ fn rendering_simple_transcript() {
     );
 
     let mut buffer = vec![];
-    Template::new(TemplateOptions::default())
+    Template::default()
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -85,7 +127,7 @@ fn rendering_simple_transcript_to_pure_svg() {
         line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -123,7 +165,7 @@ fn rendering_transcript_with_hidden_input() {
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -151,7 +193,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -180,7 +222,7 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
         line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -204,7 +246,7 @@ fn rendering_transcript_with_explicit_success() {
     transcript.add_existing_interaction(interaction);
 
     let mut buffer = vec![];
-    Template::new(TemplateOptions::default())
+    Template::default()
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -222,7 +264,7 @@ fn rendering_transcript_with_failure() {
     transcript.add_existing_interaction(interaction);
 
     let mut buffer = vec![];
-    Template::new(TemplateOptions::default())
+    Template::default()
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -244,7 +286,7 @@ fn rendering_pure_svg_transcript_with_failure() {
         line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -275,7 +317,7 @@ fn rendering_transcript_with_frame() {
         window_frame: true,
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -295,7 +337,7 @@ fn rendering_pure_svg_transcript_with_frame() {
         window_frame: true,
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -314,14 +356,14 @@ fn rendering_transcript_with_animation() {
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
         scroll: Some(ScrollOptions {
-            max_height: 240,
-            pixels_per_scroll: 52,
+            max_height: NonZeroUsize::new(240).unwrap(),
+            pixels_per_scroll: NonZeroUsize::new(52).unwrap(),
             interval: 3.0,
             ..ScrollOptions::default()
         }),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -351,15 +393,15 @@ fn scrollbar_animation_elision() {
         let options = TemplateOptions {
             line_height: Some(18.0 / 14.0),
             scroll: Some(ScrollOptions {
-                max_height: 240,
-                pixels_per_scroll: 58,
+                max_height: NonZeroUsize::new(240).unwrap(),
+                pixels_per_scroll: NonZeroUsize::new(58).unwrap(),
                 interval: 3.0,
                 elision_threshold,
                 ..ScrollOptions::default()
             }),
             ..TemplateOptions::default()
         };
-        Template::new(options)
+        Template::new(options.validated().unwrap())
             .render(&transcript, &mut buffer)
             .unwrap();
         let buffer = String::from_utf8(buffer).unwrap();
@@ -392,15 +434,15 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
         scroll: Some(ScrollOptions {
-            max_height: 240,
-            pixels_per_scroll: 52,
+            max_height: NonZeroUsize::new(240).unwrap(),
+            pixels_per_scroll: NonZeroUsize::new(52).unwrap(),
             interval: 3.0,
             ..ScrollOptions::default()
         }),
         line_numbers: line_numbers.then_some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -439,10 +481,10 @@ fn rendering_transcript_with_wraps() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        wrap: Some(WrapOptions::HardBreakAt(5)),
+        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -462,10 +504,10 @@ fn rendering_svg_transcript_with_wraps() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        wrap: Some(WrapOptions::HardBreakAt(5)),
+        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -494,7 +536,7 @@ fn rendering_transcript_with_line_numbers() {
         line_numbers: Some(LineNumbers::EachOutput),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -527,7 +569,7 @@ fn rendering_pure_svg_transcript_with_line_numbers() {
         line_numbers: Some(LineNumbers::EachOutput),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -558,7 +600,7 @@ fn rendering_transcript_with_continuous_line_numbers() {
         line_numbers: Some(LineNumbers::ContinuousOutputs),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -590,7 +632,7 @@ fn rendering_transcript_with_input_line_numbers() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -626,7 +668,7 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -662,7 +704,7 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -705,7 +747,7 @@ fn rendering_pure_svg_transcript_with_input_line_numbers() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -734,7 +776,7 @@ fn rendering_transcript_with_styles() {
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -795,9 +837,9 @@ fn embedding_font(pure_svg: bool) {
     };
     let mut buffer = vec![];
     let template = if pure_svg {
-        Template::pure_svg(options)
+        Template::pure_svg(options.validated().unwrap())
     } else {
-        Template::new(options)
+        Template::new(options.validated().unwrap())
     };
     template.render(&transcript, &mut buffer).unwrap();
     let buffer = String::from_utf8(buffer).unwrap();

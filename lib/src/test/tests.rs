@@ -2,10 +2,7 @@ use termcolor::NoColor;
 use test_casing::test_casing;
 
 use super::{color_diff::ColorSpan, *};
-use crate::{
-    svg::{Template, TemplateOptions},
-    Captured, Interaction, Transcript, UserInput,
-};
+use crate::{svg::Template, Captured, Interaction, Transcript, UserInput};
 
 #[test_casing(2, [MatchKind::TextOnly, MatchKind::Precise])]
 fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {
@@ -16,7 +13,7 @@ fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {
     )?;
 
     let mut svg_buffer = vec![];
-    Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+    Template::default().render(&transcript, &mut svg_buffer)?;
 
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
     test_config.test_transcript(&parsed);
@@ -34,7 +31,7 @@ fn test_negative_snapshot_testing(
     transcript.add_interaction(UserInput::command("echo \"Sup?\""), "Nah");
 
     let mut svg_buffer = vec![];
-    Template::new(TemplateOptions::default()).render(&transcript, &mut svg_buffer)?;
+    Template::default().render(&transcript, &mut svg_buffer)?;
 
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
     let (stats, _) = test_config.test_transcript_inner(&mut NoColor::new(out), &parsed)?;
