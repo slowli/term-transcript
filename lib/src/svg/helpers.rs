@@ -207,6 +207,7 @@ enum OpsHelper {
     Sub,
     Div,
     Min,
+    Max,
 }
 
 impl OpsHelper {
@@ -217,6 +218,7 @@ impl OpsHelper {
             Self::Sub => "sub",
             Self::Div => "div",
             Self::Min => "min",
+            Self::Max => "max",
         }
     }
 
@@ -227,6 +229,7 @@ impl OpsHelper {
             // `unwrap`s are safe because of previous checks
             Self::Sub => values.next().unwrap() - values.next().unwrap(),
             Self::Min => values.min().unwrap(),
+            Self::Max => values.max().unwrap(),
             Self::Div => unreachable!(),
         }
     }
@@ -239,6 +242,7 @@ impl OpsHelper {
             Self::Sub => values.next().unwrap() - values.next().unwrap(),
             Self::Div => values.next().unwrap() / values.next().unwrap(),
             Self::Min => values.reduce(f64::min).unwrap(),
+            Self::Max => values.reduce(f64::max).unwrap(),
         }
     }
 }
@@ -797,6 +801,8 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
     reg.register_helper("min", Box::new(OpsHelper::Min));
+    reg.register_helper("max", Box::new(OpsHelper::Max));
+
     reg.register_helper(PtrHelper::NAME, Box::new(PtrHelper));
     reg.register_helper(RoundHelper::NAME, Box::new(RoundHelper));
     reg.register_helper(LineCounter::NAME, Box::new(LineCounter));

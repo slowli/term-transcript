@@ -295,6 +295,7 @@ fn rendering_transcript_with_animation() {
         scroll: Some(ScrollOptions {
             max_height: 240,
             pixels_per_scroll: 52,
+            min_scrollbar_height: 14,
             interval: 3.0,
         }),
         ..TemplateOptions::default()
@@ -325,6 +326,7 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
         scroll: Some(ScrollOptions {
             max_height: 240,
             pixels_per_scroll: 52,
+            min_scrollbar_height: 14,
             interval: 3.0,
         }),
         line_numbers: line_numbers.then_some(LineNumbers::Continuous),

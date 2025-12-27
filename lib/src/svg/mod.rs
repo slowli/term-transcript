@@ -122,6 +122,7 @@ pub enum LineNumbers {
 /// # anyhow::Ok(())
 /// ```
 #[derive(Debug, Serialize, Deserialize)]
+// FIXME: validation
 pub struct TemplateOptions {
     /// Width of the rendered terminal window in pixels. Excludes the line numbers width if line
     /// numbering is enabled. The default value is `720`.
@@ -314,6 +315,8 @@ pub struct ScrollOptions {
     /// of text into the view with the default template (potentially, slightly less because
     /// of vertical margins around user inputs).
     pub max_height: usize,
+    /// Minimum scrollbar height in pixels. The default value is 14px (1em).
+    pub min_scrollbar_height: usize,
     /// Number of pixels moved each scroll. Default value is 52 (~3 lines of text with the default template).
     pub pixels_per_scroll: usize,
     /// Interval between keyframes in seconds. The default value is `4`.
@@ -325,6 +328,7 @@ impl Default for ScrollOptions {
         const DEFAULT_LINE_HEIGHT: usize = 18; // from the default template
         Self {
             max_height: DEFAULT_LINE_HEIGHT * 19,
+            min_scrollbar_height: 14,
             pixels_per_scroll: 52,
             interval: 4.0,
         }
@@ -513,7 +517,6 @@ impl Template {
         ("LN_WIDTH", 22),
         ("LN_PADDING", 7),
         ("SCROLLBAR_RIGHT_OFFSET", 7),
-        ("SCROLLBAR_HEIGHT", 40),
     ];
 
     /// Initializes the default template based on provided `options`.
