@@ -163,6 +163,19 @@ pub(crate) struct TemplateArgs {
         requires = "scroll"
     )]
     scroll_len: CssLength,
+    /// Threshold to elide the penultimate scroll keyframe, relative to `scroll_len`.
+    /// If the last scroll keyframe would scroll the view by less than this value (which can happen because
+    /// the last scroll always aligns the scrolled view bottom with the viewport bottom), it will be
+    /// combined with the penultimate keyframe.
+    ///
+    /// The threshold must be in [0, 1). 0 means never eliding the penultimate keyframe.
+    #[arg(
+        long,
+        value_name = "RATIO",
+        default_value_t = 0.25,
+        requires = "scroll"
+    )]
+    scroll_elision_threshold: f64,
     /// Specifies text wrapping threshold in number of chars.
     #[arg(
         long = "hard-wrap",
@@ -227,6 +240,7 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
                     );
                     options.pixels_per_scroll = scroll_len as usize;
 
+                    options.elision_threshold = value.scroll_elision_threshold;
                     anyhow::Ok(options)
                 })
                 .transpose()?,

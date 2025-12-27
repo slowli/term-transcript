@@ -310,6 +310,7 @@ impl TemplateOptions {
 /// the console will be scrolled vertically by [`Self::pixels_per_scroll`]
 /// with the interval of [`Self::interval`] seconds between every frame.
 #[derive(Debug, Clone, Deserialize, Serialize)]
+// FIXME: fill in defaults during deserialization
 pub struct ScrollOptions {
     /// Maximum height of the console, in pixels. The default value allows to fit 19 lines
     /// of text into the view with the default template (potentially, slightly less because
@@ -321,6 +322,13 @@ pub struct ScrollOptions {
     pub pixels_per_scroll: usize,
     /// Interval between keyframes in seconds. The default value is `4`.
     pub interval: f32,
+    /// Threshold to elide the penultimate scroll keyframe, relative to `pixels_per_scroll`.
+    /// If the last scroll keyframe would scroll the view by less than this value (which can happen because
+    /// the last scroll always aligns the scrolled view bottom with the viewport bottom), it will be
+    /// combined with the penultimate keyframe.
+    ///
+    /// The threshold must be in [0, 1). 0 means never eliding the penultimate keyframe. The default value is 0.25.
+    pub elision_threshold: f64,
 }
 
 impl Default for ScrollOptions {
@@ -331,6 +339,7 @@ impl Default for ScrollOptions {
             min_scrollbar_height: 14,
             pixels_per_scroll: 52,
             interval: 4.0,
+            elision_threshold: 0.25,
         }
     }
 }

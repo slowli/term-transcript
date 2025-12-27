@@ -295,8 +295,8 @@ fn rendering_transcript_with_animation() {
         scroll: Some(ScrollOptions {
             max_height: 240,
             pixels_per_scroll: 52,
-            min_scrollbar_height: 14,
             interval: 3.0,
+            ..ScrollOptions::default()
         }),
         ..TemplateOptions::default()
     };
@@ -306,10 +306,57 @@ fn rendering_transcript_with_animation() {
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
+    let scrollbar =
+        r#"<rect id="scrollbar" class="scrollbar" x="708" y="10" width="5" height="136" />"#;
+    assert!(buffer.contains(scrollbar), "{buffer}");
     let animate_tag = r##"<animate id="scroll" href="#scroll-container" attributeName="viewBox""##;
     assert!(buffer.contains(animate_tag), "{buffer}");
     let expected_view_boxes = "0 0 720 240;0 52 720 240;0 104 720 240;0 156 720 240;0 184 720 240";
     assert!(buffer.contains(expected_view_boxes), "{buffer}");
+}
+
+#[test]
+fn scrollbar_animation_elision() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test"),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!\n".repeat(22),
+    );
+
+    for elision_threshold in [0.0, 0.25] {
+        println!("Testing elision_threshold={elision_threshold}");
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            line_height: Some(18.0 / 14.0),
+            scroll: Some(ScrollOptions {
+                max_height: 240,
+                pixels_per_scroll: 58,
+                interval: 3.0,
+                elision_threshold,
+                ..ScrollOptions::default()
+            }),
+            ..TemplateOptions::default()
+        };
+        Template::new(options)
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        let expected_view_boxes = if elision_threshold > 0.0 {
+            "0 0 720 240;0 58 720 240;0 116 720 240;0 184 720 240"
+        } else {
+            "0 0 720 240;0 58 720 240;0 116 720 240;0 174 720 240;0 184 720 240"
+        };
+        assert!(buffer.contains(expected_view_boxes), "{buffer}");
+
+        let expected_scrollbar_ys = if elision_threshold > 0.0 {
+            r#"values="10;42.8;75.6;114""#
+        } else {
+            r#"values="10;42.8;75.6;108.3;114""#
+        };
+        assert!(buffer.contains(expected_scrollbar_ys), "{buffer}");
+    }
 }
 
 #[test_casing(2, [false, true])]
@@ -326,8 +373,8 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
         scroll: Some(ScrollOptions {
             max_height: 240,
             pixels_per_scroll: 52,
-            min_scrollbar_height: 14,
             interval: 3.0,
+            ..ScrollOptions::default()
         }),
         line_numbers: line_numbers.then_some(LineNumbers::Continuous),
         ..TemplateOptions::default()
@@ -343,6 +390,13 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
         r#"viewBox="0 0 720 260""#
     };
     assert!(buffer.contains(view_box), "{buffer}");
+    let scrollbar = if line_numbers {
+        r#"<rect id="scrollbar" class="scrollbar" x="737" y="10" width="5" height="136" />"#
+    } else {
+        r#"<rect id="scrollbar" class="scrollbar" x="708" y="10" width="5" height="136" />"#
+    };
+    assert!(buffer.contains(scrollbar), "{buffer}");
+
     let animate_tag = r##"<animate id="scroll" href="#scroll-container" attributeName="viewBox""##;
     assert!(buffer.contains(animate_tag), "{buffer}");
     let expected_view_boxes = if line_numbers {

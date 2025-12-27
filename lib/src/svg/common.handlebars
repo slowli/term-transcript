@@ -90,16 +90,19 @@
       sep=""
     }}
       {{#each (range 0 (add (steps) 1))}}
-        {{~pos set=(min (scroll_height) (mul ../scroll.pixels_per_scroll @index))~}}
-        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}{{round
-          (add
-            (mul (div (pos) (scroll_height)) (sub ../scroll.max_height (scrollbar_height)))
-            ../const.WINDOW_PADDING
-          )
-          digits=1
-        }}"{{/scrollbar_y}}
+        {{pos set=(min (scroll_height) (mul ../scroll.pixels_per_scroll @index))}}
+        {{! Skip the penultimate step if its position is close to the last one (less than ) }}
+        {{#if (or @last (gt (sub (scroll_height) (pos)) (mul ../scroll.pixels_per_scroll ../scroll.elision_threshold)))}}
+          {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
+          {{#view_box}}"{{view_box}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
+          {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}{{round
+            (add
+              (mul (div (pos) (scroll_height)) (sub ../scroll.max_height (scrollbar_height)))
+              ../const.WINDOW_PADDING
+            )
+            digits=1
+          }}"{{/scrollbar_y}}
+        {{/if}}
       {{/each}}
 
       {
