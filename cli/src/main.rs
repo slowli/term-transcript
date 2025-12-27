@@ -14,7 +14,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use term_transcript::{
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     traits::SpawnShell,
-    Transcript,
+    Transcript, UserInput,
 };
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
@@ -91,6 +91,9 @@ impl Command {
                 #[cfg(feature = "tracing")]
                 let _entered = tracing::info_span!("capture").entered();
 
+                let no_inputs = template.no_inputs;
+                let template = template.build()?;
+
                 let mut transcript = Transcript::new();
                 let mut term_output = vec![];
                 #[cfg(feature = "tracing")]
@@ -107,7 +110,7 @@ impl Command {
                     term_output.pop();
                 }
 
-                transcript.add_interaction(template.create_input(command), term_output);
+                transcript.add_interaction(Self::create_input(command, no_inputs), term_output);
                 #[cfg(feature = "tracing")]
                 tracing::info!("rendering transcript");
                 template.render(&transcript)?;
@@ -121,7 +124,11 @@ impl Command {
                 #[cfg(feature = "tracing")]
                 let _entered = tracing::info_span!("exec").entered();
 
-                let inputs = inputs.into_iter().map(|input| template.create_input(input));
+                let no_inputs = template.no_inputs;
+                let template = template.build()?;
+                let inputs = inputs
+                    .into_iter()
+                    .map(|input| Self::create_input(input, no_inputs));
                 let transcript = shell.create_transcript(inputs)?;
                 template.render(&transcript)?;
             }
@@ -179,6 +186,15 @@ impl Command {
             Self::Print { svg_path, color } => Self::print_file(&svg_path, color)?,
         }
         Ok(())
+    }
+
+    fn create_input(command: String, no_inputs: bool) -> UserInput {
+        let input = UserInput::command(command);
+        if no_inputs {
+            input.hide()
+        } else {
+            input
+        }
     }
 
     fn process_file<Cmd: SpawnShell + fmt::Debug>(

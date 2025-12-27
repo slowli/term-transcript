@@ -4,6 +4,7 @@ use std::{
     fmt,
     fs::{self, File},
     io, mem,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
     str::FromStr,
     time::Duration,
@@ -13,8 +14,10 @@ use anyhow::Context;
 use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
-    svg::{self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions, WrapOptions},
-    Transcript, UserInput,
+    svg::{
+        self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions, Valid, WrapOptions,
+    },
+    Transcript,
 };
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -157,12 +160,12 @@ pub(crate) struct TemplateArgs {
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
     #[arg(long, default_value = "720")]
-    width: usize,
+    width: NonZeroUsize,
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
     /// If not specified, the default height is sufficient to fit 19 lines with the default template.
     #[arg(long, value_name = "HEIGHT")]
     // FIXME: use CssLen?
-    scroll: Option<Option<usize>>,
+    scroll: Option<Option<NonZeroUsize>>,
     /// Interval between keyframes in the scrolling animation.
     #[arg(
         long,
@@ -175,7 +178,7 @@ pub(crate) struct TemplateArgs {
     #[arg(
         long,
         value_name = "CSS_LEN",
-        default_value_t = CssLength::Pixels(ScrollOptions::DEFAULT.pixels_per_scroll as f64),
+        default_value_t = CssLength::Pixels(ScrollOptions::DEFAULT.pixels_per_scroll.get() as f64),
         requires = "scroll"
     )]
     scroll_len: CssLength,
@@ -199,7 +202,7 @@ pub(crate) struct TemplateArgs {
         conflicts_with = "no_wrap",
         default_value = "80"
     )]
-    hard_wrap: usize,
+    hard_wrap: NonZeroUsize,
     /// Disables text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
     /// will be hidden.
     #[arg(long = "no-wrap")]
@@ -210,7 +213,7 @@ pub(crate) struct TemplateArgs {
     pure_svg: bool,
     /// Hides all user inputs; only outputs will be rendered.
     #[arg(long = "no-inputs")]
-    no_inputs: bool,
+    pub(crate) no_inputs: bool,
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
     ///
@@ -254,7 +257,8 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
                         scroll_len <= usize::MAX as f64,
                         "scroll length is too large"
                     );
-                    options.pixels_per_scroll = scroll_len as usize;
+                    options.pixels_per_scroll = NonZeroUsize::new(scroll_len as usize)
+                        .context("scroll length must be positive")?;
 
                     options.elision_threshold = value.scroll_elision_threshold;
                     anyhow::Ok(options)
@@ -303,16 +307,7 @@ impl TemplateArgs {
             .with_context(|| format!("invalid font at {}", path.display()))
     }
 
-    pub fn create_input(&self, command: String) -> UserInput {
-        let input = UserInput::command(command);
-        if self.no_inputs {
-            input.hide()
-        } else {
-            input
-        }
-    }
-
-    pub fn render(mut self, transcript: &Transcript) -> anyhow::Result<()> {
+    pub(crate) fn build(mut self) -> anyhow::Result<ProcessedTemplateArgs> {
         let pure_svg = self.pure_svg;
         let out_path = mem::take(&mut self.out);
         let template_path = mem::take(&mut self.template_path);
@@ -327,52 +322,24 @@ impl TemplateArgs {
         } else {
             TemplateOptions::try_from(self)?
         };
+        let options = options
+            .validated()
+            .context("template options are invalid")?;
 
         let template = if let Some(template_path) = template_path {
             if template_path.as_os_str() == "-" {
-                return Self::render_data(out_path.as_deref(), transcript, &options);
+                TemplateOrOptions::Options(options)
+            } else {
+                let template = Self::load_template(&template_path)?;
+                Template::custom(template, options).into()
             }
-            let template = Self::load_template(&template_path)?;
-            Template::custom(template, options)
         } else if pure_svg {
-            Template::pure_svg(options)
+            Template::pure_svg(options).into()
         } else {
-            Template::new(options)
+            Template::new(options).into()
         };
 
-        if let Some(out_path) = out_path {
-            let out = File::create(&out_path)
-                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
-            template
-                .render(transcript, out)
-                .with_context(|| format!("cannot render template to `{}`", out_path.display()))?;
-        } else {
-            template
-                .render(transcript, io::stdout())
-                .context("cannot render template to stdout")?;
-        }
-        Ok(())
-    }
-
-    fn render_data(
-        out_path: Option<&Path>,
-        transcript: &Transcript,
-        options: &TemplateOptions,
-    ) -> anyhow::Result<()> {
-        let data = options
-            .render_data(transcript)
-            .context("cannot render data for Handlebars template")?;
-        if let Some(out_path) = out_path {
-            let out = File::create(out_path)
-                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
-            serde_json::to_writer(out, &data).with_context(|| {
-                format!("cannot write Handlebars data to `{}`", out_path.display())
-            })?;
-        } else {
-            serde_json::to_writer(io::stdout(), &data)
-                .context("cannot write Handlebars data to stdout")?;
-        }
-        Ok(())
+        Ok(ProcessedTemplateArgs { out_path, template })
     }
 
     fn load_template(template_path: &Path) -> anyhow::Result<HandlebarsTemplate> {
@@ -389,5 +356,68 @@ impl TemplateArgs {
             )
         })?;
         Ok(template)
+    }
+}
+
+#[derive(Debug)]
+enum TemplateOrOptions {
+    Template(Box<Template>),
+    Options(Valid<TemplateOptions>),
+}
+
+impl From<Template> for TemplateOrOptions {
+    fn from(template: Template) -> Self {
+        Self::Template(Box::new(template))
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ProcessedTemplateArgs {
+    template: TemplateOrOptions,
+    out_path: Option<PathBuf>,
+}
+
+impl ProcessedTemplateArgs {
+    pub fn render(self, transcript: &Transcript) -> anyhow::Result<()> {
+        let template = match self.template {
+            TemplateOrOptions::Template(template) => template,
+            TemplateOrOptions::Options(options) => {
+                return Self::render_data(self.out_path.as_deref(), transcript, &options);
+            }
+        };
+
+        if let Some(out_path) = self.out_path {
+            let out = File::create(&out_path)
+                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
+            template
+                .render(transcript, out)
+                .with_context(|| format!("cannot render template to `{}`", out_path.display()))?;
+        } else {
+            template
+                .render(transcript, io::stdout())
+                .context("cannot render template to stdout")?;
+        }
+        Ok(())
+    }
+
+    fn render_data(
+        out_path: Option<&Path>,
+        transcript: &Transcript,
+        options: &Valid<TemplateOptions>,
+    ) -> anyhow::Result<()> {
+        let data = options
+            .render_data(transcript)
+            .context("cannot render data for Handlebars template")?;
+        if let Some(out_path) = out_path {
+            let out = File::create(out_path)
+                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
+            serde_json::to_writer(out, &data).with_context(|| {
+                format!("cannot write Handlebars data to `{}`", out_path.display())
+            })?;
+        } else {
+            serde_json::to_writer(io::stdout(), &data)
+                .context("cannot write Handlebars data to stdout")?;
+        }
+        Ok(())
     }
 }
