@@ -55,17 +55,24 @@ impl From<LineNumbers> for svg::LineNumbers {
 
 #[derive(Debug, Clone, Copy)]
 enum CssLength {
-    Ratio(f64),
+    Ems(f64),
     Pixels(f64),
 }
 
 impl CssLength {
-    fn as_ratio(self) -> f64 {
-        const FONT_SIZE: f64 = 14.0;
+    const FONT_SIZE: f64 = 14.0;
 
+    fn as_ems(self) -> f64 {
         match self {
-            Self::Ratio(val) => val,
-            Self::Pixels(val) => val / FONT_SIZE,
+            Self::Ems(val) => val,
+            Self::Pixels(val) => val / Self::FONT_SIZE,
+        }
+    }
+
+    fn as_pixels(self) -> f64 {
+        match self {
+            Self::Ems(val) => val * Self::FONT_SIZE,
+            Self::Pixels(val) => val,
         }
     }
 }
@@ -77,8 +84,11 @@ impl FromStr for CssLength {
         if let Some(val) = s.strip_suffix("px") {
             let val = val.trim();
             Ok(Self::Pixels(val.parse()?))
+        } else if let Some(val) = s.strip_suffix("em") {
+            let val = val.trim();
+            Ok(Self::Ems(val.parse()?))
         } else {
-            Ok(Self::Ratio(s.parse()?))
+            anyhow::bail!("expected value with 'px' or 'em' suffix")
         }
     }
 }
@@ -140,7 +150,19 @@ pub(crate) struct TemplateArgs {
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
     /// If not specified, the default height is sufficient to fit 19 lines with the default template.
     #[arg(long, value_name = "HEIGHT")]
+    // FIXME: use CssLen?
     scroll: Option<Option<usize>>,
+    /// Interval between keyframes in the scrolling animation.
+    #[arg(long, value_name = "TIME", default_value = "4s", requires = "scroll")]
+    scroll_interval: humantime::Duration,
+    /// Length scrolled in each keyframe.
+    #[arg(
+        long,
+        value_name = "CSS_LEN",
+        default_value = "52px",
+        requires = "scroll"
+    )]
+    scroll_len: CssLength,
     /// Specifies text wrapping threshold in number of chars.
     #[arg(
         long = "hard-wrap",
@@ -177,17 +199,37 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
     fn try_from(value: TemplateArgs) -> Result<Self, Self::Error> {
         let mut this = Self {
             width: value.width,
-            line_height: value.line_height.map(CssLength::as_ratio),
-            advance_width: value.advance_width.map(CssLength::as_ratio),
+            line_height: value.line_height.map(CssLength::as_ems),
+            advance_width: value.advance_width.map(CssLength::as_ems),
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,
-            scroll: value.scroll.map(|max_height| {
-                max_height.map_or_else(ScrollOptions::default, |max_height| ScrollOptions {
-                    max_height,
-                    ..ScrollOptions::default()
+            scroll: value
+                .scroll
+                .map(|max_height| {
+                    let mut options = ScrollOptions::default();
+                    if let Some(max_height) = max_height {
+                        options.max_height = max_height;
+                    }
+                    options.interval = value.scroll_interval.as_secs_f32();
+
+                    let mut scroll_len = value.scroll_len.as_pixels();
+                    if scroll_len.fract() != 0.0 {
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!(scroll_len, "scroll length is not integer, rounding");
+                        scroll_len = scroll_len.round();
+                    }
+                    // We only check the validity of the `as usize` conversion; other checks will be performed further.
+                    anyhow::ensure!(scroll_len >= 0.0, "negative scroll length");
+                    anyhow::ensure!(
+                        scroll_len <= usize::MAX as f64,
+                        "scroll length is too large"
+                    );
+                    options.pixels_per_scroll = scroll_len as usize;
+
+                    anyhow::Ok(options)
                 })
-            }),
+                .transpose()?,
             wrap: if value.no_wrap {
                 None
             } else {

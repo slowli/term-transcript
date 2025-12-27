@@ -3,7 +3,6 @@
 use std::{env, ffi::OsString, io, process::Command};
 
 use clap::Args;
-use humantime::Duration;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{traits::Echoing, Captured, ExitStatus, ShellOptions, Transcript, UserInput};
@@ -108,12 +107,12 @@ pub(crate) struct ShellArgs {
 
     /// Timeout for I/O operations in milliseconds.
     #[arg(name = "io-timeout", long, short = 'T', default_value = "500ms")]
-    io_timeout: Duration,
+    io_timeout: humantime::Duration,
 
     /// Additional timeout waiting for the first output line after inputting a new command
     /// in milliseconds.
     #[arg(name = "init-timeout", long, short = 'I', default_value = "0ms")]
-    init_timeout: Duration,
+    init_timeout: humantime::Duration,
 }
 
 impl ShellArgs {
