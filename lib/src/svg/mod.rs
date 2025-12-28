@@ -261,7 +261,7 @@ impl TemplateOptions {
     /// # Errors
     ///
     /// Returns an error if options are invalid.
-    pub fn validated(self) -> anyhow::Result<Valid<Self>> {
+    pub fn validated(self) -> anyhow::Result<ValidTemplateOptions> {
         self.try_into()
     }
 
@@ -451,18 +451,18 @@ impl Default for WrapOptions {
 
 /// Valid wrapper for [`TemplateOptions`]. The only way to construct this wrapper is to convert
 /// [`TemplateOptions`] via [`validated()`](TemplateOptions::validated()) or [`TryInto`].
-#[derive(Debug, Clone)]
-pub struct Valid<T>(T);
+#[derive(Debug, Default)]
+pub struct ValidTemplateOptions(TemplateOptions);
 
-impl<T> ops::Deref for Valid<T> {
-    type Target = T;
+impl ops::Deref for ValidTemplateOptions {
+    type Target = TemplateOptions;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl TryFrom<TemplateOptions> for Valid<TemplateOptions> {
+impl TryFrom<TemplateOptions> for ValidTemplateOptions {
     type Error = anyhow::Error;
 
     fn try_from(options: TemplateOptions) -> Result<Self, Self::Error> {
@@ -471,14 +471,7 @@ impl TryFrom<TemplateOptions> for Valid<TemplateOptions> {
     }
 }
 
-impl<T> Valid<T> {
-    /// Unwraps the contained data.
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}
-
-impl Valid<TemplateOptions> {
+impl ValidTemplateOptions {
     /// Generates data for rendering.
     ///
     /// # Errors
@@ -490,6 +483,11 @@ impl Valid<TemplateOptions> {
         transcript: &'s Transcript,
     ) -> Result<HandlebarsData<'s>, TermError> {
         self.0.render_data(transcript)
+    }
+
+    /// Unwraps the contained options.
+    pub fn into_inner(self) -> TemplateOptions {
+        self.0
     }
 }
 
@@ -645,7 +643,7 @@ impl fmt::Debug for Template {
 
 impl Default for Template {
     fn default() -> Self {
-        Self::new(Valid(TemplateOptions::default()))
+        Self::new(ValidTemplateOptions::default())
     }
 }
 
@@ -663,7 +661,7 @@ impl Template {
 
     /// Initializes the default template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
-    pub fn new(options: Valid<TemplateOptions>) -> Self {
+    pub fn new(options: ValidTemplateOptions) -> Self {
         let template = HandlebarsTemplate::compile(DEFAULT_TEMPLATE)
             .expect("Default template should be valid");
         Self {
@@ -674,7 +672,7 @@ impl Template {
 
     /// Initializes the pure SVG template based on provided `options`.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
-    pub fn pure_svg(options: Valid<TemplateOptions>) -> Self {
+    pub fn pure_svg(options: ValidTemplateOptions) -> Self {
         let template =
             HandlebarsTemplate::compile(PURE_TEMPLATE).expect("Pure template should be valid");
         Self {
@@ -685,7 +683,7 @@ impl Template {
 
     /// Initializes a custom template.
     #[allow(clippy::missing_panics_doc)] // Panic should never be triggered
-    pub fn custom(template: HandlebarsTemplate, options: Valid<TemplateOptions>) -> Self {
+    pub fn custom(template: HandlebarsTemplate, options: ValidTemplateOptions) -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         register_helpers(&mut handlebars);

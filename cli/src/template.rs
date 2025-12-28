@@ -15,7 +15,8 @@ use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
     svg::{
-        self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions, Valid, WrapOptions,
+        self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions,
+        ValidTemplateOptions, WrapOptions,
     },
     Transcript,
 };
@@ -372,7 +373,7 @@ impl TemplateArgs {
 #[derive(Debug)]
 enum TemplateOrOptions {
     Template(Box<Template>),
-    Options(Valid<TemplateOptions>),
+    Options(ValidTemplateOptions),
 }
 
 impl From<Template> for TemplateOrOptions {
@@ -413,7 +414,7 @@ impl ProcessedTemplateArgs {
     fn render_data(
         out_path: Option<&Path>,
         transcript: &Transcript,
-        options: &Valid<TemplateOptions>,
+        options: &ValidTemplateOptions,
     ) -> anyhow::Result<()> {
         let data = options
             .render_data(transcript)

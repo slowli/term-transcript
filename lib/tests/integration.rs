@@ -10,7 +10,7 @@ use std::{
 
 use assert_matches::assert_matches;
 use term_transcript::{
-    svg::{Template, TemplateOptions},
+    svg::{Template, ValidTemplateOptions},
     ShellOptions, Transcript, UserInput,
 };
 use test_casing::{decorate, decorators::Retry, test_casing, Product};
@@ -69,7 +69,7 @@ fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
 
     // 2. Render the transcript into SVG.
     let mut svg_buffer = vec![];
-    let options = TemplateOptions::default().validated()?;
+    let options = ValidTemplateOptions::default();
     let template = if pure_svg {
         Template::pure_svg(options)
     } else {
@@ -166,7 +166,7 @@ fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow
 
     let mut svg_buffer = vec![];
     let template = if pure_svg {
-        Template::pure_svg(TemplateOptions::default().validated()?)
+        Template::pure_svg(ValidTemplateOptions::default())
     } else {
         Template::default()
     };
