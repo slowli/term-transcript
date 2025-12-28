@@ -128,7 +128,7 @@
 //! )?;
 //! let mut writer = vec![];
 //! // ^ Any `std::io::Write` implementation will do, such as a `File`.
-//! Template::new(TemplateOptions::default()).render(&transcript, &mut writer)?;
+//! Template::default().render(&transcript, &mut writer)?;
 //! println!("{}", str::from_utf8(&writer)?);
 //! # Ok(())
 //! # }

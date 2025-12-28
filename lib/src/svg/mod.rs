@@ -116,8 +116,11 @@ pub enum LineNumbers {
 /// "#;
 ///
 /// let options: TemplateOptions = toml::from_str(options_toml)?;
-/// assert_eq!(options.width, 900);
-/// assert_matches!(options.wrap, Some(WrapOptions::HardBreakAt(100)));
+/// assert_eq!(options.width.get(), 900);
+/// assert_matches!(
+///     options.wrap,
+///     Some(WrapOptions::HardBreakAt(width)) if width.get() == 100
+/// );
 /// assert_eq!(
 ///     options.palette.colors.green,
 ///     RgbColor(0x8f, 0x9a, 0x52)
@@ -607,7 +610,6 @@ impl ValidTemplateOptions {
 /// ```
 /// use term_transcript::{svg::*, Transcript, UserInput};
 ///
-/// # fn main() -> anyhow::Result<()> {
 /// let mut transcript = Transcript::new();
 /// transcript.add_interaction(
 ///     UserInput::command("test"),
@@ -617,13 +619,13 @@ impl ValidTemplateOptions {
 /// let template_options = TemplateOptions {
 ///     palette: NamedPalette::Dracula.into(),
 ///     ..TemplateOptions::default()
-/// };
+/// }
+/// .validated()?;
 /// let mut buffer = vec![];
 /// Template::new(template_options).render(&transcript, &mut buffer)?;
 /// let buffer = String::from_utf8(buffer)?;
 /// assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
-/// # Ok(())
-/// # }
+/// # anyhow::Ok(())
 /// ```
 pub struct Template {
     options: TemplateOptions,

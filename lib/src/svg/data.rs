@@ -25,7 +25,8 @@ use crate::{
 ///     palette: NamedPalette::Dracula.into(),
 ///     font_family: "Consolas, Menlo, monospace".to_owned(),
 ///     ..TemplateOptions::default()
-/// };
+/// }
+/// .validated()?;
 /// let data = template_options.render_data(&transcript).unwrap();
 ///
 /// let expected_json = serde_json::json!({
@@ -84,6 +85,7 @@ use crate::{
 ///     }]
 /// });
 /// assert_eq!(serde_json::to_value(data).unwrap(), expected_json);
+/// # anyhow::Ok(())
 /// ```
 #[derive(Debug, Serialize)]
 #[non_exhaustive]

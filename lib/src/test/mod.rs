@@ -30,7 +30,7 @@
 //!
 //! ```
 //! use term_transcript::{test::TestConfig, ShellOptions, Transcript, UserInput};
-//! # use term_transcript::svg::{Template, TemplateOptions};
+//! # use term_transcript::svg::Template;
 //! use std::io;
 //!
 //! fn read_svg_file() -> anyhow::Result<impl io::BufRead> {
@@ -40,7 +40,7 @@
 //! #        vec![UserInput::command(r#"echo "Hello world!""#)],
 //! #   )?;
 //! #   let mut writer = vec![];
-//! #   Template::new(TemplateOptions::default()).render(&transcript, &mut writer)?;
+//! #   Template::default().render(&transcript, &mut writer)?;
 //! #   Ok(io::Cursor::new(writer))
 //! }
 //!

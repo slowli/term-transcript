@@ -34,9 +34,7 @@ term-transcript = "0.4.0"
 Example of usage:
 
 ```rust
-use term_transcript::{
-    svg::{Template, TemplateOptions}, ShellOptions, Transcript, UserInput,
-};
+use term_transcript::{svg::Template, ShellOptions, Transcript, UserInput};
 use std::str;
 
 let transcript = Transcript::from_inputs(
@@ -45,7 +43,7 @@ let transcript = Transcript::from_inputs(
 )?;
 let mut writer = vec![];
 // ^ Any `std::io::Write` implementation will do, such as a `File`.
-Template::new(TemplateOptions::default()).render(&transcript, &mut writer)?;
+Template::default().render(&transcript, &mut writer)?;
 println!("{}", str::from_utf8(&writer)?);
 Ok::<_, anyhow::Error>(())
 ```
