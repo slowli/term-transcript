@@ -146,7 +146,7 @@
               {{~#each output as |line|~}}
                 <span class="line">
                 {{~#each line.spans as |span|~}}
-                    {{{eval ">html_span" span=span}}}
+                  {{~>html_span span~}}
                 {{~else~}}{{! The line may be empty }}
                 {{~/each~}}
                 {{~#if line.br}}<b class="hard-br"></b>{{/if~}}

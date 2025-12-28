@@ -37,7 +37,7 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
     </svg>
 "#;
 
-const PURE_SVG: &[u8] = br#"
+const LEGACY_PURE_SVG: &[u8] = br#"
 <svg viewBox="0 0 720 138" width="720" height="138" xmlns="http://www.w3.org/2000/svg">
   <svg x="0" y="10" width="720" height="118" viewBox="0 0 720 118">
     <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect></g>
@@ -52,7 +52,21 @@ const PURE_SVG: &[u8] = br#"
 </svg>
 "#;
 
-#[test_casing(3, [SVG, LEGACY_SVG, PURE_SVG])]
+const PURE_SVG: &[u8] = br#"
+<svg viewBox="0 0 720 138" width="720" height="138" xmlns="http://www.w3.org/2000/svg">
+  <svg x="0" y="10" width="720" height="118" viewBox="0 0 720 118">
+    <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect></g>
+    <g class="container fg7"><g class="input"><g><text class="prompt">$</text><text> ls -al --color&#x3D;always</text><text>
+</text></g></g><g class="output"><g><text>total 28</text><text>
+</text></g><g><text>drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 </text><text class="fg4">.</text><text>
+</text></g><text>drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 </text><text class="fg4 bg2">..</text><text>
+</text><g><text>-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock</text><text>
+</text></g></g></g>
+  </svg>
+</svg>
+"#;
+
+#[test_casing(4, [SVG, LEGACY_SVG, LEGACY_PURE_SVG, PURE_SVG])]
 fn reading_file(file_contents: &[u8]) {
     let transcript = Transcript::from_svg(file_contents).unwrap();
     assert_eq!(transcript.interactions.len(), 1);

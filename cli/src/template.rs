@@ -1,18 +1,24 @@
 //! Templating-related command-line args.
 
 use std::{
+    fmt,
     fs::{self, File},
     io, mem,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
     str::FromStr,
+    time::Duration,
 };
 
 use anyhow::Context;
 use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
-    svg::{self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions, WrapOptions},
-    Transcript, UserInput,
+    svg::{
+        self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions,
+        ValidTemplateOptions, WrapOptions,
+    },
+    Transcript,
 };
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -55,17 +61,24 @@ impl From<LineNumbers> for svg::LineNumbers {
 
 #[derive(Debug, Clone, Copy)]
 enum CssLength {
-    Ratio(f64),
+    Ems(f64),
     Pixels(f64),
 }
 
 impl CssLength {
-    fn as_ratio(self) -> f64 {
-        const FONT_SIZE: f64 = 14.0;
+    const FONT_SIZE: f64 = 14.0;
 
+    fn as_ems(self) -> f64 {
         match self {
-            Self::Ratio(val) => val,
-            Self::Pixels(val) => val / FONT_SIZE,
+            Self::Ems(val) => val,
+            Self::Pixels(val) => val / Self::FONT_SIZE,
+        }
+    }
+
+    fn as_pixels(self) -> f64 {
+        match self {
+            Self::Ems(val) => val * Self::FONT_SIZE,
+            Self::Pixels(val) => val,
         }
     }
 }
@@ -77,17 +90,30 @@ impl FromStr for CssLength {
         if let Some(val) = s.strip_suffix("px") {
             let val = val.trim();
             Ok(Self::Pixels(val.parse()?))
+        } else if let Some(val) = s.strip_suffix("em") {
+            let val = val.trim();
+            Ok(Self::Ems(val.parse()?))
         } else {
-            Ok(Self::Ratio(s.parse()?))
+            anyhow::bail!("expected value with 'px' or 'em' suffix")
+        }
+    }
+}
+
+impl fmt::Display for CssLength {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Pixels(val) => write!(formatter, "{val}px"),
+            Self::Ems(val) => write!(formatter, "{val}em"),
         }
     }
 }
 
 #[derive(Debug, Args)]
+#[allow(clippy::struct_excessive_bools)] // required by `clap`
 pub(crate) struct TemplateArgs {
     /// Path to the configuration TOML file.
     ///
-    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for the configuration format.
+    /// See <https://slowli.github.io/term-transcript/term_transcript/svg/> for the configuration format.
     #[arg(
         long,
         conflicts_with_all = [
@@ -136,11 +162,41 @@ pub(crate) struct TemplateArgs {
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
     #[arg(long, default_value = "720")]
-    width: usize,
+    width: NonZeroUsize,
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
     /// If not specified, the default height is sufficient to fit 19 lines with the default template.
     #[arg(long, value_name = "HEIGHT")]
-    scroll: Option<Option<usize>>,
+    #[allow(clippy::option_option)] // required by `clap`
+    scroll: Option<Option<NonZeroUsize>>,
+    /// Interval between keyframes in the scrolling animation.
+    #[arg(
+        long,
+        value_name = "TIME",
+        default_value_t = Duration::from_secs_f64(ScrollOptions::DEFAULT.interval).into(),
+        requires = "scroll"
+    )]
+    scroll_interval: humantime::Duration,
+    /// Length scrolled in each keyframe.
+    #[arg(
+        long,
+        value_name = "CSS_LEN",
+        default_value_t = CssLength::Pixels(ScrollOptions::DEFAULT.pixels_per_scroll.get() as f64),
+        requires = "scroll"
+    )]
+    scroll_len: CssLength,
+    /// Threshold to elide the penultimate scroll keyframe, relative to `scroll_len`.
+    /// If the last scroll keyframe would scroll the view by less than this value (which can happen because
+    /// the last scroll always aligns the scrolled view bottom with the viewport bottom), it will be
+    /// combined with the penultimate keyframe.
+    ///
+    /// The threshold must be in [0, 1). 0 means never eliding the penultimate keyframe.
+    #[arg(
+        long,
+        value_name = "RATIO",
+        default_value_t = ScrollOptions::DEFAULT.elision_threshold,
+        requires = "scroll"
+    )]
+    scroll_elision_threshold: f64,
     /// Specifies text wrapping threshold in number of chars.
     #[arg(
         long = "hard-wrap",
@@ -148,7 +204,7 @@ pub(crate) struct TemplateArgs {
         conflicts_with = "no_wrap",
         default_value = "80"
     )]
-    hard_wrap: usize,
+    hard_wrap: NonZeroUsize,
     /// Disables text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
     /// will be hidden.
     #[arg(long = "no-wrap")]
@@ -159,11 +215,11 @@ pub(crate) struct TemplateArgs {
     pure_svg: bool,
     /// Hides all user inputs; only outputs will be rendered.
     #[arg(long = "no-inputs")]
-    no_inputs: bool,
+    pub(crate) no_inputs: bool,
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
     ///
-    /// See https://slowli.github.io/term-transcript/term_transcript/svg/ for docs on templating.
+    /// See <https://slowli.github.io/term-transcript/term_transcript/svg/> for docs on templating.
     #[arg(long = "tpl")]
     template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.
@@ -177,17 +233,48 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
     fn try_from(value: TemplateArgs) -> Result<Self, Self::Error> {
         let mut this = Self {
             width: value.width,
-            line_height: value.line_height.map(CssLength::as_ratio),
-            advance_width: value.advance_width.map(CssLength::as_ratio),
+            line_height: value.line_height.map(CssLength::as_ems),
+            advance_width: value.advance_width.map(CssLength::as_ems),
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,
-            scroll: value.scroll.map(|max_height| {
-                max_height.map_or_else(ScrollOptions::default, |max_height| ScrollOptions {
-                    max_height,
-                    ..ScrollOptions::default()
+            scroll: value
+                .scroll
+                .map(|max_height| {
+                    let mut options = ScrollOptions::default();
+                    if let Some(max_height) = max_height {
+                        options.max_height = max_height;
+                    }
+                    options.interval = value.scroll_interval.as_secs_f64();
+
+                    let mut scroll_len = value.scroll_len.as_pixels();
+                    if scroll_len.fract() != 0.0 {
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!(scroll_len, "scroll length is not integer, rounding");
+                        scroll_len = scroll_len.round();
+                    }
+                    // We only check the validity of the `as usize` conversion; other checks will be performed during options validation.
+                    #[allow(
+                        // OK for the threshold check
+                        clippy::cast_precision_loss,
+                        // Doesn't happen because of previous checks
+                        clippy::cast_sign_loss,
+                        clippy::cast_possible_truncation
+                    )]
+                    {
+                        anyhow::ensure!(scroll_len >= 0.0, "negative scroll length");
+                        anyhow::ensure!(
+                            scroll_len <= usize::MAX as f64,
+                            "scroll length is too large"
+                        );
+                        options.pixels_per_scroll = NonZeroUsize::new(scroll_len as usize)
+                            .context("scroll length must be positive")?;
+                    }
+
+                    options.elision_threshold = value.scroll_elision_threshold;
+                    anyhow::Ok(options)
                 })
-            }),
+                .transpose()?,
             wrap: if value.no_wrap {
                 None
             } else {
@@ -231,16 +318,7 @@ impl TemplateArgs {
             .with_context(|| format!("invalid font at {}", path.display()))
     }
 
-    pub fn create_input(&self, command: String) -> UserInput {
-        let input = UserInput::command(command);
-        if self.no_inputs {
-            input.hide()
-        } else {
-            input
-        }
-    }
-
-    pub fn render(mut self, transcript: &Transcript) -> anyhow::Result<()> {
+    pub(crate) fn build(mut self) -> anyhow::Result<ProcessedTemplateArgs> {
         let pure_svg = self.pure_svg;
         let out_path = mem::take(&mut self.out);
         let template_path = mem::take(&mut self.template_path);
@@ -255,52 +333,24 @@ impl TemplateArgs {
         } else {
             TemplateOptions::try_from(self)?
         };
+        let options = options
+            .validated()
+            .context("template options are invalid")?;
 
         let template = if let Some(template_path) = template_path {
             if template_path.as_os_str() == "-" {
-                return Self::render_data(out_path.as_deref(), transcript, &options);
+                TemplateOrOptions::Options(options)
+            } else {
+                let template = Self::load_template(&template_path)?;
+                Template::custom(template, options).into()
             }
-            let template = Self::load_template(&template_path)?;
-            Template::custom(template, options)
         } else if pure_svg {
-            Template::pure_svg(options)
+            Template::pure_svg(options).into()
         } else {
-            Template::new(options)
+            Template::new(options).into()
         };
 
-        if let Some(out_path) = out_path {
-            let out = File::create(&out_path)
-                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
-            template
-                .render(transcript, out)
-                .with_context(|| format!("cannot render template to `{}`", out_path.display()))?;
-        } else {
-            template
-                .render(transcript, io::stdout())
-                .context("cannot render template to stdout")?;
-        }
-        Ok(())
-    }
-
-    fn render_data(
-        out_path: Option<&Path>,
-        transcript: &Transcript,
-        options: &TemplateOptions,
-    ) -> anyhow::Result<()> {
-        let data = options
-            .render_data(transcript)
-            .context("cannot render data for Handlebars template")?;
-        if let Some(out_path) = out_path {
-            let out = File::create(out_path)
-                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
-            serde_json::to_writer(out, &data).with_context(|| {
-                format!("cannot write Handlebars data to `{}`", out_path.display())
-            })?;
-        } else {
-            serde_json::to_writer(io::stdout(), &data)
-                .context("cannot write Handlebars data to stdout")?;
-        }
-        Ok(())
+        Ok(ProcessedTemplateArgs { template, out_path })
     }
 
     fn load_template(template_path: &Path) -> anyhow::Result<HandlebarsTemplate> {
@@ -317,5 +367,68 @@ impl TemplateArgs {
             )
         })?;
         Ok(template)
+    }
+}
+
+#[derive(Debug)]
+enum TemplateOrOptions {
+    Template(Box<Template>),
+    Options(ValidTemplateOptions),
+}
+
+impl From<Template> for TemplateOrOptions {
+    fn from(template: Template) -> Self {
+        Self::Template(Box::new(template))
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ProcessedTemplateArgs {
+    template: TemplateOrOptions,
+    out_path: Option<PathBuf>,
+}
+
+impl ProcessedTemplateArgs {
+    pub(crate) fn render(self, transcript: &Transcript) -> anyhow::Result<()> {
+        let template = match self.template {
+            TemplateOrOptions::Template(template) => template,
+            TemplateOrOptions::Options(options) => {
+                return Self::render_data(self.out_path.as_deref(), transcript, &options);
+            }
+        };
+
+        if let Some(out_path) = self.out_path {
+            let out = File::create(&out_path)
+                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
+            template
+                .render(transcript, out)
+                .with_context(|| format!("cannot render template to `{}`", out_path.display()))?;
+        } else {
+            template
+                .render(transcript, io::stdout())
+                .context("cannot render template to stdout")?;
+        }
+        Ok(())
+    }
+
+    fn render_data(
+        out_path: Option<&Path>,
+        transcript: &Transcript,
+        options: &ValidTemplateOptions,
+    ) -> anyhow::Result<()> {
+        let data = options
+            .render_data(transcript)
+            .context("cannot render data for Handlebars template")?;
+        if let Some(out_path) = out_path {
+            let out = File::create(out_path)
+                .with_context(|| format!("cannot create output file `{}`", out_path.display()))?;
+            serde_json::to_writer(out, &data).with_context(|| {
+                format!("cannot write Handlebars data to `{}`", out_path.display())
+            })?;
+        } else {
+            serde_json::to_writer(io::stdout(), &data)
+                .context("cannot write Handlebars data to stdout")?;
+        }
+        Ok(())
     }
 }

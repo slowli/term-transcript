@@ -3,7 +3,6 @@
 use std::{env, ffi::OsString, io, process::Command};
 
 use clap::Args;
-use humantime::Duration;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{traits::Echoing, Captured, ExitStatus, ShellOptions, Transcript, UserInput};
@@ -91,6 +90,7 @@ pub(crate) struct ShellArgs {
     /// PTY size can be specified by providing row and column count in a string like 19x80.
     #[cfg(feature = "portable-pty")]
     #[arg(long)]
+    #[allow(clippy::option_option)] // required by `clap`
     pty: Option<Option<PtySize>>,
 
     /// Shell command without args (they are supplied separately). If omitted,
@@ -104,20 +104,21 @@ pub(crate) struct ShellArgs {
 
     /// Arguments to supply to the shell command.
     #[arg(name = "args", long, short = 'a')]
+    #[allow(clippy::struct_field_names)] // matter of taste
     shell_args: Vec<OsString>,
 
     /// Timeout for I/O operations in milliseconds.
     #[arg(name = "io-timeout", long, short = 'T', default_value = "500ms")]
-    io_timeout: Duration,
+    io_timeout: humantime::Duration,
 
     /// Additional timeout waiting for the first output line after inputting a new command
     /// in milliseconds.
     #[arg(name = "init-timeout", long, short = 'I', default_value = "0ms")]
-    init_timeout: Duration,
+    init_timeout: humantime::Duration,
 }
 
 impl ShellArgs {
-    pub fn into_std_options(self) -> ShellOptions<Echoing<Command>> {
+    pub(crate) fn into_std_options(self) -> ShellOptions<Echoing<Command>> {
         let (options, exit_code_check) = if let Some(shell) = self.shell {
             let exit_code_check = ExitCodeCheck::detect(&shell);
             let mut command = Command::new(shell);
@@ -171,7 +172,7 @@ impl ShellArgs {
     }
 
     #[cfg(feature = "portable-pty")]
-    pub fn create_transcript(
+    pub(crate) fn create_transcript(
         self,
         inputs: impl IntoIterator<Item = UserInput>,
     ) -> io::Result<Transcript> {

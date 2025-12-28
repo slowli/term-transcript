@@ -99,9 +99,9 @@
           </div>
         </foreignObject>
       </svg>
-      <rect id="scrollbar" class="scrollbar" x="737" y="10" width="5" height="40" />
-      <animate id="scroll" href="#scroll-container" attributeName="viewBox" values="0 0 749 342;0 52 749 342;0 104 749 342;0 156 749 342;0 208 749 342;0 260 749 342;0 272 749 342" begin="0s" dur="24s" repeatCount="indefinite" calcMode="discrete" />
-      <animate href="#scrollbar" attributeName="y" values="10;67.7;125.5;183.2;240.9;298.7;312" begin="scroll.begin" dur="24s" repeatCount="indefinite" calcMode="discrete" />
+      <rect id="scrollbar" class="scrollbar" x="737" y="10" width="5" height="190" />
+      <animate id="scroll" href="#scroll-container" attributeName="viewBox" values="0 0 749 342;0 52 749 342;0 104 749 342;0 156 749 342;0 208 749 342;0 272 749 342" begin="0s" dur="20s" repeatCount="indefinite" calcMode="discrete" />
+      <animate href="#scrollbar" attributeName="y" values="10;39.1;68.1;97.2;126.2;162" begin="scroll.begin" dur="20s" repeatCount="indefinite" calcMode="discrete" />
     </g>
     <text x="10" y="19.6" style="font: 14px monospace; fill: #c50f1f;">
       HTML embedding not supported.

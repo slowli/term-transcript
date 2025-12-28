@@ -123,7 +123,7 @@ pub(crate) struct LineWriter {
 }
 
 impl LineWriter {
-    pub fn new(max_width: Option<usize>) -> Self {
+    pub(crate) fn new(max_width: Option<usize>) -> Self {
         Self {
             lines: vec![],
             current_line: StyledLine::default(),
@@ -145,7 +145,7 @@ impl LineWriter {
         }
     }
 
-    pub fn into_lines(mut self) -> Vec<StyledLine> {
+    pub(crate) fn into_lines(mut self) -> Vec<StyledLine> {
         if self.line_splitter.current_width > 0 {
             self.lines.push(mem::take(&mut self.current_line).trimmed());
         }
@@ -183,32 +183,11 @@ impl LineWriter {
         }
         Ok(())
     }
-
-    /// Writes the specified HTML `entity` as if it were displayed as a single char.
-    fn write_html_entity(&mut self, entity: &str) -> io::Result<()> {
-        let lines = self.line_splitter.write_as_char(entity);
-        self.write_lines(lines)
-    }
 }
 
 impl io::Write for LineWriter {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        let mut last_escape = 0;
-        for (i, &byte) in buffer.iter().enumerate() {
-            let escaped = match byte {
-                b'>' => "&gt;",
-                b'<' => "&lt;",
-                b'&' => "&amp;",
-                _ => continue,
-            };
-            let saved_str = str::from_utf8(&buffer[last_escape..i])
-                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-            self.write_text(saved_str)?;
-            self.write_html_entity(escaped)?;
-            last_escape = i + 1;
-        }
-
-        let saved_str = str::from_utf8(&buffer[last_escape..])
+        let saved_str = str::from_utf8(buffer)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
         self.write_text(saved_str)?;
         Ok(buffer.len())
@@ -273,32 +252,6 @@ impl LineSplitter {
                 self.process_line(line)
             })
             .collect()
-    }
-
-    fn write_as_char<'a>(&mut self, text: &'a str) -> Vec<Line<'a>> {
-        if self.current_width + 1 > self.max_width {
-            let char_width = self.current_width;
-            self.current_width = 1;
-            vec![
-                Line {
-                    text: "",
-                    br: Some(LineBreak::Hard),
-                    char_width,
-                },
-                Line {
-                    text,
-                    br: None,
-                    char_width: 1,
-                },
-            ]
-        } else {
-            self.current_width += 1;
-            vec![Line {
-                text,
-                br: None,
-                char_width: self.current_width,
-            }]
-        }
     }
 
     fn process_line<'a>(&mut self, line: &'a str) -> Vec<Line<'a>> {

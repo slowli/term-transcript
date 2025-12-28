@@ -50,8 +50,8 @@
 
 {{! Common font styling }}
 {{~#*inline "common_font_styles"}}
-.bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round (add sp (letter_spacing_ems)) digits=4}}em;{{else}}{{/with}} }
-.italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round (add sp (letter_spacing_ems)) digits=4}}em;{{else}}{{/with}} }
+.bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
+.italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
 .underline { text-decoration: underline; }
 {{/inline~}}
 
@@ -80,27 +80,37 @@
     {{#scope
       steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
       scroll_height=(sub content_height scroll.max_height)
+      scrollbar_height=(max
+        (min scroll.min_scrollbar_height scroll.max_height)
+        (mul scroll.max_height (div scroll.max_height content_height) round=true)
+      )
       pos=0
       view_box=""
       scrollbar_y=""
       sep=""
     }}
       {{#each (range 0 (add (steps) 1))}}
-        {{~pos set=(min (scroll_height) (mul ../scroll.pixels_per_scroll @index))~}}
-        {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
-        {{#view_box}}"{{view_box}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
-        {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}{{round
-          (add
-            (mul (div (pos) (scroll_height)) (sub ../scroll.max_height ../const.SCROLLBAR_HEIGHT))
-            ../const.WINDOW_PADDING
-          )
-          digits=1
-        }}"{{/scrollbar_y}}
+        {{pos set=(min (scroll_height) (mul ../scroll.pixels_per_scroll @index))}}
+        {{! Skip the penultimate step if its position is too close to the last one }}
+        {{#if (or @last (gt (sub (scroll_height) (pos)) (mul ../scroll.pixels_per_scroll ../scroll.elision_threshold)))}}
+          {{#sep}}{{#if @first}}""{{else}}";"{{/if}}{{/sep}}
+          {{#view_box}}"{{view_box}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}"{{/view_box}}
+          {{#scrollbar_y}}"{{scrollbar_y}}{{sep}}{{round
+            (add
+              (mul (div (pos) (scroll_height)) (sub ../scroll.max_height (scrollbar_height)))
+              ../const.WINDOW_PADDING
+            )
+            digits=1
+          }}"{{/scrollbar_y}}
+        {{else}}
+          {{steps set=(sub (steps) 1)}}
+        {{/if}}
       {{/each}}
 
       {
         "duration": {{mul scroll.interval (steps)}},
         "view_box": "{{view_box}}",
+        "scrollbar_height": {{scrollbar_height}},
         "scrollbar_x": {{sub width (add const.SCROLLBAR_RIGHT_OFFSET 5)}}, {{! 5 is scrollbar width }}
         "scrollbar_y": "{{scrollbar_y}}"
       }
@@ -111,7 +121,7 @@
 {{! Scrollbar }}
 {{~#*inline "scrollbar"}}
   {{#with (scroll_animation)}}
-<rect id="scrollbar" class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{../const.SCROLLBAR_HEIGHT}}" />
+<rect id="scrollbar" class="scrollbar" x="{{scrollbar_x}}" y="10" width="5" height="{{scrollbar_height}}" />
   {{/with}}
 {{/inline~}}
 
@@ -125,21 +135,21 @@
 
 {{! Renders an HTML span }}
 {{~#*inline "html_span"}}
-  {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
+  {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
     {{~#scope classes="" styles=""}}
     {{~#classes append=true}}
-      {{~#if span.bold}} bold{{/if~}}
-      {{~#if span.italic}} italic{{/if~}}
-      {{~#if span.underline}} underline{{/if~}}
-      {{~#if span.dimmed}} dimmed{{/if~}}
-      {{~#if (and span.dimmed (ne (typeof span.bg) "null"))}} dimmed-bg{{/if~}}
-      {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
-      {{~#if (eq (typeof span.bg) "number")}} bg{{span.bg}}{{/if~}}
+      {{~#if bold}} bold{{/if~}}
+      {{~#if italic}} italic{{/if~}}
+      {{~#if underline}} underline{{/if~}}
+      {{~#if dimmed}} dimmed{{/if~}}
+      {{~#if (and dimmed (ne (typeof bg) "null"))}} dimmed-bg{{/if~}}
+      {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
+      {{~#if (eq (typeof bg) "number")}} bg{{bg}}{{/if~}}
     {{/classes~}}
     {{~classes set=(trim (classes))~}}
     {{~#styles append=true}}
-      {{~#if (eq (typeof span.fg) "string")}} color: {{span.fg}};{{/if~}}
-      {{~#if (eq (typeof span.bg) "string")}} background: {{span.bg}};{{/if~}}
+      {{~#if (eq (typeof fg) "string")}} color: {{fg}};{{/if~}}
+      {{~#if (eq (typeof bg) "string")}} background: {{bg}};{{/if~}}
     {{/styles~}}
     {{~styles set=(trim (styles))~}}
     <span{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
@@ -149,34 +159,32 @@
     If dimmed, enclose text in an additional span to apply pseudo-opacity effects based on `currentColor` and/or
     by having a semi-transparent background; see .dimmed CSS. Using `opacity` or filters doesn't work in Safari.
   }}
-  {{#if span.dimmed}}<span>{{/if}}{{{span.text}}}{{#if span.dimmed}}</span>{{/if}}
-  {{~#if (gt (len span) 1)~}}
+  {{#if dimmed}}<span>{{/if}}{{text}}{{#if dimmed}}</span>{{/if}}
+  {{~#if (gt (len this) 1)~}}
     </span>
   {{~/if~}}
 {{~/inline~}}
 
-{{! Renders an SVG foreground <tspan> }}
-{{~#*inline "svg_tspan"}}
-  {{~#if (gt (len span) 1)~}}{{! Are there any style properties in `span`? }}
-    {{~#scope classes="" styles=""}}
+{{! Renders an SVG foreground <tspan> styling attributes (class and/or style) }}
+{{~#*inline "svg_tspan_attrs"}}
+  {{~#scope classes="" styles=""}}
+  {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
       {{~#classes append=true}}
-        {{~#if span.bold}} bold{{/if~}}
-        {{~#if span.italic}} italic{{/if~}}
-        {{~#if span.underline}} underline{{/if~}}
-        {{~#if span.dimmed}} dimmed{{/if~}}
-        {{~#if (eq (typeof span.fg) "number")}} fg{{span.fg}}{{/if~}}
+        {{~#if bold}} bold{{/if~}}
+        {{~#if italic}} italic{{/if~}}
+        {{~#if underline}} underline{{/if~}}
+        {{~#if dimmed}} dimmed{{/if~}}
+        {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
         {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
-        {{~#if (ne (typeof span.bg) "null")}} bg{{span.bg}}{{/if~}}
+        {{~#if (ne (typeof bg) "null")}} bg{{bg}}{{/if~}}
       {{/classes~}}
       {{~classes set=(trim (classes))~}}
       {{~#styles append=true}}
-        {{~#if (eq (typeof span.fg) "string")}}fill: {{span.fg}};{{/if~}}
+        {{~#if (eq (typeof fg) "string")}}fill: {{fg}};{{/if~}}
       {{/styles~}}
-      <tspan{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>{{{span.text}}}</tspan>
-    {{~/scope~}}
-  {{~else~}}
-    {{{span.text}}}
   {{~/if~}}
+  {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
+  {{~/scope~}}
 {{~/inline~}}
 
 {{!

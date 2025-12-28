@@ -128,7 +128,7 @@
 //! )?;
 //! let mut writer = vec![];
 //! // ^ Any `std::io::Write` implementation will do, such as a `File`.
-//! Template::new(TemplateOptions::default()).render(&transcript, &mut writer)?;
+//! Template::default().render(&transcript, &mut writer)?;
 //! println!("{}", str::from_utf8(&writer)?);
 //! # Ok(())
 //! # }
@@ -151,10 +151,6 @@
 // Documentation settings.
 #![doc(html_root_url = "https://docs.rs/term-transcript/0.4.0")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-// Linter settings.
-#![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
-#![warn(clippy::all, clippy::pedantic)]
-#![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
 

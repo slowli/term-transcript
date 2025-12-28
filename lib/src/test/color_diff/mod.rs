@@ -23,13 +23,13 @@ pub(crate) struct ColorSpan {
 }
 
 impl ColorSpan {
-    pub fn parse(ansi_text: &str) -> Result<Vec<Self>, TermError> {
+    pub(crate) fn parse(ansi_text: &str) -> Result<Vec<Self>, TermError> {
         let mut spans = ColorSpansWriter::default();
         TermOutputParser::new(&mut spans).parse(ansi_text.as_bytes())?;
         Ok(spans.shrink().spans)
     }
 
-    pub fn write_colorized(
+    pub(crate) fn write_colorized(
         spans: &[Self],
         out: &mut impl WriteColor,
         plaintext: &str,
@@ -132,7 +132,7 @@ impl ColorSpansWriter {
         }
     }
 
-    pub fn into_inner(self) -> Vec<ColorSpan> {
+    pub(crate) fn into_inner(self) -> Vec<ColorSpan> {
         self.shrink().spans
     }
 }
@@ -182,7 +182,7 @@ pub(crate) struct ColorDiff {
 }
 
 impl ColorDiff {
-    pub fn new(lhs: &[ColorSpan], rhs: &[ColorSpan]) -> Self {
+    pub(crate) fn new(lhs: &[ColorSpan], rhs: &[ColorSpan]) -> Self {
         debug_assert_eq!(
             lhs.iter().map(|span| span.len).sum::<usize>(),
             rhs.iter().map(|span| span.len).sum::<usize>(),
@@ -240,12 +240,12 @@ impl ColorDiff {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.differing_spans.is_empty()
     }
 
     /// Highlights this diff on the specified `text` which has styling set with `color_spans`.
-    pub fn highlight_text(
+    pub(crate) fn highlight_text(
         &self,
         out: &mut impl WriteColor,
         text: &str,
@@ -332,7 +332,7 @@ impl ColorDiff {
         writeln!(out)
     }
 
-    pub fn write_as_table(&self, out: &mut impl WriteColor) -> io::Result<()> {
+    pub(crate) fn write_as_table(&self, out: &mut impl WriteColor) -> io::Result<()> {
         const POS_WIDTH: usize = 10;
         const STYLE_WIDTH: usize = 22; // `buid magenta*/magenta*`
 

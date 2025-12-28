@@ -12,7 +12,7 @@ use tempfile::tempdir;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{
-    svg::{NamedPalette, Template, TemplateOptions},
+    svg::{NamedPalette, Template, TemplateOptions, ValidTemplateOptions},
     test::{compare_transcripts, MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ExitStatus, ShellOptions, Transcript, UserInput,
 };
@@ -80,7 +80,8 @@ fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     let template_options = TemplateOptions {
         palette: NamedPalette::Gjm8.into(),
         ..TemplateOptions::default()
-    };
+    }
+    .validated()?;
     let template = if pure_svg {
         Template::pure_svg(template_options)
     } else {
@@ -137,7 +138,7 @@ fn snapshot_with_custom_template() -> anyhow::Result<()> {
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
-    Template::custom(template, template_options).render(&transcript, &mut buffer)?;
+    Template::custom(template, template_options.validated()?).render(&transcript, &mut buffer)?;
     let buffer = String::from_utf8(buffer)?;
     assert!(buffer.starts_with("<!DOCTYPE html>"), "{buffer}");
     Ok(())
@@ -151,9 +152,9 @@ fn main_snapshot_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::Result<()> 
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
     let template = if pure_svg {
-        Template::pure_svg(TemplateOptions::default())
+        Template::pure_svg(ValidTemplateOptions::default())
     } else {
-        Template::new(TemplateOptions::default())
+        Template::default()
     };
     template.render(&transcript, io::sink())?;
     Ok(())
@@ -177,9 +178,9 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::
     );
 
     let template = if pure_svg {
-        Template::pure_svg(TemplateOptions::default())
+        Template::pure_svg(ValidTemplateOptions::default())
     } else {
-        Template::new(TemplateOptions::default())
+        Template::default()
     };
     template.render(&transcript, io::sink())?;
     Ok(())
@@ -200,7 +201,7 @@ fn snapshot_testing(pure_svg: bool) {
     let shell_options = ShellOptions::default().with_cargo_path();
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(main_snapshot_path(), ["rainbow"]);
 }
@@ -212,7 +213,7 @@ fn snapshot_testing_with_pty(pure_svg: bool) {
     let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(main_snapshot_path(), ["rainbow"]);
 }
@@ -222,7 +223,7 @@ fn animated_snapshot_testing(pure_svg: bool) {
     let shell_options = ShellOptions::default().with_cargo_path();
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(
         animated_snapshot_path(),
@@ -237,7 +238,7 @@ fn snapshot_testing_with_custom_settings(pure_svg: bool) {
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(main_snapshot_path(), ["rainbow"]);
 }
@@ -250,7 +251,7 @@ fn sh_shell_example(pure_svg: bool) {
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(aliased_snapshot_path(), ["colored-output"]);
 }
@@ -280,7 +281,7 @@ fn bash_shell_example(pure_svg: bool) {
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(aliased_snapshot_path(), ["colored-output"]);
 }
@@ -310,7 +311,7 @@ fn powershell_example(pure_svg: bool) {
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(aliased_snapshot_path(), ["colored-output"]);
 }
@@ -320,7 +321,7 @@ fn repl_snapshot_testing(pure_svg: bool) {
     let shell_options = ShellOptions::from(Command::new(PATH_TO_REPL_BIN));
     let mut config = TestConfig::new(shell_options).with_match_kind(MatchKind::Precise);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(
         repl_snapshot_path(),
@@ -385,7 +386,7 @@ fn new_snapshot(error_type: ErrorType, pure_svg: bool) -> anyhow::Result<()> {
         let shell_options = ShellOptions::default().with_cargo_path();
         let mut config = TestConfig::new(shell_options).with_update_mode(UpdateMode::Always);
         if pure_svg {
-            config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+            config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
         }
         config.test(&snapshot_path, ["rainbow"]);
     });

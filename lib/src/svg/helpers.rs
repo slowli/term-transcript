@@ -207,6 +207,7 @@ enum OpsHelper {
     Sub,
     Div,
     Min,
+    Max,
 }
 
 impl OpsHelper {
@@ -217,6 +218,7 @@ impl OpsHelper {
             Self::Sub => "sub",
             Self::Div => "div",
             Self::Min => "min",
+            Self::Max => "max",
         }
     }
 
@@ -227,6 +229,7 @@ impl OpsHelper {
             // `unwrap`s are safe because of previous checks
             Self::Sub => values.next().unwrap() - values.next().unwrap(),
             Self::Min => values.min().unwrap(),
+            Self::Max => values.max().unwrap(),
             Self::Div => unreachable!(),
         }
     }
@@ -239,6 +242,7 @@ impl OpsHelper {
             Self::Sub => values.next().unwrap() - values.next().unwrap(),
             Self::Div => values.next().unwrap() / values.next().unwrap(),
             Self::Min => values.reduce(f64::min).unwrap(),
+            Self::Max => values.reduce(f64::max).unwrap(),
         }
     }
 }
@@ -791,124 +795,14 @@ impl HelperDef for CharWidthHelper {
     }
 }
 
-#[derive(Debug)]
-struct ConcatHelper;
-
-impl ConcatHelper {
-    const NAME: &'static str = "concat";
-}
-
-impl HelperDef for ConcatHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
-    fn call_inner<'reg: 'rc, 'rc>(
-        &self,
-        helper: &Helper<'rc>,
-        _: &'reg Handlebars<'reg>,
-        _: &'rc Context,
-        _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'rc>, RenderError> {
-        let concat = helper
-            .params()
-            .iter()
-            .try_fold(String::new(), |mut acc, param| {
-                let val = param.value().as_str().ok_or_else(|| {
-                    RenderErrorReason::ParamTypeMismatchForName(
-                        Self::NAME,
-                        "0".to_owned(),
-                        "string".to_owned(),
-                    )
-                })?;
-                acc += val;
-                Ok::<_, RenderErrorReason>(acc)
-            })?;
-        Ok(ScopedJson::Derived(concat.into()))
-    }
-}
-
-#[derive(Debug)]
-struct SplitIntoCharsHelper;
-
-impl SplitIntoCharsHelper {
-    const NAME: &'static str = "split_into_chars";
-}
-
-impl HelperDef for SplitIntoCharsHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
-    fn call_inner<'reg: 'rc, 'rc>(
-        &self,
-        helper: &Helper<'rc>,
-        _: &'reg Handlebars<'reg>,
-        _: &'rc Context,
-        _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'rc>, RenderError> {
-        let val = helper
-            .param(0)
-            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
-        let val = val.value().as_str().ok_or_else(|| {
-            RenderErrorReason::ParamTypeMismatchForName(
-                Self::NAME,
-                "0".to_owned(),
-                "string".to_owned(),
-            )
-        })?;
-        let chars: Vec<_> = val.chars().map(|ch| Json::String(ch.into())).collect();
-        Ok(ScopedJson::Derived(chars.into()))
-    }
-}
-
-#[derive(Debug)]
-struct PrintHelper;
-
-impl PrintHelper {
-    const NAME: &'static str = "print";
-}
-
-impl HelperDef for PrintHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
-    fn call_inner<'reg: 'rc, 'rc>(
-        &self,
-        helper: &Helper<'rc>,
-        _: &'reg Handlebars<'reg>,
-        _: &'rc Context,
-        _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'rc>, RenderError> {
-        let val = helper
-            .param(0)
-            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
-        Ok(val.try_get_constant_value().map_or_else(
-            || ScopedJson::Derived(val.value().clone()),
-            ScopedJson::Constant,
-        ))
-    }
-}
-
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("add", Box::new(OpsHelper::Add));
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
     reg.register_helper("min", Box::new(OpsHelper::Min));
+    reg.register_helper("max", Box::new(OpsHelper::Max));
+
     reg.register_helper(PtrHelper::NAME, Box::new(PtrHelper));
     reg.register_helper(RoundHelper::NAME, Box::new(RoundHelper));
     reg.register_helper(LineCounter::NAME, Box::new(LineCounter));
@@ -920,9 +814,6 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
     reg.register_helper(TrimHelper::NAME, Box::new(TrimHelper));
     reg.register_helper(CharWidthHelper::NAME, Box::new(CharWidthHelper));
-    reg.register_helper(SplitIntoCharsHelper::NAME, Box::new(SplitIntoCharsHelper));
-    reg.register_helper(PrintHelper::NAME, Box::new(PrintHelper));
-    reg.register_helper(ConcatHelper::NAME, Box::new(ConcatHelper));
 }
 
 #[cfg(test)]

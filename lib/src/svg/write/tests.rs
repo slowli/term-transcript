@@ -14,17 +14,6 @@ impl From<&str> for StyledSpan {
 }
 
 #[test]
-fn html_escaping() -> anyhow::Result<()> {
-    let mut writer = LineWriter::new(None);
-    write!(writer, "1 < 2 && 4 >= 3")?;
-
-    let lines = writer.into_lines();
-    assert_eq!(lines.len(), 1);
-    assert_eq!(lines[0].spans, ["1 &lt; 2 &amp;&amp; 4 &gt;= 3".into()]);
-    Ok(())
-}
-
-#[test]
 fn html_writer_basic_colors() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(None);
     write!(writer, "Hello, ")?;
@@ -261,7 +250,7 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
         ]
     );
     assert_eq!(lines[2].br, Some(LineBreak::Hard));
-    assert_eq!(lines[3].spans, ["ore&gt;".into()]);
+    assert_eq!(lines[3].spans, ["ore>".into()]);
     assert_eq!(lines[3].br, None);
     assert_eq!(lines[4].spans, ["text".into()]);
     assert_eq!(lines[4].br, None);
@@ -276,9 +265,9 @@ fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 2);
-    assert_eq!(lines[0].spans, ["&gt;&gt;&gt;&gt;&gt;".into()]);
+    assert_eq!(lines[0].spans, [">>>>>".into()]);
     assert_eq!(lines[0].br, Some(LineBreak::Hard));
-    assert_eq!(lines[1].spans, ["&gt;&gt;".into()]);
+    assert_eq!(lines[1].spans, [">>".into()]);
 
     let mut writer = LineWriter::new(Some(5));
     for _ in 0..7 {
@@ -287,9 +276,9 @@ fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 2);
-    assert_eq!(lines[0].spans, ["&gt;&gt;&gt;&gt;&gt;".into()]);
+    assert_eq!(lines[0].spans, [">>>>>".into()]);
     assert_eq!(lines[0].br, Some(LineBreak::Hard));
-    assert_eq!(lines[1].spans, ["&gt;&gt;".into()]);
+    assert_eq!(lines[1].spans, [">>".into()]);
     Ok(())
 }
 
@@ -303,10 +292,10 @@ fn splitting_lines_with_newlines() -> anyhow::Result<()> {
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 4);
-    assert_eq!(lines[0].spans, ["&lt; tes".into()]);
-    assert_eq!(lines[1].spans, ["t &gt;".into()]);
-    assert_eq!(lines[2].spans, ["&lt; tes".into()]);
-    assert_eq!(lines[3].spans, ["t &gt;".into()]);
+    assert_eq!(lines[0].spans, ["< tes".into()]);
+    assert_eq!(lines[1].spans, ["t >".into()]);
+    assert_eq!(lines[2].spans, ["< tes".into()]);
+    assert_eq!(lines[3].spans, ["t >".into()]);
 
     let mut writer = LineWriter::new(Some(5));
     for _ in 0..2 {
@@ -315,9 +304,9 @@ fn splitting_lines_with_newlines() -> anyhow::Result<()> {
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 4);
-    assert_eq!(lines[0].spans, ["&lt;&lt; te".into()]);
-    assert_eq!(lines[1].spans, ["st &gt;&gt;".into()]);
-    assert_eq!(lines[2].spans, ["&lt;&lt; te".into()]);
-    assert_eq!(lines[3].spans, ["st &gt;&gt;".into()]);
+    assert_eq!(lines[0].spans, ["<< te".into()]);
+    assert_eq!(lines[1].spans, ["st >>".into()]);
+    assert_eq!(lines[2].spans, ["<< te".into()]);
+    assert_eq!(lines[3].spans, ["st >>".into()]);
     Ok(())
 }

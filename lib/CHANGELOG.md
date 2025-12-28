@@ -24,8 +24,13 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Change the hard break char to `»` so that it is covered by more fonts. Do not style the hard break as the surrounding text.
 - Change the output data provided to templates. Instead of pre-rendered HTML and SVG data, a template is now provided
   with an array of lines, each consisting of styled text spans.
-- Decrease the default line height to 1.2 (i.e., 16.8px); previously, it was 18px (i.e., ~1.29).
+- Decrease the default line height to 1.2em (i.e., 16.8px); previously, it was 18px (i.e., ~1.29em).
 - Change the way background fill works for HTML-in-SVG so that it always has the full line height.
+- Make scrollbar height dynamic (dependent on the screen height / view box height ratio).
+- Elide the penultimate scroll keyframe if the last scroll is small (25% of the ordinary scroll height by default;
+  can be configured via `ScrollOptions.elision_threshold`).
+- Validate `TemplateOptions` before passing them to a `Template`.
+- Change some fields in `TemplateOptions` to use `NonZeroUsize` instead of `usize`.
 
 ### Fixed
 

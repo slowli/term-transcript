@@ -66,15 +66,15 @@
         <foreignObject width="720" height="187.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> ls -l Cargo.lock</pre></div>
-            <div class="output"><pre><span class="line">-rwxrwxrwx 1 alex alex 44148 Dec 25 10:02 <span class="fg2">Cargo.lock</span></span></pre></div>
+            <div class="output"><pre><span class="line">-rwxrwxrwx 1 alex alex 44148 Dec 27 11:40 <span class="fg2">Cargo.lock</span></span></pre></div>
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge Cargo.lock</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> grep -m 5 -n serde Cargo.lock</pre></div>
-            <div class="output"><pre><span class="line"><span class="fg2">411</span><span class="fg6">:</span> "<span class="fg1">serde</span>",
-</span><span class="line"><span class="fg2">412</span><span class="fg6">:</span> "<span class="fg1">serde</span>_json",
-</span><span class="line"><span class="fg2">935</span><span class="fg6">:</span>name = "<span class="fg1">serde</span>"
-</span><span class="line"><span class="fg2">940</span><span class="fg6">:</span> "<span class="fg1">serde</span>_core",
-</span><span class="line"><span class="fg2">941</span><span class="fg6">:</span> "<span class="fg1">serde</span>_derive",</span></pre></div>
+            <div class="output"><pre><span class="line"><span class="fg2">411</span><span class="fg6">:</span> &quot;<span class="fg1">serde</span>&quot;,
+</span><span class="line"><span class="fg2">412</span><span class="fg6">:</span> &quot;<span class="fg1">serde</span>_json&quot;,
+</span><span class="line"><span class="fg2">935</span><span class="fg6">:</span>name &#x3D; &quot;<span class="fg1">serde</span>&quot;
+</span><span class="line"><span class="fg2">940</span><span class="fg6">:</span> &quot;<span class="fg1">serde</span>_core&quot;,
+</span><span class="line"><span class="fg2">941</span><span class="fg6">:</span> &quot;<span class="fg1">serde</span>_derive&quot;,</span></pre></div>
           </div>
         </foreignObject>
       </svg>

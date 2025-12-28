@@ -335,9 +335,8 @@ mod tests {
             "\u{1b}[44m\u{1b}[1mH\u{1b}[0mello, \u{1b}[32m\u{1b}[3mworld\u{1b}[0m! ".repeat(10),
         );
 
-        let options = TemplateOptions {
-            ..TemplateOptions::default().with_font_subsetting(subsetter)
-        };
+        let options = TemplateOptions::default().with_font_subsetting(subsetter);
+        let options = options.validated().unwrap();
         let mut buffer = vec![];
         let template = if pure_svg {
             Template::pure_svg(options)

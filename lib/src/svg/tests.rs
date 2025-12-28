@@ -11,15 +11,82 @@ use super::{
 use crate::{utils::IndexOrRgb, ExitStatus, Interaction, UserInput};
 
 #[test]
+fn parsing_scroll_options() {
+    let json = serde_json::json!({});
+    let options: ScrollOptions = serde_json::from_value(json).unwrap();
+    assert_eq!(options, ScrollOptions::DEFAULT);
+
+    let json = serde_json::json!({
+        "pixels_per_scroll": 40,
+        "elision_threshold": 0.1,
+    });
+    let options: ScrollOptions = serde_json::from_value(json).unwrap();
+    assert_eq!(
+        options,
+        ScrollOptions {
+            pixels_per_scroll: NonZeroUsize::new(40).unwrap(),
+            elision_threshold: 0.1,
+            ..ScrollOptions::DEFAULT
+        }
+    );
+}
+
+#[test]
+fn validating_options() {
+    // Default options must be valid.
+    TemplateOptions::default().validate().unwrap();
+
+    let bogus_options = TemplateOptions {
+        line_height: Some(-1.0),
+        ..TemplateOptions::default()
+    };
+    let err = bogus_options.validate().unwrap_err().to_string();
+    assert!(err.contains("line_height"), "{err}");
+
+    let bogus_options = TemplateOptions {
+        advance_width: Some(-1.0),
+        ..TemplateOptions::default()
+    };
+    let err = bogus_options.validate().unwrap_err().to_string();
+    assert!(err.contains("advance_width"), "{err}");
+
+    let bogus_options = TemplateOptions {
+        scroll: Some(ScrollOptions {
+            interval: -1.0,
+            ..ScrollOptions::default()
+        }),
+        ..TemplateOptions::default()
+    };
+    let err = format!("{:#}", bogus_options.validate().unwrap_err());
+    assert!(err.contains("interval"), "{err}");
+
+    for elision_threshold in [-1.0, 1.0] {
+        let bogus_options = TemplateOptions {
+            scroll: Some(ScrollOptions {
+                elision_threshold,
+                ..ScrollOptions::default()
+            }),
+            ..TemplateOptions::default()
+        };
+        let err = format!("{:#}", bogus_options.validate().unwrap_err());
+        assert!(err.contains("elision_threshold"), "{err}");
+    }
+}
+
+#[test]
 fn rendering_simple_transcript() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
         "Hello, \u{1b}[32mworld\u{1b}[0m!",
     );
+    transcript.add_interaction(
+        UserInput::command("test --arg && true"),
+        "Hello, \u{1b}[31m\u{1b}[42m<world>\u{1b}[0m!",
+    );
 
     let mut buffer = vec![];
-    Template::new(TemplateOptions::default())
+    Template::default()
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -36,6 +103,11 @@ fn rendering_simple_transcript() {
 
     assert!(!buffer.contains("input-failure"));
     assert!(!buffer.contains("title=\"This command exited with non-zero code\""));
+
+    let second_input_span = "test --arg &amp;&amp; true";
+    assert!(buffer.contains(second_input_span), "{buffer}");
+    let second_output_span = r#"<span class="fg1 bg2">&lt;world&gt;</span>"#;
+    assert!(buffer.contains(second_output_span), "{buffer}");
 }
 
 #[test]
@@ -46,8 +118,8 @@ fn rendering_simple_transcript_to_pure_svg() {
         "Hello, \u{1b}[32mworld\u{1b}[0m!",
     );
     transcript.add_interaction(
-        UserInput::command("test --arg"),
-        "Hello, \u{1b}[31m\u{1b}[42mworld\u{1b}[0m!",
+        UserInput::command("test --arg && true"),
+        "Hello, \u{1b}[31m\u{1b}[42m<world>\u{1b}[0m!",
     );
 
     let mut buffer = vec![];
@@ -55,22 +127,28 @@ fn rendering_simple_transcript_to_pure_svg() {
         line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
 
     let top_svg = "<svg viewBox=\"0 0 720 118\"";
     assert!(buffer.contains(top_svg), "{buffer}");
-    let first_input_text =
-        r#"<g class="input"><text xml:space="preserve" x="10 18 26 34 42 50" y="15.5">"#;
+    let first_input_text = r#"<g class="input"><g transform="translate(10 15.5)">"#;
     assert!(buffer.contains(first_input_text), "{buffer}");
-    let first_output_text = r#"<g class="output"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98 106" y="41.5" clip-path="view-box xywh(0 2em 100% 18px)">"#;
+    let second_input_span = r#"<text x="8" textLength="152"> test --arg &amp;&amp; true</text"#;
+    assert!(buffer.contains(second_input_span), "{buffer}");
+
+    let first_output_text =
+        r#"<g class="output"><g transform="translate(10 41.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(first_output_text), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98" y="67.5">"#;
+    let second_input_text = r#"<g class="input"><g transform="translate(10 67.5)">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_text = r#"<g class="output"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98 106" y="93.5" clip-path="view-box xywh(0 5.7em 100% 18px)">"#;
+    let second_output_text =
+        r#"<g class="output"><g transform="translate(10 93.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(second_output_text), "{buffer}");
+    let second_output_span = r#"<text x="56" textLength="56" class="fg1 bg2">&lt;world&gt;</text>"#;
+    assert!(buffer.contains(second_output_span), "{buffer}");
 }
 
 #[test]
@@ -87,7 +165,7 @@ fn rendering_transcript_with_hidden_input() {
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -115,7 +193,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -124,7 +202,8 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     assert!(buffer.contains(r#"viewBox="0 0 720 18""#), "{buffer}");
     // No background for input should be displayed.
     assert!(buffer.contains(r#"<g class="input-bg"></g>"#), "{buffer}");
-    let output_span = r#"<g class="output"><text xml:space="preserve" x="10 18.05 26.1 34.15 42.2 50.25 58.3 66.35 74.4 82.45 90.5 98.55 106.6" y="13.5" clip-path="view-box xywh(0 0em 100% 18px)">"#;
+    let output_span =
+        r#"<g class="output"><g transform="translate(10 13.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(output_span), "{buffer}");
     assert!(!buffer.contains(r#"class="input""#), "{buffer}");
 }
@@ -143,7 +222,7 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
         line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -152,10 +231,11 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     assert!(buffer.contains(top_svg), "{buffer}");
     let second_input_bg = r#"<rect x="0" y="28" width="100%" height="22""#;
     assert!(buffer.contains(second_input_bg), "{buffer}");
-    let second_input_text = r#"<g class="input"><text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98" y="43.5">"#;
+    let second_input_text = r#"<g class="input"><g transform="translate(10 43.5)">"#;
     assert!(buffer.contains(second_input_text), "{buffer}");
-    let second_output_bg = r#"<text xml:space="preserve" x="10 18 26 34 42 50 58 66 74 82 90 98 106" y="69.5" clip-path="view-box xywh(0 4em 100% 18px)">"#;
-    assert!(buffer.contains(second_output_bg), "{buffer}");
+    let second_output_text =
+        r#"<g class="output"><g transform="translate(10 69.5)" clip-path="xywh(0 0 100% 18px)">"#;
+    assert!(buffer.contains(second_output_text), "{buffer}");
 }
 
 #[test]
@@ -166,7 +246,7 @@ fn rendering_transcript_with_explicit_success() {
     transcript.add_existing_interaction(interaction);
 
     let mut buffer = vec![];
-    Template::new(TemplateOptions::default())
+    Template::default()
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -184,7 +264,7 @@ fn rendering_transcript_with_failure() {
     transcript.add_existing_interaction(interaction);
 
     let mut buffer = vec![];
-    Template::new(TemplateOptions::default())
+    Template::default()
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -206,7 +286,7 @@ fn rendering_pure_svg_transcript_with_failure() {
         line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -237,7 +317,7 @@ fn rendering_transcript_with_frame() {
         window_frame: true,
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -257,7 +337,7 @@ fn rendering_pure_svg_transcript_with_frame() {
         window_frame: true,
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -276,22 +356,77 @@ fn rendering_transcript_with_animation() {
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
         scroll: Some(ScrollOptions {
-            max_height: 240,
-            pixels_per_scroll: 52,
+            max_height: NonZeroUsize::new(240).unwrap(),
+            pixels_per_scroll: NonZeroUsize::new(52).unwrap(),
             interval: 3.0,
+            ..ScrollOptions::default()
         }),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
 
     assert!(buffer.contains(r#"viewBox="0 0 720 260""#), "{buffer}");
+    let scrollbar =
+        r#"<rect id="scrollbar" class="scrollbar" x="708" y="10" width="5" height="136" />"#;
+    assert!(buffer.contains(scrollbar), "{buffer}");
     let animate_tag = r##"<animate id="scroll" href="#scroll-container" attributeName="viewBox""##;
     assert!(buffer.contains(animate_tag), "{buffer}");
     let expected_view_boxes = "0 0 720 240;0 52 720 240;0 104 720 240;0 156 720 240;0 184 720 240";
     assert!(buffer.contains(expected_view_boxes), "{buffer}");
+}
+
+#[test]
+fn scrollbar_animation_elision() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test"),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!\n".repeat(22),
+    );
+
+    for elision_threshold in [0.0, 0.25] {
+        println!("Testing elision_threshold={elision_threshold}");
+
+        let mut buffer = vec![];
+        let options = TemplateOptions {
+            line_height: Some(18.0 / 14.0),
+            scroll: Some(ScrollOptions {
+                max_height: NonZeroUsize::new(240).unwrap(),
+                pixels_per_scroll: NonZeroUsize::new(58).unwrap(),
+                interval: 3.0,
+                elision_threshold,
+                ..ScrollOptions::default()
+            }),
+            ..TemplateOptions::default()
+        };
+        Template::new(options.validated().unwrap())
+            .render(&transcript, &mut buffer)
+            .unwrap();
+        let buffer = String::from_utf8(buffer).unwrap();
+
+        let expected_duration = if elision_threshold > 0.0 {
+            r#"dur="9s""#
+        } else {
+            r#"dur="12s""#
+        };
+        assert!(buffer.contains(expected_duration), "{buffer}");
+
+        let expected_view_boxes = if elision_threshold > 0.0 {
+            "0 0 720 240;0 58 720 240;0 116 720 240;0 184 720 240"
+        } else {
+            "0 0 720 240;0 58 720 240;0 116 720 240;0 174 720 240;0 184 720 240"
+        };
+        assert!(buffer.contains(expected_view_boxes), "{buffer}");
+
+        let expected_scrollbar_ys = if elision_threshold > 0.0 {
+            r#"values="10;42.8;75.6;114""#
+        } else {
+            r#"values="10;42.8;75.6;108.3;114""#
+        };
+        assert!(buffer.contains(expected_scrollbar_ys), "{buffer}");
+    }
 }
 
 #[test_casing(2, [false, true])]
@@ -306,14 +441,15 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
         scroll: Some(ScrollOptions {
-            max_height: 240,
-            pixels_per_scroll: 52,
+            max_height: NonZeroUsize::new(240).unwrap(),
+            pixels_per_scroll: NonZeroUsize::new(52).unwrap(),
             interval: 3.0,
+            ..ScrollOptions::default()
         }),
         line_numbers: line_numbers.then_some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -324,6 +460,13 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
         r#"viewBox="0 0 720 260""#
     };
     assert!(buffer.contains(view_box), "{buffer}");
+    let scrollbar = if line_numbers {
+        r#"<rect id="scrollbar" class="scrollbar" x="737" y="10" width="5" height="136" />"#
+    } else {
+        r#"<rect id="scrollbar" class="scrollbar" x="708" y="10" width="5" height="136" />"#
+    };
+    assert!(buffer.contains(scrollbar), "{buffer}");
+
     let animate_tag = r##"<animate id="scroll" href="#scroll-container" attributeName="viewBox""##;
     assert!(buffer.contains(animate_tag), "{buffer}");
     let expected_view_boxes = if line_numbers {
@@ -345,10 +488,10 @@ fn rendering_transcript_with_wraps() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        wrap: Some(WrapOptions::HardBreakAt(5)),
+        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -368,10 +511,10 @@ fn rendering_svg_transcript_with_wraps() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        wrap: Some(WrapOptions::HardBreakAt(5)),
+        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -400,7 +543,7 @@ fn rendering_transcript_with_line_numbers() {
         line_numbers: Some(LineNumbers::EachOutput),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -433,7 +576,7 @@ fn rendering_pure_svg_transcript_with_line_numbers() {
         line_numbers: Some(LineNumbers::EachOutput),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -464,7 +607,7 @@ fn rendering_transcript_with_continuous_line_numbers() {
         line_numbers: Some(LineNumbers::ContinuousOutputs),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -496,7 +639,7 @@ fn rendering_transcript_with_input_line_numbers() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -532,7 +675,7 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -568,7 +711,7 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -583,11 +726,13 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
         <text x=\"32\" y=\"125.5\">6</text>";
     assert!(buffer.contains(line_numbers), "{buffer}");
 
-    let first_output = r#"<g class="output"><text xml:space="preserve" x="39 47 55 63 71 79 87 95 103 111 119 127 135" y="13.5""#;
+    let first_output =
+        r#"<g class="output"><g transform="translate(39 13.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(first_output), "{buffer}");
-    let second_output = r#"<text xml:space="preserve" x="39 47 55 63 71 79" y="101.5""#;
+    let second_output = r#"<g transform="translate(39 101.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(second_output), "{buffer}");
-    let third_output = r#"<g class="output"><text xml:space="preserve" x="39 47 55 63 71 79 87 95 103 111 119 127 135" y="125.5""#;
+    let third_output =
+        r#"<g class="output"><g transform="translate(39 125.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(third_output), "{buffer}");
 }
 
@@ -609,7 +754,7 @@ fn rendering_pure_svg_transcript_with_input_line_numbers() {
         line_numbers: Some(LineNumbers::Continuous),
         ..TemplateOptions::default()
     };
-    Template::pure_svg(options)
+    Template::pure_svg(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -638,7 +783,7 @@ fn rendering_transcript_with_styles() {
         ..TemplateOptions::default()
     };
     let mut buffer = vec![];
-    Template::new(options)
+    Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -699,9 +844,9 @@ fn embedding_font(pure_svg: bool) {
     };
     let mut buffer = vec![];
     let template = if pure_svg {
-        Template::pure_svg(options)
+        Template::pure_svg(options.validated().unwrap())
     } else {
-        Template::new(options)
+        Template::new(options.validated().unwrap())
     };
     template.render(&transcript, &mut buffer).unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
@@ -741,11 +886,9 @@ fn rendering_html_span() {
     let mut handlebars = Handlebars::new();
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style: Style::default(),
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style: Style::default(),
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -759,11 +902,9 @@ fn rendering_html_span() {
         bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -775,11 +916,9 @@ fn rendering_html_span() {
 
     style.bg = None;
     style.underline = false;
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -793,16 +932,14 @@ fn rendering_svg_tspan() {
     let mut handlebars = Handlebars::new();
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style: Style::default(),
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style: Style::default(),
+        text: "Test".into(),
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(rendered, "Test");
+    assert_eq!(rendered, "");
 
     let mut style = Style {
         bold: true,
@@ -811,51 +948,36 @@ fn rendering_svg_tspan() {
         bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(
-        rendered,
-        "<tspan class=\"bold underline fg2 bg#ccffcc\">Test</tspan>"
-    );
+    assert_eq!(rendered, " class=\"bold underline fg2 bg#ccffcc\"");
 
     style.bg = Some(IndexOrRgb::Index(0));
     style.underline = false;
     style.dimmed = true;
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(
-        rendered,
-        "<tspan class=\"bold dimmed fg2 bg0\">Test</tspan>"
-    );
+    assert_eq!(rendered, " class=\"bold dimmed fg2 bg0\"");
 
     style.fg = Some(IndexOrRgb::Rgb("#c0ffee".parse().unwrap()));
     style.bg = None;
     style.dimmed = false;
-    let data = serde_json::json!({
-        "span": StyledSpan {
-            style,
-            text: "Test".into(),
-        },
+    let data = serde_json::json!(StyledSpan {
+        style,
+        text: "Test".into(),
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan}}", &data)
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(
-        rendered,
-        "<tspan class=\"bold\" style=\"fill: #c0ffee;\">Test</tspan>"
-    );
+    assert_eq!(rendered, " class=\"bold\" style=\"fill: #c0ffee;\"");
 }

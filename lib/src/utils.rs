@@ -5,6 +5,7 @@ use std::{borrow::Cow, fmt::Write as WriteStr, io, str};
 #[cfg(any(feature = "svg", feature = "test"))]
 pub(crate) use self::rgb_color::IndexOrRgb;
 #[cfg(any(feature = "svg", feature = "test"))]
+#[cfg_attr(not(feature = "svg"), allow(unreachable_pub))]
 pub use self::rgb_color::RgbColor;
 #[cfg(feature = "svg")]
 pub use self::rgb_color::RgbColorParseError;
@@ -15,7 +16,7 @@ pub(crate) struct WriteAdapter<'a> {
 }
 
 impl<'a> WriteAdapter<'a> {
-    pub fn new(output: &'a mut dyn WriteStr) -> Self {
+    pub(crate) fn new(output: &'a mut dyn WriteStr) -> Self {
         Self { inner: output }
     }
 }
@@ -59,6 +60,7 @@ pub(crate) fn is_recoverable_kill_error(err: &io::Error) -> bool {
 }
 
 #[cfg(any(feature = "svg", feature = "test"))]
+#[cfg_attr(not(feature = "svg"), allow(unreachable_pub))] // `RgbColor` etc. is publicly re-exported from the `svg` module
 mod rgb_color {
     use std::{error::Error as StdError, fmt, num::ParseIntError, str::FromStr};
 
