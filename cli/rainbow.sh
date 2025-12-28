@@ -6,9 +6,29 @@ BASE_COLORS="black red green yellow blue magenta cyan white"
 RGB_COLOR_NAMES="pink orange brown teal"
 RGB_COLOR_VALUES="255;187;221 255;170;68 159;64;16 16;136;159"
 
+RESET='\e[0m'
+BOLD='\e[1m'
+DIMMED='\e[2m'
+ITALIC='\e[3m'
+UNDERLINE='\e[4m'
+GREEN_FG='\e[32m'
+YELLOW_FG='\e[33m'
+MAGENTA_BG='\e[45m'
+
 index() {
   shift "$1"
   echo "$2"
+}
+
+base_styles_line() {
+  base_style="$1"
+  name="$2"
+
+  line="$name: ${base_style}Regular$RESET"
+  line="$line ${base_style}$BOLD${GREEN_FG}Bold$RESET"
+  line="$line ${base_style}$ITALIC$YELLOW_FG${MAGENTA_BG}Italic$RESET"
+  line="$line ${base_style}$BOLD${ITALIC}Bold+Italic$RESET"
+  echo "$line"
 }
 
 base_colors_line() {
@@ -20,15 +40,19 @@ base_colors_line() {
     color=$((i + start_code))
     decor=""
     if [ $((i % 2)) -eq "$underline_oddity" ]; then
-      decor='\e[4m' # underline
+      decor="$UNDERLINE"
     fi
-    line=$line'\e['$color'm'$decor$(index "$i" $BASE_COLORS)'\e[0m '
+    line=$line'\e['$color'm'$decor$(index "$i" $BASE_COLORS)$RESET' '
+    if [ "$3" = "1" ]; then
+      line=$line'\e['$color'm'$UNDERLINE$ITALIC$(index "$i" $BASE_COLORS)"/italic"$RESET' '
+    fi
   done
   echo "$line"
 }
 
 ansi_colors_line() {
   line=""
+
   for i in $(seq 16 231); do
     fg_color="\e[37m" # white
     col=$(((i - 16) % 36))
@@ -37,11 +61,14 @@ ansi_colors_line() {
     fi
     line=$line'\e[38;5;'$i'm!\e[0m'$fg_color'\e[48;5;'$i'm?\e[0m'
 
-    if [ "$col" -eq 35 ]; then
+    if [ "$1" != "1" ] && [ "$col" -eq 35 ]; then
       echo "$line"
       line=""
     fi
   done
+  if [ "$1" = "1" ]; then
+    echo "$line"
+  fi
 }
 
 ansi_grayscale_line() {
@@ -66,9 +93,22 @@ rgb_colors_line() {
   echo "$line"
 }
 
+if [ "$1" = "--short" ]; then
+  echo "Base styles"
+  base_styles_line ''             "     None"
+  base_styles_line "$DIMMED"      "   Dimmed"
+  base_styles_line "$UNDERLINE"   "Underline"
+  base_styles_line '\e[30m\e[47m' "  With bg"
+fi
+
+long_lines=""
+if [ "$1" = "--long-lines" ]; then
+  long_lines=1
+fi
+
 echo "Base colors:"
-base_colors_line 30 0
-base_colors_line 90 1
+base_colors_line 30 0 "$long_lines"
+base_colors_line 90 1 "$long_lines"
 echo "Base colors (bg):"
 base_colors_line 40 2
 base_colors_line 100 2
@@ -78,7 +118,7 @@ if [ "$1" = "--short" ]; then
 fi
 
 echo "ANSI color palette:"
-ansi_colors_line
+ansi_colors_line $long_lines
 echo "ANSI grayscale palette:"
 ansi_grayscale_line
 
