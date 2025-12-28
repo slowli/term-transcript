@@ -42,7 +42,7 @@ fn scrolled_template() -> Template {
         scroll: Some(ScrollOptions::default()),
         ..TemplateOptions::default()
     };
-    Template::new(template_options)
+    Template::new(template_options.validated().unwrap())
 }
 
 #[cfg(feature = "portable-pty")]

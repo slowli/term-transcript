@@ -255,7 +255,8 @@ fn sh_shell_example(pure_svg: bool) {
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        let options = TemplateOptions::default().validated().unwrap();
+        config = config.with_template(Template::pure_svg(options));
     }
     config.test(aliased_snapshot_path(), ["colored-output"]);
 }
@@ -285,7 +286,8 @@ fn bash_shell_example(pure_svg: bool) {
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
     if pure_svg {
-        config = config.with_template(Template::pure_svg(TemplateOptions::default()));
+        let options = TemplateOptions::default().validated().unwrap();
+        config = config.with_template(Template::pure_svg(options));
     }
     config.test(aliased_snapshot_path(), ["colored-output"]);
 }
