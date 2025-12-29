@@ -20,6 +20,8 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 mod shell;
 mod template;
+#[cfg(test)]
+mod tests;
 
 use crate::{shell::ShellArgs, template::TemplateArgs};
 
