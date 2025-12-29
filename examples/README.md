@@ -68,7 +68,7 @@ Use `--scroll=$height` to set the maximum pixel height of the snapshot.
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 \
+term-transcript exec --palette gjm8 \
   --hard-wrap=50 --width=450 --scroll=180 rainbow
 ```
 
@@ -81,7 +81,7 @@ term-transcript exec -T 250ms --palette gjm8 \
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --scroll --palette xterm \
+term-transcript exec --scroll --palette xterm \
   --line-numbers each-output \
   rainbow 'rainbow --short'
 ```
@@ -93,7 +93,7 @@ term-transcript exec -T 250ms --scroll --palette xterm \
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --scroll --palette powershell \
+term-transcript exec --scroll --palette powershell \
   --line-numbers continuous-outputs \
   --line-height=1.4em \
   rainbow 'rainbow --short'
@@ -106,8 +106,9 @@ term-transcript exec -T 250ms --scroll --palette powershell \
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --scroll --palette gjm8 \
+term-transcript exec --scroll --palette gjm8 \
   --line-numbers continuous \
+  --scroll-interval 2s --scroll-len 2em \
   rainbow 'rainbow --short'
 ```
 
@@ -117,8 +118,9 @@ Same snapshot generated using the pure SVG template (i.e., with the additional
 ![Continuous numbering for inputs and outputs](numbers-continuous-pure.svg)
 
 ```shell
-term-transcript exec -T 250ms --pure-svg --scroll --palette gjm8 \
+term-transcript exec --pure-svg --scroll --palette gjm8 \
   --line-numbers continuous \
+  --scroll-interval 2s --scroll-len 2em \
   rainbow 'rainbow --short'
 ```
 
@@ -132,7 +134,7 @@ obtained after potential line breaking.
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 \
+term-transcript exec --palette gjm8 \
   --line-numbers continuous \
   --line-height 18px \
   'rainbow --long-lines'
@@ -144,9 +146,10 @@ Same snapshot generated using the pure SVG template (i.e., with the additional
 ![Numbering with line breaks, pure SVG](numbers-long-pure.svg)
 
 ```shell
-term-transcript exec -T 250ms --pure-svg --palette gjm8 \
+term-transcript exec --pure-svg --palette gjm8 \
   --line-numbers continuous \
   --line-height 18px \
+  --advance-width 7.8px \
   'rainbow --long-lines'
 ```
 
@@ -159,7 +162,7 @@ Combined with line numbering and scrolling to test more features.
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --scroll --palette xterm \
+term-transcript exec --scroll --palette xterm \
   --no-inputs --line-numbers continuous \
   rainbow 'rainbow --short'
 ```
@@ -170,7 +173,7 @@ Same snapshot generated using the pure SVG template (i.e., with the additional
 ![Hidden user inputs, pure SVG](no-inputs-numbers-pure.svg)
 
 ```shell
-term-transcript exec -T 250ms --pure-svg --scroll --palette xterm \
+term-transcript exec --pure-svg --scroll --palette xterm \
   --no-inputs --line-numbers continuous \
   rainbow 'rainbow --short'
 ```
@@ -189,7 +192,7 @@ See the [FAQ](../FAQ.md#transcripts--content-security-policy) for more details.
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 --window \
+term-transcript exec --palette gjm8 --window \
   --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
   --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow
 ```
@@ -199,7 +202,7 @@ The same snapshot rendered with pure SVG:
 ![Snapshot with Fira Mono font and pure SVG](fira-pure.svg)
 
 ```shell
-term-transcript exec -T 250ms --pure-svg --palette gjm8 --window \
+term-transcript exec --pure-svg --palette gjm8 --window \
   --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
   --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow
 ```
@@ -218,7 +221,7 @@ For example, the snapshot below embeds [Roboto Mono](https://fonts.google.com/sp
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 \
+term-transcript exec --palette gjm8 \
   --line-numbers continuous \
   --embed-font="$ROBOTO_MONO_PATH" \
   'rainbow --short'
@@ -231,7 +234,7 @@ It is possible to embed the italic font face as well by specifying 2 paths for `
 ![Snapshot with two embedded Roboto Mono fonts, pure SVG](embedded-font-pure.svg)
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 \
+term-transcript exec --palette gjm8 \
   --line-numbers continuous \
   --line-height=1.4em \
   --embed-font="$ROBOTO_MONO_PATH:$ROBOTO_MONO_ITALIC_PATH" \
@@ -245,9 +248,10 @@ We embed its regular and **bold** faces (i.e., *italic* is synthesized):
 ![Snapshot with embedded Fira Mono fonts, pure SVG](embedded-font-fira.svg)
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 \
+term-transcript exec --palette gjm8 \
   --line-numbers continuous \
   --embed-font="$FIRA_MONO_PATH:$FIRA_MONO_BOLD_PATH" \
+  --advance-width=8.6px \
   --pure-svg \
   'rainbow --short'
 ```
@@ -262,7 +266,7 @@ Using the `--tpl` option, it's possible to use a custom [Handlebars](https://han
 rather than the standard ones. As an example, [this template](custom.html.handlebars) renders a transcript into HTML.
 
 ```shell
-term-transcript exec -T 250ms --tpl custom.html.handlebars \
+term-transcript exec --tpl custom.html.handlebars \
   -o rainbow.html rainbow 'rainbow --short'
 ```
 
@@ -277,7 +281,7 @@ to customize palette colors and scroll animation step / interval.
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --config-path config.toml \
+term-transcript exec --config-path config.toml \
   'rainbow --long-lines'
 ```
 
@@ -295,7 +299,7 @@ and visually highlighted the default SVG template.
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 --window \
+term-transcript exec --palette gjm8 --window \
   './non-existing-command' \
   '[ -x non-existing-file ]' \
   '[ -x non-existing-file ] || echo "File is not there!"'
@@ -310,8 +314,9 @@ Captured using a pseudo-terminal, hence colorful `grep` output.
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 \
+term-transcript exec --palette gjm8 \
   --pty --window --shell bash \
+  --init 'export PS1=' \
   'grep -n serge ../Cargo.lock' \
   'grep -m 5 -n serde ../Cargo.lock'
 ```
