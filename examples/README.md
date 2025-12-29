@@ -12,7 +12,7 @@ Consult the [generating script](generate-snapshots.sh) for details on preparing 
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 rainbow
+term-transcript exec --palette gjm8 rainbow
 ```
 
 (`rainbow` is an executable for [end-to-end tests](../e2e-tests/rainbow).)
@@ -24,7 +24,7 @@ term-transcript exec -T 250ms --palette gjm8 rainbow
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --pure-svg --palette gjm8 rainbow
+term-transcript exec --pure-svg --palette gjm8 rainbow
 ```
 
 ### Animated snapshot
@@ -34,8 +34,8 @@ term-transcript exec -T 250ms --pure-svg --palette gjm8 rainbow
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette powershell --line-height=18px \
-  --pty --window --scroll rainbow 'rainbow --long-lines'
+term-transcript exec --palette powershell --line-height=18px \
+   --scroll --pty --window rainbow 'rainbow --long-lines'
 ```
 
 Note the `--pty` flag to use a pseudo-terminal for capture instead of default pipes,
@@ -55,7 +55,7 @@ the font being used).
 Generating command:
 
 ```shell
-term-transcript exec -T 250ms --palette gjm8 \
+term-transcript exec --palette gjm8 \
   --hard-wrap=100 --width=900 'rainbow --long-lines'
 ```
 
@@ -95,7 +95,7 @@ Generating command:
 ```shell
 term-transcript exec -T 250ms --scroll --palette powershell \
   --line-numbers continuous-outputs \
-  --line-height=1.4 \
+  --line-height=1.4em \
   rainbow 'rainbow --short'
 ```
 
@@ -115,6 +115,12 @@ Same snapshot generated using the pure SVG template (i.e., with the additional
 `--pure-svg` flag):
 
 ![Continuous numbering for inputs and outputs](numbers-continuous-pure.svg)
+
+```shell
+term-transcript exec -T 250ms --pure-svg --scroll --palette gjm8 \
+  --line-numbers continuous \
+  rainbow 'rainbow --short'
+```
 
 ### Numbering with line breaks
 
@@ -137,6 +143,13 @@ Same snapshot generated using the pure SVG template (i.e., with the additional
 
 ![Numbering with line breaks, pure SVG](numbers-long-pure.svg)
 
+```shell
+term-transcript exec -T 250ms --pure-svg --palette gjm8 \
+  --line-numbers continuous \
+  --line-height 18px \
+  'rainbow --long-lines'
+```
+
 ## Hiding user inputs
 
 Combined with line numbering and scrolling to test more features.
@@ -155,6 +168,12 @@ Same snapshot generated using the pure SVG template (i.e., with the additional
 `--pure-svg` flag):
 
 ![Hidden user inputs, pure SVG](no-inputs-numbers-pure.svg)
+
+```shell
+term-transcript exec -T 250ms --pure-svg --scroll --palette xterm \
+  --no-inputs --line-numbers continuous \
+  rainbow 'rainbow --short'
+```
 
 ## Custom fonts
 
@@ -178,6 +197,12 @@ term-transcript exec -T 250ms --palette gjm8 --window \
 The same snapshot rendered with pure SVG:
 
 ![Snapshot with Fira Mono font and pure SVG](fira-pure.svg)
+
+```shell
+term-transcript exec -T 250ms --pure-svg --palette gjm8 --window \
+  --font 'Fira Mono, Consolas, Liberation Mono, Menlo' \
+  --styles '@import url(https://code.cdn.mozilla.net/fonts/fira.css);' rainbow
+```
 
 [CSP]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
 
@@ -203,19 +228,21 @@ The embedded Roboto Mono font is [*variable*][variable-fonts] by font weight, me
 (weight: 700) embedded as well. In contrast, the *italic* font face must be synthesized by the browser.
 It is possible to embed the italic font face as well by specifying 2 paths for `--embed-font`:
 
+![Snapshot with two embedded Roboto Mono fonts, pure SVG](embedded-font-pure.svg)
+
 ```shell
 term-transcript exec -T 250ms --palette gjm8 \
   --line-numbers continuous \
-  --line-height=1.4 \
+  --line-height=1.4em \
   --embed-font="$ROBOTO_MONO_PATH:$ROBOTO_MONO_ITALIC_PATH" \
   --pure-svg \
   'rainbow --short'
 ```
 
-![Snapshot with two embedded Roboto Mono fonts, pure SVG](embedded-font-pure.svg)
-
 Another example: [Fira Mono](https://fonts.google.com/specimen/Fira+Mono), which is a non-variable font.
 We embed its regular and **bold** faces (i.e., *italic* is synthesized):
+
+![Snapshot with embedded Fira Mono fonts, pure SVG](embedded-font-fira.svg)
 
 ```shell
 term-transcript exec -T 250ms --palette gjm8 \
@@ -225,11 +252,19 @@ term-transcript exec -T 250ms --palette gjm8 \
   'rainbow --short'
 ```
 
-![Snapshot with embedded Fira Mono fonts, pure SVG](embedded-font-fira.svg)
-
 The same note regarding [content security policy][CSP] applies.
 
 [variable-fonts]: https://learn.microsoft.com/en-us/typography/opentype/spec/otvaroverview
+
+## Custom template
+
+Using the `--tpl` option, it's possible to use a custom [Handlebars](https://handlebarsjs.com/) template
+rather than the standard ones. As an example, [this template](custom.html.handlebars) renders a transcript into HTML.
+
+```shell
+term-transcript exec -T 250ms --tpl custom.html.handlebars \
+  -o rainbow.html rainbow 'rainbow --short'
+```
 
 ## Configuration file
 
@@ -277,9 +312,8 @@ Generating command:
 ```shell
 term-transcript exec -T 250ms --palette gjm8 \
   --pty --window --shell bash \
-  'ls -l Cargo.lock' \
-  'grep -n serge Cargo.lock' \
-  'grep -n serde Cargo.lock'
+  'grep -n serge ../Cargo.lock' \
+  'grep -m 5 -n serde ../Cargo.lock'
 ```
 
 ### Failures in `pwsh`

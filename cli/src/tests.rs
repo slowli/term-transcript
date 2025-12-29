@@ -5,10 +5,17 @@
 //!
 //! - `CI`: if set, disables writing differing snapshots.
 //! - `TT_IMG_FILTER`: filters snapshots by the image name. E.g., `TT_IMG_FILTER=pure` will only check snapshots
-//!   with "pure" in the image name.
+//!   with "pure" in the image name. Only snapshot generation is skipped; the command is still checked.
+//! - `TT_IMG_SKIP`: same as `TT_IMG_FILTER`, but skips snapshot generation on match.
 
 use std::{
-    collections::HashMap, env, fmt, fs, io::BufReader, mem, path::Path, thread, time::Duration,
+    collections::HashMap,
+    env, fmt, fs,
+    io::BufReader,
+    mem,
+    path::{Path, PathBuf},
+    thread,
+    time::Duration,
 };
 
 use clap::Parser as _;
@@ -20,7 +27,7 @@ use crate::{Cli, Command};
 // FIXME: move examples to binary
 const README_DIR: &str = "../examples";
 
-// Paths are relative to `README_DIR`
+// Paths are relative to `README_DIR`; FIXME: use paths directly?
 const FONT_ENV_VARS: &[(&str, &str)] = &[
     ("ROBOTO_MONO_PATH", "fonts/RobotoMono-VariableFont_wght.ttf"),
     (
@@ -191,6 +198,7 @@ fn examples_are_consistent() {
     let parser = Parser::new(&readme);
     let temp_dir = tempfile::tempdir().unwrap();
     let img_filter = env::var("TT_IMG_FILTER").unwrap_or_else(|_| String::new());
+    let img_skip_filter = env::var("TT_IMG_SKIP").ok();
 
     let mut shell_command = None;
     let mut img_path = None;
@@ -206,33 +214,49 @@ fn examples_are_consistent() {
                 assert!(shell_command.is_none(), "Embedded code samples");
                 shell_command = Some(String::with_capacity(1_024));
             }
-            Event::End(Tag::CodeBlock(_)) => {
-                if let Some(shell_command) = shell_command.take() {
-                    assert!(!shell_command.is_empty());
-                    let img_path = img_path.take().expect("no image before shell sample");
-
-                    let Some(cli) =
-                        prepare_cli(&shell_command, &img_path, temp_dir.path(), &env_vars)
-                    else {
-                        continue;
-                    };
-                    if !img_path.contains(&img_filter) {
-                        tracing::info!(%img_path, img_filter, "snapshot filtered out");
-                        continue;
-                    }
-                    // Do not actually run the command on Windows, since it expects to be run on `sh`.
-                    if cfg!(windows) {
-                        tracing::info!(%img_path, "skipped execution on Windows");
-                        continue;
-                    }
-
-                    let img_path = img_path.into_string();
-                    let img_path_copy = img_path.clone();
-                    let handle = thread::spawn(move || {
-                        check_snapshot(cli, &img_path);
-                    });
-                    threads.push((img_path_copy, handle));
+            Event::End(Tag::Heading(..)) => {
+                if let Some(img_path) = &img_path {
+                    panic!("Image not having the following shell code: {img_path}");
                 }
+            }
+            Event::End(Tag::CodeBlock(_)) => {
+                let Some(shell_command) = shell_command.take() else {
+                    continue;
+                };
+                assert!(!shell_command.is_empty());
+
+                let img_path = img_path.take();
+                let Some(cli) = prepare_cli(&shell_command, img_path.as_deref(), &env_vars) else {
+                    continue;
+                };
+
+                let img_path = extract_out_path(&cli)
+                    .to_str()
+                    .expect("non-UTF8 out path")
+                    .to_owned();
+                if !img_path.contains(&img_filter) {
+                    tracing::info!(img_path, img_filter, "snapshot filtered out");
+                    continue;
+                }
+                if let Some(skip_filter) = &img_skip_filter {
+                    if img_path.contains(skip_filter) {
+                        tracing::info!(img_path, skip_filter, "snapshot filtered out");
+                        continue;
+                    }
+                }
+
+                // Do not actually run the command on Windows, since it expects to be run on `sh`.
+                if cfg!(windows) {
+                    tracing::info!(img_path, "skipped execution on Windows");
+                    continue;
+                }
+
+                // Spawn snapshot generation into a separate thread so that it's effectively parallelized.
+                let temp_dir = temp_dir.path().to_owned();
+                let handle = thread::spawn(move || {
+                    check_snapshot(cli, &temp_dir);
+                });
+                threads.push((img_path, handle));
             }
             Event::Text(text) => {
                 if let Some(code) = &mut shell_command {
@@ -243,7 +267,7 @@ fn examples_are_consistent() {
         }
     }
 
-    // Wait for all threads to finish.
+    // Wait for all snapshot generation threads to finish.
     let failures: Vec<_> = threads
         .into_iter()
         .filter_map(|(img_path, handle)| handle.join().is_err().then_some(img_path))
@@ -253,8 +277,7 @@ fn examples_are_consistent() {
 
 fn prepare_cli(
     command: &str,
-    img_path: &str,
-    temp_dir: &Path,
+    img_path: Option<&str>,
     env_vars: &HashMap<&'static str, String>,
 ) -> Option<Cli> {
     let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -276,7 +299,6 @@ fn prepare_cli(
     }
 
     let mut args = Cli::try_parse_from(args).unwrap_or_else(|err| panic!("{err}"));
-    let out_path = temp_dir.join(img_path);
     if let Command::Exec {
         template, shell, ..
     } = &mut args.command
@@ -286,16 +308,26 @@ fn prepare_cli(
             .init
             .push(format!("alias rainbow=\"'{}'\"", path_to_rainbow.display()));
 
-        assert!(
-            template.out.is_none(),
-            "examples should not specify -o option"
-        );
-        template.out = Some(out_path.clone());
+        let out_path = if let Some(specified_path) = &template.out {
+            assert!(img_path.is_none(), "both image and -o option are specified");
+            assert!(specified_path.is_relative());
+            specified_path.clone()
+        } else {
+            PathBuf::from(img_path.expect("no image path or -o option in the script"))
+        };
+        template.out = Some(out_path);
     } else {
         panic!("unexpected command: {args:?}");
     }
 
     Some(args)
+}
+
+fn extract_out_path(cli: &Cli) -> &Path {
+    match &cli.command {
+        Command::Exec { template, .. } => template.out.as_deref().expect("no out path"),
+        _ => panic!("unexpected command: {cli:?}"),
+    }
 }
 
 // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
@@ -308,22 +340,32 @@ impl fmt::Debug for DebugStr<'_> {
     }
 }
 
-#[cfg_attr(feature = "tracing", tracing::instrument(skip(args)))]
-fn check_snapshot(args: Cli, img_path: &str) {
-    let out_path = match &args.command {
-        Command::Exec { template, .. } => template.out.clone().unwrap(),
-        _ => panic!("unexpected command: {args:?}"),
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(cli), fields(out)))]
+fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
+    let out_path = extract_out_path(&cli).to_owned();
+    assert!(out_path.is_relative());
+    #[cfg(feature = "tracing")]
+    tracing::Span::current().record("out", tracing::field::display(out_path.display()));
+
+    let is_custom_template = if let Command::Exec { template, .. } = &mut cli.command {
+        template.out = Some(temp_dir.join(&out_path));
+        template.template_path.is_some()
+    } else {
+        unreachable!()
     };
-    args.command.run().unwrap();
+
+    cli.command.run().unwrap();
     tracing::info!("run command");
 
     // Read the generated transcript and check that it can be parsed.
     let raw_transcript = fs::read_to_string(&out_path).unwrap();
     tracing::info!(byte_len = raw_transcript.len(), "read transcript");
-    let parsed = Transcript::from_svg(BufReader::new(raw_transcript.as_bytes())).unwrap();
-    assert!(!parsed.interactions().is_empty());
+    if !is_custom_template {
+        let parsed = Transcript::from_svg(BufReader::new(raw_transcript.as_bytes())).unwrap();
+        assert!(!parsed.interactions().is_empty());
+    }
 
-    let ref_path = Path::new(README_DIR).join(img_path);
+    let ref_path = Path::new(README_DIR).join(&out_path);
     let raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
         panic!("failed reading reference at {}: {err}", ref_path.display());
     });
@@ -344,7 +386,8 @@ fn check_snapshot(args: Cli, img_path: &str) {
         }
 
         panic!(
-            "Transcript {img_path} failed:\n{cmp}",
+            "Transcript {out_path} failed:\n{cmp}",
+            out_path = out_path.display(),
             cmp = pretty_assertions::Comparison::new(
                 &DebugStr(&raw_reference),
                 &DebugStr(&raw_transcript),
