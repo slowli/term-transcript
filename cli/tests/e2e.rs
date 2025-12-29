@@ -21,10 +21,10 @@ fn svg_snapshot(name: &str) -> PathBuf {
 }
 
 // Executes commands in a temporary dir, with paths to the `term-transcript` binary and
-// the `rainbow.sh` example added to PATH.
+// the `rainbow` script added to PATH.
 fn test_config() -> (TestConfig<StdShell>, TempDir) {
     let temp_dir = tempdir().expect("cannot create temporary directory");
-    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/rainbow");
 
     let shell_options = ShellOptions::sh()
         .with_env("COLOR", "always")
@@ -60,7 +60,7 @@ fn testing_example() {
     config.with_template(scrolled_template()).test(
         svg_snapshot("test"),
         [
-            "term-transcript exec -I 300ms -T 100ms rainbow.sh > rainbow.svg\n\
+            "term-transcript exec -I 300ms -T 100ms rainbow > rainbow.svg\n\
              # `-T` option defines the I/O timeout for the shell,\n\
              # and `-I` specifies the additional initialization timeout",
             "term-transcript test -I 300ms -T 100ms -v rainbow.svg\n\
@@ -75,7 +75,7 @@ fn test_failure_example() {
     config.test(
         svg_snapshot("test-fail"),
         [
-            "term-transcript exec -I 300ms -T 100ms 'rainbow.sh --short' > bogus.svg && \\\n  \
+            "term-transcript exec -I 300ms -T 100ms 'rainbow --short' > bogus.svg && \\\n  \
              sed -i -E -e 's/(fg4|bg13)//g' bogus.svg\n\
              # Mutate the captured output, removing some styles",
             "term-transcript test -I 300ms -T 100ms --precise bogus.svg\n\
@@ -90,7 +90,7 @@ fn print_example() {
     config.test(
         svg_snapshot("print"),
         [
-            "term-transcript exec -I 300ms -T 100ms 'rainbow.sh --short' > short.svg",
+            "term-transcript exec -I 300ms -T 100ms 'rainbow --short' > short.svg",
             "term-transcript print short.svg",
         ],
     );
@@ -115,7 +115,7 @@ fn capture_example() {
     config.with_template(scrolled_template()).test(
         svg_snapshot("capture"),
         [
-            "rainbow.sh | term-transcript capture 'rainbow.sh' > captured.svg",
+            "rainbow | term-transcript capture 'rainbow' > captured.svg",
             "term-transcript print captured.svg",
         ],
     );
