@@ -1,8 +1,9 @@
 use std::{
+    env,
     fs::{self, File},
     io::{self, BufReader, Read},
     panic,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     time::Duration,
 };
@@ -21,7 +22,6 @@ use test_casing::{decorate, decorators::Retry, test_casing, Product};
 use tracing::{subscriber::DefaultGuard, Subscriber};
 use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 
-const PATH_TO_BIN: &str = env!("CARGO_BIN_EXE_rainbow");
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
 
 fn create_fmt_subscriber() -> impl Subscriber {
@@ -29,7 +29,7 @@ fn create_fmt_subscriber() -> impl Subscriber {
         .pretty()
         .with_span_events(FmtSpan::CLOSE)
         .with_test_writer()
-        .with_env_filter("term_transcript=debug")
+        .with_env_filter("info,term_transcript=debug")
         .finish()
 }
 
@@ -37,8 +37,16 @@ fn enable_tracing() -> DefaultGuard {
     tracing::subscriber::set_default(create_fmt_subscriber())
 }
 
-fn main_snapshot_path() -> &'static Path {
-    Path::new("../../examples/rainbow.svg")
+fn examples_dir() -> &'static Path {
+    Path::new("../../cli/examples")
+}
+
+fn rainbow_dir() -> PathBuf {
+    examples_dir().join("rainbow")
+}
+
+fn main_snapshot_path() -> PathBuf {
+    examples_dir().join("rainbow.svg")
 }
 
 fn read_main_snapshot() -> io::Result<BufReader<File>> {
@@ -46,31 +54,23 @@ fn read_main_snapshot() -> io::Result<BufReader<File>> {
 }
 
 fn read_pure_snapshot() -> io::Result<BufReader<File>> {
-    File::open("../../examples/rainbow-pure.svg").map(BufReader::new)
+    File::open(examples_dir().join("rainbow-pure.svg")).map(BufReader::new)
 }
 
 fn read_custom_template() -> anyhow::Result<HandlebarsTemplate> {
-    let template_string = fs::read_to_string(Path::new("../../examples/custom.html.handlebars"))?;
+    let template_string = fs::read_to_string(examples_dir().join("custom.html.handlebars"))?;
     HandlebarsTemplate::compile(&template_string).map_err(Into::into)
-}
-
-fn animated_snapshot_path() -> &'static Path {
-    Path::new("../../examples/animated.svg")
 }
 
 fn aliased_snapshot_path() -> &'static Path {
     Path::new("aliased.svg")
 }
 
-fn repl_snapshot_path() -> &'static Path {
-    Path::new("repl.svg")
-}
-
 #[test_casing(2, [false, true])]
 #[test]
 fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     let _guard = enable_tracing();
-    let mut shell_options = ShellOptions::default().with_cargo_path();
+    let mut shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
     // Patch the exit status for cross-platform compatibility.
@@ -128,7 +128,7 @@ fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
 #[test]
 fn snapshot_with_custom_template() -> anyhow::Result<()> {
     let _guard = enable_tracing();
-    let mut shell_options = ShellOptions::default().with_cargo_path();
+    let mut shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
     let template = read_custom_template()?;
@@ -148,7 +148,8 @@ fn snapshot_with_custom_template() -> anyhow::Result<()> {
 #[test_casing(2, [false, true])]
 #[test]
 fn main_snapshot_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::Result<()> {
-    let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let mut shell_options =
+        ShellOptions::new(PtyCommand::default()).with_additional_path(rainbow_dir());
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
     let template = if pure_svg {
@@ -164,7 +165,8 @@ fn main_snapshot_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::Result<()> 
 #[test_casing(2, [false, true])]
 #[test]
 fn snapshot_with_long_lines_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::Result<()> {
-    let mut shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let mut shell_options =
+        ShellOptions::new(PtyCommand::default()).with_additional_path(rainbow_dir());
     let transcript = Transcript::from_inputs(
         &mut shell_options,
         vec![UserInput::command("rainbow --long-lines")],
@@ -189,7 +191,7 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::
 #[test]
 fn snapshot_testing_low_level() -> anyhow::Result<()> {
     let transcript = Transcript::from_svg(read_main_snapshot()?)?;
-    let shell_options = ShellOptions::default().with_cargo_path();
+    let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     TestConfig::new(shell_options).test_transcript(&transcript);
     Ok(())
 }
@@ -198,7 +200,7 @@ fn snapshot_testing_low_level() -> anyhow::Result<()> {
 #[test]
 fn snapshot_testing(pure_svg: bool) {
     let _guard = enable_tracing();
-    let shell_options = ShellOptions::default().with_cargo_path();
+    let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
         config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
@@ -210,7 +212,8 @@ fn snapshot_testing(pure_svg: bool) {
 #[test_casing(2, [false, true])]
 #[test]
 fn snapshot_testing_with_pty(pure_svg: bool) {
-    let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let shell_options =
+        ShellOptions::new(PtyCommand::default()).with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
         config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
@@ -220,20 +223,20 @@ fn snapshot_testing_with_pty(pure_svg: bool) {
 
 #[test_casing(2, [false, true])]
 fn animated_snapshot_testing(pure_svg: bool) {
-    let shell_options = ShellOptions::default().with_cargo_path();
+    let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
         config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(
-        animated_snapshot_path(),
+        examples_dir().join("animated.svg"),
         ["rainbow", "rainbow --long-lines"],
     );
 }
 
 #[test_casing(2, [false, true])]
 fn snapshot_testing_with_custom_settings(pure_svg: bool) {
-    let shell_options = ShellOptions::default().with_cargo_path();
+    let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
@@ -246,7 +249,9 @@ fn snapshot_testing_with_custom_settings(pure_svg: bool) {
 #[cfg(unix)]
 #[test_casing(2, [false, true])]
 fn sh_shell_example(pure_svg: bool) {
-    let shell_options = ShellOptions::sh().with_alias("colored-output", PATH_TO_BIN);
+    let rainbow_path = rainbow_dir().join("rainbow");
+    let rainbow_path = rainbow_path.to_str().expect("non-UTF8 path");
+    let shell_options = ShellOptions::sh().with_alias("colored-output", rainbow_path);
     let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
@@ -276,7 +281,9 @@ fn bash_shell_example(pure_svg: bool) {
         return;
     }
 
-    let shell_options = ShellOptions::bash().with_alias("colored-output", PATH_TO_BIN);
+    let rainbow_path = rainbow_dir().join("rainbow");
+    let rainbow_path = rainbow_path.to_str().expect("non-UTF8 path");
+    let shell_options = ShellOptions::bash().with_alias("colored-output", rainbow_path);
     let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
@@ -304,9 +311,15 @@ fn powershell_example(pure_svg: bool) {
         return;
     }
 
+    let rainbow_path = rainbow_dir().join(if cfg!(windows) {
+        "rainbow.bat"
+    } else {
+        "rainbow"
+    });
+    let rainbow_path = rainbow_path.to_str().expect("non-UTF8 path");
     let shell_options = ShellOptions::pwsh()
         .with_init_timeout(Duration::from_secs(2))
-        .with_alias("colored-output", PATH_TO_BIN);
+        .with_alias("colored-output", rainbow_path);
     let mut config = TestConfig::new(shell_options)
         .with_match_kind(MatchKind::Precise)
         .with_output(TestOutputConfig::Verbose);
@@ -324,7 +337,7 @@ fn repl_snapshot_testing(pure_svg: bool) {
         config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(
-        repl_snapshot_path(),
+        "repl.svg",
         [
             "yellow intense bold green cucumber",
             "neutral #fa4 underline #c0ffee",
@@ -383,7 +396,7 @@ fn new_snapshot(error_type: ErrorType, pure_svg: bool) -> anyhow::Result<()> {
     error_type.create_snapshot(&snapshot_path)?;
 
     let test_result = panic::catch_unwind(|| {
-        let shell_options = ShellOptions::default().with_cargo_path();
+        let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
         let mut config = TestConfig::new(shell_options).with_update_mode(UpdateMode::Always);
         if pure_svg {
             config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
@@ -423,7 +436,7 @@ fn no_new_snapshot(error_type: ErrorType) -> anyhow::Result<()> {
     error_type.create_snapshot(&snapshot_path)?;
 
     let test_result = panic::catch_unwind(|| {
-        let shell_options = ShellOptions::default().with_cargo_path();
+        let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
         TestConfig::new(shell_options)
             .with_update_mode(UpdateMode::Never)
             .test(&snapshot_path, ["rainbow"]);

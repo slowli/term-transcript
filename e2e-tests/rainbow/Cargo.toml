@@ -7,10 +7,6 @@ edition.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "rainbow"
-path = "src/main.rs"
-
-[[bin]]
 name = "rainbow-repl"
 path = "src/bin/repl.rs"
 
