@@ -198,7 +198,7 @@ impl ShellArgs {
     }
 
     #[cfg(not(feature = "portable-pty"))]
-    pub fn create_transcript(
+    pub(crate) fn create_transcript(
         self,
         inputs: impl IntoIterator<Item = UserInput>,
     ) -> io::Result<Transcript> {

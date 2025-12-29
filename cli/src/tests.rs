@@ -10,7 +10,9 @@
 
 use std::{
     collections::HashMap,
-    env, fmt, fs,
+    env,
+    ffi::OsString,
+    fmt, fs,
     io::BufReader,
     mem,
     path::{Path, PathBuf},
@@ -24,8 +26,10 @@ use term_transcript::Transcript;
 
 use crate::{Cli, Command};
 
-// FIXME: move examples to binary
-const README_DIR: &str = "../examples";
+fn readme_dir() -> PathBuf {
+    // FIXME: move examples to binary
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples")
+}
 
 // Paths are relative to `README_DIR`; FIXME: use paths directly?
 const FONT_ENV_VARS: &[(&str, &str)] = &[
@@ -179,8 +183,9 @@ fn examples_are_consistent() {
     #[cfg(feature = "tracing")]
     setup_test_tracing();
 
-    let readme_dir = Path::new(README_DIR);
-    env::set_current_dir(readme_dir).expect("cannot change current dir");
+    let readme_dir = readme_dir();
+    env::set_current_dir(&readme_dir).expect("cannot change current dir");
+
     let readme_path = readme_dir.join("README.md");
     let env_vars = FONT_ENV_VARS
         .iter()
@@ -347,25 +352,31 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
     #[cfg(feature = "tracing")]
     tracing::Span::current().record("out", tracing::field::display(out_path.display()));
 
-    let is_custom_template = if let Command::Exec { template, .. } = &mut cli.command {
-        template.out = Some(temp_dir.join(&out_path));
-        template.template_path.is_some()
-    } else {
-        unreachable!()
-    };
+    let (full_out_path, is_custom_template) =
+        if let Command::Exec { template, .. } = &mut cli.command {
+            let full_out_path = temp_dir.join(&out_path);
+            template.out = Some(full_out_path.clone());
+            (full_out_path, template.template_path.is_some())
+        } else {
+            unreachable!()
+        };
 
     cli.command.run().unwrap();
     tracing::info!("run command");
 
     // Read the generated transcript and check that it can be parsed.
-    let raw_transcript = fs::read_to_string(&out_path).unwrap();
-    tracing::info!(byte_len = raw_transcript.len(), "read transcript");
+    let raw_transcript = fs::read_to_string(&full_out_path).unwrap();
+    tracing::info!(
+        ?full_out_path,
+        byte_len = raw_transcript.len(),
+        "read transcript"
+    );
     if !is_custom_template {
         let parsed = Transcript::from_svg(BufReader::new(raw_transcript.as_bytes())).unwrap();
         assert!(!parsed.interactions().is_empty());
     }
 
-    let ref_path = Path::new(README_DIR).join(&out_path);
+    let ref_path = readme_dir().join(&out_path);
     let raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
         panic!("failed reading reference at {}: {err}", ref_path.display());
     });
@@ -375,7 +386,11 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
         let is_ci = env::var_os("CI").is_some_and(|flag| flag != "0");
         if !is_ci {
             let mut save_path = ref_path.clone();
-            save_path.set_extension("new.svg");
+            let extension = save_path.extension().expect("no extension");
+            let mut new_extension = OsString::from("new.");
+            new_extension.push(extension);
+            save_path.set_extension(new_extension);
+
             fs::write(&save_path, &raw_transcript).unwrap_or_else(|err| {
                 panic!(
                     "failed saving new transcript to {}: {err}",
