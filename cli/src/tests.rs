@@ -24,7 +24,7 @@ use clap::Parser as _;
 use pulldown_cmark::{CodeBlockKind, Event, LinkType, Parser, Tag};
 use term_transcript::Transcript;
 
-use crate::{Cli, Command};
+use crate::{shell::ShellArgs, Cli, Command};
 
 fn examples_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("examples")
@@ -210,11 +210,24 @@ fn examples_are_consistent() {
                 let Some(cli) = prepare_cli(&shell_command, img_path.as_deref()) else {
                     continue;
                 };
-
                 let img_path = extract_out_path(&cli)
                     .to_str()
                     .expect("non-UTF8 out path")
                     .to_owned();
+
+                if cfg!(windows)
+                    && matches!(
+                        &cli.command,
+                        Command::Exec {
+                            shell: ShellArgs { shell: Some(_), .. },
+                            ..
+                        }
+                    )
+                {
+                    tracing::info!(img_path, ?cli, "skipping snapshot with specified shell");
+                    continue;
+                }
+
                 if !img_path.contains(&img_filter) {
                     tracing::info!(img_path, img_filter, "snapshot filtered out");
                     continue;
@@ -224,12 +237,6 @@ fn examples_are_consistent() {
                         tracing::info!(img_path, skip_filter, "snapshot filtered out");
                         continue;
                     }
-                }
-
-                // Do not actually run the command on Windows, since it expects to be run on `sh`.
-                if cfg!(windows) {
-                    tracing::info!(img_path, "skipped execution on Windows");
-                    continue;
                 }
 
                 // Spawn snapshot generation into a separate thread so that it's effectively parallelized.
@@ -256,11 +263,8 @@ fn examples_are_consistent() {
     assert!(failures.is_empty(), "Some examples failed: {failures:#?}");
 }
 
-fn prepare_cli(
-    command: &str,
-    img_path: Option<&str>,
-) -> Option<Cli> {
-    let path_to_rainbow = examples_dir().join("rainbow.sh");
+fn prepare_cli(command: &str, img_path: Option<&str>) -> Option<Cli> {
+    let rainbow_dir = examples_dir().join("rainbow");
 
     let command = command.trim_end();
     assert!(
@@ -283,9 +287,14 @@ fn prepare_cli(
     } = &mut args.command
     {
         shell.io_timeout = Duration::from_secs(1).into();
-        shell
-            .init
-            .push(format!("alias rainbow=\"'{}'\"", path_to_rainbow.display()));
+        let path_extension = if cfg!(windows) {
+            format!("set PATH={};%PATH%", rainbow_dir.display())
+        } else if cfg!(unix) {
+            format!("export PATH={}:$PATH", rainbow_dir.display())
+        } else {
+            panic!("unsupported platform");
+        };
+        shell.init.push(path_extension);
 
         let out_path = if let Some(specified_path) = &template.out {
             assert!(img_path.is_none(), "both image and -o option are specified");
@@ -351,10 +360,15 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
     }
 
     let ref_path = examples_dir().join(&out_path);
-    let raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
+    let mut raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
         panic!("failed reading reference at {}: {err}", ref_path.display());
     });
     tracing::info!(?ref_path, byte_len = raw_reference.len(), "read reference");
+
+    if cfg!(windows) {
+        // Remove `data-exit-status` mentions, which aren't supported by the default shell.
+        raw_reference = raw_reference.replace(" data-exit-status=\"0\"", "");
+    }
 
     if raw_reference != raw_transcript {
         let is_ci = env::var_os("CI").is_some_and(|flag| flag != "0");

@@ -96,7 +96,7 @@ pub(crate) struct ShellArgs {
     /// Shell command without args (they are supplied separately). If omitted,
     /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
     #[arg(long, short = 's')]
-    shell: Option<OsString>,
+    pub(crate) shell: Option<OsString>,
 
     /// Sets the shell as echoing (i.e., one that echoes all inputs to the output).
     #[arg(long)]

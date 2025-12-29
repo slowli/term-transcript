@@ -299,7 +299,7 @@ and visually highlighted the default SVG template.
 Generating command:
 
 ```shell
-term-transcript exec --palette gjm8 --window \
+term-transcript exec --palette gjm8 --window --shell sh \
   './non-existing-command' \
   '[ -x non-existing-file ]' \
   '[ -x non-existing-file ] || echo "File is not there!"'
