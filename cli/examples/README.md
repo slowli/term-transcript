@@ -223,7 +223,7 @@ Generating command:
 ```shell
 term-transcript exec --palette gjm8 \
   --line-numbers continuous \
-  --embed-font="$ROBOTO_MONO_PATH" \
+  --embed-font=fonts/RobotoMono.ttf \
   'rainbow --short'
 ```
 
@@ -237,7 +237,7 @@ It is possible to embed the italic font face as well by specifying 2 paths for `
 term-transcript exec --palette gjm8 \
   --line-numbers continuous \
   --line-height=1.4em \
-  --embed-font="$ROBOTO_MONO_PATH:$ROBOTO_MONO_ITALIC_PATH" \
+  --embed-font="fonts/RobotoMono.ttf:fonts/RobotoMono-Italic.ttf" \
   --pure-svg \
   'rainbow --short'
 ```
@@ -250,7 +250,7 @@ We embed its regular and **bold** faces (i.e., *italic* is synthesized):
 ```shell
 term-transcript exec --palette gjm8 \
   --line-numbers continuous \
-  --embed-font="$FIRA_MONO_PATH:$FIRA_MONO_BOLD_PATH" \
+  --embed-font="fonts/FiraMono-Regular.ttf:fonts/FiraMono-Bold.ttf" \
   --advance-width=8.6px \
   --pure-svg \
   'rainbow --short'
@@ -317,8 +317,8 @@ Generating command:
 term-transcript exec --palette gjm8 \
   --pty --window --shell bash \
   --init 'export PS1=' \
-  'grep -n serge ../Cargo.lock' \
-  'grep -m 5 -n serde ../Cargo.lock'
+  'grep -n serge ../Cargo.toml' \
+  'grep -m 5 -n serde ../Cargo.toml'
 ```
 
 ### Failures in `pwsh`

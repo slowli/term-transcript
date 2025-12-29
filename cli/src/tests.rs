@@ -26,21 +26,9 @@ use term_transcript::Transcript;
 
 use crate::{Cli, Command};
 
-fn readme_dir() -> PathBuf {
-    // FIXME: move examples to binary
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples")
+fn examples_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("examples")
 }
-
-// Paths are relative to `README_DIR`; FIXME: use paths directly?
-const FONT_ENV_VARS: &[(&str, &str)] = &[
-    ("ROBOTO_MONO_PATH", "fonts/RobotoMono-VariableFont_wght.ttf"),
-    (
-        "ROBOTO_MONO_ITALIC_PATH",
-        "fonts/RobotoMono-Italic-VariableFont_wght.ttf",
-    ),
-    ("FIRA_MONO_PATH", "fonts/FiraMono-Regular.ttf"),
-    ("FIRA_MONO_BOLD_PATH", "fonts/FiraMono-Bold.ttf"),
-];
 
 fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> Vec<String> {
     #[derive(Debug, PartialEq)]
@@ -183,21 +171,9 @@ fn examples_are_consistent() {
     #[cfg(feature = "tracing")]
     setup_test_tracing();
 
-    let readme_dir = readme_dir();
-    env::set_current_dir(&readme_dir).expect("cannot change current dir");
-
-    let readme_path = readme_dir.join("README.md");
-    let env_vars = FONT_ENV_VARS
-        .iter()
-        .map(|(name, path)| {
-            let path = readme_dir
-                .join(path)
-                .to_str()
-                .expect("non-UTF8 path")
-                .to_owned();
-            (*name, path)
-        })
-        .collect();
+    let examples_dir = examples_dir();
+    env::set_current_dir(&examples_dir).expect("cannot change current dir");
+    let readme_path = examples_dir.join("README.md");
 
     let readme = fs::read_to_string(readme_path).expect("cannot read readme");
     let parser = Parser::new(&readme);
@@ -231,7 +207,7 @@ fn examples_are_consistent() {
                 assert!(!shell_command.is_empty());
 
                 let img_path = img_path.take();
-                let Some(cli) = prepare_cli(&shell_command, img_path.as_deref(), &env_vars) else {
+                let Some(cli) = prepare_cli(&shell_command, img_path.as_deref()) else {
                     continue;
                 };
 
@@ -283,17 +259,15 @@ fn examples_are_consistent() {
 fn prepare_cli(
     command: &str,
     img_path: Option<&str>,
-    env_vars: &HashMap<&'static str, String>,
 ) -> Option<Cli> {
-    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let path_to_rainbow = rainbow_dir.join("rainbow.sh");
+    let path_to_rainbow = examples_dir().join("rainbow.sh");
 
     let command = command.trim_end();
     assert!(
         command.starts_with("term-transcript exec "),
         "Unexpected command: {command}"
     );
-    let args = split_into_args(command, env_vars);
+    let args = split_into_args(command, &HashMap::new());
     #[cfg(feature = "tracing")]
     tracing::info!(?args, "split command-line args");
 
@@ -376,7 +350,7 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
         assert!(!parsed.interactions().is_empty());
     }
 
-    let ref_path = readme_dir().join(&out_path);
+    let ref_path = examples_dir().join(&out_path);
     let raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
         panic!("failed reading reference at {}: {err}", ref_path.display());
     });
