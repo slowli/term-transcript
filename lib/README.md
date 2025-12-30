@@ -59,7 +59,7 @@ for the installation and usage guides.
 
 ### Snapshot examples
 
-An SVG snapshot of [the `rainbow` script](../cli/examples/rainbow/rainbow)
+An SVG snapshot of [the `rainbow` script](../examples/rainbow/rainbow)
 produced by this crate:
 
 ![Snapshot of rainbow example][rainbow-snapshot-link]
@@ -125,5 +125,5 @@ shall be dual licensed as above, without any additional terms or conditions.
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 [custom-templates]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.Template.html#customization
 [term-transcript-cli]: https://crates.io/crates/term-transcript-cli
-[rainbow-snapshot-link]: ../cli/examples/rainbow.svg
-[animated-snapshot-link]: ../cli/examples/animated.svg
+[rainbow-snapshot-link]: ../examples/rainbow.svg
+[animated-snapshot-link]: ../examples/animated.svg
