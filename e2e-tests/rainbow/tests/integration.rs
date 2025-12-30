@@ -37,8 +37,8 @@ fn enable_tracing() -> DefaultGuard {
     tracing::subscriber::set_default(create_fmt_subscriber())
 }
 
-fn examples_dir() -> &'static Path {
-    Path::new("../../cli/examples")
+fn examples_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../cli/examples")
 }
 
 fn rainbow_dir() -> PathBuf {
@@ -175,7 +175,7 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::
     let interaction = &transcript.interactions()[0];
     let output = interaction.output().to_plaintext()?;
     assert!(
-        output.contains("\nblack blue green red cyan magenta yellow"),
+        output.contains("\nblack red green yellow blue magenta cyan white"),
         "{output}"
     );
 

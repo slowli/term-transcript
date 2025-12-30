@@ -295,7 +295,7 @@ impl FontEmbedder for FontSubsetter {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, path::Path};
 
     use assert_matches::assert_matches;
     use test_casing::test_casing;
@@ -307,24 +307,26 @@ mod tests {
     };
 
     fn read_font(path: &str) -> FontFace {
-        let bytes = fs::read(path).unwrap();
+        const FONTS_DIR: &str = "../cli/examples/fonts";
+
+        let bytes = fs::read(Path::new(FONTS_DIR).join(path)).unwrap();
         FontFace::new(bytes.into()).unwrap()
     }
 
     fn roboto_mono() -> FontFace {
-        read_font("../examples/fonts/RobotoMono-VariableFont_wght.ttf")
+        read_font("RobotoMono.ttf")
     }
 
     fn roboto_mono_italic() -> FontFace {
-        read_font("../examples/fonts/RobotoMono-Italic-VariableFont_wght.ttf")
+        read_font("RobotoMono-Italic.ttf")
     }
 
     fn fira_mono() -> FontFace {
-        read_font("../examples/fonts/FiraMono-Regular.ttf")
+        read_font("FiraMono-Regular.ttf")
     }
 
     fn fira_mono_bold() -> FontFace {
-        read_font("../examples/fonts/FiraMono-Bold.ttf")
+        read_font("FiraMono-Bold.ttf")
     }
 
     fn test_subsetting_font(subsetter: FontSubsetter, pure_svg: bool) -> String {
