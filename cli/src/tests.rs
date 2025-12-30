@@ -33,7 +33,8 @@ fn examples_dir() -> PathBuf {
 fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> Vec<String> {
     #[derive(Debug, PartialEq)]
     enum ParsingState {
-        Normal,
+        Normal { is_escape: bool },
+        Comment,
         SingleQuote,
         DoubleQuote,
         Var { in_double_quote: bool },
@@ -42,18 +43,29 @@ fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> V
     let mut args = vec![];
     let mut current_arg = String::new();
     let mut current_var = String::new();
-    let mut state = ParsingState::Normal;
+    let mut state = ParsingState::Normal { is_escape: false };
     // Add a surrogate ' ' at the end to terminate non-normal states.
     for (idx, ch) in command.char_indices().chain([(command.len(), ' ')]) {
         let next_char = command.as_bytes().get(idx + 1).copied();
-        match state {
-            ParsingState::Normal => {
+        match &mut state {
+            ParsingState::Normal { is_escape } => {
+                if *is_escape {
+                    assert_eq!(ch, '\n', "escape not supported");
+                    *is_escape = false;
+                    continue;
+                }
+
                 match ch {
                     '\'' => state = ParsingState::SingleQuote,
                     '"' => state = ParsingState::DoubleQuote,
                     '\\' => {
                         assert_eq!(next_char, Some(b'\n'), "escape not supported");
                         // Gobble the escaped newline
+                        *is_escape = true;
+                    }
+                    '\n' => panic!("unescaped newline in {command}"),
+                    '#' => {
+                        state = ParsingState::Comment;
                     }
                     '$' => {
                         let next_char = next_char.expect("unfinished var");
@@ -72,15 +84,21 @@ fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> V
                     }
                 }
             }
+            ParsingState::Comment => {
+                if ch == '\n' {
+                    state = ParsingState::Normal { is_escape: false };
+                }
+                // Otherwise, gobble the current char
+            }
             ParsingState::SingleQuote => {
                 if ch == '\'' {
-                    state = ParsingState::Normal;
+                    state = ParsingState::Normal { is_escape: false };
                 } else {
                     current_arg.push(ch);
                 }
             }
             ParsingState::DoubleQuote => match ch {
-                '"' => state = ParsingState::Normal,
+                '"' => state = ParsingState::Normal { is_escape: false },
                 '\\' => panic!("escapes are not supported in double-quoted strings"),
                 '$' => {
                     let next_char = next_char.expect("unfinished var");
@@ -106,17 +124,17 @@ fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> V
                     // This pretends that the var doesn't contain whitespace even if `!in_double_quote`.
                     current_arg.push_str(var_value);
 
-                    state = if in_double_quote {
+                    state = if *in_double_quote {
                         ParsingState::DoubleQuote
                     } else {
-                        ParsingState::Normal
+                        ParsingState::Normal { is_escape: false }
                     };
                 }
             }
         }
     }
 
-    assert_eq!(state, ParsingState::Normal);
+    assert_eq!(state, ParsingState::Normal { is_escape: false });
     assert!(current_arg.is_empty());
     assert!(current_var.is_empty());
 
@@ -141,7 +159,7 @@ fn splitting_into_args_works() {
     );
 
     let command =
-        "term-transcript exec -T='100ms' \\\n --embed-font=\"$FONT_ROBOTO:$FONT_ROBOTO_ITALIC\"";
+        "term-transcript exec -T='100ms' \\\n  # Embed font\n --embed-font=\"$FONT_ROBOTO:$FONT_ROBOTO_ITALIC\"";
     let args = split_into_args(command, &env);
     assert_eq!(
         args,
@@ -224,16 +242,19 @@ fn examples_are_consistent() {
                         }
                     )
                 {
+                    #[cfg(feature = "tracing")]
                     tracing::info!(img_path, ?cli, "skipping snapshot with specified shell");
                     continue;
                 }
 
                 if !img_path.contains(&img_filter) {
+                    #[cfg(feature = "tracing")]
                     tracing::info!(img_path, img_filter, "snapshot filtered out");
                     continue;
                 }
                 if let Some(skip_filter) = &img_skip_filter {
                     if img_path.contains(skip_filter) {
+                        #[cfg(feature = "tracing")]
                         tracing::info!(img_path, skip_filter, "snapshot filtered out");
                         continue;
                     }
@@ -345,10 +366,12 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
         };
 
     cli.command.run().unwrap();
+    #[cfg(feature = "tracing")]
     tracing::info!("run command");
 
     // Read the generated transcript and check that it can be parsed.
     let raw_transcript = fs::read_to_string(&full_out_path).unwrap();
+    #[cfg(feature = "tracing")]
     tracing::info!(
         ?full_out_path,
         byte_len = raw_transcript.len(),
@@ -363,6 +386,7 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
     let mut raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
         panic!("failed reading reference at {}: {err}", ref_path.display());
     });
+    #[cfg(feature = "tracing")]
     tracing::info!(?ref_path, byte_len = raw_reference.len(), "read reference");
 
     if cfg!(windows) {
@@ -385,6 +409,7 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
                     save_path.display()
                 );
             });
+            #[cfg(feature = "tracing")]
             tracing::info!(?save_path, "saved new transcript");
         }
 

@@ -317,6 +317,7 @@ Generating command:
 term-transcript exec --palette gjm8 \
   --pty --window --shell bash \
   --init 'export PS1=' \
+  --init 'alias grep="grep --color=always"' \
   'grep -n serge ../Cargo.toml' \
   'grep -m 5 -n serde ../Cargo.toml'
 ```
