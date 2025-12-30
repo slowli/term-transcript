@@ -50,6 +50,9 @@ jobs:
 
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets
+        env:
+          # Skip the PowerShell snapshots when testing CLI examples
+          TT_IMG_SKIP: pwsh
       - name: Run doc tests
         run: cargo test --workspace --all-features --doc
 
