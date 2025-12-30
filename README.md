@@ -25,19 +25,19 @@ See their docs and the [FAQ](FAQ.md) for usage guidelines and troubleshooting ad
 
 ### Examples
 
-An SVG snapshot of [the `rainbow` example](e2e-tests/rainbow)
+An SVG snapshot of [the `rainbow` script](cli/examples/rainbow/rainbow)
 produced by this crate:
 
-![Snapshot of rainbow example](examples/rainbow.svg)
+![Snapshot of rainbow example](cli/examples/rainbow.svg)
 
 A snapshot of the same example with the scrolling animation and window frame:
 
-![Animated snapshot of rainbow example](examples/animated.svg)
+![Animated snapshot of rainbow example](cli/examples/animated.svg)
 
-A snapshot of a similar example rendered to HTML using [a custom template](examples/custom.html.handlebars)
-is available [as a source file](examples/rainbow.html) and [in the rendered form][html-example].
+A snapshot of a similar example rendered to HTML using [a custom template](cli/examples/custom.html.handlebars)
+is available [as a source file](cli/examples/rainbow.html) and [in the rendered form][html-example].
 
-See the [`examples` directory](examples) for more snapshot examples.
+See the [`examples` directory](cli/examples) for more snapshot examples.
 
 ## Contributing
 
