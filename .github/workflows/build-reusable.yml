@@ -11,7 +11,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+          - os: macos-latest
+          - os: ubuntu-latest
+            all_checks: true
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +30,7 @@ jobs:
           components: rustfmt, clippy
       - name: Install cargo-deny
         uses: baptiste0928/cargo-install@v3
+        if: matrix.all_checks
         with:
           crate: cargo-deny
           version: "^0.18.9"
@@ -44,9 +52,12 @@ jobs:
         run: cargo clippy -p term-transcript --no-default-features --features svg --lib -- -D warnings
       - name: Clippy (features = test)
         run: cargo clippy -p term-transcript --no-default-features --features test --lib -- -D warnings
+      - name: Clippy CLI (no features)
+        run: cargo clippy -p term-transcript --no-default-features --all-targets -- -D warnings
 
       - name: Check dependencies
         run: cargo deny --workspace --all-features check
+        if: matrix.all_checks
 
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets
@@ -56,9 +67,8 @@ jobs:
       - name: Run doc tests
         run: cargo test --workspace --all-features --doc
 
-      - name: Generate snapshots
-        run: ./examples/generate-snapshots.sh
       - name: Test CLI tracing
+        shell: bash
         run: |
           RUST_LOG=term_transcript=debug \
           cargo run -p term-transcript-cli --all-features -- \
