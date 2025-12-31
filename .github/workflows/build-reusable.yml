@@ -60,7 +60,7 @@ jobs:
         if: matrix.all_checks
 
       - name: Run tests
-        run: cargo test --workspace --all-features --all-targets
+        run: cargo test --workspace --all-features --all-targets --no-fail-fast
         env:
           # Skip the PowerShell snapshots when testing CLI examples
           TT_IMG_SKIP: pwsh

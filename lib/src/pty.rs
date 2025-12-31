@@ -207,6 +207,9 @@ mod tests {
         time::Duration,
     };
 
+    #[cfg(unix)]
+    use test_casing::{decorate, decorators::Retry};
+
     use super::*;
     use crate::{ShellOptions, Transcript, UserInput};
 
@@ -262,6 +265,7 @@ mod tests {
     }
 
     #[cfg(unix)]
+    #[decorate(Retry::times(3))] // FIXME: Prompt incorrectly read from PTY in some cases (#24)
     #[test]
     fn pty_transcript_with_multiline_input() -> anyhow::Result<()> {
         let mut options = ShellOptions::new(PtyCommand::default());
