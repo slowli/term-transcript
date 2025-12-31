@@ -68,7 +68,7 @@
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge ../Cargo.toml</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> grep -m 5 -n serde ../Cargo.toml</pre></div>
-            <div class="output"><pre><span class="line"><span class="fg2">22</span><span class="fg6">:</span><span class="fg1">serde</span>_json.workspace &#x3D; true</span></pre></div>
+            <div class="output"><pre><span class="line">22:<span class="fg1">serde</span>_json.workspace &#x3D; true</span></pre></div>
           </div>
         </foreignObject>
       </svg>

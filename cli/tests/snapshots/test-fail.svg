@@ -62,7 +62,7 @@
         <foreignObject width="720" height="440">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms &#x27;rainbow --short&#x27; &gt; bogus.svg &amp;&amp; \
-  sed -i -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
+  sed -i~ -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
 # Mutate the captured output, removing some styles</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -I 300ms -T 100ms --precise bogus.svg

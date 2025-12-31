@@ -28,6 +28,8 @@ fn test_config() -> (TestConfig<StdShell>, TempDir) {
 
     let shell_options = ShellOptions::sh()
         .with_env("COLOR", "always")
+        // Switch off logging if `RUST_LOG` is set in the surrounding env
+        .with_env("RUST_LOG", "off")
         .with_current_dir(temp_dir.path())
         .with_cargo_path()
         .with_additional_path(rainbow_dir)
@@ -76,7 +78,7 @@ fn test_failure_example() {
         svg_snapshot("test-fail"),
         [
             "term-transcript exec -I 300ms -T 100ms 'rainbow --short' > bogus.svg && \\\n  \
-             sed -i -E -e 's/(fg4|bg13)//g' bogus.svg\n\
+             sed -i~ -E -e 's/(fg4|bg13)//g' bogus.svg\n\
              # Mutate the captured output, removing some styles",
             "term-transcript test -I 300ms -T 100ms --precise bogus.svg\n\
              # --precise / -p flag enables comparison by style",
@@ -102,7 +104,8 @@ fn print_example_with_failures() {
     config.test(
         svg_snapshot("print-with-failures"),
         [
-            "term-transcript exec -I 300ms -T 100ms 'some-non-existing-command' \\\n  \
+            "term-transcript exec -I 300ms -T 100ms \\\n  \
+             'which some-non-existing-command > /dev/null' \\\n  \
              '[ -x some-non-existing-file ]' > fail.svg",
             "term-transcript print fail.svg",
         ],

@@ -371,6 +371,9 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
 
     // Read the generated transcript and check that it can be parsed.
     let raw_transcript = fs::read_to_string(&full_out_path).unwrap();
+    // Normalize newlines for portability.
+    let raw_transcript = raw_transcript.replace("\r\n", "\n");
+
     #[cfg(feature = "tracing")]
     tracing::info!(
         ?full_out_path,
@@ -389,6 +392,8 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
     #[cfg(feature = "tracing")]
     tracing::info!(?ref_path, byte_len = raw_reference.len(), "read reference");
 
+    // Normalize newlines for portability.
+    raw_reference = raw_reference.replace("\r\n", "\n");
     if cfg!(windows) {
         // Remove `data-exit-status` mentions, which aren't supported by the default shell.
         raw_reference = raw_reference.replace(" data-exit-status=\"0\"", "");
