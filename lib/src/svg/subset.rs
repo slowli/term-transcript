@@ -307,7 +307,7 @@ mod tests {
     };
 
     fn read_font(path: &str) -> FontFace {
-        const FONTS_DIR: &str = "../cli/examples/fonts";
+        const FONTS_DIR: &str = "../examples/fonts";
 
         let bytes = fs::read(Path::new(FONTS_DIR).join(path)).unwrap();
         FontFace::new(bytes.into()).unwrap()

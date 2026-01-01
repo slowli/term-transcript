@@ -24,7 +24,7 @@ fn svg_snapshot(name: &str) -> PathBuf {
 // the `rainbow` script added to PATH.
 fn test_config() -> (TestConfig<StdShell>, TempDir) {
     let temp_dir = tempdir().expect("cannot create temporary directory");
-    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/rainbow");
+    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples/rainbow");
 
     let shell_options = ShellOptions::sh()
         .with_env("COLOR", "always")

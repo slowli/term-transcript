@@ -27,7 +27,7 @@ use term_transcript::Transcript;
 use crate::{shell::ShellArgs, Cli, Command};
 
 fn examples_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("examples")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples")
 }
 
 fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> Vec<String> {

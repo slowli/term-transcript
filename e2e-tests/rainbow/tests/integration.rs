@@ -38,7 +38,7 @@ fn enable_tracing() -> DefaultGuard {
 }
 
 fn examples_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../cli/examples")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples")
 }
 
 fn rainbow_dir() -> PathBuf {
