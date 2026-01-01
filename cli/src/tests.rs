@@ -317,6 +317,17 @@ fn prepare_cli(command: &str, img_path: Option<&str>) -> Option<Cli> {
         };
         shell.init.push(path_extension);
 
+        #[cfg(all(windows, feature = "portable-pty"))]
+        if shell.pty.is_some() {
+            // TODO: On Windows, PTY transforms / "optimizes" styles (e.g., merges non-styled whitespace
+            //   into the preceding styled span). It may make sense to either optimize spans during capture as well,
+            //   and/or compare produced transcripts more smartly.
+
+            #[cfg(feature = "tracing")]
+            tracing::info!("disabling PTY because of capturing inconsistencies");
+            shell.pty = None;
+        }
+
         let out_path = if let Some(specified_path) = &template.out {
             assert!(img_path.is_none(), "both image and -o option are specified");
             assert!(specified_path.is_relative());

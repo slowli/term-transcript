@@ -15,7 +15,7 @@ mod pty {
 
     #[cfg(feature = "portable-pty")]
     #[derive(Debug, Clone, Copy)]
-    pub(super) struct PtySize {
+    pub(crate) struct PtySize {
         pub rows: u16,
         pub cols: u16,
     }
@@ -91,7 +91,7 @@ pub(crate) struct ShellArgs {
     #[cfg(feature = "portable-pty")]
     #[arg(long)]
     #[allow(clippy::option_option)] // required by `clap`
-    pty: Option<Option<PtySize>>,
+    pub(crate) pty: Option<Option<PtySize>>,
 
     /// Shell command without args (they are supplied separately). If omitted,
     /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
