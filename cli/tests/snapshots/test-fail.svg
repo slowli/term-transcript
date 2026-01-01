@@ -1,102 +1,99 @@
-<!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 400" width="720" height="400" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    :root {
-      --black: #1c1c1c; --i-black: #666666;
-      --blue: #048ac7; --i-blue: #48c6ff;
-      --cyan: #0ac1cd; --i-cyan: #63e7f0;
-      --green: #cee318; --i-green: #ccff00;
-      --magenta: #833c9f; --i-magenta: #be67e1;
-      --red: #ff005b; --i-red: #ff00a0;
-      --white: #e5e5e5; --i-white: #f3f3f3;
-      --yellow: #ffe755; --i-yellow: #ff9f00;
-      --hl-black: rgba(255, 255, 255, 0.1);
-      --hl-red: rgba(255, 0, 65, 0.15);
-    }
-    .container {
-      padding: 0 10px;
-      color: var(--white);
-      line-height: 18px;
-    }
-    .container pre {
-      padding: 0;
-      margin: 0;
-      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-      line-height: inherit;
-    }
-    .user-input {
-      margin: 0 -10px 6px;
-      color: var(--white);
-      background: var(--hl-black);
-      padding: 2px 10px;
-    }
-    .term-output { margin-bottom: 6px; }
-    .user-input-failure {
-      border-left: 2px solid var(--red);
-      border-right: 2px solid var(--red);
-      background: var(--hl-red);
-    }
+<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 0 720 460" width="720" height="460" xmlns="http://www.w3.org/2000/svg">
+  <switch>
+    <g requiredExtensions="http://www.w3.org/1999/xhtml">
+      <style>
+        .container {
+          padding: 0 10px;
+          color: #e5e5e5;
+          line-height: 16.8px;
+        }
+        .container pre {
+          padding: 0;
+          margin: 0;
+          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+          line-height: inherit;
+        }
+        .input {
+          margin: 0 -10px 6px;
+          color: #e5e5e5;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 10px;
+        }
+        .input-hidden { display: none; }
+        .output { margin-bottom: 6px; }
+        .input-failure {
+          border-left: 2px solid #ff005b;
+          border-right: 2px solid #ff005b;
+          background: rgba(255, 0, 65, 0.15);
+        }
 
-    .bold,.prompt { font-weight: bold; }
-    .italic { font-style: italic; }
-    .underline { text-decoration: underline; }
-    .dimmed { opacity: 0.7; }
-    .hard-br {
-      position: relative;
-      margin-left: 5px;
-    }
-    .hard-br:before {
-      content: '↓';
-      font-size: 16px;
-      height: 16px;
-      position: absolute;
-      bottom: 0;
-      transform: rotate(45deg);
-      opacity: 0.8;
-    }
-    .fg0 { color: var(--black); } .bg0 { background: var(--black); }
-    .fg1 { color: var(--red); } .bg1 { background: var(--red); }
-    .fg2 { color: var(--green); } .bg2 { background: var(--green); }
-    .fg3 { color: var(--yellow); } .bg3 { background: var(--yellow); }
-    .fg4 { color: var(--blue); } .bg4 { background: var(--blue); }
-    .fg5 { color: var(--magenta); } .bg5 { background: var(--magenta); }
-    .fg6 { color: var(--cyan); } .bg6 { background: var(--cyan); }
-    .fg7 { color: var(--white); } .bg7 { background: var(--white); }
-    .fg8 { color: var(--i-black); } .bg8 { background: var(--i-black); }
-    .fg9 { color: var(--i-red); } .bg9 { background: var(--i-red); }
-    .fg10 { color: var(--i-green); } .bg10 { background: var(--i-green); }
-    .fg11 { color: var(--i-yellow); } .bg11 { background: var(--i-yellow); }
-    .fg12 { color: var(--i-blue); } .bg12 { background: var(--i-blue); }
-    .fg13 { color: var(--i-magenta); } .bg13 { background: var(--i-magenta); }
-    .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
-    .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
-  </style>
-  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
-  <svg x="0" y="10" width="720" height="380" viewBox="0 0 720 380">
-    <foreignObject width="720" height="380">
-      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms &#x27;rainbow.sh --short&#x27; &gt; bogus.svg &amp;&amp; \
-  sed -i -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
+        .bold,.prompt { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #1c1c1c 30%); }
+        .dimmed-bg > span { background: rgb(from #1c1c1c r g b / 30%); }
+        .hard-br { margin-left: 8px; }
+        .hard-br:before {
+          content: '»';
+          color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
+        }
+        .line { display: block; }
+        .line > span { display: inline-block; }
+        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
+        .fg2 { color: #cee318; } .bg2 { background: #cee318; }
+        .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
+        .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
+        .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
+        .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
+        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
+        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
+        .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
+        .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
+        .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
+        .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
+      </style>
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
+      <svg x="0" y="10" width="720" height="440" viewBox="0 0 720 440" overflow="hidden">
+        <foreignObject width="720" height="440">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms &#x27;rainbow --short&#x27; &gt; bogus.svg &amp;&amp; \
+  sed -i~ -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
 # Mutate the captured output, removing some styles</pre></div>
-        <div class="term-output"><pre></pre></div>
-        <div class="user-input user-input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -I 300ms -T 100ms --precise bogus.svg
+            <div class="output"><pre></pre></div>
+            <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -I 300ms -T 100ms --precise bogus.svg
 # --precise / -p flag enables comparison by style</pre></div>
-        <div class="term-output"><pre>Testing file <span class="underline">bogus.svg</span>...
-  [<span class="fg1">#</span>] Input: rainbow.sh --short
-= Base colors:
-<span class="fg1">&gt; </span><span class="underline fg0">black</span> <span class="fg1">red</span> <span class="underline fg2">green</span> <span class="fg3">yellow</span> <span class="underline">blue</span> <span class="fg5">magenta</span> <span class="underline fg6">cyan</span> <span class="fg7">white</span> 
-<span class="fg1">&gt; </span>                       <span class="fg7 bg1">^^^^</span>
-= <span class="fg8">black</span> <span class="underline fg9">red</span> <span class="fg10">green</span> <span class="underline fg11">yellow</span> <span class="fg12">blue</span> <span class="underline fg13">magenta</span> <span class="fg14">cyan</span> <span class="underline fg15">white</span> 
-= Base colors (bg):
-= <span class="bg0">black</span> <span class="bg1">red</span> <span class="bg2">green</span> <span class="bg3">yellow</span> <span class="bg4">blue</span> <span class="bg5">magenta</span> <span class="bg6">cyan</span> <span class="bg7">white</span> 
-<span class="fg1">&gt; </span><span class="bg8">black</span> <span class="bg9">red</span> <span class="bg10">green</span> <span class="bg11">yellow</span> <span class="bg12">blue</span> magenta <span class="bg14">cyan</span> <span class="bg15">white</span> 
-<span class="fg1">&gt; </span>                            <span class="fg7 bg1">^^^^^^^</span>
-<span class="bold">Positions      Expected style          Actual style     
-========== ====================== ======================
-</span>    36..40 <span class="underline">--u-   (none)/(none)  </span> <span class="underline fg4">--u-     blue/(none)  </span>
-  203..210 ----   (none)/(none)   <span class="bg13">----   (none)/magenta*</span>
-Totals: passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></pre></div>
-      </div>
-    </foreignObject>
-  </svg>
+            <div class="output"><pre><span class="line">Testing file <span class="underline">bogus.svg</span>...
+</span><span class="line">  [<span class="fg1">#</span>] Input: rainbow --short
+</span><span class="line">&#x3D; Base styles
+</span><span class="line">&#x3D;      None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic">Bold+Italic</span>
+</span><span class="line">&#x3D;    Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed"><span>Bold+Italic</span></span>
+</span><span class="line">&#x3D; Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline">Bold+Italic</span>
+</span><span class="line">&#x3D;   With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
+</span><span class="line">&#x3D; Base colors:
+</span><span class="line"><span class="fg1">&gt; </span><span class="underline fg0">black</span> <span class="fg1">red</span> <span class="underline fg2">green</span> <span class="fg3">yellow</span> <span class="underline">blue</span> <span class="fg5">magenta</span> <span class="underline fg6">cyan</span> <span class="fg7">white</span> 
+</span><span class="line"><span class="fg1">&gt; </span>                       <span class="fg7 bg1">^^^^</span>
+</span><span class="line">&#x3D; <span class="fg8">black</span> <span class="underline fg9">red</span> <span class="fg10">green</span> <span class="underline fg11">yellow</span> <span class="fg12">blue</span> <span class="underline fg13">magenta</span> <span class="fg14">cyan</span> <span class="underline fg15">white</span> 
+</span><span class="line">&#x3D; Base colors (bg):
+</span><span class="line">&#x3D; <span class="bg0">black</span> <span class="bg1">red</span> <span class="bg2">green</span> <span class="bg3">yellow</span> <span class="bg4">blue</span> <span class="bg5">magenta</span> <span class="bg6">cyan</span> <span class="bg7">white</span> 
+</span><span class="line"><span class="fg1">&gt; </span><span class="bg8">black</span> <span class="bg9">red</span> <span class="bg10">green</span> <span class="bg11">yellow</span> <span class="bg12">blue</span> magenta <span class="bg14">cyan</span> <span class="bg15">white</span> 
+</span><span class="line"><span class="fg1">&gt; </span>                            <span class="fg7 bg1">^^^^^^^</span>
+</span><span class="line"><span class="bold">Positions      Expected style          Actual style     </span>
+</span><span class="line"><span class="bold">&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;</span>
+</span><span class="line">  220..224 <span class="underline">--u-   (none)/(none)  </span> <span class="underline fg4">--u-     blue/(none)  </span>
+</span><span class="line">  387..394 ----   (none)/(none)   <span class="bg13">----   (none)/magenta*</span>
+</span><span class="line">Totals: passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></span></pre></div>
+          </div>
+        </foreignObject>
+      </svg>
+    </g>
+    <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
+      HTML embedding not supported.
+      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
+    </text>
+  </switch>
 </svg>

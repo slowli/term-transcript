@@ -6,11 +6,11 @@ use std::{
     collections::HashMap,
     error::Error as StdError,
     ffi::{OsStr, OsString},
-    io,
+    fmt, io,
     path::{Path, PathBuf},
 };
 
-use portable_pty::{native_pty_system, Child, CommandBuilder, PtyPair, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtyPair, PtySize};
 
 use crate::{
     traits::{ConfigureCommand, ShellProcess, SpawnShell, SpawnedShell},
@@ -148,7 +148,10 @@ impl SpawnShell for PtyCommand {
             .take_writer()
             .map_err(|err| into_io_error(err.into()))?;
         Ok(SpawnedShell {
-            shell: PtyShell { child },
+            shell: PtyShell {
+                child,
+                _master: master,
+            },
             reader,
             writer,
         })
@@ -157,15 +160,27 @@ impl SpawnShell for PtyCommand {
 
 /// Spawned shell process connected to pseudo-terminal (PTY).
 #[cfg_attr(docsrs, doc(cfg(feature = "portable-pty")))]
-#[derive(Debug)]
 pub struct PtyShell {
     child: Box<dyn Child + Send + Sync>,
+    _master: Box<dyn MasterPty + Send>,
+}
+
+impl fmt::Debug for PtyShell {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PtyShell")
+            .field("child", &self.child)
+            .finish_non_exhaustive()
+    }
 }
 
 impl ShellProcess for PtyShell {
     #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", err))]
     fn check_is_alive(&mut self) -> io::Result<()> {
         if let Some(exit_status) = self.child.try_wait()? {
+            #[cfg(feature = "tracing")]
+            tracing::error!(?exit_status, "shell exited prematurely");
+
             let status_str = if exit_status.success() {
                 "zero"
             } else {
@@ -205,6 +220,11 @@ mod tests {
         io::{Read, Write},
         thread,
         time::Duration,
+    };
+
+    use test_casing::{
+        decorate,
+        decorators::{Retry, RetryErrors},
     };
 
     use super::*;
@@ -261,17 +281,23 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(unix)]
+    const RETRIES: RetryErrors<anyhow::Error> =
+        Retry::times(3).on_error(|err| err.to_string().contains("Unexpected PTY output"));
+
+    #[decorate(RETRIES)] // FIXME: Prompt incorrectly read from PTY in some cases (#24)
     #[test]
     fn pty_transcript_with_multiline_input() -> anyhow::Result<()> {
         let mut options = ShellOptions::new(PtyCommand::default());
-        let inputs = vec![UserInput::command("echo \\\nhello")];
+        let inputs = vec![UserInput::command("(echo Hello\necho world)")];
         let transcript = Transcript::from_inputs(&mut options, inputs)?;
 
         assert_eq!(transcript.interactions().len(), 1);
         let interaction = &transcript.interactions()[0];
         let output = interaction.output().as_ref();
-        assert_eq!(output.trim(), "hello");
+        anyhow::ensure!(
+            output.trim() == "Hello\nworld",
+            "Unexpected PTY output: {output}"
+        );
         Ok(())
     }
 }

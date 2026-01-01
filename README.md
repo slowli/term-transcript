@@ -25,7 +25,7 @@ See their docs and the [FAQ](FAQ.md) for usage guidelines and troubleshooting ad
 
 ### Examples
 
-An SVG snapshot of [the `rainbow` example](e2e-tests/rainbow)
+An SVG snapshot of [the `rainbow` script](examples/rainbow/rainbow)
 produced by this crate:
 
 ![Snapshot of rainbow example](examples/rainbow.svg)

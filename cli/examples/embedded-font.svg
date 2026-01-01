@@ -72,17 +72,17 @@
         <foreignObject width="749" height="232">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --short</pre></div>
-            <div class="output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12</pre><pre><span class="line">Base styles:
+            <div class="output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12</pre><pre><span class="line">Base styles
 </span><span class="line">     None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic">Bold+Italic</span>
 </span><span class="line">   Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed"><span>Bold+Italic</span></span>
 </span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline">Bold+Italic</span>
 </span><span class="line">  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
 </span><span class="line">Base colors:
-</span><span class="line"><span class="underline fg0">black</span> <span class="fg4">blue</span> <span class="underline fg2">green</span> <span class="fg1">red</span> <span class="underline fg6">cyan</span> <span class="fg5">magenta</span> <span class="underline fg3">yellow</span> 
-</span><span class="line"><span class="fg8">black</span> <span class="underline fg12">blue</span> <span class="fg10">green</span> <span class="underline fg9">red</span> <span class="fg14">cyan</span> <span class="underline fg13">magenta</span> <span class="fg11">yellow</span> 
+</span><span class="line"><span class="underline fg0">black</span> <span class="fg1">red</span> <span class="underline fg2">green</span> <span class="fg3">yellow</span> <span class="underline fg4">blue</span> <span class="fg5">magenta</span> <span class="underline fg6">cyan</span> <span class="fg7">white</span> 
+</span><span class="line"><span class="fg8">black</span> <span class="underline fg9">red</span> <span class="fg10">green</span> <span class="underline fg11">yellow</span> <span class="fg12">blue</span> <span class="underline fg13">magenta</span> <span class="fg14">cyan</span> <span class="underline fg15">white</span> 
 </span><span class="line">Base colors (bg):
-</span><span class="line"><span class="fg7 bg0">black</span> <span class="fg7 bg4">blue</span> <span class="fg7 bg2">green</span> <span class="fg7 bg1">red</span> <span class="fg7 bg6">cyan</span> <span class="fg7 bg5">magenta</span> <span class="fg7 bg3">yellow</span> 
-</span><span class="line"><span class="fg15 bg8">black</span> <span class="fg15 bg12">blue</span> <span class="fg15 bg10">green</span> <span class="fg15 bg9">red</span> <span class="fg15 bg14">cyan</span> <span class="fg15 bg13">magenta</span> <span class="fg15 bg11">yellow</span> </span></pre></div>
+</span><span class="line"><span class="bg0">black</span> <span class="bg1">red</span> <span class="bg2">green</span> <span class="bg3">yellow</span> <span class="bg4">blue</span> <span class="bg5">magenta</span> <span class="bg6">cyan</span> <span class="bg7">white</span> 
+</span><span class="line"><span class="bg8">black</span> <span class="bg9">red</span> <span class="bg10">green</span> <span class="bg11">yellow</span> <span class="bg12">blue</span> <span class="bg13">magenta</span> <span class="bg14">cyan</span> <span class="bg15">white</span> </span></pre></div>
           </div>
         </foreignObject>
       </svg>

@@ -20,6 +20,24 @@ fn getting_spans_basics() {
 }
 
 #[test]
+fn newlines_break_styling() {
+    let spans = ColorSpan::parse("\u{1b}[33mHello\nworld!\u{1b}[0m").unwrap();
+    assert_eq!(spans.len(), 3);
+    assert_eq!(
+        spans[0].color_spec,
+        *ColorSpec::new().set_fg(Some(Color::Yellow))
+    );
+    assert_eq!(spans[0].len, 5);
+    assert_eq!(spans[1].color_spec, ColorSpec::default());
+    assert_eq!(spans[1].len, 1);
+    assert_eq!(
+        spans[2].color_spec,
+        *ColorSpec::new().set_fg(Some(Color::Yellow))
+    );
+    assert_eq!(spans[2].len, 6);
+}
+
+#[test]
 fn creating_color_diff_basics() {
     let lhs = [ColorSpan {
         len: 5,

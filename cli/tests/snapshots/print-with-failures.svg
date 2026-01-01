@@ -1,91 +1,84 @@
-<!-- Created with term-transcript v0.2.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 328" width="720" height="328" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    :root {
-      --black: #1c1c1c; --i-black: #666666;
-      --blue: #048ac7; --i-blue: #48c6ff;
-      --cyan: #0ac1cd; --i-cyan: #63e7f0;
-      --green: #cee318; --i-green: #ccff00;
-      --magenta: #833c9f; --i-magenta: #be67e1;
-      --red: #ff005b; --i-red: #ff00a0;
-      --white: #e5e5e5; --i-white: #f3f3f3;
-      --yellow: #ffe755; --i-yellow: #ff9f00;
-      --hl-black: rgba(255, 255, 255, 0.1);
-    }
-    .container {
-      padding: 0 10px;
-      color: var(--white);
-      line-height: 18px;
-    }
-    .container pre {
-      padding: 0;
-      margin: 0;
-      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-      line-height: inherit;
-    }
-    .user-input {
-      margin: 0 -10px 6px;
-      color: var(--white);
-      background: var(--hl-black);
-      padding: 2px 10px;
-    }
-    .term-output { margin-bottom: 6px; }
-    .bold,.prompt { font-weight: bold; }
-    .italic { font-style: italic; }
-    .underline { text-decoration: underline; }
-    .dimmed { opacity: 0.7; }
-    .hard-br {
-      position: relative;
-      margin-left: 5px;
-    }
-    .hard-br:before {
-      content: '↓';
-      font-size: 16px;
-      height: 16px;
-      position: absolute;
-      bottom: 0;
-      transform: rotate(45deg);
-      opacity: 0.8;
-    }
-    .fg0 { color: var(--black); } .bg0 { background: var(--black); }
-    .fg1 { color: var(--red); } .bg1 { background: var(--red); }
-    .fg2 { color: var(--green); } .bg2 { background: var(--green); }
-    .fg3 { color: var(--yellow); } .bg3 { background: var(--yellow); }
-    .fg4 { color: var(--blue); } .bg4 { background: var(--blue); }
-    .fg5 { color: var(--magenta); } .bg5 { background: var(--magenta); }
-    .fg6 { color: var(--cyan); } .bg6 { background: var(--cyan); }
-    .fg7 { color: var(--white); } .bg7 { background: var(--white); }
-    .fg8 { color: var(--i-black); } .bg8 { background: var(--i-black); }
-    .fg9 { color: var(--i-red); } .bg9 { background: var(--i-red); }
-    .fg10 { color: var(--i-green); } .bg10 { background: var(--i-green); }
-    .fg11 { color: var(--i-yellow); } .bg11 { background: var(--i-yellow); }
-    .fg12 { color: var(--i-blue); } .bg12 { background: var(--i-blue); }
-    .fg13 { color: var(--i-magenta); } .bg13 { background: var(--i-magenta); }
-    .fg14 { color: var(--i-cyan); } .bg14 { background: var(--i-cyan); }
-    .fg15 { color: var(--i-white); } .bg15 { background: var(--i-white); }
-  </style>
-  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: var(--black);" />
-  <svg x="0" y="10" width="720" height="308" viewBox="0 0 720 308">
-    <foreignObject width="720" height="308">
-      <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms &#x27;some-non-existing-command&#x27; \
+<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 0 720 308.8" width="720" height="308.8" xmlns="http://www.w3.org/2000/svg">
+  <switch>
+    <g requiredExtensions="http://www.w3.org/1999/xhtml">
+      <style>
+        .container {
+          padding: 0 10px;
+          color: #e5e5e5;
+          line-height: 16.8px;
+        }
+        .container pre {
+          padding: 0;
+          margin: 0;
+          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+          line-height: inherit;
+        }
+        .input {
+          margin: 0 -10px 6px;
+          color: #e5e5e5;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 10px;
+        }
+        .input-hidden { display: none; }
+        .output { margin-bottom: 6px; }
+        .bold,.prompt { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #1c1c1c 30%); }
+        .dimmed-bg > span { background: rgb(from #1c1c1c r g b / 30%); }
+        .hard-br { margin-left: 8px; }
+        .hard-br:before {
+          content: '»';
+          color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
+        }
+        .line { display: block; }
+        .line > span { display: inline-block; }
+        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
+        .fg2 { color: #cee318; } .bg2 { background: #cee318; }
+        .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
+        .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
+        .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
+        .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
+        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
+        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
+        .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
+        .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
+        .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
+        .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
+      </style>
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
+      <svg x="0" y="10" width="720" height="288.8" viewBox="0 0 720 288.8" overflow="hidden">
+        <foreignObject width="720" height="288.8">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms \
+  &#x27;which some-non-existing-command &gt; /dev/null&#x27; \
   &#x27;[ -x some-non-existing-file ]&#x27; &gt; fail.svg</pre></div>
-        <div class="term-output"><pre></pre></div>
-        <div class="user-input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript print fail.svg</pre></div>
-        <div class="term-output"><pre><span class="bold">----------  Input #1 ----------
-</span>$ some-non-existing-command
-<span class="bold">Exit status:</span> 127 <span class="fg1">(failure)
-</span><span class="bold">
----------- Output #1 ----------
-</span>sh: 1: some-non-existing-command: not found
-
-<span class="bold">----------  Input #2 ----------
-</span>$ [ -x some-non-existing-file ]
-<span class="bold">Exit status:</span> 1 <span class="fg1">(failure)
-</span><span class="bold">
----------- Output #2 ----------
-</span></pre></div>
-      </div>
-    </foreignObject>
-  </svg>
+            <div class="output"><pre></pre></div>
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript print fail.svg</pre></div>
+            <div class="output"><pre><span class="line"><span class="bold">----------  Input #1 ----------</span>
+</span><span class="line">$ which some-non-existing-command &gt; /dev/null
+</span><span class="line"><span class="bold">Exit status:</span> 1 <span class="fg1">(failure)</span>
+</span><span class="line">
+</span><span class="line"><span class="bold">---------- Output #1 ----------</span>
+</span><span class="line">
+</span><span class="line">
+</span><span class="line"><span class="bold">----------  Input #2 ----------</span>
+</span><span class="line">$ [ -x some-non-existing-file ]
+</span><span class="line"><span class="bold">Exit status:</span> 1 <span class="fg1">(failure)</span>
+</span><span class="line">
+</span><span class="line"><span class="bold">---------- Output #2 ----------</span></span></pre></div>
+          </div>
+        </foreignObject>
+      </svg>
+    </g>
+    <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
+      HTML embedding not supported.
+      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
+    </text>
+  </switch>
 </svg>

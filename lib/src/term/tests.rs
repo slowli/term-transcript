@@ -210,6 +210,36 @@ fn intense_color() -> anyhow::Result<()> {
 }
 
 #[test]
+fn carriage_return_at_end_of_line() -> anyhow::Result<()> {
+    let term_output = "\u{1b}[32mgreen\u{1b}[m\r";
+
+    let mut writer = Ansi::new(vec![]);
+    TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+    let rendered_output = writer.into_inner();
+
+    assert_eq!(
+        String::from_utf8(rendered_output)?,
+        "\u{1b}[0m\u{1b}[32mgreen\u{1b}[0m"
+    );
+    Ok(())
+}
+
+#[test]
+fn carriage_return_at_end_of_line_with_style_afterwards() -> anyhow::Result<()> {
+    let term_output = "\u{1b}[32mgreen\u{1b}[m!\r\u{1b}[m";
+
+    let mut writer = Ansi::new(vec![]);
+    TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
+    let rendered_output = writer.into_inner();
+
+    assert_eq!(
+        String::from_utf8(rendered_output)?,
+        "\u{1b}[0m\u{1b}[32mgreen\u{1b}[0m!"
+    );
+    Ok(())
+}
+
+#[test]
 fn carriage_return_at_middle_of_line() -> anyhow::Result<()> {
     let term_output = "\u{1b}[32mgreen\u{1b}[m\r\u{1b}[34mblue\u{1b}[m";
 

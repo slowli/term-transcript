@@ -15,7 +15,7 @@ mod pty {
 
     #[cfg(feature = "portable-pty")]
     #[derive(Debug, Clone, Copy)]
-    pub(super) struct PtySize {
+    pub(crate) struct PtySize {
         pub rows: u16,
         pub cols: u16,
     }
@@ -91,12 +91,12 @@ pub(crate) struct ShellArgs {
     #[cfg(feature = "portable-pty")]
     #[arg(long)]
     #[allow(clippy::option_option)] // required by `clap`
-    pty: Option<Option<PtySize>>,
+    pub(crate) pty: Option<Option<PtySize>>,
 
     /// Shell command without args (they are supplied separately). If omitted,
     /// will be set to the default OS shell (`sh` for *NIX, `cmd` for Windows).
     #[arg(long, short = 's')]
-    shell: Option<OsString>,
+    pub(crate) shell: Option<OsString>,
 
     /// Sets the shell as echoing (i.e., one that echoes all inputs to the output).
     #[arg(long)]
@@ -107,9 +107,13 @@ pub(crate) struct ShellArgs {
     #[allow(clippy::struct_field_names)] // matter of taste
     shell_args: Vec<OsString>,
 
+    /// Init commands to run in the shell before any inputs.
+    #[arg(long)]
+    pub(crate) init: Vec<String>,
+
     /// Timeout for I/O operations in milliseconds.
     #[arg(name = "io-timeout", long, short = 'T', default_value = "500ms")]
-    io_timeout: humantime::Duration,
+    pub(crate) io_timeout: humantime::Duration,
 
     /// Additional timeout waiting for the first output line after inputting a new command
     /// in milliseconds.
@@ -136,6 +140,11 @@ impl ShellArgs {
         if let Some(check) = exit_code_check {
             options = options.with_status_check("echo $?", move |code| check.check_exit_code(code));
         }
+
+        for init_cmd in self.init {
+            options = options.with_init_command(init_cmd);
+        }
+
         options
             .with_io_timeout(self.io_timeout.into())
             .with_init_timeout(self.init_timeout.into())
@@ -165,10 +174,13 @@ impl ShellArgs {
             options = options.with_current_dir(dir);
         }
         if let Some(check) = exit_code_check {
-            options.with_status_check("echo $?", move |code| check.check_exit_code(code))
-        } else {
-            options
+            options = options.with_status_check("echo $?", move |code| check.check_exit_code(code));
         }
+
+        for init_cmd in self.init {
+            options = options.with_init_command(init_cmd);
+        }
+        options
     }
 
     #[cfg(feature = "portable-pty")]
@@ -186,7 +198,7 @@ impl ShellArgs {
     }
 
     #[cfg(not(feature = "portable-pty"))]
-    pub fn create_transcript(
+    pub(crate) fn create_transcript(
         self,
         inputs: impl IntoIterator<Item = UserInput>,
     ) -> io::Result<Transcript> {

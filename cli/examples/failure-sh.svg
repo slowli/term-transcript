@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 162" width="720" height="162" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 139.2" width="720" height="139.2" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
@@ -62,11 +62,11 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="120" viewBox="0 0 720 120" overflow="hidden">
-        <foreignObject width="720" height="120">
+      <svg x="0" y="10" width="720" height="97.2" viewBox="0 0 720 97.2" overflow="hidden">
+        <foreignObject width="720" height="97.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-            <div class="input input-failure" data-exit-status="127" title="This command exited with non-zero code"><pre><span class="prompt">$</span> ./non-existing-command</pre></div>
-            <div class="output"><pre><span class="line">sh: 1: ./non-existing-command: not found</span></pre></div>
+            <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> which non-existing-command &gt; /dev/null</pre></div>
+            <div class="output"><pre></pre></div>
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> [ -x non-existing-file ]</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> [ -x non-existing-file ] || echo &quot;File is not there!&quot;</pre></div>

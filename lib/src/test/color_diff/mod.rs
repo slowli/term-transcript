@@ -139,10 +139,27 @@ impl ColorSpansWriter {
 
 impl io::Write for ColorSpansWriter {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        self.spans.push(ColorSpan {
-            len: buffer.len(),
-            color_spec: self.color_spec.clone(),
-        });
+        // Break styling on newlines because it will be broken in the parsed transcripts.
+        let lines = buffer.split(|&ch| ch == b'\n');
+        let mut pos = 0;
+        self.spans.extend(lines.flat_map(|line| {
+            let mut new_spans = vec![];
+            if !line.is_empty() {
+                new_spans.push(ColorSpan {
+                    color_spec: self.color_spec.clone(),
+                    len: line.len(),
+                });
+            }
+            pos += line.len();
+            if pos < buffer.len() {
+                new_spans.push(ColorSpan {
+                    color_spec: ColorSpec::default(),
+                    len: 1,
+                });
+                pos += 1;
+            }
+            new_spans
+        }));
         Ok(buffer.len())
     }
 

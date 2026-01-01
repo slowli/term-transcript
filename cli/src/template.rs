@@ -221,10 +221,10 @@ pub(crate) struct TemplateArgs {
     ///
     /// See <https://slowli.github.io/term-transcript/term_transcript/svg/> for docs on templating.
     #[arg(long = "tpl")]
-    template_path: Option<PathBuf>,
+    pub(crate) template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.
     #[arg(long = "out", short = 'o')]
-    out: Option<PathBuf>,
+    pub(crate) out: Option<PathBuf>,
 }
 
 impl TryFrom<TemplateArgs> for TemplateOptions {

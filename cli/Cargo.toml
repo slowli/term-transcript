@@ -28,6 +28,8 @@ tracing-subscriber = { workspace = true, features = ["env-filter"], optional = t
 term-transcript = { workspace = true, features = ["font-subset"] }
 
 [dev-dependencies]
+pretty_assertions.workspace = true
+pulldown-cmark.workspace = true
 tempfile.workspace = true
 
 [lints]
