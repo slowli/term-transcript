@@ -22,7 +22,7 @@ font-subset = { version = "0.1.0", git = "https://github.com/slowli/font-tools.g
 handlebars = "6.3.2"
 humantime = "2.3.0"
 os_pipe = "1.2.3"
-portable-pty = "0.9.0"
+portable-pty = "0.8.1" # FIXME: portable-pty 0.9 is seemingly broken on Windows
 pretty_assertions = "1.4.1"
 pulldown-cmark = "0.9.6"
 quick-xml = "0.38.3"
