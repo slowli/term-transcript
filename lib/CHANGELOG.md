@@ -37,6 +37,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Fix background fill for pure SVG, so that it doesn't rely on full block chars. Correspondingly, it now works
   even if these chars are not present in the selected fonts.
 - Fix most compatibility issues with Safari / iOS WebView.
+- Fix carriage return (`\r`) handling that previously could truncate terminal output, in particular, captured
+  from a PTY on Windows.
 
 ### Removed
 
