@@ -7,6 +7,11 @@ use termcolor::{Color, ColorSpec, WriteColor};
 
 use crate::TermError;
 
+const ANSI_ESC: u8 = 0x1b;
+const ANSI_BEL: u8 = 0x07;
+const ANSI_CSI: u8 = b'[';
+const ANSI_OCS: u8 = b']';
+
 /// Parses terminal output and issues corresponding commands to the `writer`.
 #[derive(Debug)]
 pub(crate) struct TermOutputParser<'a, W> {
@@ -22,20 +27,69 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
         }
     }
 
+    /// Handles an operating system command. Skip all chars until BEL (\u{7}) or ST (\u{1b}).
+    fn skip_ocs(term_output: &[u8], i: &mut usize) -> Result<(), TermError> {
+        while *i < term_output.len() && term_output[*i] != ANSI_BEL && term_output[*i] != ANSI_ESC {
+            *i += 1;
+        }
+
+        if *i == term_output.len() {
+            return Err(TermError::UnfinishedSequence);
+        }
+        if term_output[*i] == ANSI_ESC {
+            *i += 1;
+            if *i == term_output.len() {
+                return Err(TermError::UnfinishedSequence);
+            }
+            if term_output[*i] != b'\\' {
+                return Err(TermError::UnrecognizedSequence(term_output[*i]));
+            }
+        }
+        *i += 1;
+        Ok(())
+    }
+
+    /// Checks whether the given chunk of text has any non-escaped parts.
+    fn has_plaintext(bytes: &[u8]) -> Result<bool, TermError> {
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] != ANSI_ESC {
+                return Ok(true);
+            }
+
+            i += 1;
+            let next_byte = bytes.get(i).copied().ok_or(TermError::UnfinishedSequence)?;
+            if next_byte == ANSI_CSI {
+                i += 1;
+                let csi = Csi::parse(&bytes[i..])?;
+                i += csi.len;
+            } else if next_byte == ANSI_OCS {
+                Self::skip_ocs(bytes, &mut i)?;
+            } else {
+                return Err(TermError::UnrecognizedSequence(next_byte));
+            }
+        }
+        Ok(false)
+    }
+
     pub(crate) fn parse(&mut self, term_output: &[u8]) -> Result<(), TermError> {
         let lines: Vec<_> = term_output.split(|&ch| ch == b'\n').collect();
         let line_count = lines.len();
 
         for (i, line) in lines.into_iter().enumerate() {
-            let line = if line.last().copied() == Some(b'\r') {
-                &line[..line.len() - 1]
-            } else {
-                line
-            };
+            // Find the last occurrence of `\r` that has text output after it, and trim everything before it.
+            // This works reasonably well in most cases.
+            let chunks = line.rsplit(|&ch| ch == b'\r');
+            let mut processed_len = 0;
+            for chunk in chunks {
+                processed_len += chunk.len() + 1;
+                if Self::has_plaintext(chunk)? {
+                    break;
+                }
+            }
+            let start_pos = line.len().saturating_sub(processed_len);
+            let processed_line = &line[start_pos..];
 
-            // We ignore everything before the last occurrence of `\r` as a stop-gap measure
-            // that works reasonably well in some cases.
-            let processed_line = line.rsplitn(2, |&ch| ch == b'\r').next().unwrap_or(&[]);
             self.parse_line(processed_line)?;
 
             if i + 1 < line_count {
@@ -46,11 +100,6 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
     }
 
     fn parse_line(&mut self, term_output: &[u8]) -> Result<(), TermError> {
-        const ANSI_ESC: u8 = 0x1b;
-        const ANSI_BEL: u8 = 0x07;
-        const ANSI_CSI: u8 = b'[';
-        const ANSI_OCS: u8 = b']';
-
         let mut dirty_color_spec = false;
 
         let mut i = 0;
@@ -73,31 +122,15 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
                     dirty_color_spec = dirty_color_spec || prev_color_spec != self.color_spec;
                     i += csi.len;
                 } else if next_byte == ANSI_OCS {
-                    // Operating system command. Skip all chars until BEL (\u{7}) or ST (\u{1b}\).
-                    while i < term_output.len()
-                        && term_output[i] != ANSI_BEL
-                        && term_output[i] != ANSI_ESC
-                    {
-                        i += 1;
-                    }
-
-                    if i == term_output.len() {
-                        return Err(TermError::UnfinishedSequence);
-                    }
-                    if term_output[i] == ANSI_ESC {
-                        i += 1;
-                        if i == term_output.len() {
-                            return Err(TermError::UnfinishedSequence);
-                        }
-                        if term_output[i] != b'\\' {
-                            return Err(TermError::UnrecognizedSequence(term_output[i]));
-                        }
-                    }
-                    i += 1;
+                    Self::skip_ocs(term_output, &mut i)?;
                 } else {
                     return Err(TermError::UnrecognizedSequence(next_byte));
                 }
                 written_end = i; // skip the escape sequence
+            } else if term_output[i] == b'\r' {
+                self.write_ordinary_text(&term_output[written_end..i], &mut dirty_color_spec)?;
+                i += 1;
+                written_end = i; // skip writing '\r'
             } else {
                 // Ordinary char.
                 i += 1;
