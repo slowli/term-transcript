@@ -4,11 +4,11 @@ use std::convert::Infallible;
 
 use test_casing::test_casing;
 
-use super::{
-    write::{Style, StyledSpan},
-    *,
+use super::{write::StyledSpan, *};
+use crate::{
+    style::{Color, Style},
+    ExitStatus, Interaction, UserInput,
 };
-use crate::{utils::IndexOrRgb, ExitStatus, Interaction, UserInput};
 
 #[test]
 fn parsing_scroll_options() {
@@ -898,8 +898,8 @@ fn rendering_html_span() {
     let mut style = Style {
         bold: true,
         underline: true,
-        fg: Some(IndexOrRgb::Index(2)),
-        bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
+        fg: Some(Color::Index(2)),
+        bg: Some(Color::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
     let data = serde_json::json!(StyledSpan {
@@ -944,8 +944,8 @@ fn rendering_svg_tspan() {
     let mut style = Style {
         bold: true,
         underline: true,
-        fg: Some(IndexOrRgb::Index(2)),
-        bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
+        fg: Some(Color::Index(2)),
+        bg: Some(Color::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
     let data = serde_json::json!(StyledSpan {
@@ -957,7 +957,7 @@ fn rendering_svg_tspan() {
         .unwrap();
     assert_eq!(rendered, " class=\"bold underline fg2 bg#ccffcc\"");
 
-    style.bg = Some(IndexOrRgb::Index(0));
+    style.bg = Some(Color::Index(0));
     style.underline = false;
     style.dimmed = true;
     let data = serde_json::json!(StyledSpan {
@@ -969,7 +969,7 @@ fn rendering_svg_tspan() {
         .unwrap();
     assert_eq!(rendered, " class=\"bold dimmed fg2 bg0\"");
 
-    style.fg = Some(IndexOrRgb::Rgb("#c0ffee".parse().unwrap()));
+    style.fg = Some(Color::Rgb("#c0ffee".parse().unwrap()));
     style.bg = None;
     style.dimmed = false;
     let data = serde_json::json!(StyledSpan {

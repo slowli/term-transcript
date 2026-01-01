@@ -4,7 +4,7 @@ use std::{error, fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::utils::RgbColor;
+use crate::style::RgbColor;
 
 /// Palette of [16 standard terminal colors][colors] (8 ordinary colors + 8 intense variations).
 ///

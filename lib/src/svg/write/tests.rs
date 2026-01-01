@@ -1,8 +1,5 @@
-use std::io::Write;
-
-use termcolor::{Color, WriteColor};
-
 use super::*;
+use crate::style::Color;
 
 impl From<&str> for StyledSpan {
     fn from(text: &str) -> Self {
@@ -17,13 +14,13 @@ impl From<&str> for StyledSpan {
 fn html_writer_basic_colors() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(None);
     write!(writer, "Hello, ")?;
-    writer.set_color(
-        ColorSpec::new()
-            .set_bold(true)
-            .set_underline(true)
-            .set_fg(Some(Color::Green))
-            .set_bg(Some(Color::White)),
-    )?;
+    writer.write_style(&Style {
+        bold: true,
+        underline: true,
+        fg: Some(Color::GREEN),
+        bg: Some(Color::WHITE),
+        ..Style::default()
+    })?;
     write!(writer, "world")?;
     writer.reset()?;
     write!(writer, "!")?;
@@ -38,8 +35,8 @@ fn html_writer_basic_colors() -> anyhow::Result<()> {
                 style: Style {
                     bold: true,
                     underline: true,
-                    fg: Some(IndexOrRgb::Index(2)),
-                    bg: Some(IndexOrRgb::Index(7)),
+                    fg: Some(Color::Index(2)),
+                    bg: Some(Color::Index(7)),
                     ..Style::default()
                 },
                 text: "world".into(),
@@ -55,7 +52,10 @@ fn html_writer_basic_colors() -> anyhow::Result<()> {
 fn html_writer_intense_color() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(None);
 
-    writer.set_color(ColorSpec::new().set_intense(true).set_fg(Some(Color::Blue)))?;
+    writer.write_style(&Style {
+        fg: Some(Color::INTENSE_BLUE),
+        ..Style::default()
+    })?;
     write!(writer, "blue")?;
     writer.reset()?;
 
@@ -65,7 +65,7 @@ fn html_writer_intense_color() -> anyhow::Result<()> {
         lines[0].spans,
         [StyledSpan {
             style: Style {
-                fg: Some(IndexOrRgb::Index(12)),
+                fg: Some(Color::Index(12)),
                 ..Style::default()
             },
             text: "blue".into(),
@@ -77,14 +77,17 @@ fn html_writer_intense_color() -> anyhow::Result<()> {
 #[test]
 fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(None);
-    writer.set_color(
-        ColorSpec::new()
-            .set_dimmed(true)
-            .set_fg(Some(Color::Green))
-            .set_bg(Some(Color::White)),
-    )?;
+    writer.write_style(&Style {
+        dimmed: true,
+        fg: Some(Color::GREEN),
+        bg: Some(Color::WHITE),
+        ..Style::default()
+    })?;
     write!(writer, "Hello, ")?;
-    writer.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
+    writer.write_style(&Style {
+        fg: Some(Color::YELLOW),
+        ..Style::default()
+    })?;
     write!(writer, "world")?;
     writer.reset()?;
     write!(writer, "!")?;
@@ -97,15 +100,15 @@ fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
             StyledSpan {
                 style: Style {
                     dimmed: true,
-                    fg: Some(IndexOrRgb::Index(2)),
-                    bg: Some(IndexOrRgb::Index(7)),
+                    fg: Some(Color::Index(2)),
+                    bg: Some(Color::Index(7)),
                     ..Style::default()
                 },
                 text: "Hello, ".into(),
             },
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(3)),
+                    fg: Some(Color::Index(3)),
                     ..Style::default()
                 },
                 text: "world".into(),
@@ -120,15 +123,30 @@ fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
 #[test]
 fn html_writer_custom_colors() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(None);
-    writer.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(5))))?;
+    writer.write_style(&Style {
+        fg: Some(Color::Index(5)),
+        ..Style::default()
+    })?;
     write!(writer, "H")?;
-    writer.set_color(ColorSpec::new().set_bg(Some(Color::Ansi256(14))))?;
+    writer.write_style(&Style {
+        bg: Some(Color::Index(14)),
+        ..Style::default()
+    })?;
     write!(writer, "e")?;
-    writer.set_color(ColorSpec::new().set_bg(Some(Color::Ansi256(76))))?;
+    writer.write_style(&Style {
+        bg: Some(Color::Index(76)),
+        ..Style::default()
+    })?;
     write!(writer, "l")?;
-    writer.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(200))))?;
+    writer.write_style(&Style {
+        fg: Some(Color::Index(200)),
+        ..Style::default()
+    })?;
     write!(writer, "l")?;
-    writer.set_color(ColorSpec::new().set_bg(Some(Color::Ansi256(250))))?;
+    writer.write_style(&Style {
+        bg: Some(Color::Index(250)),
+        ..Style::default()
+    })?;
     write!(writer, "o")?;
     writer.reset()?;
 
@@ -139,35 +157,35 @@ fn html_writer_custom_colors() -> anyhow::Result<()> {
         [
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(5)),
+                    fg: Some(Color::Index(5)),
                     ..Style::default()
                 },
                 text: "H".into(),
             },
             StyledSpan {
                 style: Style {
-                    bg: Some(IndexOrRgb::Index(14)),
+                    bg: Some(Color::Index(14)),
                     ..Style::default()
                 },
                 text: "e".into(),
             },
             StyledSpan {
                 style: Style {
-                    bg: Some(IndexOrRgb::Rgb("#5fd700".parse()?)),
+                    bg: Some(Color::Rgb("#5fd700".parse()?)),
                     ..Style::default()
                 },
                 text: "l".into(),
             },
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Rgb("#ff00d7".parse()?)),
+                    fg: Some(Color::Rgb("#ff00d7".parse()?)),
                     ..Style::default()
                 },
                 text: "l".into(),
             },
             StyledSpan {
                 style: Style {
-                    bg: Some(IndexOrRgb::Rgb("#bcbcbc".parse()?)),
+                    bg: Some(Color::Rgb("#bcbcbc".parse()?)),
                     ..Style::default()
                 },
                 text: "o".into(),
@@ -201,13 +219,13 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(Some(5));
 
     write!(writer, "Hello, ")?;
-    writer.set_color(
-        ColorSpec::new()
-            .set_bold(true)
-            .set_underline(true)
-            .set_fg(Some(Color::Green))
-            .set_bg(Some(Color::White)),
-    )?;
+    writer.write_style(&Style {
+        bold: true,
+        underline: true,
+        fg: Some(Color::GREEN),
+        bg: Some(Color::WHITE),
+        ..Style::default()
+    })?;
     write!(writer, "world")?;
     writer.reset()?;
     write!(writer, "! More>\ntext")?;
@@ -224,8 +242,8 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
                 style: Style {
                     bold: true,
                     underline: true,
-                    fg: Some(IndexOrRgb::Index(2)),
-                    bg: Some(IndexOrRgb::Index(7)),
+                    fg: Some(Color::Index(2)),
+                    bg: Some(Color::Index(7)),
                     ..Style::default()
                 },
                 text: "wor".into(),
@@ -240,8 +258,8 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
                 style: Style {
                     bold: true,
                     underline: true,
-                    fg: Some(IndexOrRgb::Index(2)),
-                    bg: Some(IndexOrRgb::Index(7)),
+                    fg: Some(Color::Index(2)),
+                    bg: Some(Color::Index(7)),
                     ..Style::default()
                 },
                 text: "ld".into(),

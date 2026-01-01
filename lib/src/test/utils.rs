@@ -1,12 +1,11 @@
 use std::{
-    io::{self, IsTerminal, Write},
+    io::{self, Write},
     str,
 };
 
-use termcolor::{Ansi, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
-
 #[cfg(test)]
 use self::tests::print_to_buffer;
+use crate::style::WriteStyled;
 
 // Patch `print!` / `println!` macros for testing similarly to how they are patched in `std`.
 #[cfg(test)]
@@ -25,12 +24,12 @@ macro_rules! println {
 #[derive(Debug)]
 pub(super) struct IndentingWriter<W> {
     inner: W,
-    padding: &'static [u8],
+    padding: &'static str,
     new_line: bool,
 }
 
-impl<W: Write> IndentingWriter<W> {
-    pub(super) fn new(writer: W, padding: &'static [u8]) -> Self {
+impl<W: WriteStyled> IndentingWriter<W> {
+    pub(super) fn new(writer: W, padding: &'static str) -> Self {
         Self {
             inner: writer,
             padding,
@@ -39,23 +38,25 @@ impl<W: Write> IndentingWriter<W> {
     }
 }
 
-impl<W: Write> Write for IndentingWriter<W> {
+impl<W: WriteStyled> Write for IndentingWriter<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         for (i, line) in buf.split(|&c| c == b'\n').enumerate() {
             if i > 0 {
-                self.inner.write_all(b"\n")?;
+                self.inner.write_text("\n")?;
             }
             if !line.is_empty() && (i > 0 || self.new_line) {
-                self.inner.write_all(self.padding)?;
+                self.inner.write_text(self.padding)?;
             }
-            self.inner.write_all(line)?;
+            let line = str::from_utf8(line)
+                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+            self.inner.write_text(line)?;
         }
         self.new_line = buf.ends_with(b"\n");
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
+        Ok(())
     }
 }
 
@@ -73,7 +74,7 @@ impl<W: Write> Write for IndentingWriter<W> {
 /// This issue is solved by using a writer that uses `std::print*` macros internally,
 /// instead of (implicitly) binding to `std::io::stdout()`.
 #[derive(Debug, Default)]
-pub(super) struct PrintlnWriter {
+pub(crate) struct PrintlnWriter {
     line_buffer: Vec<u8>,
 }
 
@@ -101,79 +102,6 @@ impl Write for PrintlnWriter {
     }
 }
 
-/// `PrintlnWriter` extension with ANSI color support.
-pub(super) enum ColorPrintlnWriter {
-    NoColor(NoColor<PrintlnWriter>),
-    Ansi(Ansi<PrintlnWriter>),
-}
-
-impl ColorPrintlnWriter {
-    pub(super) fn new(color_choice: ColorChoice) -> Self {
-        let is_ansi = match color_choice {
-            ColorChoice::Never => false,
-            ColorChoice::Always | ColorChoice::AlwaysAnsi => true,
-            ColorChoice::Auto => {
-                if io::stdout().is_terminal() {
-                    StandardStream::stdout(color_choice).supports_color()
-                } else {
-                    false
-                }
-            }
-        };
-
-        let inner = PrintlnWriter::default();
-        if is_ansi {
-            Self::Ansi(Ansi::new(inner))
-        } else {
-            Self::NoColor(NoColor::new(inner))
-        }
-    }
-}
-
-impl Write for ColorPrintlnWriter {
-    #[inline]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self {
-            Self::Ansi(ansi) => ansi.write(buf),
-            Self::NoColor(no_color) => no_color.write(buf),
-        }
-    }
-
-    #[inline]
-    fn flush(&mut self) -> io::Result<()> {
-        match self {
-            Self::Ansi(ansi) => ansi.flush(),
-            Self::NoColor(no_color) => no_color.flush(),
-        }
-    }
-}
-
-impl WriteColor for ColorPrintlnWriter {
-    #[inline]
-    fn supports_color(&self) -> bool {
-        match self {
-            Self::Ansi(ansi) => ansi.supports_color(),
-            Self::NoColor(no_color) => no_color.supports_color(),
-        }
-    }
-
-    #[inline]
-    fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        match self {
-            Self::Ansi(ansi) => ansi.set_color(spec),
-            Self::NoColor(no_color) => no_color.set_color(spec),
-        }
-    }
-
-    #[inline]
-    fn reset(&mut self) -> io::Result<()> {
-        match self {
-            Self::Ansi(ansi) => ansi.reset(),
-            Self::NoColor(no_color) => no_color.reset(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::{cell::RefCell, fmt, mem};
@@ -193,13 +121,13 @@ mod tests {
 
     #[test]
     fn indenting_writer_basics() -> io::Result<()> {
-        let mut buffer = vec![];
-        let mut writer = IndentingWriter::new(&mut buffer, b"  ");
+        let mut buffer = String::new();
+        let mut writer = IndentingWriter::new(&mut buffer, "  ");
         write!(writer, "Hello, ")?;
         writeln!(writer, "world!")?;
         writeln!(writer, "many\n  lines!")?;
 
-        assert_eq!(buffer, b"  Hello, world!\n  many\n    lines!\n" as &[u8]);
+        assert_eq!(buffer, "  Hello, world!\n  many\n    lines!\n");
         Ok(())
     }
 

@@ -152,7 +152,7 @@
 #![doc(html_root_url = "https://docs.rs/term-transcript/0.4.0")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError};
+use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError, str::Utf8Error};
 
 #[cfg(feature = "portable-pty")]
 pub use self::pty::{PtyCommand, PtyShell};
@@ -164,6 +164,7 @@ pub use self::{
 #[cfg(feature = "portable-pty")]
 mod pty;
 mod shell;
+mod style;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub mod svg;
@@ -193,6 +194,8 @@ pub enum TermError {
     InvalidColorType(String),
     /// Invalid ANSI color index.
     InvalidColorIndex(ParseIntError),
+    /// UTF-8 decoding error.
+    Utf8(Utf8Error),
     /// IO error.
     Io(io::Error),
     /// Font embedding error.
@@ -222,6 +225,7 @@ impl fmt::Display for TermError {
             Self::InvalidColorIndex(err) => {
                 write!(formatter, "Failed parsing color index: {err}")
             }
+            Self::Utf8(err) => write!(formatter, "UTF-8 decoding error: {err}"),
             Self::Io(err) => write!(formatter, "I/O error: {err}"),
             Self::FontEmbedding(err) => write!(formatter, "font embedding error: {err}"),
         }
@@ -232,9 +236,16 @@ impl StdError for TermError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::InvalidColorIndex(err) => Some(err),
+            Self::Utf8(err) => Some(err),
             Self::Io(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+impl From<Utf8Error> for TermError {
+    fn from(err: Utf8Error) -> Self {
+        Self::Utf8(err)
     }
 }
 

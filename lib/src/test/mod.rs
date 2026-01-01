@@ -52,11 +52,9 @@
 //! # }
 //! ```
 
-use std::process::Command;
 #[cfg(feature = "svg")]
 use std::{env, ffi::OsStr};
-
-use termcolor::ColorChoice;
+use std::{io, io::IsTerminal, process::Command};
 
 pub use self::{
     config_impl::compare_transcripts,
@@ -72,6 +70,26 @@ mod parser;
 #[cfg(test)]
 mod tests;
 mod utils;
+
+#[allow(missing_docs)] // FIXME
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ColorChoice {
+    Always,
+    Never,
+    Auto,
+}
+
+impl ColorChoice {
+    fn resolve(self) -> bool {
+        match self {
+            Self::Never => false,
+            Self::Always => true,
+            // FIXME: too generic; use anstyle?
+            Self::Auto => io::stdout().is_terminal(),
+        }
+    }
+}
 
 /// Configuration of output produced during testing.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]

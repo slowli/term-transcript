@@ -4,22 +4,21 @@ use std::{
     iter::{self, Peekable},
 };
 
-use termcolor::{Color, ColorSpec, WriteColor};
 use unicode_width::UnicodeWidthStr;
 
 #[cfg(test)]
 mod tests;
 
 use crate::{
+    style::{Color, RgbColor, Style, WriteStyled},
     term::TermOutputParser,
-    utils::{IndexOrRgb, RgbColor},
     TermError,
 };
 
 #[derive(Debug, Clone)]
 pub(crate) struct ColorSpan {
     pub(crate) len: usize,
-    color_spec: ColorSpec,
+    style: Style,
 }
 
 impl ColorSpan {
@@ -31,7 +30,7 @@ impl ColorSpan {
 
     pub(crate) fn write_colorized(
         spans: &[Self],
-        out: &mut impl WriteColor,
+        out: &mut impl WriteStyled,
         plaintext: &str,
     ) -> io::Result<()> {
         debug_assert_eq!(
@@ -40,7 +39,7 @@ impl ColorSpan {
         );
         let mut pos = 0;
         for span in spans {
-            out.set_color(&span.color_spec)?;
+            out.write_style(&span.style)?;
             write!(out, "{}", &plaintext[pos..pos + span.len])?;
             pos += span.len;
         }
@@ -48,19 +47,23 @@ impl ColorSpan {
     }
 
     /// Writes a single plaintext `line` to `out` using styles from `spans_iter`.
-    fn write_line<'a, I: Iterator<Item = (usize, &'a Self)>>(
+    fn write_line<'a, W, I>(
         spans_iter: &mut Peekable<I>,
-        out: &mut impl WriteColor,
+        out: &mut W,
         line_start: usize,
         line: &str,
-    ) -> io::Result<()> {
+    ) -> io::Result<()>
+    where
+        W: WriteStyled + ?Sized,
+        I: Iterator<Item = (usize, &'a Self)>,
+    {
         let mut pos = 0;
         while pos < line.len() {
             let &(span_start, span) = spans_iter.peek().expect("spans ended before lines");
             let span_len = span.len - line_start.saturating_sub(span_start);
 
             let span_end = cmp::min(pos + span_len, line.len());
-            out.set_color(&span.color_spec)?;
+            out.write_style(&span.style)?;
             write!(out, "{}", &line[pos..span_end])?;
             if span_end == pos + span_len {
                 // The span has ended, can proceed to the next one.
@@ -77,46 +80,16 @@ impl ColorSpan {
 #[derive(Debug, Default)]
 pub(crate) struct ColorSpansWriter {
     spans: Vec<ColorSpan>,
-    color_spec: ColorSpec,
+    style: Style,
 }
 
 impl ColorSpansWriter {
-    fn normalize_spec(mut spec: ColorSpec) -> ColorSpec {
-        if let Some(color) = spec.fg().copied() {
-            spec.set_fg(Some(Self::normalize_color(color)));
-        }
-        if let Some(color) = spec.bg().copied() {
-            spec.set_bg(Some(Self::normalize_color(color)));
-        }
-        spec
-    }
-
-    fn normalize_color(color: Color) -> Color {
-        match color {
-            Color::Ansi256(0) => Color::Black,
-            Color::Ansi256(1) => Color::Red,
-            Color::Ansi256(2) => Color::Green,
-            Color::Ansi256(3) => Color::Yellow,
-            Color::Ansi256(4) => Color::Blue,
-            Color::Ansi256(5) => Color::Magenta,
-            Color::Ansi256(6) => Color::Cyan,
-            Color::Ansi256(7) => Color::White,
-
-            Color::Ansi256(index) if index >= 16 => match IndexOrRgb::indexed_color(index) {
-                IndexOrRgb::Rgb(RgbColor(r, g, b)) => Color::Rgb(r, g, b),
-                IndexOrRgb::Index(_) => color,
-            },
-
-            _ => color,
-        }
-    }
-
     /// Unites sequential spans with the same color spec.
     fn shrink(self) -> Self {
         let mut shrunk_spans = Vec::<ColorSpan>::with_capacity(self.spans.len());
         for span in self.spans {
             if let Some(last_span) = shrunk_spans.last_mut() {
-                if last_span.color_spec == span.color_spec {
+                if last_span.style == span.style {
                     last_span.len += span.len;
                 } else {
                     shrunk_spans.push(span);
@@ -128,7 +101,7 @@ impl ColorSpansWriter {
 
         Self {
             spans: shrunk_spans,
-            color_spec: self.color_spec,
+            style: self.style,
         }
     }
 
@@ -137,50 +110,36 @@ impl ColorSpansWriter {
     }
 }
 
-impl io::Write for ColorSpansWriter {
-    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+impl WriteStyled for ColorSpansWriter {
+    fn write_style(&mut self, style: &Style) -> io::Result<()> {
+        let mut normalized_style = *style;
+        normalized_style.normalize();
+        self.style = normalized_style;
+        Ok(())
+    }
+
+    fn write_text(&mut self, text: &str) -> io::Result<()> {
         // Break styling on newlines because it will be broken in the parsed transcripts.
-        let lines = buffer.split(|&ch| ch == b'\n');
+        let lines = text.split('\n');
         let mut pos = 0;
         self.spans.extend(lines.flat_map(|line| {
             let mut new_spans = vec![];
             if !line.is_empty() {
                 new_spans.push(ColorSpan {
-                    color_spec: self.color_spec.clone(),
+                    style: self.style,
                     len: line.len(),
                 });
             }
             pos += line.len();
-            if pos < buffer.len() {
+            if pos < text.len() {
                 new_spans.push(ColorSpan {
-                    color_spec: ColorSpec::default(),
+                    style: Style::default(),
                     len: 1,
                 });
                 pos += 1;
             }
             new_spans
         }));
-        Ok(buffer.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl WriteColor for ColorSpansWriter {
-    fn supports_color(&self) -> bool {
-        true
-    }
-
-    fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        debug_assert!(spec.reset());
-        self.color_spec = Self::normalize_spec(spec.clone());
-        Ok(())
-    }
-
-    fn reset(&mut self) -> io::Result<()> {
-        self.color_spec = ColorSpec::new();
         Ok(())
     }
 }
@@ -189,8 +148,8 @@ impl WriteColor for ColorSpansWriter {
 struct DiffColorSpan {
     start: usize,
     len: usize,
-    lhs_color_spec: ColorSpec,
-    rhs_color_spec: ColorSpec,
+    lhs_color_spec: Style,
+    rhs_color_spec: Style,
 }
 
 #[derive(Debug, Default)]
@@ -221,12 +180,12 @@ impl ColorDiff {
             let common_len = cmp::min(lhs_span.len, rhs_span.len);
 
             // Record a diff span if the color specs differ.
-            if lhs_span.color_spec != rhs_span.color_spec {
+            if lhs_span.style != rhs_span.style {
                 diff.differing_spans.push(DiffColorSpan {
                     start: pos,
                     len: common_len,
-                    lhs_color_spec: lhs_span.color_spec.clone(),
-                    rhs_color_spec: rhs_span.color_spec.clone(),
+                    lhs_color_spec: lhs_span.style,
+                    rhs_color_spec: rhs_span.style,
                 });
             }
 
@@ -262,14 +221,16 @@ impl ColorDiff {
     }
 
     /// Highlights this diff on the specified `text` which has styling set with `color_spans`.
-    pub(crate) fn highlight_text(
+    pub(crate) fn highlight_text<W: WriteStyled + ?Sized>(
         &self,
-        out: &mut impl WriteColor,
+        out: &mut W,
         text: &str,
         color_spans: &[ColorSpan],
     ) -> io::Result<()> {
-        let mut sideline_hl = ColorSpec::new();
-        sideline_hl.set_fg(Some(Color::Red));
+        let sideline_hl = Style {
+            fg: Some(Color::RED),
+            ..Style::default()
+        };
 
         let highlights = HighlightedSpan::new(&self.differing_spans);
         let mut highlights = highlights.iter().copied().peekable();
@@ -292,11 +253,11 @@ impl ColorDiff {
                 .is_some_and(|span| span.start <= line_start + line.len());
 
             if line_contains_spans {
-                out.set_color(&sideline_hl)?;
+                out.write_style(&sideline_hl)?;
                 write!(out, "> ")?;
                 out.reset()?;
                 ColorSpan::write_line(&mut color_spans, out, line_start, line)?;
-                out.set_color(&sideline_hl)?;
+                out.write_style(&sideline_hl)?;
                 write!(out, "> ")?;
                 out.reset()?;
                 Self::highlight_line(out, &mut highlights, line_start, line)?;
@@ -309,12 +270,16 @@ impl ColorDiff {
         Ok(())
     }
 
-    fn highlight_line<I: Iterator<Item = HighlightedSpan>>(
-        out: &mut impl WriteColor,
+    fn highlight_line<W, I>(
+        out: &mut W,
         spans_iter: &mut Peekable<I>,
         line_offset: usize,
         line: &str,
-    ) -> io::Result<()> {
+    ) -> io::Result<()>
+    where
+        W: WriteStyled + ?Sized,
+        I: Iterator<Item = HighlightedSpan>,
+    {
         let line_len = line.len();
         let mut line_pos = 0;
 
@@ -336,7 +301,7 @@ impl ColorDiff {
             let ch = span.kind.underline_char();
             let underline: String =
                 iter::repeat_n(ch, line[span_start..span_end].width()).collect();
-            out.set_color(&span.kind.highlight_spec())?;
+            out.write_style(&span.kind.highlight_spec())?;
             write!(out, "{underline}")?;
             out.reset()?;
 
@@ -349,15 +314,15 @@ impl ColorDiff {
         writeln!(out)
     }
 
-    pub(crate) fn write_as_table(&self, out: &mut impl WriteColor) -> io::Result<()> {
+    pub(crate) fn write_as_table<W: WriteStyled + ?Sized>(&self, out: &mut W) -> io::Result<()> {
         const POS_WIDTH: usize = 10;
         const STYLE_WIDTH: usize = 22; // `buid magenta*/magenta*`
 
         // Write table header.
-        let mut table_header_spec = ColorSpec::new();
-        table_header_spec.set_bold(true);
-        table_header_spec.set_intense(true);
-        out.set_color(&table_header_spec)?;
+        out.write_style(&Style {
+            bold: true,
+            ..Style::default()
+        })?;
         writeln!(
             out,
             "{pos:^POS_WIDTH$} {lhs:^STYLE_WIDTH$} {rhs:^STYLE_WIDTH$}",
@@ -382,7 +347,7 @@ impl ColorDiff {
             write!(out, "{pos:>POS_WIDTH$} ")?;
 
             Self::write_color_spec(out, &differing_span.lhs_color_spec)?;
-            out.write_all(b" ")?;
+            out.write_text(" ")?;
             Self::write_color_spec(out, &differing_span.rhs_color_spec)?;
             writeln!(out)?;
         }
@@ -391,51 +356,51 @@ impl ColorDiff {
     }
 
     /// Writes `color_spec` in human-readable format.
-    fn write_color_spec(out: &mut impl WriteColor, color_spec: &ColorSpec) -> io::Result<()> {
+    fn write_color_spec<W: WriteStyled + ?Sized>(out: &mut W, style: &Style) -> io::Result<()> {
         const COLOR_WIDTH: usize = 8; // `magenta*` is the widest color output
 
-        out.set_color(color_spec)?;
-        out.write_all(if color_spec.bold() { b"b" } else { b"-" })?;
-        out.write_all(if color_spec.italic() { b"i" } else { b"-" })?;
-        out.write_all(if color_spec.underline() { b"u" } else { b"-" })?;
-        out.write_all(if color_spec.dimmed() { b"d" } else { b"-" })?;
+        out.write_style(style)?;
+        out.write_text(if style.bold { "b" } else { "-" })?;
+        out.write_text(if style.italic { "i" } else { "-" })?;
+        out.write_text(if style.underline { "u" } else { "-" })?;
+        out.write_text(if style.dimmed { "d" } else { "-" })?;
 
         write!(
             out,
             " {fg:>COLOR_WIDTH$}/{bg:<COLOR_WIDTH$}",
-            fg = color_spec
-                .fg()
-                .map_or_else(|| "(none)".to_owned(), |&fg| Self::color_to_string(fg)),
-            bg = color_spec
-                .bg()
-                .map_or_else(|| "(none)".to_owned(), |&bg| Self::color_to_string(bg)),
+            fg = style
+                .fg
+                .map_or_else(|| "(none)".to_owned(), Self::color_to_string),
+            bg = style
+                .bg
+                .map_or_else(|| "(none)".to_owned(), Self::color_to_string),
         )?;
         out.reset()
     }
 
     fn color_to_string(color: Color) -> String {
         match color {
-            Color::Black | Color::Ansi256(0) => "black".to_owned(),
-            Color::Red | Color::Ansi256(1) => "red".to_owned(),
-            Color::Green | Color::Ansi256(2) => "green".to_owned(),
-            Color::Yellow | Color::Ansi256(3) => "yellow".to_owned(),
-            Color::Blue | Color::Ansi256(4) => "blue".to_owned(),
-            Color::Magenta | Color::Ansi256(5) => "magenta".to_owned(),
-            Color::Cyan | Color::Ansi256(6) => "cyan".to_owned(),
-            Color::White | Color::Ansi256(7) => "white".to_owned(),
+            Color::Index(0) => "black".to_owned(),
+            Color::Index(1) => "red".to_owned(),
+            Color::Index(2) => "green".to_owned(),
+            Color::Index(3) => "yellow".to_owned(),
+            Color::Index(4) => "blue".to_owned(),
+            Color::Index(5) => "magenta".to_owned(),
+            Color::Index(6) => "cyan".to_owned(),
+            Color::Index(7) => "white".to_owned(),
 
-            Color::Ansi256(8) => "black*".to_owned(),
-            Color::Ansi256(9) => "red*".to_owned(),
-            Color::Ansi256(10) => "green*".to_owned(),
-            Color::Ansi256(11) => "yellow*".to_owned(),
-            Color::Ansi256(12) => "blue*".to_owned(),
-            Color::Ansi256(13) => "magenta*".to_owned(),
-            Color::Ansi256(14) => "cyan*".to_owned(),
-            Color::Ansi256(15) => "white*".to_owned(),
+            Color::Index(8) => "black*".to_owned(),
+            Color::Index(9) => "red*".to_owned(),
+            Color::Index(10) => "green*".to_owned(),
+            Color::Index(11) => "yellow*".to_owned(),
+            Color::Index(12) => "blue*".to_owned(),
+            Color::Index(13) => "magenta*".to_owned(),
+            Color::Index(14) => "cyan*".to_owned(),
+            Color::Index(15) => "white*".to_owned(),
 
-            Color::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
+            Color::Rgb(RgbColor(r, g, b)) => format!("#{r:02x}{g:02x}{b:02x}"),
 
-            _ => unreachable!(), // must be transformed during color normalization
+            Color::Index(_) => unreachable!(), // must be transformed during color normalization
         }
     }
 }
@@ -454,17 +419,19 @@ impl SpanHighlightKind {
         }
     }
 
-    fn highlight_spec(self) -> ColorSpec {
-        let mut spec = ColorSpec::new();
+    fn highlight_spec(self) -> Style {
+        let mut style = Style::default();
         match self {
             Self::Main => {
-                spec.set_fg(Some(Color::White)).set_bg(Some(Color::Red));
+                style.fg = Some(Color::WHITE);
+                style.bg = Some(Color::RED);
             }
             Self::Aux => {
-                spec.set_fg(Some(Color::Black)).set_bg(Some(Color::Yellow));
+                style.fg = Some(Color::BLACK);
+                style.bg = Some(Color::YELLOW);
             }
         }
-        spec
+        style
     }
 }
 

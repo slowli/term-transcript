@@ -8,20 +8,22 @@ use std::{
     str,
 };
 
-use termcolor::{Color, ColorSpec, NoColor, WriteColor};
-
 use super::{
     color_diff::{ColorDiff, ColorSpan},
     parser::Parsed,
-    utils::{ColorPrintlnWriter, IndentingWriter},
+    utils::{IndentingWriter, PrintlnWriter},
     MatchKind, TestConfig, TestOutputConfig, TestStats,
 };
-use crate::{traits::SpawnShell, Interaction, TermError, Transcript, UserInput};
+use crate::{
+    style::{Ansi, Color, Style, WriteStyled},
+    traits::SpawnShell,
+    Interaction, TermError, Transcript, UserInput,
+};
 
 #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, ret, err))]
 #[doc(hidden)] // low-level; not public API
-pub fn compare_transcripts(
-    out: &mut impl WriteColor,
+pub fn compare_transcripts<W: WriteStyled + ?Sized>(
+    out: &mut W,
     parsed: &Transcript<Parsed>,
     reproduced: &Transcript,
     match_kind: MatchKind,
@@ -41,7 +43,10 @@ pub fn compare_transcripts(
             tracing::debug_span!("compare_interaction", input = ?original.input).entered();
 
         write!(out, "  ")?;
-        out.set_color(ColorSpec::new().set_intense(true))?;
+        out.write_style(&Style {
+            bold: true,
+            ..Style::default()
+        })?;
         write!(out, "[")?;
 
         // First, process text only.
@@ -94,17 +99,28 @@ pub fn compare_transcripts(
 
         stats.matches.push(actual_match);
         if actual_match >= Some(match_kind) {
-            out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Green)))?;
+            out.write_style(&Style {
+                bold: true,
+                fg: Some(Color::INTENSE_GREEN),
+                ..Style::default()
+            })?;
             write!(out, "+")?;
         } else {
-            out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Red)))?;
+            out.write_style(&Style {
+                bold: true,
+                fg: Some(Color::INTENSE_RED),
+                ..Style::default()
+            })?;
             if color_diff.is_some() {
                 write!(out, "#")?;
             } else {
                 write!(out, "-")?;
             }
         }
-        out.set_color(ColorSpec::new().set_intense(true))?;
+        out.write_style(&Style {
+            bold: true,
+            ..Style::default()
+        })?;
         write!(out, "]")?;
         out.reset()?;
         writeln!(out, " Input: {}", original.input().as_ref())?;
@@ -116,8 +132,11 @@ pub fn compare_transcripts(
         } else if actual_match.is_none() {
             write_diff(out, original_text, &reproduced_text)?;
         } else if verbose {
-            out.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(244))))?;
-            let mut out_with_indents = IndentingWriter::new(&mut *out, b"    ");
+            out.write_style(&Style {
+                fg: Some(Color::Index(244)),
+                ..Style::default()
+            })?;
+            let mut out_with_indents = IndentingWriter::new(&mut *out, "    ");
             writeln!(out_with_indents, "{}", original.output().plaintext())?;
             out.reset()?;
         }
@@ -127,7 +146,11 @@ pub fn compare_transcripts(
 }
 
 #[cfg(feature = "pretty_assertions")]
-fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
+fn write_diff<W: WriteStyled + ?Sized>(
+    out: &mut W,
+    original: &str,
+    reproduced: &str,
+) -> io::Result<()> {
     use pretty_assertions::Comparison;
 
     // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
@@ -153,7 +176,11 @@ fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Res
 }
 
 #[cfg(not(feature = "pretty_assertions"))]
-fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
+fn write_diff<W: WriteStyled + ?Sized>(
+    out: &mut W,
+    original: &str,
+    reproduced: &str,
+) -> io::Result<()> {
     writeln!(out, "  Original:")?;
     for line in original.lines() {
         writeln!(out, "    {line}")?;
@@ -380,17 +407,17 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
         transcript: &Transcript<Parsed>,
     ) -> io::Result<(TestStats, Transcript)> {
         if self.output == TestOutputConfig::Quiet {
-            let mut out = NoColor::new(io::sink());
-            self.test_transcript_inner(&mut out, transcript)
+            self.test_transcript_inner(&mut io::sink(), transcript)
         } else {
-            let mut out = ColorPrintlnWriter::new(self.color_choice);
+            let write_styles = self.color_choice.resolve();
+            let mut out = Ansi::new(PrintlnWriter::default(), write_styles);
             self.test_transcript_inner(&mut out, transcript)
         }
     }
 
-    pub(super) fn test_transcript_inner(
+    pub(super) fn test_transcript_inner<W: WriteStyled + ?Sized>(
         &mut self,
-        out: &mut impl WriteColor,
+        out: &mut W,
         transcript: &Transcript<Parsed>,
     ) -> io::Result<(TestStats, Transcript)> {
         let inputs = transcript

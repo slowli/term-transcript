@@ -1176,7 +1176,6 @@ dependencies = [
  "quick-xml",
  "serde",
  "serde_json",
- "termcolor",
  "test-casing",
  "toml 0.9.8",
  "tracing",

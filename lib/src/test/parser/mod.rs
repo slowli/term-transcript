@@ -16,11 +16,11 @@ use quick_xml::{
     events::{attributes::Attributes, Event},
     Reader as XmlReader,
 };
-use termcolor::WriteColor;
 
 use self::text::TextReadingState;
 use crate::{
-    test::color_diff::ColorSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput,
+    style::Ansi, test::color_diff::ColorSpan, ExitStatus, Interaction, TermOutput, Transcript,
+    UserInput,
 };
 
 #[cfg(test)]
@@ -54,9 +54,13 @@ impl Parsed {
     /// # Errors
     ///
     /// - Returns an I/O error should it occur when writing to `out`.
-    #[doc(hidden)] // makes `termcolor` dependency public, which we want to avoid so far
-    pub fn write_colorized(&self, out: &mut impl WriteColor) -> io::Result<()> {
-        ColorSpan::write_colorized(&self.color_spans, out, &self.plaintext)
+    #[doc(hidden)]
+    pub fn write_colorized(&self, out: &mut impl io::Write) -> io::Result<()> {
+        ColorSpan::write_colorized(
+            &self.color_spans,
+            &mut Ansi::new(out, true),
+            &self.plaintext,
+        )
     }
 
     /// Converts this parsed fragment into text for `UserInput`. This takes into account
