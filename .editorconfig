@@ -11,7 +11,7 @@ insert_final_newline = true
 [*.rs]
 indent_size = 4
 
-[*.{md,svg}]
+[*.{md,svg,out}]
 trim_trailing_whitespace = false
 
 [tests/non-utf8.txt]
