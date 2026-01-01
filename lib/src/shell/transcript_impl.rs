@@ -142,19 +142,45 @@ impl Transcript {
 
         let stdout = BufReader::new(reader);
         let (out_lines_send, out_lines_recv) = mpsc::channel();
+
+        // Propagate the dispatcher for the current thread to the spawned one. Mainly useful for integration tests
+        // that don't set the global dispatcher.
+        #[cfg(feature = "tracing")]
+        let dispatcher = tracing::dispatcher::get_default(Clone::clone);
         let io_handle = thread::spawn(move || {
+            #[cfg(feature = "tracing")]
+            let _tracing_guard = tracing::dispatcher::set_default(&dispatcher);
             #[cfg(feature = "tracing")]
             let _entered = tracing::debug_span!("reader_thread").entered();
 
             let mut lines = stdout.split(b'\n');
-            while let Some(Ok(line)) = lines.next() {
-                #[cfg(feature = "tracing")]
-                tracing::debug!(line_utf8 = std::str::from_utf8(&line).ok(), "received line");
+            loop {
+                match lines.next() {
+                    Some(Ok(line)) => {
+                        #[cfg(feature = "tracing")]
+                        tracing::debug!(
+                            line_utf8 = std::str::from_utf8(&line).ok(),
+                            "received line"
+                        );
 
-                if out_lines_send.send(line).is_err() {
-                    #[cfg(feature = "tracing")]
-                    tracing::debug!("receiver dropped, breaking reader loop");
-                    break;
+                        if out_lines_send.send(line).is_err() {
+                            #[cfg(feature = "tracing")]
+                            tracing::debug!("receiver dropped, breaking reader loop");
+                            return;
+                        }
+                    }
+                    // `err` is only used in the log message
+                    #[cfg_attr(not(feature = "tracing"), allow(unused_variables))]
+                    Some(Err(err)) => {
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!(?err, msg = %err, "error reading shell output");
+                        return;
+                    }
+                    None => {
+                        #[cfg(feature = "tracing")]
+                        tracing::debug!("input sender dropped");
+                        return;
+                    }
                 }
             }
         });
