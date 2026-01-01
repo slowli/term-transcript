@@ -44,6 +44,7 @@ jobs:
 
       - name: Format
         run: cargo fmt --all -- --check
+        if: matrix.all_checks
       - name: Clippy
         run: cargo clippy --workspace --all-features --all-targets -- -D warnings
       - name: Clippy (no features)
@@ -57,6 +58,9 @@ jobs:
 
       - name: Check dependencies
         run: cargo deny --workspace --all-features check
+        if: matrix.all_checks
+      - name: Check rainbow script outputs
+        run: ./examples/rainbow/regenerate-rainbow-out.sh --check
         if: matrix.all_checks
 
       - name: Run tests
