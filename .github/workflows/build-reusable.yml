@@ -72,4 +72,4 @@ jobs:
         run: |
           RUST_LOG=term_transcript=debug \
           cargo run -p term-transcript-cli --all-features -- \
-          exec 'echo Hello' |& grep DEBUG
+          exec 'echo Hello' 2>&1 | grep DEBUG
