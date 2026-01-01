@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 -22 720 112.4" width="720" height="112.4" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 -22 720 129.2" width="720" height="129.2" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
@@ -62,13 +62,14 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
-      <svg x="0" y="10" width="720" height="70.4" viewBox="0 0 720 70.4" overflow="hidden">
-        <foreignObject width="720" height="70.4">
+      <svg x="0" y="10" width="720" height="87.2" viewBox="0 0 720 87.2" overflow="hidden">
+        <foreignObject width="720" height="87.2">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> grep -n serge ../Cargo.toml</pre></div>
             <div class="output"><pre></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> grep -m 5 -n serde ../Cargo.toml</pre></div>
-            <div class="output"><pre><span class="line">22:<span class="fg1">serde</span>_json.workspace &#x3D; true</span></pre></div>
+            <div class="output"><pre><span class="line">29:<span class="fg1">serde</span> &#x3D; { version &#x3D; &quot;1.0&quot;, features &#x3D; [&quot;derive&quot;] }
+</span><span class="line">30:<span class="fg1">serde</span>_json &#x3D; &quot;1.0&quot;</span></pre></div>
           </div>
         </foreignObject>
       </svg>
