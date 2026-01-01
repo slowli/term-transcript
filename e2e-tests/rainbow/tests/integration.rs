@@ -212,8 +212,10 @@ fn snapshot_testing(pure_svg: bool) {
 #[test_casing(2, [false, true])]
 #[test]
 fn snapshot_testing_with_pty(pure_svg: bool) {
-    let shell_options =
-        ShellOptions::new(PtyCommand::default()).with_additional_path(rainbow_dir());
+    let _guard = enable_tracing();
+    let shell_options = ShellOptions::new(PtyCommand::default())
+        .with_io_timeout(Duration::from_secs(2))
+        .with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
         config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
