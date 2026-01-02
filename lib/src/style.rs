@@ -111,7 +111,10 @@ impl Color {
     pub(crate) const INTENSE_MAGENTA: Self = Self::Index(13);
     pub(crate) const INTENSE_CYAN: Self = Self::Index(14);
     pub(crate) const INTENSE_WHITE: Self = Self::Index(15);
+}
 
+#[cfg(any(feature = "svg", feature = "test"))]
+impl Color {
     fn index(value: u8) -> Self {
         debug_assert!(value < 16);
         Self::Index(value)
@@ -235,6 +238,7 @@ impl Style {
             && self.bg.is_none()
     }
 
+    #[cfg(any(feature = "svg", feature = "test"))]
     pub(crate) fn normalize(&mut self) {
         if let Some(color) = &mut self.fg {
             color.normalize();
