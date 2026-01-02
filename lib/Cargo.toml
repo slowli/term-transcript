@@ -18,7 +18,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 # Public dependencies (present in the public API).
-anstream.workspace = true
+anstream = { workspace = true, optional = true }
 anyhow.workspace = true
 quick-xml = { workspace = true, optional = true }
 handlebars = { workspace = true, optional = true }
@@ -55,7 +55,7 @@ svg = ["dep:handlebars", "dep:serde", "dep:serde_json"]
 # Enables subsetting and embedding OpenType fonts into snapshots
 font-subset = ["svg", "dep:font-subset"]
 # Allows parsing transcripts from SVG snapshots and testing them
-test = ["dep:quick-xml"]
+test = ["dep:quick-xml", "dep:anstream"]
 
 [[test]]
 name = "integration"
