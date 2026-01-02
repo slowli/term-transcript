@@ -1,3 +1,4 @@
+use anstream::StripStream;
 use test_casing::test_casing;
 
 use super::*;
@@ -19,10 +20,7 @@ fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn test_negative_snapshot_testing(
-    out: &mut String,
-    test_config: &mut TestConfig,
-) -> anyhow::Result<()> {
+fn test_negative_snapshot_testing(test_config: &mut TestConfig) -> anyhow::Result<String> {
     let mut transcript = Transcript::from_inputs(
         &mut ShellOptions::default(),
         vec![UserInput::command("echo \"Hello, world!\"")],
@@ -33,17 +31,17 @@ fn test_negative_snapshot_testing(
     Template::default().render(&transcript, &mut svg_buffer)?;
 
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
-    let (stats, _) = test_config.test_transcript_inner(out, &parsed)?;
+    let mut out = StripStream::new(vec![]);
+    let (stats, _) = test_config.test_transcript_inner(&mut out, &parsed)?;
     assert_eq!(stats.errors(MatchKind::TextOnly), 1);
-    Ok(())
+    String::from_utf8(out.into_inner()).map_err(Into::into)
 }
 
 #[test]
 fn negative_snapshot_testing_with_default_output() {
-    let mut out = String::new();
     let mut test_config =
         TestConfig::new(ShellOptions::default()).with_color_choice(ColorChoice::Never);
-    test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();
+    let out = test_negative_snapshot_testing(&mut test_config).unwrap();
 
     assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{out}");
     assert_eq!(out.matches("Hello, world!").count(), 1, "{out}");
@@ -54,11 +52,10 @@ fn negative_snapshot_testing_with_default_output() {
 
 #[test]
 fn negative_snapshot_testing_with_verbose_output() {
-    let mut out = String::new();
     let mut test_config = TestConfig::new(ShellOptions::default())
         .with_output(TestOutputConfig::Verbose)
         .with_color_choice(ColorChoice::Never);
-    test_negative_snapshot_testing(&mut out, &mut test_config).unwrap();
+    let out = test_negative_snapshot_testing(&mut test_config).unwrap();
 
     assert!(out.contains("[+] Input: echo \"Hello, world!\""), "{out}");
     assert_eq!(out.matches("Hello, world!").count(), 2, "{out}");
@@ -83,9 +80,10 @@ fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (Te
     let mut reproduced = Transcript::new();
     reproduced.add_interaction(UserInput::command("test"), actual_capture);
 
-    let mut out = String::new();
+    let mut out = StripStream::new(vec![]);
     let stats =
         compare_transcripts(&mut out, &parsed, &reproduced, MatchKind::Precise, false).unwrap();
+    let out = String::from_utf8(out.into_inner()).unwrap();
     (stats, out)
 }
 

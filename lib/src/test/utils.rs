@@ -8,7 +8,6 @@ use anstream::{ColorChoice, StripStream};
 
 #[cfg(test)]
 use self::tests::print_to_buffer;
-use crate::style::WriteStyled;
 
 // Patch `print!` / `println!` macros for testing similarly to how they are patched in `std`.
 #[cfg(test)]
@@ -31,7 +30,7 @@ pub(super) struct IndentingWriter<W> {
     new_line: bool,
 }
 
-impl<W: WriteStyled> IndentingWriter<W> {
+impl<W: Write> IndentingWriter<W> {
     pub(super) fn new(writer: W, padding: &'static str) -> Self {
         Self {
             inner: writer,
@@ -41,18 +40,16 @@ impl<W: WriteStyled> IndentingWriter<W> {
     }
 }
 
-impl<W: WriteStyled> Write for IndentingWriter<W> {
+impl<W: Write> Write for IndentingWriter<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         for (i, line) in buf.split(|&c| c == b'\n').enumerate() {
             if i > 0 {
-                self.inner.write_text("\n")?;
+                self.inner.write_all(b"\n")?;
             }
             if !line.is_empty() && (i > 0 || self.new_line) {
-                self.inner.write_text(self.padding)?;
+                self.inner.write_all(self.padding.as_bytes())?;
             }
-            let line = str::from_utf8(line)
-                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-            self.inner.write_text(line)?;
+            self.inner.write_all(line)?;
         }
         self.new_line = buf.ends_with(b"\n");
         Ok(buf.len())
@@ -164,13 +161,13 @@ mod tests {
 
     #[test]
     fn indenting_writer_basics() -> io::Result<()> {
-        let mut buffer = String::new();
+        let mut buffer = vec![];
         let mut writer = IndentingWriter::new(&mut buffer, "  ");
         write!(writer, "Hello, ")?;
         writeln!(writer, "world!")?;
         writeln!(writer, "many\n  lines!")?;
 
-        assert_eq!(buffer, "  Hello, world!\n  many\n    lines!\n");
+        assert_eq!(buffer, b"  Hello, world!\n  many\n    lines!\n");
         Ok(())
     }
 

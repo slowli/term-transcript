@@ -143,7 +143,7 @@ impl TextReadingState {
 
                 if Self::is_text_span(tag.name().as_ref()) {
                     self.color_spans_writer
-                        .reset()
+                        .write_style(&Style::default())
                         .expect("cannot reset color for ANSI buffer");
                 }
 

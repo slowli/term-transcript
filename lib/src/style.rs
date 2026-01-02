@@ -5,6 +5,7 @@ use std::{error::Error as StdError, fmt, io, num::ParseIntError, str::FromStr};
 /// RGB color with 8-bit channels.
 ///
 /// A color [can be parsed](FromStr) from a hex string like `#fed` or `#de382b`.
+#[cfg_attr(not(feature = "svg"), allow(unreachable_pub))] // re-exported publicly from the `svg` module
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbColor(pub u8, pub u8, pub u8);
 
@@ -17,6 +18,7 @@ impl fmt::LowerHex for RgbColor {
 /// Errors that can occur when [parsing](FromStr) an [`RgbColor`] from a string.
 #[derive(Debug)]
 #[non_exhaustive]
+#[cfg_attr(not(feature = "svg"), allow(unreachable_pub))] // re-exported publicly from the `svg` module
 pub enum RgbColorParseError {
     /// Color string contains non-ASCII chars.
     NotAscii,
@@ -174,7 +176,50 @@ pub(crate) struct Style {
     pub(crate) bg: Option<Color>,
 }
 
+// Use `anstyle`-compatible API:
+impl fmt::Display for Style {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let is_terminal = formatter.alternate();
+        if self.is_none() {
+            Ok(()) // don't write anything
+        } else if is_terminal {
+            write!(formatter, "\u{1b}[0m")
+        } else {
+            if self.bold {
+                write!(formatter, "\u{1b}[1m")?;
+            }
+            if self.dimmed {
+                write!(formatter, "\u{1b}[2m")?;
+            }
+            if self.italic {
+                write!(formatter, "\u{1b}[3m")?;
+            }
+            if self.underline {
+                write!(formatter, "\u{1b}[4m")?;
+            }
+
+            if let Some(fg) = &self.fg {
+                fg.write_params(formatter, false)?;
+            }
+            if let Some(bg) = &self.bg {
+                bg.write_params(formatter, true)?;
+            }
+            Ok(())
+        }
+    }
+}
+
 impl Style {
+    #[cfg(feature = "test")]
+    pub(crate) const NONE: Self = Self {
+        bold: false,
+        italic: false,
+        underline: false,
+        dimmed: false,
+        fg: None,
+        bg: None,
+    };
+
     #[cfg(feature = "svg")]
     #[allow(clippy::trivially_copy_pass_by_ref)] // required by `serde`
     fn is_false(&val: &bool) -> bool {
@@ -198,49 +243,22 @@ impl Style {
             color.normalize();
         }
     }
-
-    fn write_to_io(&self, writer: &mut impl io::Write) -> io::Result<()> {
-        // Reset the style first.
-        write!(writer, "\u{1b}[0m")?;
-
-        if self.bold {
-            write!(writer, "\u{1b}[1m")?;
-        }
-        if self.dimmed {
-            write!(writer, "\u{1b}[2m")?;
-        }
-        if self.italic {
-            write!(writer, "\u{1b}[3m")?;
-        }
-        if self.underline {
-            write!(writer, "\u{1b}[4m")?;
-        }
-
-        if let Some(fg) = &self.fg {
-            fg.write_params_to_io(writer, false)?;
-        }
-        if let Some(bg) = &self.bg {
-            bg.write_params_to_io(writer, true)?;
-        }
-
-        Ok(())
-    }
 }
 
 impl Color {
-    fn write_params_to_io(self, writer: &mut impl io::Write, is_bg: bool) -> io::Result<()> {
+    fn write_params(self, formatter: &mut fmt::Formatter<'_>, is_bg: bool) -> fmt::Result {
         match self {
             Self::Index(idx) if idx < 8 => {
                 let offset = if is_bg { 40 } else { 30 };
-                write!(writer, "\u{1b}[{}m", offset + idx)
+                write!(formatter, "\u{1b}[{}m", offset + idx)
             }
             Self::Index(idx) => {
                 let prefix = if is_bg { 48 } else { 38 };
-                write!(writer, "\u{1b}[{prefix};5;{idx}m")
+                write!(formatter, "\u{1b}[{prefix};5;{idx}m")
             }
             Self::Rgb(RgbColor(r, g, b)) => {
                 let prefix = if is_bg { 48 } else { 38 };
-                write!(writer, "\u{1b}[{prefix};2;{r};{g};{b}m")
+                write!(formatter, "\u{1b}[{prefix};2;{r};{g};{b}m")
             }
         }
     }
@@ -263,29 +281,7 @@ pub(crate) trait WriteStyled {
 
     fn write_text(&mut self, text: &str) -> io::Result<()>;
 
-    fn write_fmt(&mut self, args: fmt::Arguments<'_>) -> io::Result<()> {
-        struct WriteWrapper<T>(io::Result<T>);
-
-        impl<T: WriteStyled + ?Sized> fmt::Write for WriteWrapper<&mut T> {
-            fn write_str(&mut self, s: &str) -> fmt::Result {
-                if let Ok(writer) = &mut self.0 {
-                    if let Err(err) = writer.write_text(s) {
-                        self.0 = Err(err);
-                    }
-                }
-
-                if self.0.is_err() {
-                    Err(fmt::Error)
-                } else {
-                    Ok(())
-                }
-            }
-        }
-
-        let mut writer = WriteWrapper(Ok(self));
-        fmt::Write::write_fmt(&mut writer, args).map_err(|_| writer.0.map(drop).unwrap_err())
-    }
-
+    #[cfg(test)]
     fn reset(&mut self) -> io::Result<()> {
         self.write_style(&Style::default())
     }
@@ -299,20 +295,6 @@ impl WriteStyled for io::Sink {
 
     fn write_text(&mut self, _text: &str) -> io::Result<()> {
         Ok(())
-    }
-}
-
-/// `WriteStyled` implementation that writes styles as ANSI escape sequences.
-#[derive(Debug)]
-pub(crate) struct Ansi<W>(pub(crate) W);
-
-impl<W: io::Write> WriteStyled for Ansi<W> {
-    fn write_style(&mut self, style: &Style) -> io::Result<()> {
-        style.write_to_io(&mut self.0)
-    }
-
-    fn write_text(&mut self, text: &str) -> io::Result<()> {
-        self.0.write_all(text.as_bytes())
     }
 }
 

@@ -109,10 +109,10 @@ fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
         read_main_snapshot()?
     };
     let parsed = Transcript::from_svg(snapshot_reader)?;
-    let mut buffer = String::new();
+    let mut buffer = vec![];
     let stats = compare_transcripts(&mut buffer, &parsed, &transcript, MatchKind::Precise, false)?;
     if stats.errors(MatchKind::Precise) > 0 {
-        panic!("{buffer}");
+        panic!("{}", String::from_utf8_lossy(&buffer));
     }
 
     Ok(())

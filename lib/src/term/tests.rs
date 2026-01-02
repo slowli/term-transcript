@@ -1,8 +1,35 @@
+use std::{fmt, fmt::Write as _, io};
+
 use super::*;
-use crate::style::{Ansi, Color, RgbColor, Style, WriteStyled};
+use crate::style::{Color, RgbColor, Style, WriteStyled};
+
+#[derive(Debug, Default)]
+struct Ansi {
+    buffer: String,
+}
+
+impl fmt::Write for Ansi {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.buffer.push_str(s);
+        Ok(())
+    }
+}
+
+impl WriteStyled for Ansi {
+    fn write_style(&mut self, style: &Style) -> io::Result<()> {
+        write!(&mut self.buffer, "\u{1b}[0m").unwrap();
+        write!(&mut self.buffer, "{style}").unwrap();
+        Ok(())
+    }
+
+    fn write_text(&mut self, text: &str) -> io::Result<()> {
+        self.buffer.push_str(text);
+        Ok(())
+    }
+}
 
 fn prepare_term_output() -> anyhow::Result<String> {
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     writer.write_style(&Style {
         underline: true,
         fg: Some(Color::CYAN),
@@ -20,7 +47,7 @@ fn prepare_term_output() -> anyhow::Result<String> {
     writer.reset()?;
     write!(writer, "!")?;
 
-    String::from_utf8(writer.0).map_err(From::from)
+    Ok(writer.buffer)
 }
 
 #[test]
@@ -30,16 +57,9 @@ fn converting_captured_output_to_text() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn assert_eq_term_output(actual: &[u8], expected: &[u8]) {
-    assert_eq!(
-        String::from_utf8_lossy(actual),
-        String::from_utf8_lossy(expected)
-    );
-}
-
 #[test]
 fn term_roundtrip_simple() -> anyhow::Result<()> {
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     write!(writer, "Hello, ")?;
     writer.write_style(&Style {
         bold: true,
@@ -50,18 +70,18 @@ fn term_roundtrip_simple() -> anyhow::Result<()> {
     writer.reset()?;
     write!(writer, "!")?;
 
-    let term_output = writer.0;
+    let term_output = writer.buffer;
 
-    let mut new_writer = Ansi(vec![]);
-    TermOutputParser::new(&mut new_writer).parse(&term_output)?;
-    let new_term_output = new_writer.0;
-    assert_eq_term_output(&new_term_output, &term_output);
+    let mut new_writer = Ansi::default();
+    TermOutputParser::new(&mut new_writer).parse(term_output.as_bytes())?;
+    let new_term_output = new_writer.buffer;
+    assert_eq!(new_term_output, term_output);
     Ok(())
 }
 
 #[test]
 fn term_roundtrip_with_multiple_colors() -> anyhow::Result<()> {
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     write!(writer, "He")?;
     writer.write_style(&Style {
         fg: Some(Color::BLACK),
@@ -89,18 +109,18 @@ fn term_roundtrip_with_multiple_colors() -> anyhow::Result<()> {
     })?;
     write!(writer, "!")?;
 
-    let term_output = writer.0;
+    let term_output = writer.buffer;
 
-    let mut new_writer = Ansi(vec![]);
-    TermOutputParser::new(&mut new_writer).parse(&term_output)?;
-    let new_term_output = new_writer.0;
-    assert_eq_term_output(&new_term_output, &term_output);
+    let mut new_writer = Ansi::default();
+    TermOutputParser::new(&mut new_writer).parse(term_output.as_bytes())?;
+    let new_term_output = new_writer.buffer;
+    assert_eq!(new_term_output, term_output);
     Ok(())
 }
 
 #[test]
 fn roundtrip_with_indexed_colors() -> anyhow::Result<()> {
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     write!(writer, "H")?;
     writer.write_style(&Style {
         fg: Some(Color::Index(5)),
@@ -123,18 +143,18 @@ fn roundtrip_with_indexed_colors() -> anyhow::Result<()> {
     })?;
     write!(writer, "o")?;
 
-    let term_output = writer.0;
+    let term_output = writer.buffer;
 
-    let mut new_writer = Ansi(vec![]);
-    TermOutputParser::new(&mut new_writer).parse(&term_output)?;
-    let new_term_output = new_writer.0;
-    assert_eq_term_output(&new_term_output, &term_output);
+    let mut new_writer = Ansi::default();
+    TermOutputParser::new(&mut new_writer).parse(term_output.as_bytes())?;
+    let new_term_output = new_writer.buffer;
+    assert_eq!(new_term_output, term_output);
     Ok(())
 }
 
 #[test]
 fn roundtrip_with_rgb_colors() -> anyhow::Result<()> {
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     write!(writer, "H")?;
     writer.write_style(&Style {
         fg: Some(Color::Rgb(RgbColor(16, 22, 35))),
@@ -157,12 +177,12 @@ fn roundtrip_with_rgb_colors() -> anyhow::Result<()> {
     })?;
     write!(writer, "o")?;
 
-    let term_output = writer.0;
+    let term_output = writer.buffer;
 
-    let mut new_writer = Ansi(vec![]);
-    TermOutputParser::new(&mut new_writer).parse(&term_output)?;
-    let new_term_output = new_writer.0;
-    assert_eq_term_output(&new_term_output, &term_output);
+    let mut new_writer = Ansi::default();
+    TermOutputParser::new(&mut new_writer).parse(term_output.as_bytes())?;
+    let new_term_output = new_writer.buffer;
+    assert_eq!(new_term_output, term_output);
     Ok(())
 }
 
@@ -170,11 +190,11 @@ fn roundtrip_with_rgb_colors() -> anyhow::Result<()> {
 fn skipping_ocs_sequence_with_bell_terminator() -> anyhow::Result<()> {
     let term_output = "\u{1b}]0;C:\\WINDOWS\\system32\\cmd.EXE\u{7}echo foo";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(String::from_utf8(rendered_output)?, "echo foo");
+    assert_eq!(rendered_output, "echo foo");
     Ok(())
 }
 
@@ -182,11 +202,11 @@ fn skipping_ocs_sequence_with_bell_terminator() -> anyhow::Result<()> {
 fn skipping_ocs_sequence_with_st_terminator() -> anyhow::Result<()> {
     let term_output = "\u{1b}]0;C:\\WINDOWS\\system32\\cmd.EXE\u{1b}\\echo foo";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(String::from_utf8(rendered_output)?, "echo foo");
+    assert_eq!(rendered_output, "echo foo");
     Ok(())
 }
 
@@ -194,11 +214,11 @@ fn skipping_ocs_sequence_with_st_terminator() -> anyhow::Result<()> {
 fn skipping_non_color_csi_sequence() -> anyhow::Result<()> {
     let term_output = "\u{1b}[49Xecho foo";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(String::from_utf8(rendered_output)?, "echo foo");
+    assert_eq!(rendered_output, "echo foo");
     Ok(())
 }
 
@@ -206,14 +226,11 @@ fn skipping_non_color_csi_sequence() -> anyhow::Result<()> {
 fn implicit_reset_sequence() -> anyhow::Result<()> {
     let term_output = "\u{1b}[34mblue\u{1b}[m";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(
-        String::from_utf8(rendered_output)?,
-        "\u{1b}[0m\u{1b}[34mblue\u{1b}[0m"
-    );
+    assert_eq!(rendered_output, "\u{1b}[0m\u{1b}[34mblue\u{1b}[0m");
     Ok(())
 }
 
@@ -221,14 +238,11 @@ fn implicit_reset_sequence() -> anyhow::Result<()> {
 fn intense_color() -> anyhow::Result<()> {
     let term_output = "\u{1b}[94mblue\u{1b}[m";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(
-        String::from_utf8(rendered_output)?,
-        "\u{1b}[0m\u{1b}[38;5;12mblue\u{1b}[0m"
-    );
+    assert_eq!(rendered_output, "\u{1b}[0m\u{1b}[38;5;12mblue\u{1b}[0m");
     Ok(())
 }
 
@@ -236,14 +250,11 @@ fn intense_color() -> anyhow::Result<()> {
 fn carriage_return_at_end_of_line() -> anyhow::Result<()> {
     let term_output = "\u{1b}[32mgreen\u{1b}[m\r";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(
-        String::from_utf8(rendered_output)?,
-        "\u{1b}[0m\u{1b}[32mgreen\u{1b}[0m"
-    );
+    assert_eq!(rendered_output, "\u{1b}[0m\u{1b}[32mgreen\u{1b}[0m");
     Ok(())
 }
 
@@ -251,14 +262,11 @@ fn carriage_return_at_end_of_line() -> anyhow::Result<()> {
 fn carriage_return_at_end_of_line_with_style_afterwards() -> anyhow::Result<()> {
     let term_output = "\u{1b}[32mgreen\u{1b}[m!\r\u{1b}[m";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(
-        String::from_utf8(rendered_output)?,
-        "\u{1b}[0m\u{1b}[32mgreen\u{1b}[0m!"
-    );
+    assert_eq!(rendered_output, "\u{1b}[0m\u{1b}[32mgreen\u{1b}[0m!");
     Ok(())
 }
 
@@ -266,13 +274,10 @@ fn carriage_return_at_end_of_line_with_style_afterwards() -> anyhow::Result<()> 
 fn carriage_return_at_middle_of_line() -> anyhow::Result<()> {
     let term_output = "\u{1b}[32mgreen\u{1b}[m\r\u{1b}[34mblue\u{1b}[m";
 
-    let mut writer = Ansi(vec![]);
+    let mut writer = Ansi::default();
     TermOutputParser::new(&mut writer).parse(term_output.as_bytes())?;
-    let rendered_output = writer.0;
+    let rendered_output = writer.buffer;
 
-    assert_eq!(
-        String::from_utf8(rendered_output)?,
-        "\u{1b}[0m\u{1b}[34mblue\u{1b}[0m"
-    );
+    assert_eq!(rendered_output, "\u{1b}[0m\u{1b}[34mblue\u{1b}[0m");
     Ok(())
 }

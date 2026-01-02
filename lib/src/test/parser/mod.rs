@@ -18,10 +18,7 @@ use quick_xml::{
 };
 
 use self::text::TextReadingState;
-use crate::{
-    style::{Ansi, StyledSpan},
-    ExitStatus, Interaction, TermOutput, Transcript, UserInput,
-};
+use crate::{style::StyledSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput};
 
 #[cfg(test)]
 mod tests;
@@ -56,7 +53,7 @@ impl Parsed {
     /// - Returns an I/O error should it occur when writing to `out`.
     #[doc(hidden)]
     pub fn write_colorized(&self, out: &mut impl io::Write) -> io::Result<()> {
-        StyledSpan::write_colorized(&self.styled_spans, &mut Ansi(out), &self.plaintext)
+        StyledSpan::write_colorized(&self.styled_spans, out, &self.plaintext)
     }
 
     /// Converts this parsed fragment into text for `UserInput`. This takes into account

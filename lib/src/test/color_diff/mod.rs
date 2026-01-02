@@ -1,6 +1,7 @@
 use std::{
     cmp::{self, Ordering},
     io,
+    io::Write,
     iter::{self, Peekable},
 };
 
@@ -24,7 +25,7 @@ impl StyledSpan<usize> {
 
     pub(crate) fn write_colorized(
         spans: &[Self],
-        out: &mut impl WriteStyled,
+        out: &mut impl Write,
         plaintext: &str,
     ) -> io::Result<()> {
         debug_assert_eq!(
@@ -33,22 +34,25 @@ impl StyledSpan<usize> {
         );
         let mut pos = 0;
         for span in spans {
-            out.write_style(&span.style)?;
-            write!(out, "{}", &plaintext[pos..pos + span.text])?;
+            write!(
+                out,
+                "{style}{}{style:#}",
+                &plaintext[pos..pos + span.text],
+                style = span.style
+            )?;
             pos += span.text;
         }
         Ok(())
     }
 
     /// Writes a single plaintext `line` to `out` using styles from `spans_iter`.
-    fn write_line<'a, W, I>(
+    fn write_line<'a, I>(
         spans_iter: &mut Peekable<I>,
-        out: &mut W,
+        out: &mut impl Write,
         line_start: usize,
         line: &str,
     ) -> io::Result<()>
     where
-        W: WriteStyled + ?Sized,
         I: Iterator<Item = (usize, &'a Self)>,
     {
         let mut pos = 0;
@@ -57,15 +61,18 @@ impl StyledSpan<usize> {
             let span_len = span.text - line_start.saturating_sub(span_start);
 
             let span_end = cmp::min(pos + span_len, line.len());
-            out.write_style(&span.style)?;
-            write!(out, "{}", &line[pos..span_end])?;
+            write!(
+                out,
+                "{style}{}{style:#}",
+                &line[pos..span_end],
+                style = span.style
+            )?;
             if span_end == pos + span_len {
                 // The span has ended, can proceed to the next one.
                 spans_iter.next();
             }
             pos += span_len;
         }
-        out.reset()?;
         writeln!(out)
     }
 }
@@ -215,15 +222,15 @@ impl ColorDiff {
     }
 
     /// Highlights this diff on the specified `text` which has styling set with `color_spans`.
-    pub(crate) fn highlight_text<W: WriteStyled + ?Sized>(
+    pub(crate) fn highlight_text(
         &self,
-        out: &mut W,
+        out: &mut impl Write,
         text: &str,
         color_spans: &[StyledSpan<usize>],
     ) -> io::Result<()> {
-        let sideline_hl = Style {
+        const SIDELINE_HL: Style = Style {
             fg: Some(Color::RED),
-            ..Style::default()
+            ..Style::NONE
         };
 
         let highlights = HighlightedSpan::new(&self.differing_spans);
@@ -247,13 +254,9 @@ impl ColorDiff {
                 .is_some_and(|span| span.start <= line_start + line.len());
 
             if line_contains_spans {
-                out.write_style(&sideline_hl)?;
-                write!(out, "> ")?;
-                out.reset()?;
+                write!(out, "{SIDELINE_HL}> {SIDELINE_HL:#}")?;
                 StyledSpan::write_line(&mut color_spans, out, line_start, line)?;
-                out.write_style(&sideline_hl)?;
-                write!(out, "> ")?;
-                out.reset()?;
+                write!(out, "{SIDELINE_HL}> {SIDELINE_HL:#}")?;
                 Self::highlight_line(out, &mut highlights, line_start, line)?;
             } else {
                 write!(out, "= ")?;
@@ -264,14 +267,13 @@ impl ColorDiff {
         Ok(())
     }
 
-    fn highlight_line<W, I>(
-        out: &mut W,
+    fn highlight_line<I>(
+        out: &mut impl Write,
         spans_iter: &mut Peekable<I>,
         line_offset: usize,
         line: &str,
     ) -> io::Result<()>
     where
-        W: WriteStyled + ?Sized,
         I: Iterator<Item = HighlightedSpan>,
     {
         let line_len = line.len();
@@ -295,9 +297,8 @@ impl ColorDiff {
             let ch = span.kind.underline_char();
             let underline: String =
                 iter::repeat_n(ch, line[span_start..span_end].width()).collect();
-            out.write_style(&span.kind.highlight_spec())?;
-            write!(out, "{underline}")?;
-            out.reset()?;
+            let hl = span.kind.highlight_style();
+            write!(out, "{hl}{underline}{hl:#}")?;
 
             line_pos = span_end;
             if span.start + span.len <= line_offset + line_len {
@@ -308,30 +309,29 @@ impl ColorDiff {
         writeln!(out)
     }
 
-    pub(crate) fn write_as_table<W: WriteStyled + ?Sized>(&self, out: &mut W) -> io::Result<()> {
+    pub(crate) fn write_as_table(&self, out: &mut impl Write) -> io::Result<()> {
+        const TABLE_HEAD: Style = Style {
+            bold: true,
+            ..Style::NONE
+        };
         const POS_WIDTH: usize = 10;
         const STYLE_WIDTH: usize = 22; // `buid magenta*/magenta*`
 
         // Write table header.
-        out.write_style(&Style {
-            bold: true,
-            ..Style::default()
-        })?;
         writeln!(
             out,
-            "{pos:^POS_WIDTH$} {lhs:^STYLE_WIDTH$} {rhs:^STYLE_WIDTH$}",
+            "{TABLE_HEAD}{pos:^POS_WIDTH$} {lhs:^STYLE_WIDTH$} {rhs:^STYLE_WIDTH$}",
             pos = "Positions",
             lhs = "Expected style",
             rhs = "Actual style"
         )?;
         writeln!(
             out,
-            "{pos:=>POS_WIDTH$} {lhs:=>STYLE_WIDTH$} {rhs:=>STYLE_WIDTH$}",
+            "{pos:=>POS_WIDTH$} {lhs:=>STYLE_WIDTH$} {rhs:=>STYLE_WIDTH$}{TABLE_HEAD:#}",
             pos = "",
             lhs = "",
             rhs = ""
         )?;
-        out.reset()?;
 
         // Write table itself.
         for differing_span in &self.differing_spans {
@@ -341,7 +341,7 @@ impl ColorDiff {
             write!(out, "{pos:>POS_WIDTH$} ")?;
 
             Self::write_color_spec(out, &differing_span.lhs_color_spec)?;
-            out.write_text(" ")?;
+            out.write_all(b" ")?;
             Self::write_color_spec(out, &differing_span.rhs_color_spec)?;
             writeln!(out)?;
         }
@@ -350,26 +350,25 @@ impl ColorDiff {
     }
 
     /// Writes `color_spec` in human-readable format.
-    fn write_color_spec<W: WriteStyled + ?Sized>(out: &mut W, style: &Style) -> io::Result<()> {
+    fn write_color_spec(out: &mut impl Write, style: &Style) -> io::Result<()> {
         const COLOR_WIDTH: usize = 8; // `magenta*` is the widest color output
 
-        out.write_style(style)?;
-        out.write_text(if style.bold { "b" } else { "-" })?;
-        out.write_text(if style.italic { "i" } else { "-" })?;
-        out.write_text(if style.underline { "u" } else { "-" })?;
-        out.write_text(if style.dimmed { "d" } else { "-" })?;
+        write!(out, "{style}")?;
+        out.write_all(if style.bold { b"b" } else { b"-" })?;
+        out.write_all(if style.italic { b"i" } else { b"-" })?;
+        out.write_all(if style.underline { b"u" } else { b"-" })?;
+        out.write_all(if style.dimmed { b"d" } else { b"-" })?;
 
         write!(
             out,
-            " {fg:>COLOR_WIDTH$}/{bg:<COLOR_WIDTH$}",
+            " {fg:>COLOR_WIDTH$}/{bg:<COLOR_WIDTH$}{style:#}",
             fg = style
                 .fg
                 .map_or_else(|| "(none)".to_owned(), Self::color_to_string),
             bg = style
                 .bg
                 .map_or_else(|| "(none)".to_owned(), Self::color_to_string),
-        )?;
-        out.reset()
+        )
     }
 
     fn color_to_string(color: Color) -> String {
@@ -413,7 +412,7 @@ impl SpanHighlightKind {
         }
     }
 
-    fn highlight_spec(self) -> Style {
+    fn highlight_style(self) -> Style {
         let mut style = Style::default();
         match self {
             Self::Main => {

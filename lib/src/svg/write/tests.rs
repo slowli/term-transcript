@@ -13,7 +13,7 @@ impl From<&str> for StyledSpan {
 #[test]
 fn html_writer_basic_colors() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(None);
-    write!(writer, "Hello, ")?;
+    writer.write_text("Hello, ")?;
     writer.write_style(&Style {
         bold: true,
         underline: true,
@@ -21,9 +21,9 @@ fn html_writer_basic_colors() -> anyhow::Result<()> {
         bg: Some(Color::WHITE),
         ..Style::default()
     })?;
-    write!(writer, "world")?;
+    writer.write_text("world")?;
     writer.reset()?;
-    write!(writer, "!")?;
+    writer.write_text("!")?;
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 1);
@@ -56,7 +56,7 @@ fn html_writer_intense_color() -> anyhow::Result<()> {
         fg: Some(Color::INTENSE_BLUE),
         ..Style::default()
     })?;
-    write!(writer, "blue")?;
+    writer.write_text("blue")?;
     writer.reset()?;
 
     let lines = writer.into_lines();
@@ -83,14 +83,14 @@ fn html_writer_embedded_spans_with_reset() -> anyhow::Result<()> {
         bg: Some(Color::WHITE),
         ..Style::default()
     })?;
-    write!(writer, "Hello, ")?;
+    writer.write_text("Hello, ")?;
     writer.write_style(&Style {
         fg: Some(Color::YELLOW),
         ..Style::default()
     })?;
-    write!(writer, "world")?;
+    writer.write_text("world")?;
     writer.reset()?;
-    write!(writer, "!")?;
+    writer.write_text("!")?;
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 1);
@@ -127,27 +127,27 @@ fn html_writer_custom_colors() -> anyhow::Result<()> {
         fg: Some(Color::Index(5)),
         ..Style::default()
     })?;
-    write!(writer, "H")?;
+    writer.write_text("H")?;
     writer.write_style(&Style {
         bg: Some(Color::Index(14)),
         ..Style::default()
     })?;
-    write!(writer, "e")?;
+    writer.write_text("e")?;
     writer.write_style(&Style {
         bg: Some(Color::Index(76)),
         ..Style::default()
     })?;
-    write!(writer, "l")?;
+    writer.write_text("l")?;
     writer.write_style(&Style {
         fg: Some(Color::Index(200)),
         ..Style::default()
     })?;
-    write!(writer, "l")?;
+    writer.write_text("l")?;
     writer.write_style(&Style {
         bg: Some(Color::Index(250)),
         ..Style::default()
     })?;
-    write!(writer, "o")?;
+    writer.write_text("o")?;
     writer.reset()?;
 
     let lines = writer.into_lines();
@@ -218,7 +218,7 @@ fn splitting_lines() {
 fn splitting_lines_in_writer() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(Some(5));
 
-    write!(writer, "Hello, ")?;
+    writer.write_text("Hello, ")?;
     writer.write_style(&Style {
         bold: true,
         underline: true,
@@ -226,9 +226,9 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
         bg: Some(Color::WHITE),
         ..Style::default()
     })?;
-    write!(writer, "world")?;
+    writer.write_text("world")?;
     writer.reset()?;
-    write!(writer, "! More>\ntext")?;
+    writer.write_text("! More>\ntext")?;
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 5);
@@ -279,7 +279,7 @@ fn splitting_lines_in_writer() -> anyhow::Result<()> {
 #[test]
 fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(Some(5));
-    writeln!(writer, ">>>>>>>")?;
+    writer.write_text(">>>>>>>\n")?;
 
     let lines = writer.into_lines();
     assert_eq!(lines.len(), 2);
@@ -289,7 +289,7 @@ fn splitting_lines_with_escaped_chars() -> anyhow::Result<()> {
 
     let mut writer = LineWriter::new(Some(5));
     for _ in 0..7 {
-        write!(writer, ">")?;
+        writer.write_text(">")?;
     }
 
     let lines = writer.into_lines();
@@ -305,7 +305,7 @@ fn splitting_lines_with_newlines() -> anyhow::Result<()> {
     let mut writer = LineWriter::new(Some(5));
 
     for _ in 0..2 {
-        writeln!(writer, "< test >")?;
+        writer.write_text("< test >\n")?;
     }
 
     let lines = writer.into_lines();
@@ -317,7 +317,7 @@ fn splitting_lines_with_newlines() -> anyhow::Result<()> {
 
     let mut writer = LineWriter::new(Some(5));
     for _ in 0..2 {
-        writeln!(writer, "<< test >>")?;
+        writer.write_text("<< test >>\n")?;
     }
 
     let lines = writer.into_lines();

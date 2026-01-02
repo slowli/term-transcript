@@ -1,5 +1,7 @@
 //! Test for color diffs.
 
+use anstream::StripStream;
+
 use super::*;
 use crate::{
     style::{Style, StyledSpan},
@@ -130,9 +132,9 @@ fn creating_color_diff_overlapping_spans() {
 }
 
 fn color_spec_to_string(spec: &Style) -> String {
-    let mut buffer = String::new();
+    let mut buffer = StripStream::new(vec![]);
     ColorDiff::write_color_spec(&mut buffer, spec).unwrap();
-    buffer
+    String::from_utf8(buffer.into_inner()).unwrap()
 }
 
 #[test]
@@ -180,8 +182,9 @@ fn writing_color_diff_table() {
         }],
     };
 
-    let mut out = String::new();
+    let mut out = StripStream::new(vec![]);
     color_diff.write_as_table(&mut out).unwrap();
+    let out = String::from_utf8(out.into_inner()).unwrap();
 
     for (actual, &expected) in out.lines().zip(EXPECTED_TABLE_LINES) {
         assert_eq!(actual, expected);
@@ -222,10 +225,12 @@ fn highlighting_diff_on_text() {
         ],
     };
 
-    let mut out = LineWriter::new(None);
+    let mut buffer = vec![];
     color_diff
-        .highlight_text(&mut out, "Hello, world!", &color_spans)
+        .highlight_text(&mut buffer, "Hello, world!", &color_spans)
         .unwrap();
+    let mut out = LineWriter::new(None);
+    TermOutputParser::new(&mut out).parse(&buffer).unwrap();
     let lines = out.into_lines();
     assert_eq!(lines.len(), 2);
     assert_eq!(
@@ -317,11 +322,13 @@ fn spans_on_multiple_lines() {
         differing_spans: vec![diff_span(9, 3)],
     };
 
-    let mut out = LineWriter::new(None);
+    let mut buffer = vec![];
     color_diff
-        .highlight_text(&mut out, "Hello,\nworld!", &color_spans)
+        .highlight_text(&mut buffer, "Hello,\nworld!", &color_spans)
         .unwrap();
 
+    let mut out = LineWriter::new(None);
+    TermOutputParser::new(&mut out).parse(&buffer).unwrap();
     let lines = out.into_lines();
     assert_eq!(lines.len(), 3);
     assert_eq!(
@@ -407,11 +414,13 @@ fn spans_with_multiple_sequential_line_breaks() {
         differing_spans: vec![diff_span(10, 3)],
     };
 
-    let mut out = LineWriter::new(None);
+    let mut buffer = vec![];
     color_diff
-        .highlight_text(&mut out, "Hello,\n\nworld!", &color_spans)
+        .highlight_text(&mut buffer, "Hello,\n\nworld!", &color_spans)
         .unwrap();
 
+    let mut out = LineWriter::new(None);
+    TermOutputParser::new(&mut out).parse(&buffer).unwrap();
     let lines = out.into_lines();
     assert_eq!(lines.len(), 4);
 
@@ -480,11 +489,11 @@ fn test_highlight(color_diff: &ColorDiff, text: &str) -> String {
         text: text.len(),
         style: Style::default(),
     };
-    let mut buffer = String::new();
+    let mut buffer = StripStream::new(vec![]);
     color_diff
         .highlight_text(&mut buffer, text, &[color_span])
         .unwrap();
-    buffer
+    String::from_utf8(buffer.into_inner()).unwrap()
 }
 
 #[test]
@@ -543,7 +552,6 @@ fn plaintext_highlight_with_skipped_lines() {
 
 #[test]
 fn highlighting_works_with_non_ascii_text() {
-    let mut buffer = String::new();
     let line = "  ┌─ Snippet #1:1:1";
     let spans = vec![HighlightedSpan {
         start: 2,
@@ -551,8 +559,10 @@ fn highlighting_works_with_non_ascii_text() {
         kind: SpanHighlightKind::Main,
     }];
     let mut spans = spans.into_iter().peekable();
+    let mut buffer = StripStream::new(vec![]);
     ColorDiff::highlight_line(&mut buffer, &mut spans, 0, line).unwrap();
 
+    let buffer = String::from_utf8(buffer.into_inner()).unwrap();
     assert_eq!(buffer, "  ^^\n");
 }
 

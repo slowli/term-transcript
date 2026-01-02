@@ -17,16 +17,28 @@ use super::{
     MatchKind, TestConfig, TestOutputConfig, TestStats,
 };
 use crate::{
-    style::{Ansi, Color, Style, StyledSpan, WriteStyled},
+    style::{Color, Style, StyledSpan},
     traits::SpawnShell,
     Interaction, TermError, Transcript, UserInput,
 };
 
+const SUCCESS: Style = Style {
+    fg: Some(Color::INTENSE_GREEN),
+    ..Style::NONE
+};
+const ERROR: Style = Style {
+    fg: Some(Color::INTENSE_RED),
+    ..Style::NONE
+};
+const VERBOSE_OUTPUT: Style = Style {
+    fg: Some(Color::Index(244)), // medium gray
+    ..Style::NONE
+};
+
 #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, ret, err))]
 #[doc(hidden)] // low-level; not public API
-#[allow(private_bounds)] // acceptable since the API isn't public
-pub fn compare_transcripts<W: WriteStyled + ?Sized>(
-    out: &mut W,
+pub fn compare_transcripts(
+    out: &mut impl Write,
     parsed: &Transcript<Parsed>,
     reproduced: &Transcript,
     match_kind: MatchKind,
@@ -97,23 +109,12 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
 
         stats.matches.push(actual_match);
         if actual_match >= Some(match_kind) {
-            out.write_style(&Style {
-                fg: Some(Color::INTENSE_GREEN),
-                ..Style::default()
-            })?;
-            write!(out, "+")?;
+            write!(out, "{SUCCESS}+{SUCCESS:#}")?;
+        } else if color_diff.is_some() {
+            write!(out, "{ERROR}#{ERROR:#}")?;
         } else {
-            out.write_style(&Style {
-                fg: Some(Color::INTENSE_RED),
-                ..Style::default()
-            })?;
-            if color_diff.is_some() {
-                write!(out, "#")?;
-            } else {
-                write!(out, "-")?;
-            }
+            write!(out, "{ERROR}-{ERROR:#}")?;
         }
-        out.reset()?;
         writeln!(out, "] Input: {}", original.input().as_ref())?;
 
         if let Some(diff) = color_diff {
@@ -123,25 +124,19 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
         } else if actual_match.is_none() {
             write_diff(out, original_text, &reproduced_text)?;
         } else if verbose {
-            out.write_style(&Style {
-                fg: Some(Color::Index(244)), // medium gray
-                ..Style::default()
-            })?;
+            write!(out, "{VERBOSE_OUTPUT}")?;
             let mut out_with_indents = IndentingWriter::new(&mut *out, "    ");
             writeln!(out_with_indents, "{}", original.output().plaintext())?;
-            out.reset()?;
+            write!(out, "{VERBOSE_OUTPUT:#}")?;
         }
     }
 
+    out.flush()?; // apply terminal styling if necessary
     Ok(stats)
 }
 
 #[cfg(feature = "pretty_assertions")]
-fn write_diff<W: WriteStyled + ?Sized>(
-    out: &mut W,
-    original: &str,
-    reproduced: &str,
-) -> io::Result<()> {
+fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
     use pretty_assertions::Comparison;
 
     // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
@@ -167,11 +162,7 @@ fn write_diff<W: WriteStyled + ?Sized>(
 }
 
 #[cfg(not(feature = "pretty_assertions"))]
-fn write_diff<W: WriteStyled + ?Sized>(
-    out: &mut W,
-    original: &str,
-    reproduced: &str,
-) -> io::Result<()> {
+fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
     writeln!(out, "  Original:")?;
     for line in original.lines() {
         writeln!(out, "    {line}")?;
@@ -407,14 +398,14 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
             };
             // We cannot create an `AutoStream` here because it would require `PrintlnWriter` to implement `anstream::RawStream`,
             // which is a sealed trait.
-            let out = ChoiceWriter::new(PrintlnWriter::default(), choice);
-            self.test_transcript_inner(&mut Ansi(out), transcript)
+            let mut out = ChoiceWriter::new(PrintlnWriter::default(), choice);
+            self.test_transcript_inner(&mut out, transcript)
         }
     }
 
-    pub(super) fn test_transcript_inner<W: WriteStyled + ?Sized>(
+    pub(super) fn test_transcript_inner(
         &mut self,
-        out: &mut W,
+        out: &mut impl Write,
         transcript: &Transcript<Parsed>,
     ) -> io::Result<(TestStats, Transcript)> {
         let inputs = transcript
