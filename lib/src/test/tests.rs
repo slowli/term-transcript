@@ -84,14 +84,8 @@ fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (Te
     reproduced.add_interaction(UserInput::command("test"), actual_capture);
 
     let mut out = String::new();
-    let stats = compare_transcripts(
-        &mut out,
-        &parsed,
-        &reproduced,
-        MatchKind::Precise,
-        false,
-    )
-    .unwrap();
+    let stats =
+        compare_transcripts(&mut out, &parsed, &reproduced, MatchKind::Precise, false).unwrap();
     (stats, out)
 }
 

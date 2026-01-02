@@ -18,6 +18,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 # Public dependencies (present in the public API).
+anstream.workspace = true
 anyhow.workspace = true
 quick-xml = { workspace = true, optional = true }
 handlebars = { workspace = true, optional = true }

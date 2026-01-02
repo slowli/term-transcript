@@ -56,11 +56,7 @@ impl Parsed {
     /// - Returns an I/O error should it occur when writing to `out`.
     #[doc(hidden)]
     pub fn write_colorized(&self, out: &mut impl io::Write) -> io::Result<()> {
-        ColorSpan::write_colorized(
-            &self.color_spans,
-            &mut Ansi::new(out, true),
-            &self.plaintext,
-        )
+        ColorSpan::write_colorized(&self.color_spans, &mut Ansi(out), &self.plaintext)
     }
 
     /// Converts this parsed fragment into text for `UserInput`. This takes into account

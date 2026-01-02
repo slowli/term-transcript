@@ -8,10 +8,12 @@ use std::{
     str,
 };
 
+use anstream::{AutoStream, ColorChoice};
+
 use super::{
     color_diff::{ColorDiff, ColorSpan},
     parser::Parsed,
-    utils::{IndentingWriter, PrintlnWriter},
+    utils::{ChoiceWriter, IndentingWriter, PrintlnWriter},
     MatchKind, TestConfig, TestOutputConfig, TestStats,
 };
 use crate::{
@@ -409,9 +411,15 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
         if self.output == TestOutputConfig::Quiet {
             self.test_transcript_inner(&mut io::sink(), transcript)
         } else {
-            let write_styles = self.color_choice.resolve();
-            let mut out = Ansi::new(PrintlnWriter::default(), write_styles);
-            self.test_transcript_inner(&mut out, transcript)
+            let choice = if self.color_choice == ColorChoice::Auto {
+                AutoStream::choice(&io::stdout())
+            } else {
+                self.color_choice
+            };
+            // We cannot create an `AutoStream` here because it would require `PrintlnWriter` to implement `anstream::RawStream`,
+            // which is a sealed trait.
+            let out = ChoiceWriter::new(PrintlnWriter::default(), choice);
+            self.test_transcript_inner(&mut Ansi(out), transcript)
         }
     }
 

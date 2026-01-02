@@ -292,37 +292,17 @@ impl WriteStyled for io::Sink {
     }
 }
 
+/// `WriteStyled` implementation that writes styles as ANSI escape sequences.
 #[derive(Debug)]
-pub(crate) struct Ansi<W> {
-    inner: W,
-    write_styles: bool,
-}
-
-impl<W: io::Write> Ansi<W> {
-    pub(crate) fn new(inner: W, write_styles: bool) -> Self {
-        Self {
-            inner,
-            write_styles,
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn into_inner(self) -> W {
-        self.inner
-    }
-}
+pub(crate) struct Ansi<W>(pub(crate) W);
 
 impl<W: io::Write> WriteStyled for Ansi<W> {
     fn write_style(&mut self, style: &Style) -> io::Result<()> {
-        if self.write_styles {
-            style.write_to_io(&mut self.inner)
-        } else {
-            Ok(())
-        }
+        style.write_to_io(&mut self.0)
     }
 
     fn write_text(&mut self, text: &str) -> io::Result<()> {
-        self.inner.write_all(text.as_bytes())
+        self.0.write_all(text.as_bytes())
     }
 }
 

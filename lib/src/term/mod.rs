@@ -1,4 +1,4 @@
-use std::{borrow::Cow};
+use std::borrow::Cow;
 
 use crate::{utils::normalize_newlines, TermError};
 

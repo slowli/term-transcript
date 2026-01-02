@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::{
-    style::{Ansi, Style},
+    style::Style,
     svg::write::{LineWriter, StyledSpan},
 };
 
@@ -171,12 +171,10 @@ fn writing_color_diff_table() {
         }],
     };
 
-    let mut buffer = vec![];
-    let mut out = Ansi::new(&mut buffer, false);
+    let mut out = String::new();
     color_diff.write_as_table(&mut out).unwrap();
-    let table_string = String::from_utf8(buffer).unwrap();
 
-    for (actual, &expected) in table_string.lines().zip(EXPECTED_TABLE_LINES) {
+    for (actual, &expected) in out.lines().zip(EXPECTED_TABLE_LINES) {
         assert_eq!(actual, expected);
     }
 }
@@ -473,11 +471,11 @@ fn test_highlight(color_diff: &ColorDiff, text: &str) -> String {
         len: text.len(),
         style: Style::default(),
     };
-    let mut buffer = vec![];
+    let mut buffer = String::new();
     color_diff
-        .highlight_text(&mut Ansi::new(&mut buffer, false), text, &[color_span])
+        .highlight_text(&mut buffer, text, &[color_span])
         .unwrap();
-    String::from_utf8(buffer).unwrap()
+    buffer
 }
 
 #[test]
@@ -536,7 +534,7 @@ fn plaintext_highlight_with_skipped_lines() {
 
 #[test]
 fn highlighting_works_with_non_ascii_text() {
-    let mut buffer = vec![];
+    let mut buffer = String::new();
     let line = "  ┌─ Snippet #1:1:1";
     let spans = vec![HighlightedSpan {
         start: 2,
@@ -544,10 +542,9 @@ fn highlighting_works_with_non_ascii_text() {
         kind: SpanHighlightKind::Main,
     }];
     let mut spans = spans.into_iter().peekable();
-    ColorDiff::highlight_line(&mut Ansi::new(&mut buffer, false), &mut spans, 0, line).unwrap();
+    ColorDiff::highlight_line(&mut buffer, &mut spans, 0, line).unwrap();
 
-    let highlight_line = String::from_utf8(buffer).unwrap();
-    assert_eq!(highlight_line, "  ^^\n");
+    assert_eq!(buffer, "  ^^\n");
 }
 
 #[test]

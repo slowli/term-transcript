@@ -1,7 +1,10 @@
 use std::{
+    fmt,
     io::{self, Write},
     str,
 };
+
+use anstream::{ColorChoice, StripStream};
 
 #[cfg(test)]
 use self::tests::print_to_buffer;
@@ -99,6 +102,46 @@ impl Write for PrintlnWriter {
         print!("{str}");
         self.line_buffer.clear();
         Ok(())
+    }
+}
+
+pub(crate) enum ChoiceWriter<W> {
+    Passthrough(W),
+    Strip(StripStream<Box<dyn Write>>),
+}
+
+impl<W> fmt::Debug for ChoiceWriter<W> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Passthrough(_) => formatter.debug_tuple("Passthrough").finish_non_exhaustive(),
+            Self::Strip(_) => formatter.debug_tuple("Strip").finish_non_exhaustive(),
+        }
+    }
+}
+
+impl<W: Write + 'static> ChoiceWriter<W> {
+    pub(crate) fn new(inner: W, choice: ColorChoice) -> Self {
+        match choice {
+            ColorChoice::Always | ColorChoice::AlwaysAnsi => Self::Passthrough(inner),
+            ColorChoice::Never => Self::Strip(StripStream::new(Box::new(inner))),
+            ColorChoice::Auto => unreachable!("must be resolved"),
+        }
+    }
+}
+
+impl<W: Write + 'static> Write for ChoiceWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self {
+            Self::Passthrough(inner) => inner.write(buf),
+            Self::Strip(inner) => inner.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self {
+            Self::Passthrough(inner) => inner.flush(),
+            Self::Strip(inner) => inner.flush(),
+        }
     }
 }
 
