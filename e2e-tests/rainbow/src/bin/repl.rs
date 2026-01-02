@@ -1,65 +1,69 @@
 //! Simple REPL application that echoes the input with coloring / styles applied.
 
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Write};
 
+use anstyle::{AnsiColor, Color, Style};
 use term_transcript::svg::RgbColor;
-use termcolor::{Ansi, Color, ColorSpec, WriteColor};
 
-fn process_line(writer: &mut impl WriteColor, line: &str) -> io::Result<()> {
+fn process_line(writer: &mut impl Write, line: &str) -> io::Result<()> {
     let parts: Vec<_> = line.split_whitespace().collect();
-    let mut color_spec = ColorSpec::new();
+    let mut style = Style::new();
+    let mut intense = false;
     for (i, &part) in parts.iter().enumerate() {
         match part {
             "bold" => {
-                color_spec.set_bold(true);
+                style = style.bold();
             }
             "italic" => {
-                color_spec.set_italic(true);
+                style = style.italic();
             }
             "underline" => {
-                color_spec.set_underline(true);
+                style = style.underline();
             }
             "intense" => {
-                color_spec.set_intense(true);
+                intense = true;
             }
 
             "black" => {
-                color_spec.set_fg(Some(Color::Black));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::Black)));
             }
             "blue" => {
-                color_spec.set_fg(Some(Color::Blue));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::Blue)));
             }
             "green" => {
-                color_spec.set_fg(Some(Color::Green));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::Green)));
             }
             "red" => {
-                color_spec.set_fg(Some(Color::Red));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::Red)));
             }
             "cyan" => {
-                color_spec.set_fg(Some(Color::Cyan));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
             }
             "magenta" => {
-                color_spec.set_fg(Some(Color::Magenta));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::Magenta)));
             }
             "yellow" => {
-                color_spec.set_fg(Some(Color::Yellow));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
             }
             "white" => {
-                color_spec.set_fg(Some(Color::White));
+                style = style.fg_color(Some(Color::Ansi(AnsiColor::White)));
             }
 
             color if color.starts_with('#') => {
                 if let Ok(color) = color.parse::<RgbColor>() {
-                    color_spec.set_fg(Some(Color::Rgb(color.0, color.1, color.2)));
+                    let color = anstyle::RgbColor(color.0, color.1, color.2);
+                    style = style.fg_color(Some(Color::Rgb(color)));
                 }
             }
 
             _ => { /* Do nothing. */ }
         }
 
-        writer.set_color(&color_spec)?;
-        write!(writer, "{part}")?;
-        writer.reset()?;
+        if let Some(Color::Ansi(color)) = style.get_fg_color() {
+            style = style.fg_color(Some(color.bright(intense).into()));
+        }
+
+        write!(writer, "{style}{part}{style:#}")?;
         if i + 1 < parts.len() {
             write!(writer, " ")?;
         }
@@ -68,11 +72,10 @@ fn process_line(writer: &mut impl WriteColor, line: &str) -> io::Result<()> {
 }
 
 fn main() -> anyhow::Result<()> {
-    let mut writer = Ansi::new(io::stdout());
     let stdin = io::stdin();
     let mut lines = stdin.lock().lines();
     while let Some(line) = lines.next().transpose()? {
-        process_line(&mut writer, &line)?;
+        process_line(&mut io::stdout(), &line)?;
     }
     Ok(())
 }

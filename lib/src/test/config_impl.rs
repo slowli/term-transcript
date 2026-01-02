@@ -44,12 +44,7 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
         let _entered =
             tracing::debug_span!("compare_interaction", input = ?original.input).entered();
 
-        write!(out, "  ")?;
-        out.write_style(&Style {
-            bold: true,
-            ..Style::default()
-        })?;
-        write!(out, "[")?;
+        write!(out, "  [")?;
 
         // First, process text only.
         let original_text = original.output().plaintext();
@@ -102,14 +97,12 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
         stats.matches.push(actual_match);
         if actual_match >= Some(match_kind) {
             out.write_style(&Style {
-                bold: true,
                 fg: Some(Color::INTENSE_GREEN),
                 ..Style::default()
             })?;
             write!(out, "+")?;
         } else {
             out.write_style(&Style {
-                bold: true,
                 fg: Some(Color::INTENSE_RED),
                 ..Style::default()
             })?;
@@ -119,13 +112,8 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
                 write!(out, "-")?;
             }
         }
-        out.write_style(&Style {
-            bold: true,
-            ..Style::default()
-        })?;
-        write!(out, "]")?;
         out.reset()?;
-        writeln!(out, " Input: {}", original.input().as_ref())?;
+        writeln!(out, "] Input: {}", original.input().as_ref())?;
 
         if let Some(diff) = color_diff {
             let original_spans = &original.output().color_spans;
@@ -135,7 +123,7 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
             write_diff(out, original_text, &reproduced_text)?;
         } else if verbose {
             out.write_style(&Style {
-                fg: Some(Color::Index(244)),
+                fg: Some(Color::Index(244)), // medium gray
                 ..Style::default()
             })?;
             let mut out_with_indents = IndentingWriter::new(&mut *out, "    ");

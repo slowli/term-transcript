@@ -9,6 +9,8 @@ use std::{
     str::FromStr,
 };
 
+use anstream::{AutoStream, ColorChoice};
+use anstyle::{AnsiColor, Color, Style};
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
 use term_transcript::{
@@ -16,7 +18,6 @@ use term_transcript::{
     traits::SpawnShell,
     Transcript, UserInput,
 };
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 mod shell;
 mod template;
@@ -24,6 +25,12 @@ mod template;
 mod tests;
 
 use crate::{shell::ShellArgs, template::TemplateArgs};
+
+const BOLD: Style = Style::new().bold();
+const ERROR: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
+const WARN: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
+const SUCCESS: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+const FILE: Style = Style::new().underline();
 
 /// CLI for capturing and snapshot-testing terminal output.
 #[derive(Debug, Parser)]
@@ -162,23 +169,23 @@ impl Command {
                     .with_color_choice(color.into());
 
                 let mut totals = FullTestStats::default();
-                let out = StandardStream::stdout(color.into());
+                let color = ColorChoice::from(color);
 
                 for svg_path in &svg_paths {
-                    Self::report_test_start(&out, svg_path)?;
+                    Self::report_test_start(color, svg_path)?;
                     match Self::process_file(svg_path, &mut test_config) {
                         Ok(stats) => {
                             totals.passed += stats.passed(match_kind);
                             totals.errors += stats.errors(match_kind);
                         }
                         Err(err) => {
-                            Self::report_failure(&out, svg_path, &err)?;
+                            Self::report_failure(color, svg_path, &err)?;
                             totals.failures += 1;
                         }
                     }
                 }
 
-                Self::report_totals(&out, totals)?;
+                Self::report_totals(color, totals)?;
 
                 if !totals.is_successful() {
                     process::exit(1);
@@ -218,40 +225,27 @@ impl Command {
             .map_err(From::from)
     }
 
-    fn report_test_start(out: &StandardStream, svg_path: &Path) -> io::Result<()> {
-        let mut out = out.lock();
-        write!(out, "Testing file ")?;
-        out.set_color(ColorSpec::new().set_intense(true).set_underline(true))?;
-        write!(out, "{}", svg_path.to_string_lossy())?;
-        out.reset()?;
-        writeln!(out, "...")
+    fn report_test_start(color: ColorChoice, svg_path: &Path) -> io::Result<()> {
+        let mut out = AutoStream::new(io::stdout().lock(), color);
+        writeln!(
+            out,
+            "Testing file {FILE}{file}{FILE:#}...",
+            file = svg_path.to_string_lossy()
+        )
     }
 
-    fn report_failure(
-        out: &StandardStream,
-        svg_path: &Path,
-        err: &anyhow::Error,
-    ) -> io::Result<()> {
-        let mut out = out.lock();
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-        write!(out, "Error testing file ")?;
-        out.set_color(
-            ColorSpec::new()
-                .set_reset(false)
-                .set_intense(true)
-                .set_underline(true),
-        )?;
-        write!(out, "{}", svg_path.to_string_lossy())?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-        writeln!(out, ": {err}")?;
-        out.reset()
+    fn report_failure(color: ColorChoice, svg_path: &Path, err: &anyhow::Error) -> io::Result<()> {
+        let mut out = AutoStream::new(io::stdout().lock(), color);
+        writeln!(
+            out,
+            "{ERROR}Error testing file {FILE}{file}{FILE:#}{ERROR:#}: {ERROR}{err}{ERROR:#}",
+            file = svg_path.to_string_lossy()
+        )
     }
 
-    fn report_totals(out: &StandardStream, totals: FullTestStats) -> io::Result<()> {
-        let mut out = out.lock();
-        out.set_color(ColorSpec::new().set_intense(true))?;
-        write!(out, "Totals: ")?;
-        out.reset()?;
+    fn report_totals(color: ColorChoice, totals: FullTestStats) -> io::Result<()> {
+        let mut out = AutoStream::new(io::stdout().lock(), color);
+        write!(out, "{BOLD}Totals:{BOLD:#} ")?;
         totals.print(&mut out)?;
         writeln!(out)
     }
@@ -273,42 +267,36 @@ impl Command {
         );
 
         let color = ColorChoice::from(color);
-        let out = StandardStream::stdout(color);
+        let out = AutoStream::new(io::stdout(), color);
         let mut out = out.lock();
 
         for (i, interaction) in transcript.interactions().iter().enumerate() {
             if i > 0 {
                 writeln!(out)?;
             }
-            out.set_color(ColorSpec::new().set_bold(true))?;
-            writeln!(out, "----------  Input #{} ----------", i + 1)?;
-            out.reset()?;
+            writeln!(out, "{BOLD}----------  Input #{} ----------{BOLD:#}", i + 1)?;
 
             let input = interaction.input();
             writeln!(out, "{} {}", input.prompt().unwrap_or("$"), input.as_ref())?;
 
             if let Some(exit_status) = interaction.exit_status() {
                 if !exit_status.is_success() {
-                    out.set_color(ColorSpec::new().set_bold(true))?;
-                    write!(out, "Exit status:")?;
-                    out.reset()?;
+                    write!(out, "{BOLD}Exit status:{BOLD:#}")?;
                     write!(out, " {} ", exit_status.0)?;
-
-                    out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-                    writeln!(out, "(failure)")?;
-                    out.reset()?;
+                    writeln!(out, "{ERROR}(failure){ERROR:#}")?;
                 }
             }
 
-            out.set_color(ColorSpec::new().set_bold(true))?;
-            writeln!(out, "\n---------- Output #{} ----------", i + 1)?;
-            out.reset()?;
+            writeln!(
+                out,
+                "\n{BOLD}---------- Output #{} ----------{BOLD:#}",
+                i + 1
+            )?;
 
             if color == ColorChoice::Never {
                 writeln!(out, "{}", interaction.output().plaintext())?;
             } else {
                 interaction.output().write_colorized(&mut out)?;
-                out.reset()?;
                 if !interaction.output().plaintext().ends_with('\n') {
                     writeln!(out)?;
                 }
@@ -365,21 +353,15 @@ struct FullTestStats {
 }
 
 impl FullTestStats {
-    fn print(self, out: &mut impl WriteColor) -> io::Result<()> {
+    fn print(self, out: &mut impl Write) -> io::Result<()> {
         write!(out, "passed: ")?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Green)))?;
-        write!(out, "{}", self.passed)?;
-        out.reset()?;
+        write!(out, "{SUCCESS}{}{SUCCESS:#}", self.passed)?;
 
         write!(out, ", errors: ")?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-        write!(out, "{}", self.errors)?;
-        out.reset()?;
+        write!(out, "{ERROR}{}{ERROR:#}", self.errors)?;
 
         write!(out, ", failures: ")?;
-        out.set_color(ColorSpec::new().set_fg(Some(Color::Yellow)))?;
-        write!(out, "{}", self.failures)?;
-        out.reset()
+        write!(out, "{WARN}{}{WARN:#}", self.failures)
     }
 
     fn is_successful(self) -> bool {
