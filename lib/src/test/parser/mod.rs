@@ -19,8 +19,8 @@ use quick_xml::{
 
 use self::text::TextReadingState;
 use crate::{
-    style::Ansi, test::color_diff::ColorSpan, ExitStatus, Interaction, TermOutput, Transcript,
-    UserInput,
+    style::{Ansi, StyledSpan},
+    ExitStatus, Interaction, TermOutput, Transcript, UserInput,
 };
 
 #[cfg(test)]
@@ -35,13 +35,13 @@ fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
 #[derive(Debug, Clone, Default)]
 pub struct Parsed {
     pub(crate) plaintext: String,
-    pub(crate) color_spans: Vec<ColorSpan>,
+    pub(crate) styled_spans: Vec<StyledSpan<usize>>,
 }
 
 impl Parsed {
     const DEFAULT: Self = Self {
         plaintext: String::new(),
-        color_spans: Vec::new(),
+        styled_spans: Vec::new(),
     };
 
     /// Returns the parsed plaintext.
@@ -56,7 +56,7 @@ impl Parsed {
     /// - Returns an I/O error should it occur when writing to `out`.
     #[doc(hidden)]
     pub fn write_colorized(&self, out: &mut impl io::Write) -> io::Result<()> {
-        ColorSpan::write_colorized(&self.color_spans, &mut Ansi(out), &self.plaintext)
+        StyledSpan::write_colorized(&self.styled_spans, &mut Ansi(out), &self.plaintext)
     }
 
     /// Converts this parsed fragment into text for `UserInput`. This takes into account
@@ -78,8 +78,8 @@ impl Parsed {
     fn trim_ending_newline(&mut self) {
         if self.plaintext.ends_with('\n') {
             self.plaintext.pop();
-            if let Some(last_span) = self.color_spans.last_mut() {
-                last_span.len -= 1;
+            if let Some(last_span) = self.styled_spans.last_mut() {
+                last_span.text -= 1;
             }
         }
     }

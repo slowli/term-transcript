@@ -69,7 +69,7 @@ fn reading_file(file_contents: &[u8]) {
     assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
     assert!(!plaintext.contains("__"), "{plaintext}");
 
-    let color_spans = &interaction.output.color_spans;
+    let color_spans = &interaction.output.styled_spans;
     assert_eq!(color_spans.len(), 5, "{color_spans:#?}"); // 2 colored regions + 3 surrounding areas
 }
 

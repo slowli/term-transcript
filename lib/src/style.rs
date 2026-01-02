@@ -246,6 +246,16 @@ impl Color {
     }
 }
 
+/// Span of text with associated [`Style`].
+#[cfg(any(feature = "svg", feature = "test"))]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[cfg_attr(feature = "svg", derive(serde::Serialize))]
+pub(crate) struct StyledSpan<T = String> {
+    #[cfg_attr(feature = "svg", serde(flatten))]
+    pub(crate) style: Style,
+    pub(crate) text: T,
+}
+
 /// Writer similar to `io::Write`, but with separated writing of `Style`s.
 pub(crate) trait WriteStyled {
     /// The style is completely reset on each call.

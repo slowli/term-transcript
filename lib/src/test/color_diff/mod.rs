@@ -10,18 +10,12 @@ use unicode_width::UnicodeWidthStr;
 mod tests;
 
 use crate::{
-    style::{Color, RgbColor, Style, WriteStyled},
+    style::{Color, RgbColor, Style, StyledSpan, WriteStyled},
     term::TermOutputParser,
     TermError,
 };
 
-#[derive(Debug, Clone)]
-pub(crate) struct ColorSpan {
-    pub(crate) len: usize,
-    style: Style,
-}
-
-impl ColorSpan {
+impl StyledSpan<usize> {
     pub(crate) fn parse(ansi_text: &str) -> Result<Vec<Self>, TermError> {
         let mut spans = ColorSpansWriter::default();
         TermOutputParser::new(&mut spans).parse(ansi_text.as_bytes())?;
@@ -34,14 +28,14 @@ impl ColorSpan {
         plaintext: &str,
     ) -> io::Result<()> {
         debug_assert_eq!(
-            spans.iter().map(|span| span.len).sum::<usize>(),
+            spans.iter().map(|span| span.text).sum::<usize>(),
             plaintext.len()
         );
         let mut pos = 0;
         for span in spans {
             out.write_style(&span.style)?;
-            write!(out, "{}", &plaintext[pos..pos + span.len])?;
-            pos += span.len;
+            write!(out, "{}", &plaintext[pos..pos + span.text])?;
+            pos += span.text;
         }
         Ok(())
     }
@@ -60,7 +54,7 @@ impl ColorSpan {
         let mut pos = 0;
         while pos < line.len() {
             let &(span_start, span) = spans_iter.peek().expect("spans ended before lines");
-            let span_len = span.len - line_start.saturating_sub(span_start);
+            let span_len = span.text - line_start.saturating_sub(span_start);
 
             let span_end = cmp::min(pos + span_len, line.len());
             out.write_style(&span.style)?;
@@ -79,18 +73,18 @@ impl ColorSpan {
 /// `Write` / `WriteColor` implementation recording `ColorSpan`s for the input text.
 #[derive(Debug, Default)]
 pub(crate) struct ColorSpansWriter {
-    spans: Vec<ColorSpan>,
+    spans: Vec<StyledSpan<usize>>,
     style: Style,
 }
 
 impl ColorSpansWriter {
     /// Unites sequential spans with the same color spec.
     fn shrink(self) -> Self {
-        let mut shrunk_spans = Vec::<ColorSpan>::with_capacity(self.spans.len());
+        let mut shrunk_spans = Vec::<StyledSpan<_>>::with_capacity(self.spans.len());
         for span in self.spans {
             if let Some(last_span) = shrunk_spans.last_mut() {
                 if last_span.style == span.style {
-                    last_span.len += span.len;
+                    last_span.text += span.text;
                 } else {
                     shrunk_spans.push(span);
                 }
@@ -105,7 +99,7 @@ impl ColorSpansWriter {
         }
     }
 
-    pub(crate) fn into_inner(self) -> Vec<ColorSpan> {
+    pub(crate) fn into_inner(self) -> Vec<StyledSpan<usize>> {
         self.shrink().spans
     }
 }
@@ -125,16 +119,16 @@ impl WriteStyled for ColorSpansWriter {
         self.spans.extend(lines.flat_map(|line| {
             let mut new_spans = vec![];
             if !line.is_empty() {
-                new_spans.push(ColorSpan {
+                new_spans.push(StyledSpan {
                     style: self.style,
-                    len: line.len(),
+                    text: line.len(),
                 });
             }
             pos += line.len();
             if pos < text.len() {
-                new_spans.push(ColorSpan {
+                new_spans.push(StyledSpan {
                     style: Style::default(),
-                    len: 1,
+                    text: 1,
                 });
                 pos += 1;
             }
@@ -158,26 +152,26 @@ pub(crate) struct ColorDiff {
 }
 
 impl ColorDiff {
-    pub(crate) fn new(lhs: &[ColorSpan], rhs: &[ColorSpan]) -> Self {
+    pub(crate) fn new(lhs: &[StyledSpan<usize>], rhs: &[StyledSpan<usize>]) -> Self {
         debug_assert_eq!(
-            lhs.iter().map(|span| span.len).sum::<usize>(),
-            rhs.iter().map(|span| span.len).sum::<usize>(),
+            lhs.iter().map(|span| span.text).sum::<usize>(),
+            rhs.iter().map(|span| span.text).sum::<usize>(),
             "Spans {lhs:?} and {rhs:?} must have equal total covered length"
         );
 
         let mut diff = Self::default();
         let mut pos = 0;
-        let mut lhs_iter = lhs.iter().cloned();
+        let mut lhs_iter = lhs.iter().copied();
         let Some(mut lhs_span) = lhs_iter.next() else {
             return diff;
         };
-        let mut rhs_iter = rhs.iter().cloned();
+        let mut rhs_iter = rhs.iter().copied();
         let Some(mut rhs_span) = rhs_iter.next() else {
             return diff;
         };
 
         loop {
-            let common_len = cmp::min(lhs_span.len, rhs_span.len);
+            let common_len = cmp::min(lhs_span.text, rhs_span.text);
 
             // Record a diff span if the color specs differ.
             if lhs_span.style != rhs_span.style {
@@ -191,15 +185,15 @@ impl ColorDiff {
 
             pos += common_len;
 
-            match lhs_span.len.cmp(&rhs_span.len) {
+            match lhs_span.text.cmp(&rhs_span.text) {
                 Ordering::Less => {
-                    rhs_span.len -= lhs_span.len;
+                    rhs_span.text -= lhs_span.text;
                     lhs_span = lhs_iter.next().unwrap();
                     // ^ `unwrap()` here and below are safe; we've checked that
                     // `lhs` and `rhs` contain same total span coverage.
                 }
                 Ordering::Greater => {
-                    lhs_span.len -= rhs_span.len;
+                    lhs_span.text -= rhs_span.text;
                     rhs_span = rhs_iter.next().unwrap();
                 }
                 Ordering::Equal => {
@@ -225,7 +219,7 @@ impl ColorDiff {
         &self,
         out: &mut W,
         text: &str,
-        color_spans: &[ColorSpan],
+        color_spans: &[StyledSpan<usize>],
     ) -> io::Result<()> {
         let sideline_hl = Style {
             fg: Some(Color::RED),
@@ -242,7 +236,7 @@ impl ColorDiff {
             .iter()
             .map(move |span| {
                 let prev_start = span_start;
-                span_start += span.len;
+                span_start += span.text;
                 (prev_start, span)
             })
             .peekable();
@@ -256,14 +250,14 @@ impl ColorDiff {
                 out.write_style(&sideline_hl)?;
                 write!(out, "> ")?;
                 out.reset()?;
-                ColorSpan::write_line(&mut color_spans, out, line_start, line)?;
+                StyledSpan::write_line(&mut color_spans, out, line_start, line)?;
                 out.write_style(&sideline_hl)?;
                 write!(out, "> ")?;
                 out.reset()?;
                 Self::highlight_line(out, &mut highlights, line_start, line)?;
             } else {
                 write!(out, "= ")?;
-                ColorSpan::write_line(&mut color_spans, out, line_start, line)?;
+                StyledSpan::write_line(&mut color_spans, out, line_start, line)?;
             }
             line_start += line.len() + 1;
         }

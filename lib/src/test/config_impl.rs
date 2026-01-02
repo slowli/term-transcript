@@ -11,13 +11,13 @@ use std::{
 use anstream::{AutoStream, ColorChoice};
 
 use super::{
-    color_diff::{ColorDiff, ColorSpan},
+    color_diff::ColorDiff,
     parser::Parsed,
     utils::{ChoiceWriter, IndentingWriter, PrintlnWriter},
     MatchKind, TestConfig, TestOutputConfig, TestStats,
 };
 use crate::{
-    style::{Ansi, Color, Style, WriteStyled},
+    style::{Ansi, Color, Style, StyledSpan, WriteStyled},
     traits::SpawnShell,
     Interaction, TermError, Transcript, UserInput,
 };
@@ -69,15 +69,15 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
 
         // If we do precise matching, check it as well.
         let color_diff = if match_kind == MatchKind::Precise && actual_match.is_some() {
-            let original_spans = &original.output().color_spans;
+            let original_spans = &original.output().styled_spans;
             let mut reproduced_spans =
-                ColorSpan::parse(reproduced.as_ref()).map_err(|err| match err {
+                StyledSpan::parse(reproduced.as_ref()).map_err(|err| match err {
                     TermError::Io(err) => err,
                     other => io::Error::new(io::ErrorKind::InvalidInput, other),
                 })?;
             if should_trim_newline {
                 if let Some(last_span) = reproduced_spans.last_mut() {
-                    last_span.len -= 1;
+                    last_span.text -= 1;
                 }
             }
 
@@ -117,7 +117,7 @@ pub fn compare_transcripts<W: WriteStyled + ?Sized>(
         writeln!(out, "] Input: {}", original.input().as_ref())?;
 
         if let Some(diff) = color_diff {
-            let original_spans = &original.output().color_spans;
+            let original_spans = &original.output().styled_spans;
             diff.highlight_text(out, original_text, original_spans)?;
             diff.write_as_table(out)?;
         } else if actual_match.is_none() {

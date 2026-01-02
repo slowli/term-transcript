@@ -4,9 +4,9 @@ use std::convert::Infallible;
 
 use test_casing::test_casing;
 
-use super::{write::StyledSpan, *};
+use super::*;
 use crate::{
-    style::{Color, Style},
+    style::{Color, Style, StyledSpan},
     ExitStatus, Interaction, UserInput,
 };
 
@@ -888,7 +888,7 @@ fn rendering_html_span() {
     handlebars.register_template("_helpers", helpers);
     let data = serde_json::json!(StyledSpan {
         style: Style::default(),
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -904,7 +904,7 @@ fn rendering_html_span() {
     };
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -918,7 +918,7 @@ fn rendering_html_span() {
     style.underline = false;
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -934,7 +934,7 @@ fn rendering_svg_tspan() {
     handlebars.register_template("_helpers", helpers);
     let data = serde_json::json!(StyledSpan {
         style: Style::default(),
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
@@ -950,7 +950,7 @@ fn rendering_svg_tspan() {
     };
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
@@ -962,7 +962,7 @@ fn rendering_svg_tspan() {
     style.dimmed = true;
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
@@ -974,7 +974,7 @@ fn rendering_svg_tspan() {
     style.dimmed = false;
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)

@@ -1,7 +1,7 @@
 use test_casing::test_casing;
 
-use super::{color_diff::ColorSpan, *};
-use crate::{svg::Template, Captured, Interaction, Transcript, UserInput};
+use super::*;
+use crate::{style::StyledSpan, svg::Template, Captured, Interaction, Transcript, UserInput};
 
 #[test_casing(2, [MatchKind::TextOnly, MatchKind::Precise])]
 fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {
@@ -74,7 +74,7 @@ fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (Te
             input: UserInput::command("test"),
             output: Parsed {
                 plaintext: expected_capture.to_plaintext().unwrap(),
-                color_spans: ColorSpan::parse(expected_capture.as_ref()).unwrap(),
+                styled_spans: StyledSpan::parse(expected_capture.as_ref()).unwrap(),
             },
             exit_status: None,
         }],

@@ -5,18 +5,10 @@ use std::{io, mem, str};
 use serde::Serialize;
 use unicode_width::UnicodeWidthChar;
 
-use crate::style::{Style, WriteStyled};
+use crate::style::{Style, StyledSpan, WriteStyled};
 
 #[cfg(test)]
 mod tests;
-
-// FIXME: unite with `test` module
-#[derive(Debug, Default, PartialEq, Serialize)]
-pub(crate) struct StyledSpan {
-    #[serde(flatten)]
-    pub(crate) style: Style,
-    pub(crate) text: String,
-}
 
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct StyledLine {

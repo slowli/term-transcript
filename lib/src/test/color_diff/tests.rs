@@ -2,17 +2,17 @@
 
 use super::*;
 use crate::{
-    style::Style,
-    svg::write::{LineWriter, StyledSpan},
+    style::{Style, StyledSpan},
+    svg::write::LineWriter,
 };
 
 #[test]
 fn getting_spans_basics() {
-    let spans = ColorSpan::parse("Apr 18 12:54\n\u{1b}[0m\u{1b}[33m.\u{1b}[0m").unwrap();
+    let spans = StyledSpan::parse("Apr 18 12:54\n\u{1b}[0m\u{1b}[33m.\u{1b}[0m").unwrap();
 
     assert_eq!(spans.len(), 2);
     assert!(spans[0].style.is_none());
-    assert_eq!(spans[0].len, 13);
+    assert_eq!(spans[0].text, 13);
     assert_eq!(
         spans[1].style,
         Style {
@@ -20,12 +20,12 @@ fn getting_spans_basics() {
             ..Style::default()
         }
     );
-    assert_eq!(spans[1].len, 1);
+    assert_eq!(spans[1].text, 1);
 }
 
 #[test]
 fn newlines_break_styling() {
-    let spans = ColorSpan::parse("\u{1b}[33mHello\nworld!\u{1b}[0m").unwrap();
+    let spans = StyledSpan::parse("\u{1b}[33mHello\nworld!\u{1b}[0m").unwrap();
     assert_eq!(spans.len(), 3);
     assert_eq!(
         spans[0].style,
@@ -34,9 +34,9 @@ fn newlines_break_styling() {
             ..Style::default()
         }
     );
-    assert_eq!(spans[0].len, 5);
+    assert_eq!(spans[0].text, 5);
     assert_eq!(spans[1].style, Style::default());
-    assert_eq!(spans[1].len, 1);
+    assert_eq!(spans[1].text, 1);
     assert_eq!(
         spans[2].style,
         Style {
@@ -44,13 +44,13 @@ fn newlines_break_styling() {
             ..Style::default()
         }
     );
-    assert_eq!(spans[2].len, 6);
+    assert_eq!(spans[2].text, 6);
 }
 
 #[test]
 fn creating_color_diff_basics() {
-    let lhs = [ColorSpan {
-        len: 5,
+    let lhs = [StyledSpan {
+        text: 5,
         style: Style::default(),
     }];
     let red = Style {
@@ -58,11 +58,14 @@ fn creating_color_diff_basics() {
         ..Style::default()
     };
     let rhs = [
-        ColorSpan {
-            len: 2,
+        StyledSpan {
+            text: 2,
             style: Style::default(),
         },
-        ColorSpan { len: 3, style: red },
+        StyledSpan {
+            text: 3,
+            style: red,
+        },
     ];
 
     let color_diff = ColorDiff::new(&lhs, &rhs);
@@ -87,20 +90,26 @@ fn creating_color_diff_overlapping_spans() {
     };
 
     let lhs = [
-        ColorSpan {
-            len: 2,
+        StyledSpan {
+            text: 2,
             style: Style::default(),
         },
-        ColorSpan { len: 3, style: red },
+        StyledSpan {
+            text: 3,
+            style: red,
+        },
     ];
     let rhs = [
-        ColorSpan {
-            len: 1,
+        StyledSpan {
+            text: 1,
             style: Style::default(),
         },
-        ColorSpan { len: 2, style: red },
-        ColorSpan {
-            len: 2,
+        StyledSpan {
+            text: 2,
+            style: red,
+        },
+        StyledSpan {
+            text: 2,
             style: blue,
         },
     ];
@@ -195,12 +204,12 @@ fn highlighting_diff_on_text() {
         ..Style::default()
     };
     let color_spans = [
-        ColorSpan {
-            len: 2,
+        StyledSpan {
+            text: 2,
             style: Style::default(),
         },
-        ColorSpan {
-            len: 11,
+        StyledSpan {
+            text: 11,
             style: green,
         },
     ];
@@ -294,12 +303,12 @@ fn spans_on_multiple_lines() {
         ..Style::default()
     };
     let color_spans = [
-        ColorSpan {
-            len: 9,
+        StyledSpan {
+            text: 9,
             style: green,
         },
-        ColorSpan {
-            len: 4,
+        StyledSpan {
+            text: 4,
             style: Style::default(),
         },
     ];
@@ -380,16 +389,16 @@ fn spans_with_multiple_sequential_line_breaks() {
         ..Style::default()
     };
     let color_spans = [
-        ColorSpan {
-            len: 6,
+        StyledSpan {
+            text: 6,
             style: green,
         },
-        ColorSpan {
-            len: 4,
+        StyledSpan {
+            text: 4,
             style: Style::default(),
         },
-        ColorSpan {
-            len: 4,
+        StyledSpan {
+            text: 4,
             style: green,
         },
     ];
@@ -467,8 +476,8 @@ fn spans_with_multiple_sequential_line_breaks() {
 }
 
 fn test_highlight(color_diff: &ColorDiff, text: &str) -> String {
-    let color_span = ColorSpan {
-        len: text.len(),
+    let color_span = StyledSpan {
+        text: text.len(),
         style: Style::default(),
     };
     let mut buffer = String::new();

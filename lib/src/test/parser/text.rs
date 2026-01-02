@@ -152,7 +152,7 @@ impl TextReadingState {
                     let color_spans = mem::take(&mut self.color_spans_writer).into_inner();
                     let mut parsed = Parsed {
                         plaintext,
-                        color_spans,
+                        styled_spans: color_spans,
                     };
                     parsed.trim_ending_newline();
                     return Ok(Some(parsed));
