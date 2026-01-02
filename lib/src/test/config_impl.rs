@@ -24,6 +24,7 @@ use crate::{
 
 #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, ret, err))]
 #[doc(hidden)] // low-level; not public API
+#[allow(private_bounds)] // acceptable since the API isn't public
 pub fn compare_transcripts<W: WriteStyled + ?Sized>(
     out: &mut W,
     parsed: &Transcript<Parsed>,

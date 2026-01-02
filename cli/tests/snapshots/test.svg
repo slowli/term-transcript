@@ -67,7 +67,7 @@
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript test -I 300ms -T 100ms -v rainbow.svg
 # &#x60;-v&#x60; switches on verbose output</pre></div>
             <div class="output"><pre><span class="line">Testing file <span class="underline">rainbow.svg</span>...
-</span><span class="line">  [<span class="fg2">+</span>] Input: rainbow
+</span><span class="line">  [<span class="fg10">+</span>] Input: rainbow
 </span><span class="line"><span style="color: #808080;">    Base colors:</span>
 </span><span class="line"><span style="color: #808080;">    black red green yellow blue magenta cyan white </span>
 </span><span class="line"><span style="color: #808080;">    black red green yellow blue magenta cyan white </span>
@@ -85,7 +85,7 @@
 </span><span class="line"><span style="color: #808080;">    !?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?!?</span>
 </span><span class="line"><span style="color: #808080;">    24-bit colors:</span>
 </span><span class="line"><span style="color: #808080;">    pink orange brown teal </span>
-</span><span class="line">Totals: passed: <span class="fg2">1</span>, errors: <span class="fg1">0</span>, failures: <span class="fg3">0</span></span></pre></div>
+</span><span class="line"><span class="bold" style="color: #808080;">Totals:</span> passed: <span class="fg2">1</span>, errors: <span class="fg1">0</span>, failures: <span class="fg3">0</span></span></pre></div>
           </div>
         </foreignObject>
       </svg>
