@@ -37,21 +37,6 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg4 bg2">..</span>
     </svg>
 "#;
 
-const LEGACY_PURE_SVG: &[u8] = br#"
-<svg viewBox="0 0 720 138" width="720" height="138" xmlns="http://www.w3.org/2000/svg">
-  <svg x="0" y="10" width="720" height="118" viewBox="0 0 720 118">
-    <g class="input-bg"><rect x="0" y="0" width="100%" height="22"></rect></g>
-    <g class="container fg7"><g xml:space="preserve" class="input"><text x="10" y="16"><tspan class="prompt">$</tspan> ls -al --color&#x3D;always
-</text></g><g xml:space="preserve" class="output"><text x="10" y="42">total 28
-</text><text x="10" y="60">drwxr-xr-x 1 alex alex 4096 Apr 18 12:54 <tspan class="fg4">.</tspan>
-</text><text x="10" y="78" class="output-bg"><tspan class="fg2">__</tspan>                                       <tspan class="fg2">__</tspan></text><text x="10" y="78">drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <tspan class="fg4 bg2">..</tspan>
-</text><text x="10" y="96">-rw-r--r-- 1 alex alex 8199 Apr 18 12:48 Cargo.lock
-</text><text x="10" y="114">
-</text></g></g>
-  </svg>
-</svg>
-"#;
-
 const PURE_SVG: &[u8] = br#"
 <svg viewBox="0 0 720 138" width="720" height="138" xmlns="http://www.w3.org/2000/svg">
   <svg x="0" y="10" width="720" height="118" viewBox="0 0 720 118">
@@ -66,7 +51,7 @@ const PURE_SVG: &[u8] = br#"
 </svg>
 "#;
 
-#[test_casing(4, [SVG, LEGACY_SVG, LEGACY_PURE_SVG, PURE_SVG])]
+#[test_casing(3, [SVG, LEGACY_SVG, PURE_SVG])]
 fn reading_file(file_contents: &[u8]) {
     let transcript = Transcript::from_svg(file_contents).unwrap();
     assert_eq!(transcript.interactions.len(), 1);
@@ -84,7 +69,7 @@ fn reading_file(file_contents: &[u8]) {
     assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
     assert!(!plaintext.contains("__"), "{plaintext}");
 
-    let color_spans = &interaction.output.color_spans;
+    let color_spans = &interaction.output.styled_spans;
     assert_eq!(color_spans.len(), 5, "{color_spans:#?}"); // 2 colored regions + 3 surrounding areas
 }
 

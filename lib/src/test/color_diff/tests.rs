@@ -1,58 +1,72 @@
 //! Test for color diffs.
 
-use termcolor::NoColor;
+use anstream::StripStream;
 
 use super::*;
-use crate::svg::write::{LineWriter, Style, StyledSpan};
+use crate::{
+    style::{Style, StyledSpan},
+    svg::write::LineWriter,
+};
 
 #[test]
 fn getting_spans_basics() {
-    let spans = ColorSpan::parse("Apr 18 12:54\n\u{1b}[0m\u{1b}[33m.\u{1b}[0m").unwrap();
+    let spans = StyledSpan::parse("Apr 18 12:54\n\u{1b}[0m\u{1b}[33m.\u{1b}[0m").unwrap();
 
     assert_eq!(spans.len(), 2);
-    assert!(spans[0].color_spec.is_none());
-    assert_eq!(spans[0].len, 13);
+    assert!(spans[0].style.is_none());
+    assert_eq!(spans[0].text, 13);
     assert_eq!(
-        spans[1].color_spec,
-        *ColorSpec::new().set_fg(Some(Color::Yellow))
+        spans[1].style,
+        Style {
+            fg: Some(Color::YELLOW),
+            ..Style::default()
+        }
     );
-    assert_eq!(spans[1].len, 1);
+    assert_eq!(spans[1].text, 1);
 }
 
 #[test]
 fn newlines_break_styling() {
-    let spans = ColorSpan::parse("\u{1b}[33mHello\nworld!\u{1b}[0m").unwrap();
+    let spans = StyledSpan::parse("\u{1b}[33mHello\nworld!\u{1b}[0m").unwrap();
     assert_eq!(spans.len(), 3);
     assert_eq!(
-        spans[0].color_spec,
-        *ColorSpec::new().set_fg(Some(Color::Yellow))
+        spans[0].style,
+        Style {
+            fg: Some(Color::YELLOW),
+            ..Style::default()
+        }
     );
-    assert_eq!(spans[0].len, 5);
-    assert_eq!(spans[1].color_spec, ColorSpec::default());
-    assert_eq!(spans[1].len, 1);
+    assert_eq!(spans[0].text, 5);
+    assert_eq!(spans[1].style, Style::default());
+    assert_eq!(spans[1].text, 1);
     assert_eq!(
-        spans[2].color_spec,
-        *ColorSpec::new().set_fg(Some(Color::Yellow))
+        spans[2].style,
+        Style {
+            fg: Some(Color::YELLOW),
+            ..Style::default()
+        }
     );
-    assert_eq!(spans[2].len, 6);
+    assert_eq!(spans[2].text, 6);
 }
 
 #[test]
 fn creating_color_diff_basics() {
-    let lhs = [ColorSpan {
-        len: 5,
-        color_spec: ColorSpec::default(),
+    let lhs = [StyledSpan {
+        text: 5,
+        style: Style::default(),
     }];
-    let mut red = ColorSpec::new();
-    red.set_fg(Some(Color::Red));
+    let red = Style {
+        fg: Some(Color::RED),
+        ..Style::default()
+    };
     let rhs = [
-        ColorSpan {
-            len: 2,
-            color_spec: ColorSpec::default(),
+        StyledSpan {
+            text: 2,
+            style: Style::default(),
         },
-        ColorSpan {
-            len: 3,
-            color_spec: red.clone(),
+        StyledSpan {
+            text: 3,
+            style: red,
         },
     ];
 
@@ -62,39 +76,43 @@ fn creating_color_diff_basics() {
     let diff_span = &color_diff.differing_spans[0];
     assert_eq!(diff_span.start, 2);
     assert_eq!(diff_span.len, 3);
-    assert_eq!(diff_span.lhs_color_spec, ColorSpec::default());
+    assert_eq!(diff_span.lhs_color_spec, Style::default());
     assert_eq!(diff_span.rhs_color_spec, red);
 }
 
 #[test]
 fn creating_color_diff_overlapping_spans() {
-    let mut red = ColorSpec::new();
-    red.set_fg(Some(Color::Red));
-    let mut blue = ColorSpec::new();
-    blue.set_bg(Some(Color::Blue));
+    let red = Style {
+        fg: Some(Color::RED),
+        ..Style::default()
+    };
+    let blue = Style {
+        bg: Some(Color::BLUE),
+        ..Style::default()
+    };
 
     let lhs = [
-        ColorSpan {
-            len: 2,
-            color_spec: ColorSpec::default(),
+        StyledSpan {
+            text: 2,
+            style: Style::default(),
         },
-        ColorSpan {
-            len: 3,
-            color_spec: red.clone(),
+        StyledSpan {
+            text: 3,
+            style: red,
         },
     ];
     let rhs = [
-        ColorSpan {
-            len: 1,
-            color_spec: ColorSpec::default(),
+        StyledSpan {
+            text: 1,
+            style: Style::default(),
         },
-        ColorSpan {
-            len: 2,
-            color_spec: red.clone(),
+        StyledSpan {
+            text: 2,
+            style: red,
         },
-        ColorSpan {
-            len: 2,
-            color_spec: blue.clone(),
+        StyledSpan {
+            text: 2,
+            style: blue,
         },
     ];
 
@@ -104,7 +122,7 @@ fn creating_color_diff_overlapping_spans() {
     assert_eq!(color_diff.differing_spans[0].len, 1);
     assert_eq!(
         color_diff.differing_spans[0].lhs_color_spec,
-        ColorSpec::default()
+        Style::default()
     );
     assert_eq!(color_diff.differing_spans[0].rhs_color_spec, red);
     assert_eq!(color_diff.differing_spans[1].start, 3);
@@ -113,29 +131,30 @@ fn creating_color_diff_overlapping_spans() {
     assert_eq!(color_diff.differing_spans[1].rhs_color_spec, blue);
 }
 
-fn color_spec_to_string(spec: &ColorSpec) -> String {
-    let mut buffer = vec![];
-    let mut out = NoColor::new(&mut buffer);
-    ColorDiff::write_color_spec(&mut out, spec).unwrap();
-    String::from_utf8(buffer).unwrap()
+fn color_spec_to_string(spec: &Style) -> String {
+    let mut buffer = StripStream::new(vec![]);
+    ColorDiff::write_color_spec(&mut buffer, spec).unwrap();
+    String::from_utf8(buffer.into_inner()).unwrap()
 }
 
 #[test]
 fn writing_color_spec() {
-    let mut spec = ColorSpec::new();
-    spec.set_bold(true);
-    spec.set_fg(Some(Color::Cyan));
+    let mut spec = Style {
+        bold: true,
+        fg: Some(Color::CYAN),
+        ..Style::default()
+    };
     let spec_string = color_spec_to_string(&spec);
     assert_eq!(spec_string, "b---     cyan/(none)  ");
 
-    spec.set_underline(true);
-    spec.set_bg(Some(Color::Ansi256(11)));
+    spec.underline = true;
+    spec.bg = Some(Color::Index(11));
     let spec_string = color_spec_to_string(&spec);
     assert_eq!(spec_string, "b-u-     cyan/yellow* ");
 
-    spec.set_italic(true);
-    spec.set_bold(false);
-    spec.set_fg(Some(Color::Rgb(0xc0, 0xff, 0xee)));
+    spec.italic = true;
+    spec.bold = false;
+    spec.fg = Some(Color::Rgb(RgbColor(0xc0, 0xff, 0xee)));
     let spec_string = color_spec_to_string(&spec);
     assert_eq!(spec_string, "-iu-  #c0ffee/yellow* ");
 }
@@ -148,25 +167,26 @@ fn writing_color_diff_table() {
         "      0..2 ----   (none)/(none)   b---      red/white   ",
     ];
 
-    let mut red = ColorSpec::new();
-    red.set_bold(true)
-        .set_fg(Some(Color::Red))
-        .set_bg(Some(Color::White));
+    let red = Style {
+        bold: true,
+        fg: Some(Color::RED),
+        bg: Some(Color::WHITE),
+        ..Style::default()
+    };
     let color_diff = ColorDiff {
         differing_spans: vec![DiffColorSpan {
             start: 0,
             len: 2,
-            lhs_color_spec: ColorSpec::default(),
+            lhs_color_spec: Style::default(),
             rhs_color_spec: red,
         }],
     };
 
-    let mut buffer = vec![];
-    let mut out = NoColor::new(&mut buffer);
+    let mut out = StripStream::new(vec![]);
     color_diff.write_as_table(&mut out).unwrap();
-    let table_string = String::from_utf8(buffer).unwrap();
+    let out = String::from_utf8(out.into_inner()).unwrap();
 
-    for (actual, &expected) in table_string.lines().zip(EXPECTED_TABLE_LINES) {
+    for (actual, &expected) in out.lines().zip(EXPECTED_TABLE_LINES) {
         assert_eq!(actual, expected);
     }
 }
@@ -175,23 +195,25 @@ fn diff_span(start: usize, len: usize) -> DiffColorSpan {
     DiffColorSpan {
         start,
         len,
-        lhs_color_spec: ColorSpec::default(),
-        rhs_color_spec: ColorSpec::default(),
+        lhs_color_spec: Style::default(),
+        rhs_color_spec: Style::default(),
     }
 }
 
 #[test]
 fn highlighting_diff_on_text() {
-    let mut green = ColorSpec::default();
-    green.set_fg(Some(Color::Green));
+    let green = Style {
+        fg: Some(Color::GREEN),
+        ..Style::default()
+    };
     let color_spans = [
-        ColorSpan {
-            len: 2,
-            color_spec: ColorSpec::default(),
+        StyledSpan {
+            text: 2,
+            style: Style::default(),
         },
-        ColorSpan {
-            len: 11,
-            color_spec: green,
+        StyledSpan {
+            text: 11,
+            style: green,
         },
     ];
     let color_diff = ColorDiff {
@@ -203,10 +225,12 @@ fn highlighting_diff_on_text() {
         ],
     };
 
-    let mut out = LineWriter::new(None);
+    let mut buffer = vec![];
     color_diff
-        .highlight_text(&mut out, "Hello, world!", &color_spans)
+        .highlight_text(&mut buffer, "Hello, world!", &color_spans)
         .unwrap();
+    let mut out = LineWriter::new(None);
+    TermOutputParser::new(&mut out).parse(&buffer).unwrap();
     let lines = out.into_lines();
     assert_eq!(lines.len(), 2);
     assert_eq!(
@@ -214,7 +238,7 @@ fn highlighting_diff_on_text() {
         [
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "> ".into(),
@@ -222,7 +246,7 @@ fn highlighting_diff_on_text() {
             "He".into(),
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(2)),
+                    fg: Some(Color::Index(2)),
                     ..Style::default()
                 },
                 text: "llo, world!".into(),
@@ -235,31 +259,31 @@ fn highlighting_diff_on_text() {
         [
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "> ".into(),
             },
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(7)),
-                    bg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(7)),
+                    bg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "^^".into(),
             },
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(0)),
-                    bg: Some(IndexOrRgb::Index(3)),
+                    fg: Some(Color::Index(0)),
+                    bg: Some(Color::Index(3)),
                     ..Style::default()
                 },
                 text: "!!".into(),
             },
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(7)),
-                    bg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(7)),
+                    bg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "^".into(),
@@ -267,8 +291,8 @@ fn highlighting_diff_on_text() {
             "     ".into(),
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(7)),
-                    bg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(7)),
+                    bg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "^".into(),
@@ -279,16 +303,18 @@ fn highlighting_diff_on_text() {
 
 #[test]
 fn spans_on_multiple_lines() {
-    let mut green = ColorSpec::default();
-    green.set_fg(Some(Color::Green));
+    let green = Style {
+        fg: Some(Color::GREEN),
+        ..Style::default()
+    };
     let color_spans = [
-        ColorSpan {
-            len: 9,
-            color_spec: green,
+        StyledSpan {
+            text: 9,
+            style: green,
         },
-        ColorSpan {
-            len: 4,
-            color_spec: ColorSpec::default(),
+        StyledSpan {
+            text: 4,
+            style: Style::default(),
         },
     ];
 
@@ -296,11 +322,13 @@ fn spans_on_multiple_lines() {
         differing_spans: vec![diff_span(9, 3)],
     };
 
-    let mut out = LineWriter::new(None);
+    let mut buffer = vec![];
     color_diff
-        .highlight_text(&mut out, "Hello,\nworld!", &color_spans)
+        .highlight_text(&mut buffer, "Hello,\nworld!", &color_spans)
         .unwrap();
 
+    let mut out = LineWriter::new(None);
+    TermOutputParser::new(&mut out).parse(&buffer).unwrap();
     let lines = out.into_lines();
     assert_eq!(lines.len(), 3);
     assert_eq!(
@@ -309,7 +337,7 @@ fn spans_on_multiple_lines() {
             "= ".into(),
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(2)),
+                    fg: Some(Color::Index(2)),
                     ..Style::default()
                 },
                 text: "Hello,".into(),
@@ -322,14 +350,14 @@ fn spans_on_multiple_lines() {
         [
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "> ".into(),
             },
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(2)),
+                    fg: Some(Color::Index(2)),
                     ..Style::default()
                 },
                 text: "wo".into(),
@@ -343,7 +371,7 @@ fn spans_on_multiple_lines() {
         [
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "> ".into(),
@@ -351,8 +379,8 @@ fn spans_on_multiple_lines() {
             "  ".into(),
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(7)),
-                    bg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(7)),
+                    bg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "^^^".into(),
@@ -363,20 +391,22 @@ fn spans_on_multiple_lines() {
 
 #[test]
 fn spans_with_multiple_sequential_line_breaks() {
-    let mut green = ColorSpec::default();
-    green.set_fg(Some(Color::Green));
+    let green = Style {
+        fg: Some(Color::GREEN),
+        ..Style::default()
+    };
     let color_spans = [
-        ColorSpan {
-            len: 6,
-            color_spec: green.clone(),
+        StyledSpan {
+            text: 6,
+            style: green,
         },
-        ColorSpan {
-            len: 4,
-            color_spec: ColorSpec::default(),
+        StyledSpan {
+            text: 4,
+            style: Style::default(),
         },
-        ColorSpan {
-            len: 4,
-            color_spec: green,
+        StyledSpan {
+            text: 4,
+            style: green,
         },
     ];
 
@@ -384,11 +414,13 @@ fn spans_with_multiple_sequential_line_breaks() {
         differing_spans: vec![diff_span(10, 3)],
     };
 
-    let mut out = LineWriter::new(None);
+    let mut buffer = vec![];
     color_diff
-        .highlight_text(&mut out, "Hello,\n\nworld!", &color_spans)
+        .highlight_text(&mut buffer, "Hello,\n\nworld!", &color_spans)
         .unwrap();
 
+    let mut out = LineWriter::new(None);
+    TermOutputParser::new(&mut out).parse(&buffer).unwrap();
     let lines = out.into_lines();
     assert_eq!(lines.len(), 4);
 
@@ -398,7 +430,7 @@ fn spans_with_multiple_sequential_line_breaks() {
             "= ".into(),
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(2)),
+                    fg: Some(Color::Index(2)),
                     ..Style::default()
                 },
                 text: "Hello,".into(),
@@ -413,7 +445,7 @@ fn spans_with_multiple_sequential_line_breaks() {
         [
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "> ".into(),
@@ -421,7 +453,7 @@ fn spans_with_multiple_sequential_line_breaks() {
             "wo".into(),
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(2)),
+                    fg: Some(Color::Index(2)),
                     ..Style::default()
                 },
                 text: "rld!".into(),
@@ -434,7 +466,7 @@ fn spans_with_multiple_sequential_line_breaks() {
         [
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "> ".into(),
@@ -442,8 +474,8 @@ fn spans_with_multiple_sequential_line_breaks() {
             "  ".into(),
             StyledSpan {
                 style: Style {
-                    fg: Some(IndexOrRgb::Index(7)),
-                    bg: Some(IndexOrRgb::Index(1)),
+                    fg: Some(Color::Index(7)),
+                    bg: Some(Color::Index(1)),
                     ..Style::default()
                 },
                 text: "^^^".into(),
@@ -453,15 +485,15 @@ fn spans_with_multiple_sequential_line_breaks() {
 }
 
 fn test_highlight(color_diff: &ColorDiff, text: &str) -> String {
-    let color_span = ColorSpan {
-        len: text.len(),
-        color_spec: ColorSpec::default(),
+    let color_span = StyledSpan {
+        text: text.len(),
+        style: Style::default(),
     };
-    let mut buffer = vec![];
+    let mut buffer = StripStream::new(vec![]);
     color_diff
-        .highlight_text(&mut NoColor::new(&mut buffer), text, &[color_span])
+        .highlight_text(&mut buffer, text, &[color_span])
         .unwrap();
-    String::from_utf8(buffer).unwrap()
+    String::from_utf8(buffer.into_inner()).unwrap()
 }
 
 #[test]
@@ -520,7 +552,6 @@ fn plaintext_highlight_with_skipped_lines() {
 
 #[test]
 fn highlighting_works_with_non_ascii_text() {
-    let mut buffer = vec![];
     let line = "  ┌─ Snippet #1:1:1";
     let spans = vec![HighlightedSpan {
         start: 2,
@@ -528,10 +559,11 @@ fn highlighting_works_with_non_ascii_text() {
         kind: SpanHighlightKind::Main,
     }];
     let mut spans = spans.into_iter().peekable();
-    ColorDiff::highlight_line(&mut NoColor::new(&mut buffer), &mut spans, 0, line).unwrap();
+    let mut buffer = StripStream::new(vec![]);
+    ColorDiff::highlight_line(&mut buffer, &mut spans, 0, line).unwrap();
 
-    let highlight_line = String::from_utf8(buffer).unwrap();
-    assert_eq!(highlight_line, "  ^^\n");
+    let buffer = String::from_utf8(buffer.into_inner()).unwrap();
+    assert_eq!(buffer, "  ^^\n");
 }
 
 #[test]

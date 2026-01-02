@@ -1,11 +1,6 @@
-use std::{borrow::Cow, fmt::Write as WriteStr};
+use std::borrow::Cow;
 
-use termcolor::NoColor;
-
-use crate::{
-    utils::{normalize_newlines, WriteAdapter},
-    TermError,
-};
+use crate::{utils::normalize_newlines, TermError};
 
 mod parser;
 #[cfg(test)]
@@ -37,9 +32,8 @@ impl From<String> for Captured {
 }
 
 impl Captured {
-    fn write_as_plaintext(&self, output: &mut dyn WriteStr) -> Result<(), TermError> {
-        let mut plaintext_writer = NoColor::new(WriteAdapter::new(output));
-        TermOutputParser::new(&mut plaintext_writer).parse(self.0.as_bytes())
+    fn write_as_plaintext(&self, output: &mut String) -> Result<(), TermError> {
+        TermOutputParser::new(output).parse(self.0.as_bytes())
     }
 
     /// Converts this terminal output to plaintext.

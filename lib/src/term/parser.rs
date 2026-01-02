@@ -3,9 +3,10 @@
 
 use std::str;
 
-use termcolor::{Color, ColorSpec, WriteColor};
-
-use crate::TermError;
+use crate::{
+    style::{Color, RgbColor, Style, WriteStyled},
+    TermError,
+};
 
 const ANSI_ESC: u8 = 0x1b;
 const ANSI_BEL: u8 = 0x07;
@@ -14,16 +15,16 @@ const ANSI_OCS: u8 = b']';
 
 /// Parses terminal output and issues corresponding commands to the `writer`.
 #[derive(Debug)]
-pub(crate) struct TermOutputParser<'a, W> {
+pub(crate) struct TermOutputParser<'a, W: ?Sized> {
     writer: &'a mut W,
-    color_spec: ColorSpec,
+    style: Style,
 }
 
-impl<'a, W: WriteColor> TermOutputParser<'a, W> {
+impl<'a, W: WriteStyled + ?Sized> TermOutputParser<'a, W> {
     pub(crate) fn new(writer: &'a mut W) -> Self {
         Self {
             writer,
-            color_spec: ColorSpec::new(),
+            style: Style::default(),
         }
     }
 
@@ -93,7 +94,7 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
             self.parse_line(processed_line)?;
 
             if i + 1 < line_count {
-                writeln!(self.writer).map_err(TermError::Io)?;
+                self.writer.write_text("\n").map_err(TermError::Io)?;
             }
         }
         Ok(())
@@ -117,9 +118,9 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
                 if next_byte == ANSI_CSI {
                     i += 1;
                     let csi = Csi::parse(&term_output[i..])?;
-                    let prev_color_spec = self.color_spec.clone();
-                    csi.update_color_spec(&mut self.color_spec)?;
-                    dirty_color_spec = dirty_color_spec || prev_color_spec != self.color_spec;
+                    let prev_color_spec = self.style;
+                    csi.update_color_spec(&mut self.style)?;
+                    dirty_color_spec = dirty_color_spec || prev_color_spec != self.style;
                     i += csi.len;
                 } else if next_byte == ANSI_OCS {
                     Self::skip_ocs(term_output, &mut i)?;
@@ -140,11 +141,13 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
         // We write the terminal color spec even if the text is empty.
         if dirty_color_spec {
             self.writer
-                .set_color(&self.color_spec)
+                .write_style(&self.style)
                 .map_err(TermError::Io)?;
         }
+
+        let remaining_text = str::from_utf8(&term_output[written_end..i])?;
         self.writer
-            .write_all(&term_output[written_end..i])
+            .write_text(remaining_text)
             .map_err(TermError::Io)
     }
 
@@ -156,13 +159,14 @@ impl<'a, W: WriteColor> TermOutputParser<'a, W> {
         if text.is_empty() {
             Ok(())
         } else {
+            let text = str::from_utf8(text)?;
             if *dirty_color_spec {
                 *dirty_color_spec = false;
                 self.writer
-                    .set_color(&self.color_spec)
+                    .write_style(&self.style)
                     .map_err(TermError::Io)?;
             }
-            self.writer.write_all(text).map_err(TermError::Io)
+            self.writer.write_text(text).map_err(TermError::Io)
         }
     }
 }
@@ -199,14 +203,14 @@ impl<'a> Csi<'a> {
         }
     }
 
-    fn update_color_spec(self, spec: &mut ColorSpec) -> Result<(), TermError> {
+    fn update_color_spec(self, spec: &mut Style) -> Result<(), TermError> {
         if self.final_byte != b'm' {
             return Ok(());
         }
 
         let mut params = self.parameters.split(|&byte| byte == b';').peekable();
         if params.peek().is_none() {
-            *spec = ColorSpec::new(); // reset
+            *spec = Style::default(); // reset
         }
         while params.peek().is_some() {
             Self::process_param(spec, &mut params)?;
@@ -215,57 +219,58 @@ impl<'a> Csi<'a> {
     }
 
     fn process_param(
-        spec: &mut ColorSpec,
+        style: &mut Style,
         mut params: impl Iterator<Item = &'a [u8]>,
     ) -> Result<(), TermError> {
         let param = params.next().unwrap();
         if let Some(fg_color) = Self::parse_simple_fg_color(param) {
-            spec.set_fg(Some(fg_color));
+            style.fg = Some(fg_color);
         } else if let Some(bg_color) = Self::parse_simple_bg_color(param) {
-            spec.set_bg(Some(bg_color));
+            style.bg = Some(bg_color);
         } else {
             match param {
                 b"" | b"0" => {
-                    *spec = ColorSpec::new();
+                    *style = Style::default();
                 }
                 b"1" => {
-                    spec.set_bold(true);
+                    style.bold = true;
                 }
                 b"2" => {
-                    spec.set_dimmed(true);
+                    style.dimmed = true;
                 }
                 b"3" => {
-                    spec.set_italic(true);
+                    style.italic = true;
                 }
                 b"4" => {
-                    spec.set_underline(true);
+                    style.underline = true;
                 }
 
                 b"22" => {
-                    spec.set_bold(false).set_dimmed(false);
+                    style.bold = false;
+                    style.dimmed = false;
                 }
                 b"23" => {
-                    spec.set_italic(false);
+                    style.italic = false;
                 }
                 b"24" => {
-                    spec.set_underline(false);
+                    style.underline = false;
                 }
 
                 // Compound foreground color spec
                 b"38" => {
                     let color = Self::read_color(params)?;
-                    spec.set_fg(Some(color));
+                    style.fg = Some(color);
                 }
                 b"39" => {
-                    spec.set_fg(None);
+                    style.fg = None;
                 }
                 // Compound background color spec
                 b"48" => {
                     let color = Self::read_color(params)?;
-                    spec.set_bg(Some(color));
+                    style.bg = Some(color);
                 }
                 b"49" => {
-                    spec.set_bg(None);
+                    style.bg = None;
                 }
 
                 _ => { /* Do nothing */ }
@@ -276,23 +281,23 @@ impl<'a> Csi<'a> {
 
     fn parse_simple_fg_color(param: &[u8]) -> Option<Color> {
         Some(match param {
-            b"30" => Color::Black,
-            b"31" => Color::Red,
-            b"32" => Color::Green,
-            b"33" => Color::Yellow,
-            b"34" => Color::Blue,
-            b"35" => Color::Magenta,
-            b"36" => Color::Cyan,
-            b"37" => Color::White,
+            b"30" => Color::BLACK,
+            b"31" => Color::RED,
+            b"32" => Color::GREEN,
+            b"33" => Color::YELLOW,
+            b"34" => Color::BLUE,
+            b"35" => Color::MAGENTA,
+            b"36" => Color::CYAN,
+            b"37" => Color::WHITE,
 
-            b"90" => Color::Ansi256(8),
-            b"91" => Color::Ansi256(9),
-            b"92" => Color::Ansi256(10),
-            b"93" => Color::Ansi256(11),
-            b"94" => Color::Ansi256(12),
-            b"95" => Color::Ansi256(13),
-            b"96" => Color::Ansi256(14),
-            b"97" => Color::Ansi256(15),
+            b"90" => Color::INTENSE_BLACK,
+            b"91" => Color::INTENSE_RED,
+            b"92" => Color::INTENSE_GREEN,
+            b"93" => Color::INTENSE_YELLOW,
+            b"94" => Color::INTENSE_BLUE,
+            b"95" => Color::INTENSE_MAGENTA,
+            b"96" => Color::INTENSE_CYAN,
+            b"97" => Color::INTENSE_WHITE,
 
             _ => return None,
         })
@@ -300,23 +305,23 @@ impl<'a> Csi<'a> {
 
     fn parse_simple_bg_color(param: &[u8]) -> Option<Color> {
         Some(match param {
-            b"40" => Color::Black,
-            b"41" => Color::Red,
-            b"42" => Color::Green,
-            b"43" => Color::Yellow,
-            b"44" => Color::Blue,
-            b"45" => Color::Magenta,
-            b"46" => Color::Cyan,
-            b"47" => Color::White,
+            b"40" => Color::BLACK,
+            b"41" => Color::RED,
+            b"42" => Color::GREEN,
+            b"43" => Color::YELLOW,
+            b"44" => Color::BLUE,
+            b"45" => Color::MAGENTA,
+            b"46" => Color::CYAN,
+            b"47" => Color::WHITE,
 
-            b"100" => Color::Ansi256(8),
-            b"101" => Color::Ansi256(9),
-            b"102" => Color::Ansi256(10),
-            b"103" => Color::Ansi256(11),
-            b"104" => Color::Ansi256(12),
-            b"105" => Color::Ansi256(13),
-            b"106" => Color::Ansi256(14),
-            b"107" => Color::Ansi256(15),
+            b"100" => Color::INTENSE_BLACK,
+            b"101" => Color::INTENSE_RED,
+            b"102" => Color::INTENSE_GREEN,
+            b"103" => Color::INTENSE_YELLOW,
+            b"104" => Color::INTENSE_BLUE,
+            b"105" => Color::INTENSE_MAGENTA,
+            b"106" => Color::INTENSE_CYAN,
+            b"107" => Color::INTENSE_WHITE,
 
             _ => return None,
         })
@@ -327,7 +332,7 @@ impl<'a> Csi<'a> {
         match color_type {
             b"5" => {
                 let index = params.next().ok_or(TermError::UnfinishedColor)?;
-                Self::parse_color_index(index).map(Color::Ansi256)
+                Self::parse_color_index(index).map(Color::Index)
             }
             b"2" => {
                 let r = params.next().ok_or(TermError::UnfinishedColor)?;
@@ -337,7 +342,7 @@ impl<'a> Csi<'a> {
                 let r = Self::parse_color_index(r)?;
                 let g = Self::parse_color_index(g)?;
                 let b = Self::parse_color_index(b)?;
-                Ok(Color::Rgb(r, g, b))
+                Ok(Color::Rgb(RgbColor(r, g, b)))
             }
             _ => {
                 let color_type = String::from_utf8_lossy(color_type).into_owned();

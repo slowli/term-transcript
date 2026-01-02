@@ -56,7 +56,7 @@ use std::process::Command;
 #[cfg(feature = "svg")]
 use std::{env, ffi::OsStr};
 
-use termcolor::ColorChoice;
+use anstream::ColorChoice;
 
 pub use self::{
     config_impl::compare_transcripts,

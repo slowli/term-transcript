@@ -68,7 +68,7 @@
             <div class="input input-failure" data-exit-status="1" title="This command exited with non-zero code"><pre><span class="prompt">$</span> term-transcript test -I 300ms -T 100ms --precise bogus.svg
 # --precise / -p flag enables comparison by style</pre></div>
             <div class="output"><pre><span class="line">Testing file <span class="underline">bogus.svg</span>...
-</span><span class="line">  [<span class="fg1">#</span>] Input: rainbow --short
+</span><span class="line">  [<span class="fg9">#</span>] Input: rainbow --short
 </span><span class="line">&#x3D; Base styles
 </span><span class="line">&#x3D;      None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic">Bold+Italic</span>
 </span><span class="line">&#x3D;    Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed"><span>Bold+Italic</span></span>
@@ -86,7 +86,7 @@
 </span><span class="line"><span class="bold">&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;</span>
 </span><span class="line">  220..224 <span class="underline">--u-   (none)/(none)  </span> <span class="underline fg4">--u-     blue/(none)  </span>
 </span><span class="line">  387..394 ----   (none)/(none)   <span class="bg13">----   (none)/magenta*</span>
-</span><span class="line">Totals: passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></span></pre></div>
+</span><span class="line"><span class="bold">Totals:</span> passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></span></pre></div>
           </div>
         </foreignObject>
       </svg>

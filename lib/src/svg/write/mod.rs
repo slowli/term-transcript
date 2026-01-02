@@ -3,68 +3,12 @@
 use std::{io, mem, str};
 
 use serde::Serialize;
-use termcolor::{ColorSpec, WriteColor};
 use unicode_width::UnicodeWidthChar;
 
-use crate::utils::IndexOrRgb;
+use crate::style::{Style, StyledSpan, WriteStyled};
 
 #[cfg(test)]
 mod tests;
-
-/// Serializable `ColorSpec` representation.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
-#[allow(clippy::struct_excessive_bools)] // makes serialization simpler
-pub(crate) struct Style {
-    #[serde(skip_serializing_if = "Style::is_false")]
-    pub(crate) bold: bool,
-    #[serde(skip_serializing_if = "Style::is_false")]
-    pub(crate) italic: bool,
-    #[serde(skip_serializing_if = "Style::is_false")]
-    pub(crate) underline: bool,
-    #[serde(skip_serializing_if = "Style::is_false")]
-    pub(crate) dimmed: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) fg: Option<IndexOrRgb>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) bg: Option<IndexOrRgb>,
-}
-
-impl Style {
-    #[allow(clippy::trivially_copy_pass_by_ref)] // required by `serde`
-    fn is_false(&val: &bool) -> bool {
-        !val
-    }
-
-    fn new(spec: &ColorSpec) -> io::Result<Self> {
-        let mut fg = spec.fg().copied().map(IndexOrRgb::new).transpose()?;
-        let mut bg = spec.bg().copied().map(IndexOrRgb::new).transpose()?;
-        if spec.intense() {
-            // Switch to intense colors.
-            if let Some(IndexOrRgb::Index(idx)) = &mut fg {
-                *idx |= 8;
-            }
-            if let Some(IndexOrRgb::Index(idx)) = &mut bg {
-                *idx |= 8;
-            }
-        }
-
-        Ok(Self {
-            bold: spec.bold(),
-            italic: spec.italic(),
-            underline: spec.underline(),
-            dimmed: spec.dimmed(),
-            fg,
-            bg,
-        })
-    }
-}
-
-#[derive(Debug, Default, PartialEq, Serialize)]
-pub(crate) struct StyledSpan {
-    #[serde(flatten)]
-    pub(crate) style: Style,
-    pub(crate) text: String,
-}
 
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct StyledLine {
@@ -81,13 +25,11 @@ impl StyledLine {
         self.spans.last_mut().unwrap().text.push_str(s);
     }
 
-    fn write_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        let style = Style::new(spec)?;
+    fn write_style(&mut self, style: Style) {
         self.push_span(StyledSpan {
             style,
             text: String::new(),
         });
-        Ok(())
     }
 
     fn push_span(&mut self, span: StyledSpan) {
@@ -118,7 +60,7 @@ impl StyledLine {
 pub(crate) struct LineWriter {
     lines: Vec<StyledLine>,
     current_line: StyledLine,
-    current_style: Option<ColorSpec>,
+    current_style: Option<Style>,
     line_splitter: LineSplitter,
 }
 
@@ -132,10 +74,10 @@ impl LineWriter {
         }
     }
 
-    fn write_color(&mut self, spec: ColorSpec) -> io::Result<()> {
-        self.current_line.write_color(&spec)?;
-        self.current_style = Some(spec);
-        Ok(())
+    fn write_style_inner(&mut self, mut style: Style) {
+        style.normalize();
+        self.current_line.write_style(style);
+        self.current_style = Some(style);
     }
 
     fn reset_inner(&mut self) {
@@ -152,8 +94,8 @@ impl LineWriter {
         self.lines
     }
 
-    fn write_new_line(&mut self, br: Option<LineBreak>) -> io::Result<()> {
-        let current_style = self.current_style.clone();
+    fn write_new_line(&mut self, br: Option<LineBreak>) {
+        let current_style = self.current_style;
         self.reset_inner();
 
         let mut line = mem::take(&mut self.current_line).trimmed();
@@ -161,59 +103,34 @@ impl LineWriter {
         self.lines.push(line);
 
         if let Some(spec) = current_style {
-            self.write_color(spec)?;
+            self.write_style_inner(spec);
         }
-        Ok(())
     }
 
-    /// Writes the specified text displayed to the user that should be subjected to wrapping.
-    fn write_text(&mut self, s: &str) -> io::Result<()> {
-        let lines = self.line_splitter.split_lines(s);
-        self.write_lines(lines)
-    }
-
-    fn write_lines(&mut self, lines: Vec<Line<'_>>) -> io::Result<()> {
+    fn write_lines(&mut self, lines: Vec<Line<'_>>) {
         let lines_count = lines.len();
         let it = lines.into_iter().enumerate();
         for (i, line) in it {
             self.current_line.push_str(line.text);
             if i + 1 < lines_count || line.br.is_some() {
-                self.write_new_line(line.br)?;
+                self.write_new_line(line.br);
             }
         }
-        Ok(())
     }
 }
 
-impl io::Write for LineWriter {
-    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        let saved_str = str::from_utf8(buffer)
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-        self.write_text(saved_str)?;
-        Ok(buffer.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl WriteColor for LineWriter {
-    fn supports_color(&self) -> bool {
-        true
-    }
-
-    fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
-        debug_assert!(spec.reset());
-        self.reset()?;
-        if !spec.is_none() {
-            self.write_color(spec.clone())?;
+impl WriteStyled for LineWriter {
+    fn write_style(&mut self, style: &Style) -> io::Result<()> {
+        self.reset_inner();
+        if !style.is_none() {
+            self.write_style_inner(*style);
         }
         Ok(())
     }
 
-    fn reset(&mut self) -> io::Result<()> {
-        self.reset_inner();
+    fn write_text(&mut self, text: &str) -> io::Result<()> {
+        let lines = self.line_splitter.split_lines(text);
+        self.write_lines(lines);
         Ok(())
     }
 }

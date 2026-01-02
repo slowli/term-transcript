@@ -37,7 +37,7 @@ pub use self::{
     font::{EmbeddedFont, EmbeddedFontFace, FontEmbedder, FontMetrics},
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
-pub use crate::utils::{RgbColor, RgbColorParseError};
+pub use crate::style::{RgbColor, RgbColorParseError};
 use crate::{term::TermOutputParser, BoxedError, Captured, TermError, Transcript};
 
 mod data;

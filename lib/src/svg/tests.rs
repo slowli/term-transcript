@@ -4,11 +4,11 @@ use std::convert::Infallible;
 
 use test_casing::test_casing;
 
-use super::{
-    write::{Style, StyledSpan},
-    *,
+use super::*;
+use crate::{
+    style::{Color, Style, StyledSpan},
+    ExitStatus, Interaction, UserInput,
 };
-use crate::{utils::IndexOrRgb, ExitStatus, Interaction, UserInput};
 
 #[test]
 fn parsing_scroll_options() {
@@ -888,7 +888,7 @@ fn rendering_html_span() {
     handlebars.register_template("_helpers", helpers);
     let data = serde_json::json!(StyledSpan {
         style: Style::default(),
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -898,13 +898,13 @@ fn rendering_html_span() {
     let mut style = Style {
         bold: true,
         underline: true,
-        fg: Some(IndexOrRgb::Index(2)),
-        bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
+        fg: Some(Color::Index(2)),
+        bg: Some(Color::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -918,7 +918,7 @@ fn rendering_html_span() {
     style.underline = false;
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
@@ -934,7 +934,7 @@ fn rendering_svg_tspan() {
     handlebars.register_template("_helpers", helpers);
     let data = serde_json::json!(StyledSpan {
         style: Style::default(),
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
@@ -944,37 +944,37 @@ fn rendering_svg_tspan() {
     let mut style = Style {
         bold: true,
         underline: true,
-        fg: Some(IndexOrRgb::Index(2)),
-        bg: Some(IndexOrRgb::Rgb("#cfc".parse().unwrap())),
+        fg: Some(Color::Index(2)),
+        bg: Some(Color::Rgb("#cfc".parse().unwrap())),
         ..Style::default()
     };
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
     assert_eq!(rendered, " class=\"bold underline fg2 bg#ccffcc\"");
 
-    style.bg = Some(IndexOrRgb::Index(0));
+    style.bg = Some(Color::Index(0));
     style.underline = false;
     style.dimmed = true;
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
     assert_eq!(rendered, " class=\"bold dimmed fg2 bg0\"");
 
-    style.fg = Some(IndexOrRgb::Rgb("#c0ffee".parse().unwrap()));
+    style.fg = Some(Color::Rgb("#c0ffee".parse().unwrap()));
     style.bg = None;
     style.dimmed = false;
     let data = serde_json::json!(StyledSpan {
         style,
-        text: "Test".into(),
+        text: "Test",
     });
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)

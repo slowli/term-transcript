@@ -8,20 +8,37 @@ use std::{
     str,
 };
 
-use termcolor::{Color, ColorSpec, NoColor, WriteColor};
+use anstream::{AutoStream, ColorChoice};
 
 use super::{
-    color_diff::{ColorDiff, ColorSpan},
+    color_diff::ColorDiff,
     parser::Parsed,
-    utils::{ColorPrintlnWriter, IndentingWriter},
+    utils::{ChoiceWriter, IndentingWriter, PrintlnWriter},
     MatchKind, TestConfig, TestOutputConfig, TestStats,
 };
-use crate::{traits::SpawnShell, Interaction, TermError, Transcript, UserInput};
+use crate::{
+    style::{Color, Style, StyledSpan},
+    traits::SpawnShell,
+    Interaction, TermError, Transcript, UserInput,
+};
+
+const SUCCESS: Style = Style {
+    fg: Some(Color::INTENSE_GREEN),
+    ..Style::NONE
+};
+const ERROR: Style = Style {
+    fg: Some(Color::INTENSE_RED),
+    ..Style::NONE
+};
+const VERBOSE_OUTPUT: Style = Style {
+    fg: Some(Color::Index(244)), // medium gray
+    ..Style::NONE
+};
 
 #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, ret, err))]
 #[doc(hidden)] // low-level; not public API
 pub fn compare_transcripts(
-    out: &mut impl WriteColor,
+    out: &mut impl Write,
     parsed: &Transcript<Parsed>,
     reproduced: &Transcript,
     match_kind: MatchKind,
@@ -40,9 +57,7 @@ pub fn compare_transcripts(
         let _entered =
             tracing::debug_span!("compare_interaction", input = ?original.input).entered();
 
-        write!(out, "  ")?;
-        out.set_color(ColorSpec::new().set_intense(true))?;
-        write!(out, "[")?;
+        write!(out, "  [")?;
 
         // First, process text only.
         let original_text = original.output().plaintext();
@@ -66,15 +81,15 @@ pub fn compare_transcripts(
 
         // If we do precise matching, check it as well.
         let color_diff = if match_kind == MatchKind::Precise && actual_match.is_some() {
-            let original_spans = &original.output().color_spans;
+            let original_spans = &original.output().styled_spans;
             let mut reproduced_spans =
-                ColorSpan::parse(reproduced.as_ref()).map_err(|err| match err {
+                StyledSpan::parse(reproduced.as_ref()).map_err(|err| match err {
                     TermError::Io(err) => err,
                     other => io::Error::new(io::ErrorKind::InvalidInput, other),
                 })?;
             if should_trim_newline {
                 if let Some(last_span) = reproduced_spans.last_mut() {
-                    last_span.len -= 1;
+                    last_span.text -= 1;
                 }
             }
 
@@ -94,35 +109,29 @@ pub fn compare_transcripts(
 
         stats.matches.push(actual_match);
         if actual_match >= Some(match_kind) {
-            out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Green)))?;
-            write!(out, "+")?;
+            write!(out, "{SUCCESS}+{SUCCESS:#}")?;
+        } else if color_diff.is_some() {
+            write!(out, "{ERROR}#{ERROR:#}")?;
         } else {
-            out.set_color(ColorSpec::new().set_reset(false).set_fg(Some(Color::Red)))?;
-            if color_diff.is_some() {
-                write!(out, "#")?;
-            } else {
-                write!(out, "-")?;
-            }
+            write!(out, "{ERROR}-{ERROR:#}")?;
         }
-        out.set_color(ColorSpec::new().set_intense(true))?;
-        write!(out, "]")?;
-        out.reset()?;
-        writeln!(out, " Input: {}", original.input().as_ref())?;
+        writeln!(out, "] Input: {}", original.input().as_ref())?;
 
         if let Some(diff) = color_diff {
-            let original_spans = &original.output().color_spans;
+            let original_spans = &original.output().styled_spans;
             diff.highlight_text(out, original_text, original_spans)?;
             diff.write_as_table(out)?;
         } else if actual_match.is_none() {
             write_diff(out, original_text, &reproduced_text)?;
         } else if verbose {
-            out.set_color(ColorSpec::new().set_fg(Some(Color::Ansi256(244))))?;
-            let mut out_with_indents = IndentingWriter::new(&mut *out, b"    ");
+            write!(out, "{VERBOSE_OUTPUT}")?;
+            let mut out_with_indents = IndentingWriter::new(&mut *out, "    ");
             writeln!(out_with_indents, "{}", original.output().plaintext())?;
-            out.reset()?;
+            write!(out, "{VERBOSE_OUTPUT:#}")?;
         }
     }
 
+    out.flush()?; // apply terminal styling if necessary
     Ok(stats)
 }
 
@@ -380,17 +389,23 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
         transcript: &Transcript<Parsed>,
     ) -> io::Result<(TestStats, Transcript)> {
         if self.output == TestOutputConfig::Quiet {
-            let mut out = NoColor::new(io::sink());
-            self.test_transcript_inner(&mut out, transcript)
+            self.test_transcript_inner(&mut io::sink(), transcript)
         } else {
-            let mut out = ColorPrintlnWriter::new(self.color_choice);
+            let choice = if self.color_choice == ColorChoice::Auto {
+                AutoStream::choice(&io::stdout())
+            } else {
+                self.color_choice
+            };
+            // We cannot create an `AutoStream` here because it would require `PrintlnWriter` to implement `anstream::RawStream`,
+            // which is a sealed trait.
+            let mut out = ChoiceWriter::new(PrintlnWriter::default(), choice);
             self.test_transcript_inner(&mut out, transcript)
         }
     }
 
     pub(super) fn test_transcript_inner(
         &mut self,
-        out: &mut impl WriteColor,
+        out: &mut impl Write,
         transcript: &Transcript<Parsed>,
     ) -> io::Result<(TestStats, Transcript)> {
         let inputs = transcript

@@ -16,12 +16,9 @@ use quick_xml::{
     events::{attributes::Attributes, Event},
     Reader as XmlReader,
 };
-use termcolor::WriteColor;
 
 use self::text::TextReadingState;
-use crate::{
-    test::color_diff::ColorSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput,
-};
+use crate::{style::StyledSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput};
 
 #[cfg(test)]
 mod tests;
@@ -35,13 +32,13 @@ fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
 #[derive(Debug, Clone, Default)]
 pub struct Parsed {
     pub(crate) plaintext: String,
-    pub(crate) color_spans: Vec<ColorSpan>,
+    pub(crate) styled_spans: Vec<StyledSpan<usize>>,
 }
 
 impl Parsed {
     const DEFAULT: Self = Self {
         plaintext: String::new(),
-        color_spans: Vec::new(),
+        styled_spans: Vec::new(),
     };
 
     /// Returns the parsed plaintext.
@@ -54,9 +51,9 @@ impl Parsed {
     /// # Errors
     ///
     /// - Returns an I/O error should it occur when writing to `out`.
-    #[doc(hidden)] // makes `termcolor` dependency public, which we want to avoid so far
-    pub fn write_colorized(&self, out: &mut impl WriteColor) -> io::Result<()> {
-        ColorSpan::write_colorized(&self.color_spans, out, &self.plaintext)
+    #[doc(hidden)]
+    pub fn write_colorized(&self, out: &mut impl io::Write) -> io::Result<()> {
+        StyledSpan::write_colorized(&self.styled_spans, out, &self.plaintext)
     }
 
     /// Converts this parsed fragment into text for `UserInput`. This takes into account
@@ -78,8 +75,8 @@ impl Parsed {
     fn trim_ending_newline(&mut self) {
         if self.plaintext.ends_with('\n') {
             self.plaintext.pop();
-            if let Some(last_span) = self.color_spans.last_mut() {
-                last_span.len -= 1;
+            if let Some(last_span) = self.styled_spans.last_mut() {
+                last_span.text -= 1;
             }
         }
     }

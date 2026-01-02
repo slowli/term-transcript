@@ -17,7 +17,6 @@ use term_transcript::{
     test::{compare_transcripts, MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ExitStatus, ShellOptions, Transcript, UserInput,
 };
-use termcolor::NoColor;
 use test_casing::{decorate, decorators::Retry, test_casing, Product};
 use tracing::{subscriber::DefaultGuard, Subscriber};
 use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
@@ -111,13 +110,7 @@ fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     };
     let parsed = Transcript::from_svg(snapshot_reader)?;
     let mut buffer = vec![];
-    let stats = compare_transcripts(
-        &mut NoColor::new(&mut buffer),
-        &parsed,
-        &transcript,
-        MatchKind::Precise,
-        false,
-    )?;
+    let stats = compare_transcripts(&mut buffer, &parsed, &transcript, MatchKind::Precise, false)?;
     if stats.errors(MatchKind::Precise) > 0 {
         panic!("{}", String::from_utf8_lossy(&buffer));
     }
@@ -333,6 +326,7 @@ fn powershell_example(pure_svg: bool) {
 
 #[test_casing(2, [false, true])]
 fn repl_snapshot_testing(pure_svg: bool) {
+    let _guard = enable_tracing();
     let shell_options = ShellOptions::from(Command::new(PATH_TO_REPL_BIN));
     let mut config = TestConfig::new(shell_options).with_match_kind(MatchKind::Precise);
     if pure_svg {
