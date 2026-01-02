@@ -11,6 +11,8 @@ BOLD='\033[1m'
 DIMMED='\033[2m'
 ITALIC='\033[3m'
 UNDERLINE='\033[4m'
+INVERTED='\033[7m'
+STRIKE='\033[9m'
 GREEN_FG='\033[32m'
 YELLOW_FG='\033[33m'
 MAGENTA_BG='\033[45m'
@@ -28,6 +30,7 @@ base_styles_line() {
   line="$line ${base_style}$BOLD${GREEN_FG}Bold$RESET"
   line="$line ${base_style}$ITALIC$YELLOW_FG${MAGENTA_BG}Italic$RESET"
   line="$line ${base_style}$BOLD${ITALIC}Bold+Italic$RESET"
+  line="$line ${base_style}${STRIKE}Strike$RESET"
   echo "$line"
 }
 
@@ -98,6 +101,7 @@ if [ "$1" = "--short" ]; then
   base_styles_line ''             "     None"
   base_styles_line "$DIMMED"      "   Dimmed"
   base_styles_line "$UNDERLINE"   "Underline"
+  base_styles_line "$INVERTED"    " Inverted"
   base_styles_line '\033[30m\033[47m' "  With bg"
 fi
 
