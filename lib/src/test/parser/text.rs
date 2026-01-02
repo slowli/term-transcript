@@ -4,7 +4,7 @@ use std::{borrow::Cow, fmt, mem, ops, str};
 
 use quick_xml::{
     escape::{resolve_xml_entity, EscapeError},
-    events::{attributes::Attributes, BytesStart, Event},
+    events::{BytesStart, Event},
 };
 
 use super::{extract_base_class, map_utf8_error, parse_classes, ParseError, Parsed};
@@ -24,7 +24,6 @@ pub(super) struct TextReadingState {
     pub plaintext_buffer: String,
     color_spans_writer: ColorSpansWriter,
     open_tags: usize,
-    bg_line_level: Option<usize>,
     hard_br: Option<HardBreak>,
 }
 
@@ -43,7 +42,6 @@ impl Default for TextReadingState {
             color_spans_writer: ColorSpansWriter::default(),
             plaintext_buffer: String::new(),
             open_tags: 1,
-            bg_line_level: None,
             hard_br: None,
         }
     }
@@ -59,7 +57,7 @@ impl TextReadingState {
     }
 
     fn should_ignore_text(&self) -> bool {
-        self.bg_line_level.is_some() || self.hard_br.is_some()
+        self.hard_br.is_some()
     }
 
     // We only retain `<span>` tags in the HTML since they are the only ones containing color info.
@@ -114,18 +112,11 @@ impl TextReadingState {
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
-                if self.bg_line_level.is_some() {
-                    return Ok(None);
-                } else if self.hard_br.is_some() {
+                if self.hard_br.is_some() {
                     return Err(ParseError::InvalidHardBreak);
                 }
 
                 let tag_name = tag.name();
-                // FIXME: remove bg line logic (no longer necessary)
-                if tag_name.as_ref() == b"text" && Self::is_bg_line(tag.attributes())? {
-                    self.bg_line_level = Some(self.open_tags - 1);
-                    return Ok(None);
-                }
                 // Check for the hard line break <tspan> or <b>. We mustn't add its contents to the text,
                 // and instead gobble the following '\n'.
                 let classes = parse_classes(tag.attributes())?;
@@ -145,19 +136,12 @@ impl TextReadingState {
             }
             Event::End(tag) => {
                 self.open_tags -= 1;
-                if let Some(level) = self.bg_line_level {
-                    debug_assert!(level <= self.open_tags);
-                    if self.open_tags == level {
-                        self.bg_line_level = None;
-                    }
-                    return Ok(None);
-                } else if matches!(self.hard_br, Some(HardBreak::Active)) {
+                if matches!(self.hard_br, Some(HardBreak::Active)) {
                     self.hard_br = Some(HardBreak::JustEnded);
                     return Ok(None);
                 }
 
                 if Self::is_text_span(tag.name().as_ref()) {
-                    // FIXME: check embedded color specs (should never be produced).
                     self.color_spans_writer
                         .reset()
                         .expect("cannot reset color for ANSI buffer");
@@ -188,11 +172,6 @@ impl TextReadingState {
         self.color_spans_writer
             .write_text(text)
             .expect("cannot write to ANSI buffer");
-    }
-
-    fn is_bg_line(attrs: Attributes<'_>) -> Result<bool, ParseError> {
-        let classes = parse_classes(attrs)?;
-        Ok(extract_base_class(&classes) == b"output-bg")
     }
 
     /// Parses color spec from a `span`.
