@@ -145,6 +145,12 @@ pub struct TemplateOptions {
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     #[serde(default)]
     pub palette: Palette,
+    /// Opacity of dimmed text. The default value is 0.7.
+    #[serde(default = "TemplateOptions::default_dim_opacity")]
+    pub dim_opacity: f64,
+    /// Blink options.
+    #[serde(default)]
+    pub blink: BlinkOptions,
     /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
     /// to import fonts in conjunction with `font_family`.
     ///
@@ -181,6 +187,8 @@ impl Default for TemplateOptions {
             line_height: None,
             advance_width: None,
             palette: Palette::default(),
+            dim_opacity: Self::default_dim_opacity(),
+            blink: BlinkOptions::default(),
             additional_styles: String::new(),
             font_family: Self::default_font_family(),
             window_frame: false,
@@ -194,6 +202,12 @@ impl Default for TemplateOptions {
 
 impl TemplateOptions {
     fn validate(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.dim_opacity > 0.0 && self.dim_opacity < 1.0,
+            "invalid dimmed text opacity ({:?}), should be in (0, 1)",
+            self.dim_opacity
+        );
+
         if let Some(line_height) = self.line_height {
             anyhow::ensure!(line_height > 0.0, "line_height must be positive");
             #[cfg(feature = "tracing")]
@@ -229,6 +243,8 @@ impl TemplateOptions {
                 .context("invalid scroll options")?;
         }
 
+        self.blink.validate().context("invalid blink options")?;
+
         Ok(())
     }
 
@@ -248,6 +264,10 @@ impl TemplateOptions {
 
     const fn default_width() -> NonZeroUsize {
         NonZeroUsize::new(720).unwrap()
+    }
+
+    const fn default_dim_opacity() -> f64 {
+        0.7
     }
 
     fn default_font_family() -> String {
@@ -449,6 +469,41 @@ pub enum WrapOptions {
 impl Default for WrapOptions {
     fn default() -> Self {
         Self::HardBreakAt(NonZeroUsize::new(80).unwrap())
+    }
+}
+
+/// Blink options.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BlinkOptions {
+    /// Interval between blinking animation keyframes in seconds.
+    #[serde(default = "BlinkOptions::default_interval")]
+    pub interval: f64,
+    /// Lower value of blink opacity. Must be in `[0, 1]`.
+    #[serde(default = "TemplateOptions::default_dim_opacity")]
+    pub opacity: f64,
+}
+
+impl Default for BlinkOptions {
+    fn default() -> Self {
+        Self {
+            interval: Self::default_interval(),
+            opacity: TemplateOptions::default_dim_opacity(),
+        }
+    }
+}
+
+impl BlinkOptions {
+    const fn default_interval() -> f64 {
+        1.0
+    }
+
+    fn validate(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(self.interval > 0.0, "interval must be positive");
+        anyhow::ensure!(
+            self.opacity >= 0.0 && self.opacity <= 1.0,
+            "opacity must be in [0, 1]"
+        );
+        Ok(())
     }
 }
 

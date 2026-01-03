@@ -152,6 +152,45 @@ fn rendering_simple_transcript_to_pure_svg() {
 }
 
 #[test]
+fn rendering_transcript_with_opacity_options() {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test"),
+        "\u{1b}[2mHello,\u{1b}[0m \u{1b}[5mworld\u{1b}[0m!",
+    );
+
+    let mut buffer = vec![];
+    let options = TemplateOptions {
+        dim_opacity: 0.5,
+        blink: BlinkOptions {
+            interval: 0.4,
+            opacity: 0.0,
+        },
+        ..TemplateOptions::default()
+    };
+    Template::new(options.validated().unwrap())
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    assert!(
+        buffer.contains(
+            ".dimmed > span { color: color-mix(in hsl, currentColor 50%, transparent); }"
+        ),
+        "{buffer}"
+    );
+    // Part of the `@keyframes blink`
+    assert!(
+        buffer.contains("100% { color: color-mix(in hsl, currentColor 0%, transparent); }"),
+        "{buffer}"
+    );
+    assert!(
+        buffer.contains(".blink > span { animation: 0.8s steps(2, jump-none) 0s infinite blink; }"),
+        "{buffer}"
+    );
+}
+
+#[test]
 fn rendering_transcript_with_hidden_input() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
@@ -958,6 +997,54 @@ fn rendering_inverted_html_span() {
     assert_eq!(
         rendered,
         r#"<span class="bg5" style="color: #c0ffee;">Test</span>"#
+    );
+}
+
+#[test]
+fn rendering_blinking_html_span() {
+    let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+    let mut handlebars = Handlebars::new();
+    register_helpers(&mut handlebars);
+    handlebars.register_template("_helpers", helpers);
+
+    let data = StyledSpan {
+        style: Style {
+            blink: true,
+            inverted: true,
+            ..Style::default()
+        },
+        text: "Test",
+    };
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        r#"<span class="blink fg0 bg7"><span>Test</span></span>"#
+    );
+}
+
+#[test]
+fn rendering_dimmed_html_span() {
+    let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+    let mut handlebars = Handlebars::new();
+    register_helpers(&mut handlebars);
+    handlebars.register_template("_helpers", helpers);
+
+    let data = StyledSpan {
+        style: Style {
+            dimmed: true,
+            strikethrough: true,
+            ..Style::default()
+        },
+        text: "Test",
+    };
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        r#"<span class="strike dimmed"><span>Test</span></span>"#
     );
 }
 

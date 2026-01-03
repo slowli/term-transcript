@@ -70,13 +70,13 @@
   .underline { text-decoration-line: underline; }
   .strike { text-decoration-line: line-through; }
   .underline.strike { text-decoration-line: underline line-through; }
-  .dimmed { fill-opacity: 0.7; }
+  .dimmed { fill-opacity: {{dim_opacity}}; }
   .concealed { fill-opacity: 0 !important; }
   @keyframes blink {
     0% { fill-opacity: 1; }
-    100% { fill-opacity: 0.7; }
+    100% { fill-opacity: {{blink.opacity}}; }
   }
-  .blink { animation: 2s steps(2, jump-none) 0s infinite blink; }
+  .blink { animation: {{mul 2 blink.interval}}s steps(2, jump-none) 0s infinite blink; }
   {{~#if wrap}}
 
   .hard-br { font-weight: bold; fill-opacity: 0.6; user-select: none; }

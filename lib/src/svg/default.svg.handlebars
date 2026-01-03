@@ -99,15 +99,20 @@
     The dimmed-related complexity is motivated by Safari quirks; it doesn't render HTML-in-SVG with any filters
     (incl. opacity) correctly.
   }}
-  .dimmed > span { color: color-mix(in hsl, currentColor 70%, {{ palette.colors.black }} 30%); }
-  .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / 30%); }
+  {{#scope opacity=(round (mul 100 dim_opacity) digits=1)}}
+  .dimmed > span { color: color-mix(in hsl, currentColor {{opacity}}%, transparent); }
+  {{! Overlay the default background color with the complementary opacity }}
+  .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / {{round (sub 100 (opacity)) digits=1}}%); }
+  {{/scope}}
   {{! Only text is concealed, background is not }}
   .concealed { color: rgba(0, 0, 0, 0) !important; }
+  {{#if (lt blink.opacity 1)}}
   @keyframes blink {
     0% { color: currentColor; }
-    100% { color: rgb(from currentColor r g b / 70%); }
+    100% { color: color-mix(in hsl, currentColor {{round (mul 100 blink.opacity) digits=1}}%, transparent); }
   }
-  .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
+  .blink > span { animation: {{mul 2 blink.interval}}s steps(2, jump-none) 0s infinite blink; }
+  {{/if}}
   {{~#if wrap}}
 
   .hard-br { margin-left: 8px; }
