@@ -138,21 +138,22 @@
 {{! Renders an HTML span }}
 {{~#*inline "html_span"}}
   {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
-    {{~#scope classes="" styles=""}}
+    {{~#scope final_fg=fg final_bg=bg classes="" styles=""~}}
+    {{~>invert_colors~}}
     {{~#classes append=true}}
       {{~#if bold}} bold{{/if~}}
       {{~#if italic}} italic{{/if~}}
       {{~#if underline}} underline{{/if~}}
       {{~#if strikethrough}} strike{{/if~}}
       {{~#if dimmed}} dimmed{{/if~}}
-      {{~#if (and dimmed (ne (typeof bg) "null"))}} dimmed-bg{{/if~}}
-      {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
-      {{~#if (eq (typeof bg) "number")}} bg{{bg}}{{/if~}}
+      {{~#if (and dimmed (ne (typeof (final_bg)) "null"))}} dimmed-bg{{/if~}}
+      {{~#if (eq (typeof (final_fg)) "number")}} fg{{final_fg}}{{/if~}}
+      {{~#if (eq (typeof (final_bg)) "number")}} bg{{final_bg}}{{/if~}}
     {{/classes~}}
     {{~classes set=(trim (classes))~}}
     {{~#styles append=true}}
-      {{~#if (eq (typeof fg) "string")}} color: {{fg}};{{/if~}}
-      {{~#if (eq (typeof bg) "string")}} background: {{bg}};{{/if~}}
+      {{~#if (eq (typeof (final_fg)) "string")}} color: {{final_fg}};{{/if~}}
+      {{~#if (eq (typeof (final_bg)) "string")}} background: {{final_bg}};{{/if~}}
     {{/styles~}}
     {{~styles set=(trim (styles))~}}
     <span{{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}>
@@ -168,24 +169,41 @@
   {{~/if~}}
 {{~/inline~}}
 
+{{! Swaps background and foreground colors. If any are not specified, use the default palette colors. }}
+{{~#*inline "invert_colors"}}
+  {{~#if inverted~}}
+    {{~#if (eq (typeof bg) "null")~}}
+      {{~final_fg set=0 ~}} {{! indexed black }}
+    {{~else~}}
+      {{~final_fg set=bg~}}
+    {{~/if~}}
+    {{~#if (eq (typeof fg) "null")~}}
+      {{~final_bg set=7 ~}} {{! indexed white }}
+    {{~else~}}
+      {{~final_bg set=fg~}}
+    {{~/if~}}
+  {{~/if~}}
+{{~/inline~}}
+
 {{! Renders an SVG foreground <tspan> styling attributes (class and/or style) }}
 {{~#*inline "svg_tspan_attrs"}}
-  {{~#scope classes="" styles=""}}
+  {{~#scope final_fg=fg final_bg=bg classes="" styles=""}}
   {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
-      {{~#classes append=true}}
-        {{~#if bold}} bold{{/if~}}
-        {{~#if italic}} italic{{/if~}}
-        {{~#if underline}} underline{{/if~}}
-        {{~#if strikethrough}} strike{{/if~}}
-        {{~#if dimmed}} dimmed{{/if~}}
-        {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
-        {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
-        {{~#if (ne (typeof bg) "null")}} bg{{bg}}{{/if~}}
-      {{/classes~}}
-      {{~classes set=(trim (classes))~}}
-      {{~#styles append=true}}
-        {{~#if (eq (typeof fg) "string")}}fill: {{fg}};{{/if~}}
-      {{/styles~}}
+    {{~>invert_colors~}}
+    {{~#classes append=true}}
+      {{~#if bold}} bold{{/if~}}
+      {{~#if italic}} italic{{/if~}}
+      {{~#if underline}} underline{{/if~}}
+      {{~#if strikethrough}} strike{{/if~}}
+      {{~#if dimmed}} dimmed{{/if~}}
+      {{~#if (eq (typeof (final_fg)) "number")}} fg{{final_fg}}{{/if~}}
+      {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
+      {{~#if (ne (typeof (final_bg)) "null")}} bg{{final_bg}}{{/if~}}
+    {{/classes~}}
+    {{~classes set=(trim (classes))~}}
+    {{~#styles append=true}}
+      {{~#if (eq (typeof (final_fg)) "string")}}fill: {{final_fg}};{{/if~}}
+    {{/styles~}}
   {{~/if~}}
   {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
   {{~/scope~}}
@@ -197,9 +215,9 @@
 }}
 {{~#*inline "scale_font_metrics"}}
   {
-  "advance_width": {{mul font_size (div metrics.advance_width metrics.units_per_em)}},
-  "ascent": {{mul font_size (div metrics.ascent metrics.units_per_em)}},
-  "descent": {{mul font_size (div metrics.descent metrics.units_per_em)}}
+    "advance_width": {{mul font_size (div metrics.advance_width metrics.units_per_em)}},
+    "ascent": {{mul font_size (div metrics.ascent metrics.units_per_em)}},
+    "descent": {{mul font_size (div metrics.descent metrics.units_per_em)}}
   }
 {{/inline~}}
 

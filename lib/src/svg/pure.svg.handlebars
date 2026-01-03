@@ -3,16 +3,23 @@
 
 {{! Renders `class` and/or `style` attributes for a background SVG span }}
 {{~#*inline "svg_bg_tspan_attrs"}}
-  {{~#scope classes="" styles=""}}
+  {{~#scope final_bg=bg classes="" styles=""}}
+    {{~#if inverted~}}
+      {{~#if (eq (typeof fg) "null")~}}
+        {{~final_bg set=7 ~}} {{! indexed white }}
+      {{~else~}}
+        {{~final_bg set=fg ~}}
+      {{~/if~}}
+    {{~/if~}}
     {{~#classes append=true}}
-      {{~#if span.dimmed}} dimmed{{/if~}}
+      {{~#if dimmed}} dimmed{{/if~}}
       {{! Here, we intentionally use the *foreground* class }}
-      {{~#if (eq (typeof span.bg) "number")}} fg{{span.bg}}{{/if~}}
+      {{~#if (eq (typeof (final_bg)) "number")}} fg{{final_bg}}{{/if~}}
     {{/classes~}}
     {{~classes set=(trim (classes))~}}
 
-    {{~#if (eq (typeof span.bg) "string")}}
-      {{~#styles append=true}}fill: {{span.bg}}; stroke: {{span.bg}};{{/styles~}}
+    {{~#if (eq (typeof (final_bg)) "string")}}
+      {{~#styles append=true}}fill: {{final_bg}}; stroke: {{final_bg}};{{/styles~}}
     {{~/if~}}
     {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
   {{~/scope~}}
@@ -160,7 +167,7 @@
           {{~#scope char_pos=0 line_fg="" line_bg="" ~}}
           {{~#each line.spans as |span|~}}
             {{~#line_bg append=true ~}}
-              {{~#if (ne (typeof span.bg) "null")~}}
+              {{~#if (or (ne (typeof span.bg) "null") span.inverted)~}}
                 <rect x="{{
                   round (add (x_pos) (mul (char_pos) (advance_width))) digits=2
                 }}" y="{{
@@ -169,7 +176,7 @@
                   round (mul (char_width span.text) (advance_width)) digits=2
                 }}" height="{{
                   round (line_height) digits=2
-                }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
+                }}"{{>svg_bg_tspan_attrs span}}/>
               {{~/if~}}
             {{~/line_bg~}}
             {{! Render span foreground }}

@@ -927,6 +927,41 @@ fn rendering_html_span() {
 }
 
 #[test]
+fn rendering_inverted_html_span() {
+    let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+    let mut handlebars = Handlebars::new();
+    register_helpers(&mut handlebars);
+    handlebars.register_template("_helpers", helpers);
+
+    let mut data = StyledSpan {
+        style: Style {
+            inverted: true,
+            ..Style::default()
+        },
+        text: "Test",
+    };
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(rendered, r#"<span class="fg0 bg7">Test</span>"#);
+
+    data.style.fg = Some(Color::Index(5));
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(rendered, r#"<span class="fg0 bg5">Test</span>"#);
+
+    data.style.bg = Some(Color::Rgb("#c0ffee".parse().unwrap()));
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        r#"<span class="bg5" style="color: #c0ffee;">Test</span>"#
+    );
+}
+
+#[test]
 fn rendering_svg_tspan() {
     let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
     let mut handlebars = Handlebars::new();
@@ -980,4 +1015,36 @@ fn rendering_svg_tspan() {
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
     assert_eq!(rendered, " class=\"bold\" style=\"fill: #c0ffee;\"");
+}
+
+#[test]
+fn rendering_inverted_svg_tspan() {
+    let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
+    let mut handlebars = Handlebars::new();
+    register_helpers(&mut handlebars);
+    handlebars.register_template("_helpers", helpers);
+
+    let mut data = StyledSpan {
+        style: Style {
+            inverted: true,
+            ..Style::default()
+        },
+        text: "Test",
+    };
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .unwrap();
+    assert_eq!(rendered, r#" class="fg0 bg7""#);
+
+    data.style.fg = Some(Color::Index(5));
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .unwrap();
+    assert_eq!(rendered, r#" class="fg0 bg5""#);
+
+    data.style.bg = Some(Color::Rgb("#c0ffee".parse().unwrap()));
+    let rendered = handlebars
+        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .unwrap();
+    assert_eq!(rendered, r#" class="bg5" style="fill: #c0ffee;""#);
 }

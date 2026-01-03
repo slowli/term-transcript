@@ -244,6 +244,9 @@ impl<'a> Csi<'a> {
                 b"4" => {
                     style.underline = true;
                 }
+                b"7" => {
+                    style.inverted = true;
+                }
                 b"9" => {
                     style.strikethrough = true;
                 }
@@ -257,6 +260,9 @@ impl<'a> Csi<'a> {
                 }
                 b"24" => {
                     style.underline = false;
+                }
+                b"27" => {
+                    style.inverted = false;
                 }
                 b"29" => {
                     style.strikethrough = false;
