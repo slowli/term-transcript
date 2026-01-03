@@ -96,6 +96,7 @@ fn term_roundtrip_with_multiple_colors() -> anyhow::Result<()> {
     write!(writer, "o")?;
     writer.write_style(&Style {
         italic: true,
+        strikethrough: true,
         fg: Some(Color::GREEN),
         bg: Some(Color::YELLOW),
         ..Style::default()

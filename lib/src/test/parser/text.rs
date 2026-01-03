@@ -212,6 +212,9 @@ impl TextReadingState {
                 b"underline" => {
                     style.underline = true;
                 }
+                b"strike" => {
+                    style.strikethrough = true;
+                }
 
                 // Indexed foreground color candidate.
                 fg if fg.starts_with(b"fg") => {
@@ -373,5 +376,15 @@ mod tests {
         assert!(color_spec.bold);
         assert_eq!(color_spec.fg, Some(Color::YELLOW));
         assert_eq!(color_spec.bg, Some(Color::Rgb(RgbColor(0xd7, 0xd7, 0x5f))));
+
+        let mut color_spec = Style::default();
+        TextReadingState::parse_color_from_classes(
+            &mut color_spec,
+            b"underline strike italic dimmed",
+        );
+        assert!(color_spec.underline);
+        assert!(color_spec.strikethrough);
+        assert!(color_spec.italic);
+        assert!(color_spec.dimmed);
     }
 }

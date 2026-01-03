@@ -244,6 +244,9 @@ impl<'a> Csi<'a> {
                 b"4" => {
                     style.underline = true;
                 }
+                b"9" => {
+                    style.strikethrough = true;
+                }
 
                 b"22" => {
                     style.bold = false;
@@ -254,6 +257,9 @@ impl<'a> Csi<'a> {
                 }
                 b"24" => {
                     style.underline = false;
+                }
+                b"29" => {
+                    style.strikethrough = false;
                 }
 
                 // Compound foreground color spec

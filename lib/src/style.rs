@@ -173,6 +173,8 @@ pub(crate) struct Style {
     pub(crate) underline: bool,
     #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
     pub(crate) dimmed: bool,
+    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
+    pub(crate) strikethrough: bool,
     #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Option::is_none"))]
     pub(crate) fg: Option<Color>,
     #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Option::is_none"))]
@@ -200,6 +202,9 @@ impl fmt::Display for Style {
             if self.underline {
                 write!(formatter, "\u{1b}[4m")?;
             }
+            if self.strikethrough {
+                write!(formatter, "\u{1b}[9m")?;
+            }
 
             if let Some(fg) = &self.fg {
                 fg.write_params(formatter, false)?;
@@ -219,6 +224,7 @@ impl Style {
         italic: false,
         underline: false,
         dimmed: false,
+        strikethrough: false,
         fg: None,
         bg: None,
     };
@@ -234,6 +240,7 @@ impl Style {
             && !self.italic
             && !self.underline
             && !self.dimmed
+            && !self.strikethrough
             && self.fg.is_none()
             && self.bg.is_none()
     }

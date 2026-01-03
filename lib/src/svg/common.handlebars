@@ -52,7 +52,9 @@
 {{~#*inline "common_font_styles"}}
 .bold,.prompt { font-weight: bold;{{#with (ptr embedded_font "/metrics/bold_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
 .italic { font-style: italic;{{#with (ptr embedded_font "/metrics/italic_spacing") as |sp|}} letter-spacing: {{round sp digits=4}}em;{{else}}{{/with}} }
-.underline { text-decoration: underline; }
+.underline { text-decoration-line: underline; }
+.strike { text-decoration-line: line-through; }
+.underline.strike { text-decoration-line: underline line-through; }
 {{/inline~}}
 
 {{! Terminal background }}
@@ -141,6 +143,7 @@
       {{~#if bold}} bold{{/if~}}
       {{~#if italic}} italic{{/if~}}
       {{~#if underline}} underline{{/if~}}
+      {{~#if strikethrough}} strike{{/if~}}
       {{~#if dimmed}} dimmed{{/if~}}
       {{~#if (and dimmed (ne (typeof bg) "null"))}} dimmed-bg{{/if~}}
       {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
@@ -173,6 +176,7 @@
         {{~#if bold}} bold{{/if~}}
         {{~#if italic}} italic{{/if~}}
         {{~#if underline}} underline{{/if~}}
+        {{~#if strikethrough}} strike{{/if~}}
         {{~#if dimmed}} dimmed{{/if~}}
         {{~#if (eq (typeof fg) "number")}} fg{{fg}}{{/if~}}
         {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}

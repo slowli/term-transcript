@@ -41,7 +41,7 @@
     font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: {{round (line_height) digits=2}}px;
   }
-  text { white-space: pre; }
+  text { white-space: pre; text-decoration-thickness: 1px; }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
   .input-hidden { display: none; }
   .output-bg { stroke-width: 0.5; }
