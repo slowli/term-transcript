@@ -236,6 +236,8 @@ It is possible to embed the italic font face as well by specifying 2 paths for `
 term-transcript exec --palette gjm8 \
   --line-numbers continuous \
   --line-height=1.4em \
+  --dim-opacity 0.5 \
+  --blink-opacity 0 --blink-interval 500ms \
   --embed-font="fonts/RobotoMono.ttf:fonts/RobotoMono-Italic.ttf" \
   --pure-svg \
   'rainbow --short'

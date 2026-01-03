@@ -35,24 +35,33 @@
         .scrollbar { fill: #fff; fill-opacity: 0.35; }
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
-        .underline { text-decoration: underline; }
-        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #0c0c0c 30%); }
+        .underline:not(.dimmed, .blink), .underline:is(.dimmed, .blink) > span { text-decoration-line: underline; }
+        .strike:not(.dimmed, .blink), .strike:is(.dimmed, .blink) > span { text-decoration-line: line-through; }
+        .underline.strike:not(.dimmed, .blink), .underline.strike:is(.dimmed, .blink) > span { text-decoration-line: underline line-through; }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, transparent); }
         .dimmed-bg > span { background: rgb(from #0c0c0c r g b / 30%); }
+        .concealed { color: rgba(0, 0, 0, 0) !important; }
+        @keyframes blink {
+          0% { color: currentColor; }
+          100% { color: color-mix(in hsl, currentColor 70%, transparent); }
+        }
+        .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
+
         .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
           color: color-mix(in hsl, currentColor 60%, #0c0c0c 40%);
         }
         .line { display: block; }
-        .line > span { display: inline-block; }
-        .fg0 { color: #0c0c0c; } .bg0 { background: #0c0c0c; }
+        .line span { display: inline-block; text-decoration-thickness: 1px; }
+        .fg0,.inv.fg-none { color: #0c0c0c; } .bg0 { background: #0c0c0c; }
         .fg1 { color: #c50f1f; } .bg1 { background: #c50f1f; }
         .fg2 { color: #13a10e; } .bg2 { background: #13a10e; }
         .fg3 { color: #c19c00; } .bg3 { background: #c19c00; }
         .fg4 { color: #0037da; } .bg4 { background: #0037da; }
         .fg5 { color: #881798; } .bg5 { background: #881798; }
         .fg6 { color: #3a96dd; } .bg6 { background: #3a96dd; }
-        .fg7 { color: #cccccc; } .bg7 { background: #cccccc; }
+        .fg7 { color: #cccccc; } .bg7,.inv.bg-none { background: #cccccc; }
         .fg8 { color: #767676; } .bg8 { background: #767676; }
         .fg9 { color: #e74856; } .bg9 { background: #e74856; }
         .fg10 { color: #16c60c; } .bg10 { background: #16c60c; }
@@ -64,7 +73,7 @@
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #0c0c0c;"/>
       <svg id="scroll-container" x="0" y="10" width="749" height="342" viewBox="0 0 749 342" overflow="hidden">
-        <foreignObject width="749" height="614">
+        <foreignObject width="749" height="672.8">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow</pre></div>
             <div class="output"><pre class="line-numbers">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17</pre><pre><span class="line">Base colors:
@@ -85,11 +94,14 @@
 </span><span class="line">24-bit colors:
 </span><span class="line"><span style="color: #ffbbdd;">pink</span> <span style="color: #ffaa44;">orange</span> <span style="color: #9f4010;">brown</span> <span style="color: #10889f;">teal</span> </span></pre></div>
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> rainbow --short</pre></div>
-            <div class="output"><pre class="line-numbers">18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28</pre><pre><span class="line">Base styles
-</span><span class="line">     None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic">Bold+Italic</span>
-</span><span class="line">   Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed"><span>Bold+Italic</span></span>
-</span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline">Bold+Italic</span>
-</span><span class="line">  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
+            <div class="output"><pre class="line-numbers">18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28<br/>29<br/>30<br/>31</pre><pre><span class="line">Base styles
+</span><span class="line">     None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic bg6">Bold+Italic</span> <span class="strike">Strike</span>
+</span><span class="line">   Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed dimmed-bg bg6"><span>Bold+Italic</span></span> <span class="strike dimmed"><span>Strike</span></span>
+</span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline bg6">Bold+Italic</span> <span class="underline strike">Strike</span>
+</span><span class="line">    Blink: <span class="blink"><span>Regular</span></span> <span class="bold blink fg2"><span>Bold</span></span> <span class="italic blink fg3 bg5"><span>Italic</span></span> <span class="bold italic blink bg6"><span>Bold+Italic</span></span> <span class="strike blink"><span>Strike</span></span>
+</span><span class="line">Concealed: <span class="concealed">Regular</span> <span class="bold concealed fg2">Bold</span> <span class="italic concealed fg3 bg5">Italic</span> <span class="bold italic concealed bg6">Bold+Italic</span> <span class="strike concealed">Strike</span>
+</span><span class="line"> Inverted: <span class="inv fg-none bg-none">Regular</span> <span class="bold inv fg-none bg2">Bold</span> <span class="italic inv fg5 bg3">Italic</span> <span class="bold italic inv bg-none fg6">Bold+Italic</span> <span class="strike inv fg-none bg-none">Strike</span>
+</span><span class="line">  With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg6">Bold+Italic</span> <span class="strike fg0 bg7">Strike</span>
 </span><span class="line">Base colors:
 </span><span class="line"><span class="underline fg0">black</span> <span class="fg1">red</span> <span class="underline fg2">green</span> <span class="fg3">yellow</span> <span class="underline fg4">blue</span> <span class="fg5">magenta</span> <span class="underline fg6">cyan</span> <span class="fg7">white</span> 
 </span><span class="line"><span class="fg8">black</span> <span class="underline fg9">red</span> <span class="fg10">green</span> <span class="underline fg11">yellow</span> <span class="fg12">blue</span> <span class="underline fg13">magenta</span> <span class="fg14">cyan</span> <span class="underline fg15">white</span> 
@@ -99,9 +111,9 @@
           </div>
         </foreignObject>
       </svg>
-      <rect id="scrollbar" class="scrollbar" x="737" y="10" width="5" height="190" />
-      <animate id="scroll" href="#scroll-container" attributeName="viewBox" values="0 0 749 342;0 52 749 342;0 104 749 342;0 156 749 342;0 208 749 342;0 272 749 342" begin="0s" dur="20s" repeatCount="indefinite" calcMode="discrete" />
-      <animate href="#scrollbar" attributeName="y" values="10;39.1;68.1;97.2;126.2;162" begin="scroll.begin" dur="20s" repeatCount="indefinite" calcMode="discrete" />
+      <rect id="scrollbar" class="scrollbar" x="737" y="10" width="5" height="174" />
+      <animate id="scroll" href="#scroll-container" attributeName="viewBox" values="0 0 749 342;0 52 749 342;0 104 749 342;0 156 749 342;0 208 749 342;0 260 749 342;0 312 749 342;0 330.8 749 342" begin="0s" dur="28s" repeatCount="indefinite" calcMode="discrete" />
+      <animate href="#scrollbar" attributeName="y" values="10;36.4;62.8;89.2;115.6;142;168.5;178" begin="scroll.begin" dur="28s" repeatCount="indefinite" calcMode="discrete" />
     </g>
     <text x="10" y="19.6" style="font: 14px monospace; fill: #c50f1f;">
       HTML embedding not supported.
