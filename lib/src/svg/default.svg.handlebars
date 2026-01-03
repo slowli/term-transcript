@@ -89,6 +89,13 @@
 
   {{>common_font_styles}}
   {{!
+    For opacity-related styling (.dimmed, .blink), text decoration must be applied to the child <span>,
+    so that it has the correct opacity.
+  }}
+  .underline:not(.dimmed, .blink), .underline:is(.dimmed, .blink) > span { text-decoration-line: underline; }
+  .strike:not(.dimmed, .blink), .strike:is(.dimmed, .blink) > span { text-decoration-line: line-through; }
+  .underline.strike:not(.dimmed, .blink), .underline.strike:is(.dimmed, .blink) > span { text-decoration-line: underline line-through; }
+  {{!
     The dimmed-related complexity is motivated by Safari quirks; it doesn't render HTML-in-SVG with any filters
     (incl. opacity) correctly.
   }}
@@ -98,9 +105,9 @@
   .concealed { color: rgba(0, 0, 0, 0) !important; }
   @keyframes blink {
     0% { color: currentColor; }
-    100% { color: color-mix(in hsl, currentColor 70%, {{ palette.colors.black }} 30%); }
+    100% { color: rgb(from currentColor r g b / 70%); }
   }
-  .blink > span { animation: 2s steps(2) 0s infinite blink; }
+  .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
   {{~#if wrap}}
 
   .hard-br { margin-left: 8px; }
@@ -111,7 +118,7 @@
   {{~/if}}
 
   .line { display: block; }
-  .line > span { display: inline-block; text-decoration-thickness: 1px; }
+  .line span { display: inline-block; text-decoration-thickness: 1px; }
   .fg0 { color: {{ palette.colors.black }}; } .bg0 { background: {{ palette.colors.black }}; }
   .fg1 { color: {{ palette.colors.red }}; } .bg1 { background: {{ palette.colors.red }}; }
   .fg2 { color: {{ palette.colors.green }}; } .bg2 { background: {{ palette.colors.green }}; }
