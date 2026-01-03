@@ -146,6 +146,8 @@
       {{~#if underline}} underline{{/if~}}
       {{~#if strikethrough}} strike{{/if~}}
       {{~#if dimmed}} dimmed{{/if~}}
+      {{~#if blink}} blink{{/if~}}
+      {{~#if concealed}} concealed{{/if~}}
       {{~#if (and dimmed (ne (typeof (final_bg)) "null"))}} dimmed-bg{{/if~}}
       {{~#if (eq (typeof (final_fg)) "number")}} fg{{final_fg}}{{/if~}}
       {{~#if (eq (typeof (final_bg)) "number")}} bg{{final_bg}}{{/if~}}
@@ -160,10 +162,10 @@
     {{~/scope~}}
   {{~/if~}}
   {{!
-    If dimmed, enclose text in an additional span to apply pseudo-opacity effects based on `currentColor` and/or
-    by having a semi-transparent background; see .dimmed CSS. Using `opacity` or filters doesn't work in Safari.
+    If dimmed or blinking, enclose text in an additional span to apply pseudo-opacity effects based on `currentColor` and/or
+    by having a semi-transparent background; see .dimmed / .blink CSS. Using `opacity` or filters doesn't work in Safari.
   }}
-  {{#if dimmed}}<span>{{/if}}{{text}}{{#if dimmed}}</span>{{/if}}
+  {{#if (or dimmed blink)}}<span>{{/if}}{{text}}{{#if (or dimmed blink)}}</span>{{/if}}
   {{~#if (gt (len this) 1)~}}
     </span>
   {{~/if~}}
@@ -196,6 +198,8 @@
       {{~#if underline}} underline{{/if~}}
       {{~#if strikethrough}} strike{{/if~}}
       {{~#if dimmed}} dimmed{{/if~}}
+      {{~#if blink}} blink{{/if~}}
+      {{~#if concealed}} concealed{{/if~}}
       {{~#if (eq (typeof (final_fg)) "number")}} fg{{final_fg}}{{/if~}}
       {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
       {{~#if (ne (typeof (final_bg)) "null")}} bg{{final_bg}}{{/if~}}

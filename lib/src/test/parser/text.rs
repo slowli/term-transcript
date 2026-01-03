@@ -215,6 +215,12 @@ impl TextReadingState {
                 b"strike" => {
                     style.strikethrough = true;
                 }
+                b"blink" => {
+                    style.blink = true;
+                }
+                b"concealed" => {
+                    style.concealed = true;
+                }
 
                 // Indexed foreground color candidate.
                 fg if fg.starts_with(b"fg") => {

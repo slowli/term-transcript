@@ -94,6 +94,13 @@
   }}
   .dimmed > span { color: color-mix(in hsl, currentColor 70%, {{ palette.colors.black }} 30%); }
   .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / 30%); }
+  {{! Only text is concealed, background is not }}
+  .concealed { color: rgba(0, 0, 0, 0) !important; }
+  @keyframes blink {
+    0% { color: currentColor; }
+    100% { color: color-mix(in hsl, currentColor 70%, {{ palette.colors.black }} 30%); }
+  }
+  .blink > span { animation: 2s steps(2) 0s infinite blink; }
   {{~#if wrap}}
 
   .hard-br { margin-left: 8px; }

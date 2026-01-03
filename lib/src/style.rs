@@ -176,9 +176,15 @@ pub(crate) struct Style {
     /// Not supported by all terminals.
     #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
     pub(crate) strikethrough: bool,
-    /// Swap background and foreground. For normalized styles, this is only set if both `fg` and `bg` are `None`.
+    /// Swap background and foreground.
     #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
     pub(crate) inverted: bool,
+    /// Not supported on all terminals, sometimes intentionally switched off.
+    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
+    pub(crate) blink: bool,
+    /// Not supported on all terminals.
+    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
+    pub(crate) concealed: bool,
     #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Option::is_none"))]
     pub(crate) fg: Option<Color>,
     #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Option::is_none"))]
@@ -212,6 +218,12 @@ impl fmt::Display for Style {
             if self.inverted {
                 write!(formatter, "\u{1b}[7m")?;
             }
+            if self.blink {
+                write!(formatter, "\u{1b}[5m")?;
+            }
+            if self.concealed {
+                write!(formatter, "\u{1b}[8m")?;
+            }
 
             if let Some(fg) = &self.fg {
                 fg.write_params(formatter, false)?;
@@ -233,6 +245,8 @@ impl Style {
         dimmed: false,
         strikethrough: false,
         inverted: false,
+        blink: false,
+        concealed: false,
         fg: None,
         bg: None,
     };
@@ -250,6 +264,8 @@ impl Style {
             && !self.dimmed
             && !self.strikethrough
             && !self.inverted
+            && !self.blink
+            && !self.concealed
             && self.fg.is_none()
             && self.bg.is_none()
     }
