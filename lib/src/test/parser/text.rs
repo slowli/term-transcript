@@ -117,7 +117,7 @@ impl TextReadingState {
                 }
 
                 let tag_name = tag.name();
-                // Check for the hard line break <tspan> or <b>. We mustn't add its contents to the text,
+                // Check for the hard line break <text> or <b>. We mustn't add its contents to the text,
                 // and instead gobble the following '\n'.
                 let classes = parse_classes(tag.attributes())?;
                 if extract_base_class(&classes) == b"hard-br" {
@@ -126,10 +126,10 @@ impl TextReadingState {
                 }
 
                 if Self::is_text_span(tag_name.as_ref()) {
-                    let color_spec = Self::parse_color_from_span(&tag)?;
-                    if !color_spec.is_none() {
+                    let style = Self::parse_style_from_span(&tag)?;
+                    if !style.is_none() {
                         self.color_spans_writer
-                            .write_style(&color_spec)
+                            .write_style(&style)
                             .expect("cannot set color for ANSI buffer");
                     }
                 }
@@ -174,24 +174,29 @@ impl TextReadingState {
             .expect("cannot write to ANSI buffer");
     }
 
-    /// Parses color spec from a `span`.
+    /// Parses a style from a `span`.
     ///
-    /// **NB.** Must correspond to the span creation logic in the `html` module.
-    fn parse_color_from_span(span_tag: &BytesStart) -> Result<Style, ParseError> {
+    /// **NB.** Must correspond to the span creation logic in the `svg` module.
+    fn parse_style_from_span(span_tag: &BytesStart) -> Result<Style, ParseError> {
         let class_attr = parse_classes(span_tag.attributes())?;
-        let mut color_spec = Style::default();
-        Self::parse_color_from_classes(&mut color_spec, &class_attr);
+        let mut style = Style::default();
+        Self::parse_color_from_classes(&mut style, &class_attr);
 
-        let mut style = Cow::Borrowed(&[] as &[u8]);
+        let mut style_attr = Cow::Borrowed(&[] as &[u8]);
         for attr in span_tag.attributes() {
             let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
             if attr.key.as_ref() == b"style" {
-                style = attr.value;
+                style_attr = attr.value;
             }
         }
-        Self::parse_color_from_style(&mut color_spec, &style)?;
+        Self::parse_color_from_style(&mut style, &style_attr)?;
 
-        Ok(color_spec)
+        if style.inverted {
+            // Swap fg and bg colors back; they are swapped when writing to SVG.
+            mem::swap(&mut style.fg, &mut style.bg);
+        }
+
+        Ok(style)
     }
 
     fn parse_color_from_classes(style: &mut Style, class_attr: &[u8]) {
@@ -211,6 +216,18 @@ impl TextReadingState {
                 }
                 b"underline" => {
                     style.underline = true;
+                }
+                b"strike" => {
+                    style.strikethrough = true;
+                }
+                b"blink" => {
+                    style.blink = true;
+                }
+                b"concealed" => {
+                    style.concealed = true;
+                }
+                b"inv" => {
+                    style.inverted = true;
                 }
 
                 // Indexed foreground color candidate.
@@ -331,6 +348,35 @@ mod tests {
     }
 
     #[test]
+    fn parsing_inverted_style_from_classes() {
+        let tag = BytesStart::from_content(r#"span class="bold inv fg3""#, 4);
+        let color_spec = TextReadingState::parse_style_from_span(&tag).unwrap();
+        assert_eq!(
+            color_spec,
+            Style {
+                bold: true,
+                inverted: true,
+                bg: Some(Color::Index(3)),
+                ..Style::default()
+            }
+        );
+
+        let tag =
+            BytesStart::from_content(r#"span class="italic inv bg5" style="color: #c0ffee;""#, 4);
+        let color_spec = TextReadingState::parse_style_from_span(&tag).unwrap();
+        assert_eq!(
+            color_spec,
+            Style {
+                italic: true,
+                inverted: true,
+                fg: Some(Color::Index(5)),
+                bg: Some(Color::Rgb("#c0ffee".parse().unwrap())),
+                ..Style::default()
+            }
+        );
+    }
+
+    #[test]
     fn parsing_color_from_style() {
         let mut color_spec = Style::default();
         TextReadingState::parse_color_from_style(
@@ -373,5 +419,15 @@ mod tests {
         assert!(color_spec.bold);
         assert_eq!(color_spec.fg, Some(Color::YELLOW));
         assert_eq!(color_spec.bg, Some(Color::Rgb(RgbColor(0xd7, 0xd7, 0x5f))));
+
+        let mut color_spec = Style::default();
+        TextReadingState::parse_color_from_classes(
+            &mut color_spec,
+            b"underline strike italic dimmed",
+        );
+        assert!(color_spec.underline);
+        assert!(color_spec.strikethrough);
+        assert!(color_spec.italic);
+        assert!(color_spec.dimmed);
     }
 }

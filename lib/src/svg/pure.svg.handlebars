@@ -3,16 +3,23 @@
 
 {{! Renders `class` and/or `style` attributes for a background SVG span }}
 {{~#*inline "svg_bg_tspan_attrs"}}
-  {{~#scope classes="" styles=""}}
+  {{~#scope final_bg=bg classes="" styles=""}}
+    {{~#if inverted~}}
+      {{~#if (eq (typeof fg) "null")~}}
+        {{~final_bg set=7 ~}} {{! indexed white }}
+      {{~else~}}
+        {{~final_bg set=fg ~}}
+      {{~/if~}}
+    {{~/if~}}
     {{~#classes append=true}}
-      {{~#if span.dimmed}} dimmed{{/if~}}
+      {{~#if dimmed}} dimmed{{/if~}}
       {{! Here, we intentionally use the *foreground* class }}
-      {{~#if (eq (typeof span.bg) "number")}} fg{{span.bg}}{{/if~}}
+      {{~#if (eq (typeof (final_bg)) "number")}} fg{{final_bg}}{{/if~}}
     {{/classes~}}
     {{~classes set=(trim (classes))~}}
 
-    {{~#if (eq (typeof span.bg) "string")}}
-      {{~#styles append=true}}fill: {{span.bg}}; stroke: {{span.bg}};{{/styles~}}
+    {{~#if (eq (typeof (final_bg)) "string")}}
+      {{~#styles append=true}}fill: {{final_bg}}; stroke: {{final_bg}};{{/styles~}}
     {{~/if~}}
     {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
   {{~/scope~}}
@@ -41,7 +48,7 @@
     font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
     line-height: {{round (line_height) digits=2}}px;
   }
-  text { white-space: pre; }
+  text { white-space: pre; text-decoration-thickness: 1px; }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
   .input-hidden { display: none; }
   .output-bg { stroke-width: 0.5; }
@@ -60,13 +67,22 @@
   {{/if}}
 
   {{>common_font_styles}}
-  .dimmed { fill-opacity: 0.7; }
+  .underline { text-decoration-line: underline; }
+  .strike { text-decoration-line: line-through; }
+  .underline.strike { text-decoration-line: underline line-through; }
+  .dimmed { fill-opacity: {{dim_opacity}}; }
+  .concealed { fill-opacity: 0 !important; }
+  @keyframes blink {
+    0% { fill-opacity: 1; }
+    100% { fill-opacity: {{blink.opacity}}; }
+  }
+  .blink { animation: {{mul 2 blink.interval}}s steps(2, jump-none) 0s infinite blink; }
   {{~#if wrap}}
 
   .hard-br { font-weight: bold; fill-opacity: 0.6; user-select: none; }
   {{~/if}}
 
-  .fg0 { fill: {{ palette.colors.black }}; } .output-bg .fg0 { stroke: {{ palette.colors.black }}; }
+  .fg0,.inv.fg-none { fill: {{ palette.colors.black }}; } .output-bg .fg0 { stroke: {{ palette.colors.black }}; }
   .fg1 { fill: {{ palette.colors.red }}; } .output-bg .fg1 { stroke: {{ palette.colors.red }}; }
   .fg2 { fill: {{ palette.colors.green }}; } .output-bg .fg2 { stroke: {{ palette.colors.green }}; }
   .fg3 { fill: {{ palette.colors.yellow }}; } .output-bg .fg3 { stroke: {{ palette.colors.yellow }}; }
@@ -160,7 +176,7 @@
           {{~#scope char_pos=0 line_fg="" line_bg="" ~}}
           {{~#each line.spans as |span|~}}
             {{~#line_bg append=true ~}}
-              {{~#if (ne (typeof span.bg) "null")~}}
+              {{~#if (or (ne (typeof span.bg) "null") span.inverted)~}}
                 <rect x="{{
                   round (add (x_pos) (mul (char_pos) (advance_width))) digits=2
                 }}" y="{{
@@ -169,7 +185,7 @@
                   round (mul (char_width span.text) (advance_width)) digits=2
                 }}" height="{{
                   round (line_height) digits=2
-                }}"{{{eval ">svg_bg_tspan_attrs" span=span }}}/>
+                }}"{{>svg_bg_tspan_attrs span}}/>
               {{~/if~}}
             {{~/line_bg~}}
             {{! Render span foreground }}
@@ -180,7 +196,7 @@
                 round (mul (char_width span.text) (advance_width)) digits=2
               }}"{{/if}}{{>svg_tspan_attrs span}}>{{span.text}}</text>
               {{~#if @last~}}
-              <text>
+              <text{{#if ../line.br}} class="hard-br"{{/if}}>
 </text>
               {{~/if~}}
             {{~/line_fg~}}

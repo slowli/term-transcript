@@ -36,24 +36,33 @@
 
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
-        .underline { text-decoration: underline; }
-        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #1c1c1c 30%); }
+        .underline:not(.dimmed, .blink), .underline:is(.dimmed, .blink) > span { text-decoration-line: underline; }
+        .strike:not(.dimmed, .blink), .strike:is(.dimmed, .blink) > span { text-decoration-line: line-through; }
+        .underline.strike:not(.dimmed, .blink), .underline.strike:is(.dimmed, .blink) > span { text-decoration-line: underline line-through; }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, transparent); }
         .dimmed-bg > span { background: rgb(from #1c1c1c r g b / 30%); }
+        .concealed { color: rgba(0, 0, 0, 0) !important; }
+        @keyframes blink {
+          0% { color: currentColor; }
+          100% { color: color-mix(in hsl, currentColor 70%, transparent); }
+        }
+        .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
+
         .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
           color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
         }
         .line { display: block; }
-        .line > span { display: inline-block; }
-        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .line span { display: inline-block; text-decoration-thickness: 1px; }
+        .fg0,.inv.fg-none { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
         .fg2 { color: #cee318; } .bg2 { background: #cee318; }
         .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
         .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
         .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
         .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
-        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg7 { color: #e5e5e5; } .bg7,.inv.bg-none { background: #e5e5e5; }
         .fg8 { color: #666666; } .bg8 { background: #666666; }
         .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
         .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }

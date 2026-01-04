@@ -15,7 +15,7 @@ use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
     svg::{
-        self, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions,
+        self, BlinkOptions, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions,
         ValidTemplateOptions, WrapOptions,
     },
     Transcript,
@@ -118,7 +118,8 @@ pub(crate) struct TemplateArgs {
         long,
         conflicts_with_all = [
             "palette", "line_numbers", "window_frame", "additional_styles", "font_family", "width",
-            "scroll", "hard_wrap", "no_wrap", "line_height", "advance_width",
+            "scroll", "hard_wrap", "no_wrap", "line_height", "advance_width", "dim_opacity", "blink_interval",
+            "blink_opacity"
         ]
     )]
     config_path: Option<PathBuf>,
@@ -161,7 +162,7 @@ pub(crate) struct TemplateArgs {
     advance_width: Option<CssLength>,
     /// Configures width of the rendered console in SVG units. Hint: use together with `--hard-wrap $chars`,
     /// where width is around $chars * 9.
-    #[arg(long, default_value = "720")]
+    #[arg(long, default_value_t = TemplateOptions::default().width)]
     width: NonZeroUsize,
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
     /// If not specified, the default height is sufficient to fit 19 lines with the default template.
@@ -197,6 +198,23 @@ pub(crate) struct TemplateArgs {
         requires = "scroll"
     )]
     scroll_elision_threshold: f64,
+    /// Opacity of dimmed text.
+    #[arg(long, value_name = "RATIO", default_value_t = TemplateOptions::default().dim_opacity)]
+    dim_opacity: f64,
+    /// Interval between blinking animation keyframes.
+    #[arg(
+        long,
+        value_name = "TIME",
+        default_value_t = Duration::from_secs_f64(BlinkOptions::default().interval).into()
+    )]
+    blink_interval: humantime::Duration,
+    /// Lower value of blink opacity. Must be in `[0, 1]`.
+    #[arg(
+        long,
+        value_name = "RATIO",
+        default_value_t = BlinkOptions::default().opacity
+    )]
+    blink_opacity: f64,
     /// Specifies text wrapping threshold in number of chars.
     #[arg(
         long = "hard-wrap",
@@ -238,6 +256,11 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(svg::LineNumbers::from),
             window_frame: value.window_frame,
+            dim_opacity: value.dim_opacity,
+            blink: BlinkOptions {
+                interval: value.blink_interval.as_secs_f64(),
+                opacity: value.blink_opacity,
+            },
             scroll: value
                 .scroll
                 .map(|max_height| {
@@ -339,7 +362,7 @@ impl TemplateArgs {
 
         let template = if let Some(template_path) = template_path {
             if template_path.as_os_str() == "-" {
-                TemplateOrOptions::Options(options)
+                TemplateOrOptions::from(options)
             } else {
                 let template = Self::load_template(&template_path)?;
                 Template::custom(template, options).into()
@@ -373,12 +396,18 @@ impl TemplateArgs {
 #[derive(Debug)]
 enum TemplateOrOptions {
     Template(Box<Template>),
-    Options(ValidTemplateOptions),
+    Options(Box<ValidTemplateOptions>),
 }
 
 impl From<Template> for TemplateOrOptions {
     fn from(template: Template) -> Self {
         Self::Template(Box::new(template))
+    }
+}
+
+impl From<ValidTemplateOptions> for TemplateOrOptions {
+    fn from(options: ValidTemplateOptions) -> Self {
+        Self::Options(Box::new(options))
     }
 }
 

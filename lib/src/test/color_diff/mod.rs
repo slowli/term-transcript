@@ -3,6 +3,7 @@ use std::{
     io,
     io::Write,
     iter::{self, Peekable},
+    mem,
 };
 
 use unicode_width::UnicodeWidthStr;
@@ -152,6 +153,8 @@ struct DiffColorSpan {
     lhs_color_spec: Style,
     rhs_color_spec: Style,
 }
+
+const STYLE_WIDTH: usize = 25;
 
 #[derive(Debug, Default)]
 pub(crate) struct ColorDiff {
@@ -315,7 +318,6 @@ impl ColorDiff {
             ..Style::NONE
         };
         const POS_WIDTH: usize = 10;
-        const STYLE_WIDTH: usize = 22; // `buid magenta*/magenta*`
 
         // Write table header.
         writeln!(
@@ -335,40 +337,88 @@ impl ColorDiff {
 
         // Write table itself.
         for differing_span in &self.differing_spans {
-            let start = differing_span.start;
-            let end = start + differing_span.len;
-            let pos = format!("{start}..{end}");
-            write!(out, "{pos:>POS_WIDTH$} ")?;
+            let lhs_style = &differing_span.lhs_color_spec;
+            let mut lhs_lines = Self::write_style(lhs_style);
+            let rhs_style = &differing_span.rhs_color_spec;
+            let mut rhs_lines = Self::write_style(rhs_style);
+            if lhs_lines.len() < rhs_lines.len() {
+                lhs_lines.resize_with(rhs_lines.len(), String::new);
+            } else {
+                rhs_lines.resize_with(lhs_lines.len(), String::new);
+            }
 
-            Self::write_color_spec(out, &differing_span.lhs_color_spec)?;
-            out.write_all(b" ")?;
-            Self::write_color_spec(out, &differing_span.rhs_color_spec)?;
-            writeln!(out)?;
+            for (i, (lhs_line, rhs_line)) in lhs_lines.into_iter().zip(rhs_lines).enumerate() {
+                if i == 0 {
+                    let start = differing_span.start;
+                    let end = start + differing_span.len;
+                    let pos = format!("{start}..{end}");
+                    write!(out, "{pos:>POS_WIDTH$} ")?;
+                } else {
+                    write!(out, "{:>POS_WIDTH$} ", "")?;
+                }
+                writeln!(
+                    out,
+                    "{lhs_style}{lhs_line:^STYLE_WIDTH$}{lhs_style:#} \
+                     {rhs_style}{rhs_line:^STYLE_WIDTH$}{rhs_style:#}"
+                )?;
+            }
         }
 
         Ok(())
     }
 
     /// Writes `color_spec` in human-readable format.
-    fn write_color_spec(out: &mut impl Write, style: &Style) -> io::Result<()> {
-        const COLOR_WIDTH: usize = 8; // `magenta*` is the widest color output
+    fn write_style(style: &Style) -> Vec<String> {
+        let mut tags = vec![];
+        if let Some(color) = style.fg {
+            tags.push(format!("fg:{}", Self::color_to_string(color)));
+        }
+        if let Some(color) = style.bg {
+            tags.push(format!("bg:{}", Self::color_to_string(color)));
+        }
+        if style.bold {
+            tags.push("bold".to_owned());
+        }
+        if style.italic {
+            tags.push("italic".to_owned());
+        }
+        if style.underline {
+            tags.push("underline".to_owned());
+        }
+        if style.strikethrough {
+            tags.push("strikethrough".to_owned());
+        }
+        if style.dimmed {
+            tags.push("dimmed".to_owned());
+        }
+        if style.blink {
+            tags.push("blink".to_owned());
+        }
+        if style.concealed {
+            tags.push("concealed".to_owned());
+        }
 
-        write!(out, "{style}")?;
-        out.write_all(if style.bold { b"b" } else { b"-" })?;
-        out.write_all(if style.italic { b"i" } else { b"-" })?;
-        out.write_all(if style.underline { b"u" } else { b"-" })?;
-        out.write_all(if style.dimmed { b"d" } else { b"-" })?;
+        if tags.is_empty() {
+            tags.push("(none)".to_owned());
+        }
 
-        write!(
-            out,
-            " {fg:>COLOR_WIDTH$}/{bg:<COLOR_WIDTH$}{style:#}",
-            fg = style
-                .fg
-                .map_or_else(|| "(none)".to_owned(), Self::color_to_string),
-            bg = style
-                .bg
-                .map_or_else(|| "(none)".to_owned(), Self::color_to_string),
-        )
+        let mut lines = vec![];
+        let mut current_line = String::new();
+        for tag in tags {
+            // We can use `len()` because all text is ASCII.
+            if !current_line.is_empty() && current_line.len() + 1 + tag.len() > STYLE_WIDTH {
+                lines.push(mem::take(&mut current_line));
+            }
+            if !current_line.is_empty() {
+                current_line.push(' ');
+            }
+            current_line.push_str(&tag);
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+        lines
     }
 
     fn color_to_string(color: Color) -> String {

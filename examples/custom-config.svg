@@ -37,24 +37,33 @@
         .scrollbar { fill: #fff; fill-opacity: 0.35; }
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
-        .underline { text-decoration: underline; }
-        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #3c3836 30%); }
-        .dimmed-bg > span { background: rgb(from #3c3836 r g b / 30%); }
+        .underline:not(.dimmed, .blink), .underline:is(.dimmed, .blink) > span { text-decoration-line: underline; }
+        .strike:not(.dimmed, .blink), .strike:is(.dimmed, .blink) > span { text-decoration-line: line-through; }
+        .underline.strike:not(.dimmed, .blink), .underline.strike:is(.dimmed, .blink) > span { text-decoration-line: underline line-through; }
+        .dimmed > span { color: color-mix(in hsl, currentColor 50%, transparent); }
+        .dimmed-bg > span { background: rgb(from #3c3836 r g b / 50%); }
+        .concealed { color: rgba(0, 0, 0, 0) !important; }
+        @keyframes blink {
+          0% { color: currentColor; }
+          100% { color: color-mix(in hsl, currentColor 70%, transparent); }
+        }
+        .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
+
         .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
           color: color-mix(in hsl, currentColor 60%, #3c3836 40%);
         }
         .line { display: block; }
-        .line > span { display: inline-block; }
-        .fg0 { color: #3c3836; } .bg0 { background: #3c3836; }
+        .line span { display: inline-block; text-decoration-thickness: 1px; }
+        .fg0,.inv.fg-none { color: #3c3836; } .bg0 { background: #3c3836; }
         .fg1 { color: #b85651; } .bg1 { background: #b85651; }
         .fg2 { color: #8f9a52; } .bg2 { background: #8f9a52; }
         .fg3 { color: #c18f41; } .bg3 { background: #c18f41; }
         .fg4 { color: #68948a; } .bg4 { background: #68948a; }
         .fg5 { color: #ab6c7d; } .bg5 { background: #ab6c7d; }
         .fg6 { color: #72966c; } .bg6 { background: #72966c; }
-        .fg7 { color: #a89984; } .bg7 { background: #a89984; }
+        .fg7 { color: #a89984; } .bg7,.inv.bg-none { background: #a89984; }
         .fg8 { color: #5a524c; } .bg8 { background: #5a524c; }
         .fg9 { color: #b85651; } .bg9 { background: #b85651; }
         .fg10 { color: #a9b665; } .bg10 { background: #a9b665; }

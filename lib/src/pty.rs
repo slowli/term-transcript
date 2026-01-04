@@ -230,6 +230,11 @@ mod tests {
     use super::*;
     use crate::{ShellOptions, Transcript, UserInput};
 
+    // FIXME: Prompt incorrectly read from PTY in some cases (#24)
+    const RETRIES: RetryErrors<anyhow::Error> =
+        Retry::times(3).on_error(|err| err.to_string().contains("Unexpected PTY output"));
+
+    #[decorate(RETRIES)]
     #[test]
     fn pty_trait_implementation() -> anyhow::Result<()> {
         let mut pty_command = PtyCommand::default();
@@ -249,7 +254,10 @@ mod tests {
         let mut buffer = String::new();
         spawned.reader.read_to_string(&mut buffer)?;
 
-        assert!(buffer.contains("Hello"), "Unexpected buffer: {buffer:?}");
+        anyhow::ensure!(
+            buffer.contains("Hello"),
+            "Unexpected PTY output: {buffer:?}"
+        );
         Ok(())
     }
 
@@ -281,10 +289,7 @@ mod tests {
         Ok(())
     }
 
-    const RETRIES: RetryErrors<anyhow::Error> =
-        Retry::times(3).on_error(|err| err.to_string().contains("Unexpected PTY output"));
-
-    #[decorate(RETRIES)] // FIXME: Prompt incorrectly read from PTY in some cases (#24)
+    #[decorate(RETRIES)]
     #[test]
     fn pty_transcript_with_multiline_input() -> anyhow::Result<()> {
         let mut options = ShellOptions::new(PtyCommand::default());

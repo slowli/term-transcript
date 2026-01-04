@@ -1,7 +1,7 @@
 //! Tests the full lifecycle of `Transcript`s.
 
 use std::{
-    io,
+    fmt, io,
     path::Path,
     process::{Command, Stdio},
     str::Utf8Error,
@@ -11,6 +11,7 @@ use std::{
 use assert_matches::assert_matches;
 use term_transcript::{
     svg::{Template, ValidTemplateOptions},
+    test::{compare_transcripts, MatchKind},
     ShellOptions, Transcript, UserInput,
 };
 use test_casing::{decorate, decorators::Retry, test_casing, Product};
@@ -378,5 +379,72 @@ fn non_utf8_shell_output(lossy: bool) -> anyhow::Result<()> {
         assert_matches!(err.kind(), io::ErrorKind::InvalidData);
         assert!(err.get_ref().unwrap().is::<Utf8Error>(), "{err:?}");
     }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct TestOutput {
+    name: &'static str,
+    content: &'static str,
+}
+
+impl fmt::Debug for TestOutput {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.name, formatter)
+    }
+}
+
+macro_rules! test_output {
+    ($path:tt) => {
+        TestOutput {
+            name: $path,
+            content: ::core::include_str!($path),
+        }
+    };
+}
+
+const RAINBOW_OUTPUTS: [TestOutput; 3] = [
+    test_output!("outputs/rainbow.out"),
+    test_output!("outputs/rainbow-short.out"),
+    test_output!("outputs/rainbow-long.out"),
+];
+
+#[test_casing(6, Product((RAINBOW_OUTPUTS, [false, true])))]
+#[tracing::instrument]
+fn transcript_roundtrip_for_rainbow_outputs(
+    output: TestOutput,
+    pure_svg: bool,
+) -> anyhow::Result<()> {
+    let _guard = enable_tracing();
+
+    // 1. Prepare a transcript from the predefined output.
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(output.name, output.content);
+
+    // 2. Render the transcript into SVG.
+    let mut svg_buffer = vec![];
+    let options = ValidTemplateOptions::default();
+    let template = if pure_svg {
+        Template::pure_svg(options)
+    } else {
+        Template::new(options)
+    };
+    template.render(&transcript, &mut svg_buffer)?;
+
+    // 3. Parse SVG back to the transcript.
+    let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
+    assert_eq!(parsed.interactions().len(), 1);
+    let interaction = &parsed.interactions()[0];
+    assert_eq!(*interaction.input(), UserInput::command(output.name));
+
+    // 4. Compare output to the output in the original transcript.
+    let mut buffer = vec![];
+    let stats = compare_transcripts(&mut buffer, &parsed, &transcript, MatchKind::Precise, false)?;
+    assert_eq!(
+        stats.errors(MatchKind::Precise),
+        0,
+        "{}",
+        String::from_utf8_lossy(&buffer)
+    );
     Ok(())
 }

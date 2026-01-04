@@ -131,12 +131,6 @@ fn creating_color_diff_overlapping_spans() {
     assert_eq!(color_diff.differing_spans[1].rhs_color_spec, blue);
 }
 
-fn color_spec_to_string(spec: &Style) -> String {
-    let mut buffer = StripStream::new(vec![]);
-    ColorDiff::write_color_spec(&mut buffer, spec).unwrap();
-    String::from_utf8(buffer.into_inner()).unwrap()
-}
-
 #[test]
 fn writing_color_spec() {
     let mut spec = Style {
@@ -144,31 +138,34 @@ fn writing_color_spec() {
         fg: Some(Color::CYAN),
         ..Style::default()
     };
-    let spec_string = color_spec_to_string(&spec);
-    assert_eq!(spec_string, "b---     cyan/(none)  ");
+    let spec_strings = ColorDiff::write_style(&spec);
+    assert_eq!(spec_strings, ["fg:cyan bold"]);
 
     spec.underline = true;
     spec.bg = Some(Color::Index(11));
-    let spec_string = color_spec_to_string(&spec);
-    assert_eq!(spec_string, "b-u-     cyan/yellow* ");
+    let spec_string = ColorDiff::write_style(&spec);
+    assert_eq!(spec_string, ["fg:cyan bg:yellow* bold", "underline"]);
 
     spec.italic = true;
     spec.bold = false;
     spec.fg = Some(Color::Rgb(RgbColor(0xc0, 0xff, 0xee)));
-    let spec_string = color_spec_to_string(&spec);
-    assert_eq!(spec_string, "-iu-  #c0ffee/yellow* ");
+    let spec_string = ColorDiff::write_style(&spec);
+    assert_eq!(spec_string, ["fg:#c0ffee bg:yellow*", "italic underline"]);
 }
 
 #[test]
 fn writing_color_diff_table() {
     const EXPECTED_TABLE_LINES: &[&str] = &[
-        "Positions      Expected style          Actual style     ",
-        "========== ====================== ======================",
-        "      0..2 ----   (none)/(none)   b---      red/white   ",
+        "Positions       Expected style             Actual style       ",
+        "========== ========================= =========================",
+        "      0..2          (none)             fg:red bg:white bold   ",
+        "                                        strikethrough blink   ",
     ];
 
     let red = Style {
         bold: true,
+        strikethrough: true,
+        blink: true,
         fg: Some(Color::RED),
         bg: Some(Color::WHITE),
         ..Style::default()

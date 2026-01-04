@@ -39,6 +39,15 @@
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration: underline; }
+    .strike { text-decoration: line-through; }
+    .underline.strike { text-decoration: underline line-through; }
+    .dimmed > span { opacity: 0.5; }
+    @keyframes blink {
+      0% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    .blink > span { animation: 1s steps(2, jump-none) 0s infinite blink; }
+    .concealed { color: transparent !important; }
     .term-wrapper {
       color: var(--white);
       background-color: var(--black);

@@ -1,5 +1,5 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 460" width="720" height="460" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 720 510.4" width="720" height="510.4" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
@@ -30,24 +30,33 @@
 
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
-        .underline { text-decoration: underline; }
-        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #1c1c1c 30%); }
+        .underline:not(.dimmed, .blink), .underline:is(.dimmed, .blink) > span { text-decoration-line: underline; }
+        .strike:not(.dimmed, .blink), .strike:is(.dimmed, .blink) > span { text-decoration-line: line-through; }
+        .underline.strike:not(.dimmed, .blink), .underline.strike:is(.dimmed, .blink) > span { text-decoration-line: underline line-through; }
+        .dimmed > span { color: color-mix(in hsl, currentColor 70%, transparent); }
         .dimmed-bg > span { background: rgb(from #1c1c1c r g b / 30%); }
+        .concealed { color: rgba(0, 0, 0, 0) !important; }
+        @keyframes blink {
+          0% { color: currentColor; }
+          100% { color: color-mix(in hsl, currentColor 70%, transparent); }
+        }
+        .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
+
         .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
           color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
         }
         .line { display: block; }
-        .line > span { display: inline-block; }
-        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .line span { display: inline-block; text-decoration-thickness: 1px; }
+        .fg0,.inv.fg-none { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
         .fg2 { color: #cee318; } .bg2 { background: #cee318; }
         .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
         .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
         .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
         .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
-        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg7 { color: #e5e5e5; } .bg7,.inv.bg-none { background: #e5e5e5; }
         .fg8 { color: #666666; } .bg8 { background: #666666; }
         .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
         .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
@@ -58,8 +67,8 @@
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
-      <svg x="0" y="10" width="720" height="440" viewBox="0 0 720 440" overflow="hidden">
-        <foreignObject width="720" height="440">
+      <svg x="0" y="10" width="720" height="490.4" viewBox="0 0 720 490.4" overflow="hidden">
+        <foreignObject width="720" height="490.4">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> term-transcript exec -I 300ms -T 100ms &#x27;rainbow --short&#x27; &gt; bogus.svg &amp;&amp; \
   sed -i~ -E -e &#x27;s/(fg4|bg13)//g&#x27; bogus.svg
@@ -70,10 +79,13 @@
             <div class="output"><pre><span class="line">Testing file <span class="underline">bogus.svg</span>...
 </span><span class="line">  [<span class="fg9">#</span>] Input: rainbow --short
 </span><span class="line">&#x3D; Base styles
-</span><span class="line">&#x3D;      None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic">Bold+Italic</span>
-</span><span class="line">&#x3D;    Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed"><span>Bold+Italic</span></span>
-</span><span class="line">&#x3D; Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline">Bold+Italic</span>
-</span><span class="line">&#x3D;   With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg7">Bold+Italic</span>
+</span><span class="line">&#x3D;      None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic bg6">Bold+Italic</span> <span class="strike">Strike</span>
+</span><span class="line">&#x3D;    Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed dimmed-bg bg6"><span>Bold+Italic</span></span> <span class="strike dimmed"><span>Strike</span></span>
+</span><span class="line">&#x3D; Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline bg6">Bold+Italic</span> <span class="underline strike">Strike</span>
+</span><span class="line">&#x3D;     Blink: <span class="blink"><span>Regular</span></span> <span class="bold blink fg2"><span>Bold</span></span> <span class="italic blink fg3 bg5"><span>Italic</span></span> <span class="bold italic blink bg6"><span>Bold+Italic</span></span> <span class="strike blink"><span>Strike</span></span>
+</span><span class="line">&#x3D; Concealed: <span class="concealed">Regular</span> <span class="bold concealed fg2">Bold</span> <span class="italic concealed fg3 bg5">Italic</span> <span class="bold italic concealed bg6">Bold+Italic</span> <span class="strike concealed">Strike</span>
+</span><span class="line">&#x3D;  Inverted: <span class="inv fg-none bg-none">Regular</span> <span class="bold inv fg-none bg2">Bold</span> <span class="italic inv fg5 bg3">Italic</span> <span class="bold italic inv bg-none fg6">Bold+Italic</span> <span class="strike inv fg-none bg-none">Strike</span>
+</span><span class="line">&#x3D;   With bg: <span class="fg0 bg7">Regular</span> <span class="bold fg2 bg7">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic fg0 bg6">Bold+Italic</span> <span class="strike fg0 bg7">Strike</span>
 </span><span class="line">&#x3D; Base colors:
 </span><span class="line"><span class="fg1">&gt; </span><span class="underline fg0">black</span> <span class="fg1">red</span> <span class="underline fg2">green</span> <span class="fg3">yellow</span> <span class="underline">blue</span> <span class="fg5">magenta</span> <span class="underline fg6">cyan</span> <span class="fg7">white</span> 
 </span><span class="line"><span class="fg1">&gt; </span>                       <span class="fg7 bg1">^^^^</span>
@@ -82,10 +94,10 @@
 </span><span class="line">&#x3D; <span class="bg0">black</span> <span class="bg1">red</span> <span class="bg2">green</span> <span class="bg3">yellow</span> <span class="bg4">blue</span> <span class="bg5">magenta</span> <span class="bg6">cyan</span> <span class="bg7">white</span> 
 </span><span class="line"><span class="fg1">&gt; </span><span class="bg8">black</span> <span class="bg9">red</span> <span class="bg10">green</span> <span class="bg11">yellow</span> <span class="bg12">blue</span> magenta <span class="bg14">cyan</span> <span class="bg15">white</span> 
 </span><span class="line"><span class="fg1">&gt; </span>                            <span class="fg7 bg1">^^^^^^^</span>
-</span><span class="line"><span class="bold">Positions      Expected style          Actual style     </span>
-</span><span class="line"><span class="bold">&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;</span>
-</span><span class="line">  220..224 <span class="underline">--u-   (none)/(none)  </span> <span class="underline fg4">--u-     blue/(none)  </span>
-</span><span class="line">  387..394 ----   (none)/(none)   <span class="bg13">----   (none)/magenta*</span>
+</span><span class="line"><span class="bold">Positions       Expected style             Actual style       </span>
+</span><span class="line"><span class="bold">&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;</span>
+</span><span class="line">  398..402 <span class="underline">        underline        </span> <span class="underline fg4">    fg:blue underline    </span>
+</span><span class="line">  565..572          (none)           <span class="bg13">       bg:magenta*       </span>
 </span><span class="line"><span class="bold">Totals:</span> passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></span></pre></div>
           </div>
         </foreignObject>
