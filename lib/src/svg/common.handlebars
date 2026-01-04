@@ -136,15 +136,12 @@
 {{~#*inline "html_span"}}
   {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
     {{~#scope final_fg=fg final_bg=bg classes="" styles=""~}}
-    {{~>invert_colors~}}
+    {{~#if inverted~}}
+      {{~final_fg set=bg~}}
+      {{~final_bg set=fg~}}
+    {{~/if~}}
     {{~#classes append=true}}
-      {{~#if bold}} bold{{/if~}}
-      {{~#if italic}} italic{{/if~}}
-      {{~#if underline}} underline{{/if~}}
-      {{~#if strikethrough}} strike{{/if~}}
-      {{~#if dimmed}} dimmed{{/if~}}
-      {{~#if blink}} blink{{/if~}}
-      {{~#if concealed}} concealed{{/if~}}
+      {{~>common_span_classes~}}
       {{~#if (and dimmed (ne (typeof (final_bg)) "null"))}} dimmed-bg{{/if~}}
       {{~#if (eq (typeof (final_fg)) "number")}} fg{{final_fg}}{{/if~}}
       {{~#if (eq (typeof (final_bg)) "number")}} bg{{final_bg}}{{/if~}}
@@ -169,34 +166,29 @@
 {{~/inline~}}
 
 {{! Swaps background and foreground colors. If any are not specified, use the default palette colors. }}
-{{~#*inline "invert_colors"}}
-  {{~#if inverted~}}
-    {{~#if (eq (typeof bg) "null")~}}
-      {{~final_fg set=0 ~}} {{! indexed black }}
-    {{~else~}}
-      {{~final_fg set=bg~}}
-    {{~/if~}}
-    {{~#if (eq (typeof fg) "null")~}}
-      {{~final_bg set=7 ~}} {{! indexed white }}
-    {{~else~}}
-      {{~final_bg set=fg~}}
-    {{~/if~}}
-  {{~/if~}}
+{{~#*inline "common_span_classes"}}
+  {{~#if bold}} bold{{/if~}}
+  {{~#if italic}} italic{{/if~}}
+  {{~#if underline}} underline{{/if~}}
+  {{~#if strikethrough}} strike{{/if~}}
+  {{~#if dimmed}} dimmed{{/if~}}
+  {{~#if blink}} blink{{/if~}}
+  {{~#if concealed}} concealed{{/if~}}
+  {{~#if inverted}} inv{{/if~}}
+  {{~#if (and inverted (eq (typeof (final_fg)) "null"))}} fg-none{{/if~}}
+  {{~#if (and inverted (eq (typeof (final_bg)) "null"))}} bg-none{{/if~}}
 {{~/inline~}}
 
 {{! Renders an SVG foreground <tspan> styling attributes (class and/or style) }}
 {{~#*inline "svg_tspan_attrs"}}
   {{~#scope final_fg=fg final_bg=bg classes="" styles=""}}
   {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
-    {{~>invert_colors~}}
+    {{~#if inverted~}}
+      {{~final_fg set=bg~}}
+      {{~final_bg set=fg~}}
+    {{~/if~}}
     {{~#classes append=true}}
-      {{~#if bold}} bold{{/if~}}
-      {{~#if italic}} italic{{/if~}}
-      {{~#if underline}} underline{{/if~}}
-      {{~#if strikethrough}} strike{{/if~}}
-      {{~#if dimmed}} dimmed{{/if~}}
-      {{~#if blink}} blink{{/if~}}
-      {{~#if concealed}} concealed{{/if~}}
+      {{~>common_span_classes~}}
       {{~#if (eq (typeof (final_fg)) "number")}} fg{{final_fg}}{{/if~}}
       {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
       {{~#if (ne (typeof (final_bg)) "null")}} bg{{final_bg}}{{/if~}}
