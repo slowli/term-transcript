@@ -378,7 +378,7 @@ fn parser_errors_on_unknown_entity() {
 }
 
 #[test]
-fn reading_pure_svg_with_hard_breaks() {
+fn reading_legacy_pure_svg_with_hard_breaks() {
     const SVG: &str = r#"
 <svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
   <g class="container fg7"><g xml:space="preserve" class="input"><text x="10" y="16"><tspan class="prompt">$</tspan> font-subset info RobotoMono.ttf
@@ -399,7 +399,31 @@ fn reading_pure_svg_with_hard_breaks() {
         "{output:#?}"
     );
     assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
-    assert!(!output.plaintext.contains("↓"), "{output:#?}");
+    assert!(!output.plaintext.contains(">"), "{output:#?}");
+}
+
+#[test]
+fn reading_pure_svg_with_hard_breaks() {
+    const SVG: &str = r#"
+<svg x="0" y="10" width="720" height="342" viewBox="0 0 720 342">
+  <g class="container fg7"><g class="input"><text x="10" y="16">$</text> <text>font-subset info RobotoMono.ttf
+</text></g><g class="output"><text x="42" y="42" class="bold">Roboto Mono </text><text class="dimmed">Regular</text><text>
+</text><text x="42" y="60" class="bold">License:</text><text> This Font Software is licensed under the SIL Open Font License, Version</text><text class="hard-br">
+</text><text x="42" y="78"> 1.1. This license is available with a FAQ at: https://openfontlicense.org
+</text></g>
+  </g>
+</svg>"#;
+
+    let transcript = Transcript::from_svg(SVG.as_bytes()).unwrap();
+    assert_eq!(transcript.interactions().len(), 1);
+    let output = transcript.interactions()[0].output();
+    assert!(
+        output
+            .plaintext
+            .starts_with("Roboto Mono Regular\nLicense:"),
+        "{output:#?}"
+    );
+    assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
 }
 
 #[test]

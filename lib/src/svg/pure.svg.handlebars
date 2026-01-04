@@ -196,7 +196,7 @@
                 round (mul (char_width span.text) (advance_width)) digits=2
               }}"{{/if}}{{>svg_tspan_attrs span}}>{{span.text}}</text>
               {{~#if @last~}}
-              <text>
+              <text{{#if ../line.br}} class="hard-br"{{/if}}>
 </text>
               {{~/if~}}
             {{~/line_fg~}}

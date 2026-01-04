@@ -117,7 +117,7 @@ impl TextReadingState {
                 }
 
                 let tag_name = tag.name();
-                // Check for the hard line break <tspan> or <b>. We mustn't add its contents to the text,
+                // Check for the hard line break <text> or <b>. We mustn't add its contents to the text,
                 // and instead gobble the following '\n'.
                 let classes = parse_classes(tag.attributes())?;
                 if extract_base_class(&classes) == b"hard-br" {
@@ -126,10 +126,10 @@ impl TextReadingState {
                 }
 
                 if Self::is_text_span(tag_name.as_ref()) {
-                    let color_spec = Self::parse_color_from_span(&tag)?;
-                    if !color_spec.is_none() {
+                    let style = Self::parse_style_from_span(&tag)?;
+                    if !style.is_none() {
                         self.color_spans_writer
-                            .write_style(&color_spec)
+                            .write_style(&style)
                             .expect("cannot set color for ANSI buffer");
                     }
                 }
@@ -174,10 +174,10 @@ impl TextReadingState {
             .expect("cannot write to ANSI buffer");
     }
 
-    /// Parses color spec from a `span`.
+    /// Parses a style from a `span`.
     ///
-    /// **NB.** Must correspond to the span creation logic in the `html` module.
-    fn parse_color_from_span(span_tag: &BytesStart) -> Result<Style, ParseError> {
+    /// **NB.** Must correspond to the span creation logic in the `svg` module.
+    fn parse_style_from_span(span_tag: &BytesStart) -> Result<Style, ParseError> {
         let class_attr = parse_classes(span_tag.attributes())?;
         let mut style = Style::default();
         Self::parse_color_from_classes(&mut style, &class_attr);
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn parsing_inverted_style_from_classes() {
         let tag = BytesStart::from_content(r#"span class="bold inv fg3""#, 4);
-        let color_spec = TextReadingState::parse_color_from_span(&tag).unwrap();
+        let color_spec = TextReadingState::parse_style_from_span(&tag).unwrap();
         assert_eq!(
             color_spec,
             Style {
@@ -363,7 +363,7 @@ mod tests {
 
         let tag =
             BytesStart::from_content(r#"span class="italic inv bg5" style="color: #c0ffee;""#, 4);
-        let color_spec = TextReadingState::parse_color_from_span(&tag).unwrap();
+        let color_spec = TextReadingState::parse_style_from_span(&tag).unwrap();
         assert_eq!(
             color_spec,
             Style {
