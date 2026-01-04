@@ -12,6 +12,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   `--scroll-len` (length of a single scroll animation) and `--scroll-elision-threshold`
   (threshold for eliding the penultimate scroll keyframe if the last scroll is small).
 - Allow specifying shell initialization commands via `--init`.
+- Allow configuring dimmed text opacity via `--dim-opacity`, and blinking options via `--blink-opacity` / `--blink-interval`.
 
 ## 0.4.0-beta.1 - 2024-03-03
 

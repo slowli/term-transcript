@@ -14,6 +14,9 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Support embedding fonts into the SVG template via `@font-face` CSS rules with a data URL.
   Provide font subsetting as an extension via the opt-in `font-subset` feature.
 - Allow configuring line height and char (advance) width for both HTML-in-SVG and pure SVG templates.
+- Allow configuring dimmed text opacity via `TemplateOptions`.
+- Support strike-through, blinking, concealed and inverted text styles. Blinking opacity and interval are configurable
+  via `TemplateOptions`.
 
 ### Changed
 
