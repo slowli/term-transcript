@@ -66,6 +66,11 @@ use crate::{
 ///         "hard_break_at": 80,
 ///     },
 ///     "line_numbers": null,
+///     "dim_opacity": 0.7,
+///     "blink": {
+///         "opacity": 0.7,
+///         "interval": 1.0,
+///     },
 ///     "has_failures": false,
 ///     "interactions": [{
 ///         "input": {

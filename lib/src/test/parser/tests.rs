@@ -399,7 +399,7 @@ fn reading_legacy_pure_svg_with_hard_breaks() {
         "{output:#?}"
     );
     assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
-    assert!(!output.plaintext.contains(">"), "{output:#?}");
+    assert!(!output.plaintext.contains('>'), "{output:#?}");
 }
 
 #[test]
