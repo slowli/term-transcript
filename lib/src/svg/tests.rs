@@ -179,9 +179,13 @@ fn rendering_transcript_with_opacity_options() {
         ),
         "{buffer}"
     );
-    // Part of the `@keyframes blink`
+    // Parts of the `@keyframes blink`
     assert!(
-        buffer.contains("100% { color: color-mix(in hsl, currentColor 0%, transparent); }"),
+        buffer.contains("color: color-mix(in hsl, currentColor 0%, transparent);"),
+        "{buffer}"
+    );
+    assert!(
+        buffer.contains("background: rgb(from #1c1c1c r g b / 100%);"),
         "{buffer}"
     );
     assert!(

@@ -13,6 +13,7 @@
     {{~/if~}}
     {{~#classes append=true}}
       {{~#if dimmed}} dimmed{{/if~}}
+      {{~#if blink}} blink{{/if~}}
       {{! Here, we intentionally use the *foreground* class }}
       {{~#if (eq (typeof (final_bg)) "number")}} fg{{final_bg}}{{/if~}}
     {{/classes~}}
@@ -73,8 +74,8 @@
   .dimmed { fill-opacity: {{dim_opacity}}; }
   .concealed { fill-opacity: 0 !important; }
   @keyframes blink {
-    0% { fill-opacity: 1; }
-    100% { fill-opacity: {{blink.opacity}}; }
+    0% { fill-opacity: 1; stroke-opacity: 1; }
+    100% { fill-opacity: {{blink.opacity}}; stroke-opacity: {{blink.opacity}}; }
   }
   .blink { animation: {{mul 2 blink.interval}}s steps(2, jump-none) 0s infinite blink; }
   {{~#if wrap}}

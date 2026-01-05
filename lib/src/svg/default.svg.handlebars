@@ -108,8 +108,11 @@
   .concealed { color: rgba(0, 0, 0, 0) !important; }
   {{#if (lt blink.opacity 1)}}
   @keyframes blink {
-    0% { color: currentColor; }
-    100% { color: color-mix(in hsl, currentColor {{round (mul 100 blink.opacity) digits=1}}%, transparent); }
+    0% { color: currentColor; background: transparent; }
+    100% {
+      color: color-mix(in hsl, currentColor {{round (mul 100 blink.opacity) digits=1}}%, transparent);
+      background: rgb(from {{ palette.colors.black }} r g b / {{round (mul 100 (sub 1 blink.opacity)) digits=1}}%);
+    }
   }
   .blink > span { animation: {{mul 2 blink.interval}}s steps(2, jump-none) 0s infinite blink; }
   {{/if}}
