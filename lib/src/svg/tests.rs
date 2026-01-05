@@ -1,6 +1,6 @@
 //! Tests for the SVG rendering logic.
 
-use std::convert::Infallible;
+use std::{convert::Infallible, num::NonZeroUsize};
 
 use test_casing::test_casing;
 
@@ -9,69 +9,6 @@ use crate::{
     style::{Color, Style, StyledSpan},
     ExitStatus, Interaction, UserInput,
 };
-
-#[test]
-fn parsing_scroll_options() {
-    let json = serde_json::json!({});
-    let options: ScrollOptions = serde_json::from_value(json).unwrap();
-    assert_eq!(options, ScrollOptions::DEFAULT);
-
-    let json = serde_json::json!({
-        "pixels_per_scroll": 40,
-        "elision_threshold": 0.1,
-    });
-    let options: ScrollOptions = serde_json::from_value(json).unwrap();
-    assert_eq!(
-        options,
-        ScrollOptions {
-            pixels_per_scroll: NonZeroUsize::new(40).unwrap(),
-            elision_threshold: 0.1,
-            ..ScrollOptions::DEFAULT
-        }
-    );
-}
-
-#[test]
-fn validating_options() {
-    // Default options must be valid.
-    TemplateOptions::default().validate().unwrap();
-
-    let bogus_options = TemplateOptions {
-        line_height: Some(-1.0),
-        ..TemplateOptions::default()
-    };
-    let err = bogus_options.validate().unwrap_err().to_string();
-    assert!(err.contains("line_height"), "{err}");
-
-    let bogus_options = TemplateOptions {
-        advance_width: Some(-1.0),
-        ..TemplateOptions::default()
-    };
-    let err = bogus_options.validate().unwrap_err().to_string();
-    assert!(err.contains("advance_width"), "{err}");
-
-    let bogus_options = TemplateOptions {
-        scroll: Some(ScrollOptions {
-            interval: -1.0,
-            ..ScrollOptions::default()
-        }),
-        ..TemplateOptions::default()
-    };
-    let err = format!("{:#}", bogus_options.validate().unwrap_err());
-    assert!(err.contains("interval"), "{err}");
-
-    for elision_threshold in [-1.0, 1.0] {
-        let bogus_options = TemplateOptions {
-            scroll: Some(ScrollOptions {
-                elision_threshold,
-                ..ScrollOptions::default()
-            }),
-            ..TemplateOptions::default()
-        };
-        let err = format!("{:#}", bogus_options.validate().unwrap_err());
-        assert!(err.contains("elision_threshold"), "{err}");
-    }
-}
 
 #[test]
 fn rendering_simple_transcript() {
