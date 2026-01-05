@@ -62,20 +62,22 @@
   {{~/if}}
 
   .output { {{#if line_numbers}}display: flex; {{/if}}margin-bottom: {{const.BLOCK_MARGIN}}px; }
-  {{~#if line_numbers}}
-
+  {{#if line_numbers}}
   .output > pre { flex-grow: 1; }
   pre.line-numbers {
     flex-grow: 0;
     width: {{const.LN_WIDTH}}px;
     text-align: right;
     padding-right: {{const.LN_PADDING}}px;
-    color: color-mix(in hsl, currentColor 35%, {{ palette.colors.black }} 65%);
+    color: color-mix(in hsl, currentColor 35%, {{ palette.colors.black }});
     user-select: none;
   }
   {{/if}}
-  {{~#if has_failures}}
-
+  .output-sep {
+    margin: -{{div const.BLOCK_MARGIN 2}}px -{{const.WINDOW_PADDING}}px {{sub (div const.BLOCK_MARGIN 2) 1}}px;
+    border-top: 1px solid color-mix(in hsl, {{ palette.colors.white }} 35%, {{ palette.colors.black }});
+  }
+  {{#if has_failures}}
   .input-failure {
     border-left: 2px solid {{ palette.colors.red }};
     border-right: 2px solid {{ palette.colors.red }};
@@ -121,7 +123,7 @@
   .hard-br { margin-left: 8px; }
   .hard-br:before {
     content: '»';
-    color: color-mix(in hsl, currentColor 60%, {{ palette.colors.black }} 40%);
+    color: color-mix(in hsl, currentColor 60%, {{ palette.colors.black }});
   }
   {{~/if}}
 
@@ -157,6 +159,9 @@
               {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
               {{~#if (and (eq ../line_numbers "continuous") (not input.hidden))}}{{>number_input_lines}}{{/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
+            {{~#if (and (not @first) input.hidden)~}}
+              <div class="output-sep"></div>
+            {{~/if~}}
             <div class="output">
               {{~#if ../line_numbers~}}
                 {{~>number_output_lines~}}

@@ -730,6 +730,12 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
     let second_output_line_numbers =
         r#"<div class="output"><pre class="line-numbers">4<br/>5</pre>"#;
     assert!(buffer.contains(second_output_line_numbers), "{buffer}");
+
+    let sep_count = buffer
+        .lines()
+        .filter(|line| line.contains(r#"class="output-sep""#))
+        .count();
+    assert_eq!(sep_count, 1, "{buffer}");
 }
 
 #[test]
@@ -777,6 +783,12 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
     let third_output =
         r#"<g class="output"><g transform="translate(39 125.5)" clip-path="xywh(0 0 100% 18px)">"#;
     assert!(buffer.contains(third_output), "{buffer}");
+
+    let sep_count = buffer
+        .lines()
+        .filter(|line| line.contains(r#"<line class="output-sep""#))
+        .count();
+    assert_eq!(sep_count, 1, "{buffer}");
 }
 
 #[test]
