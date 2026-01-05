@@ -1,6 +1,6 @@
 //! Tests for the SVG rendering logic.
 
-use std::{convert::Infallible, num::NonZeroUsize};
+use std::{borrow::Cow, convert::Infallible, num::NonZeroUsize};
 
 use test_casing::test_casing;
 
@@ -510,7 +510,80 @@ fn rendering_svg_transcript_with_wraps() {
     );
 }
 
-// FIXME: test breaks + line numbers
+const CONTINUED_NUMBERS: [ContinuedLineNumbers; 3] = [
+    ContinuedLineNumbers::Inherit,
+    ContinuedLineNumbers::Skip,
+    ContinuedLineNumbers::Mark(Cow::Borrowed(">>")),
+];
+
+#[test_casing(3, CONTINUED_NUMBERS)]
+fn rendering_transcript_with_breaks_and_line_numbers(continued: ContinuedLineNumbers) {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test"),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let mut buffer = vec![];
+    let options = TemplateOptions {
+        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::EachOutput,
+            continued: continued.clone(),
+        }),
+        ..TemplateOptions::default()
+    };
+    Template::new(options.validated().unwrap())
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    let expected_numbers = match continued {
+        ContinuedLineNumbers::Inherit => r#"<pre class="line-numbers">1<br/>2<br/>3</pre>"#,
+        ContinuedLineNumbers::Skip => r#"<pre class="line-numbers">1<br/><br/></pre>"#,
+        ContinuedLineNumbers::Mark(_) => {
+            r#"<pre class="line-numbers">1<br/><b class="cont"></b><br/><b class="cont"></b></pre>"#
+        }
+    };
+    assert!(buffer.contains(expected_numbers), "{buffer}");
+}
+
+#[test_casing(3, CONTINUED_NUMBERS)]
+fn rendering_svg_transcript_with_breaks_and_line_numbers(continued: ContinuedLineNumbers) {
+    let mut transcript = Transcript::new();
+    transcript.add_interaction(
+        UserInput::command("test"),
+        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+    );
+
+    let mut buffer = vec![];
+    let options = TemplateOptions {
+        line_height: Some(18.0 / 14.0),
+        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::EachOutput,
+            continued: continued.clone(),
+        }),
+        ..TemplateOptions::default()
+    };
+    Template::pure_svg(options.validated().unwrap())
+        .render(&transcript, &mut buffer)
+        .unwrap();
+    let buffer = String::from_utf8(buffer).unwrap();
+
+    let expected_numbers = match continued {
+        ContinuedLineNumbers::Inherit => {
+            r#"<g class="container fg7 line-numbers"><text x="32" y="41.5">1</text><text x="32" y="59.5">2</text><text x="32" y="77.5">3</text></g>"#
+        }
+        ContinuedLineNumbers::Skip => {
+            r#"<g class="container fg7 line-numbers"><text x="32" y="41.5">1</text></g>"#
+        }
+        ContinuedLineNumbers::Mark(_) => {
+            r#"<g class="container fg7 line-numbers"><text x="32" y="41.5">1</text><text x="35" y="59.5">&gt;&gt;</text><text x="35" y="77.5">&gt;&gt;</text></g>"#
+        }
+    };
+    assert!(buffer.contains(expected_numbers), "{buffer}");
+}
 
 #[test]
 fn rendering_transcript_with_line_numbers() {

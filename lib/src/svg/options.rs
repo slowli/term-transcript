@@ -1,14 +1,14 @@
 //! `TemplateOptions` and related types.
 
-use std::{num::NonZeroUsize, ops};
+use std::{borrow::Cow, num::NonZeroUsize, ops};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    svg::{font::BoxedErrorEmbedder, FontEmbedder, FontSubsetter, HandlebarsData, Palette},
-    BoxedError, TermError, Transcript,
-};
+#[cfg(feature = "font-subset")]
+use super::subset::FontSubsetter;
+use super::{font::BoxedErrorEmbedder, FontEmbedder, HandlebarsData, Palette};
+use crate::{BoxedError, TermError, Transcript};
 
 /// Line numbering scope.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -36,7 +36,7 @@ pub enum ContinuedLineNumbers {
     /// Continued lines have numbers skipped.
     Skip,
     /// Mark continued lines with the specified string.
-    Mark(String),
+    Mark(Cow<'static, str>),
 }
 
 /// Line numbering options.
