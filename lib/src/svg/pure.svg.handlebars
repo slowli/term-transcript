@@ -118,7 +118,7 @@
       {{~#if line_numbers~}}
         {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
       {{~/if~}}
-      {{~#if (eq line_numbers "continuous")~}}
+      {{~#if (eq line_numbers.scope "continuous")~}}
         {{input_x_pos set=(x_pos)}}
       {{~/if}}
 
@@ -261,12 +261,13 @@
     x_pos=(add const.WINDOW_PADDING const.LN_WIDTH)
     y_pos=0
     line_number=1
+    skip_line_number=false
   ~}}
   <g class="container fg7 line-numbers">
-    {{~#each interactions}}
+  {{~#each interactions}}
     {{~#if (not input.hidden)}}
       {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
-      {{~#if (eq ../line_numbers "continuous")}}
+      {{~#if (eq ../line_numbers.scope "continuous")}}
         {{~#each (range 0 (count_lines input.text))~}}
           <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{add this (line_number)}}</text>
           {{~y_pos set=(add (y_pos) (line_height))~}}
@@ -278,17 +279,27 @@
       {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
     {{! Number lines in the output }}
-    {{~#each (range 0 (len output))~}}
-      <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{add this (line_number)}}</text>
+    {{~#if (eq ../line_numbers.scope "each_output")~}}
+      {{~line_number set=1 ~}}
+    {{~/if~}}
+
+    {{~skip_line_number set=false ~}}
+    {{~#each output as |line|~}}
+      {{~#if (not (skip_line_number))~}}
+        <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{line_number}}</text>
+        {{~line_number set=(add 1 (line_number))~}}
+      {{~else~}}
+        {{~#with ../../line_numbers.continued.mark as |mark|~}}
+          <text x="{{add (x_pos) 3}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{mark}}</text>
+        {{~else}}{{/with~}}
+      {{~/if~}}
+      {{~skip_line_number set=(and line.br (ne ../../line_numbers.continued "inherit"))~}}
       {{~y_pos set=(add (y_pos) (line_height))~}}
     {{~/each~}}
     {{~#if (gt (len output) 0)~}}
       {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
-    {{~#if (ne ../line_numbers "each_output")~}}
-      {{line_number set=(add (line_number) (len output))}}
-    {{~/if~}}
-    {{/each~}}
+  {{~/each~}}
   </g>
   {{~/scope~}}
 {{~/inline~}}

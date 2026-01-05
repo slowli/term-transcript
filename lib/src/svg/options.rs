@@ -10,8 +10,8 @@ use crate::{
     BoxedError, TermError, Transcript,
 };
 
-/// Line numbering options.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Line numbering scope.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum LineNumbers {
@@ -21,7 +21,33 @@ pub enum LineNumbers {
     ContinuousOutputs,
     /// Use continuous numbering for the lines in all displayed inputs (i.e., ones that
     /// are not [hidden](crate::UserInput::hide())) and outputs.
+    #[default]
     Continuous,
+}
+
+/// Numbering of continued lines.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum ContinuedLineNumbers {
+    /// Continued lines are numbered in the same way as the ordinary lines.
+    #[default]
+    Inherit,
+    /// Continued lines have numbers skipped.
+    Skip,
+    /// Mark continued lines with the specified string.
+    Mark(String),
+}
+
+/// Line numbering options.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LineNumberingOptions {
+    /// Scoping of line numbers.
+    #[serde(default)]
+    pub scope: LineNumbers,
+    /// Numbering of continued lines.
+    #[serde(default)]
+    pub continued: ContinuedLineNumbers,
 }
 
 /// Configurable options of a [`Template`].
@@ -119,8 +145,7 @@ pub struct TemplateOptions {
     #[serde(default = "TemplateOptions::default_wrap")]
     pub wrap: Option<WrapOptions>,
     /// Line numbering options.
-    #[serde(default)]
-    pub line_numbers: Option<LineNumbers>,
+    pub line_numbers: Option<LineNumberingOptions>,
     /// *Font embedder* that will embed the font into the SVG file via `@font-face` CSS.
     /// This guarantees that the SVG will look identical on all platforms.
     #[serde(skip)]

@@ -31,8 +31,8 @@ pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     font::{EmbeddedFont, EmbeddedFontFace, FontEmbedder, FontMetrics},
     options::{
-        BlinkOptions, LineNumbers, ScrollOptions, TemplateOptions, ValidTemplateOptions,
-        WrapOptions,
+        BlinkOptions, ContinuedLineNumbers, LineNumberingOptions, LineNumbers, ScrollOptions,
+        TemplateOptions, ValidTemplateOptions, WrapOptions,
     },
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };

@@ -45,7 +45,7 @@
     line-height: inherit;
   }
   .input {
-    {{~#if (eq line_numbers "continuous")}}
+    {{~#if (eq line_numbers.scope "continuous")}}
 
     display: flex;
     {{~/if}}
@@ -56,7 +56,7 @@
     padding: 2px {{const.WINDOW_PADDING}}px;
   }
   .input-hidden { display: none; }
-  {{~#if (eq line_numbers "continuous")}}
+  {{~#if (eq line_numbers.scope "continuous")}}
 
   .input > pre { flex-grow: 1; }
   {{~/if}}
@@ -118,15 +118,17 @@
   }
   .blink > span { animation: {{mul 2 blink.interval}}s steps(2, jump-none) 0s infinite blink; }
   {{/if}}
-  {{~#if wrap}}
-
+  {{#if wrap}}
   .hard-br { margin-left: 8px; }
   .hard-br:before {
-    content: '»';
+    content: '»'; {{! TODO: make configurable }}
     color: color-mix(in hsl, currentColor 60%, {{ palette.colors.black }});
   }
-  {{~/if}}
-
+  {{#with line_numbers.continued.mark as |mark|}}
+  .line-numbers .cont { margin-right: -3px; }
+  .line-numbers .cont:before { content: '{{mark}}'; }
+  {{else}}{{/with}}
+  {{/if}}
   .line { display: block; }
   .line span { display: inline-block; text-decoration-thickness: 1px; }
   .fg0,.inv.fg-none { color: {{ palette.colors.black }}; } .bg0 { background: {{ palette.colors.black }}; }
@@ -157,17 +159,17 @@
             <div class="input{{#if failure}} input-failure{{/if}}{{#if input.hidden}} input-hidden{{/if}}"
               {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
               {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
-              {{~#if (and (eq ../line_numbers "continuous") (not input.hidden))}}{{>number_input_lines}}{{/if~}}
+              {{~#if (and (eq ../line_numbers.scope "continuous") (not input.hidden))}}{{>number_input_lines}}{{/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
             {{~#if (and (not @first) input.hidden)~}}
               <div class="output-sep"></div>
             {{~/if~}}
             <div class="output">
               {{~#if ../line_numbers~}}
-                {{~>number_output_lines~}}
-                {{~#if (ne ../line_numbers "each_output")~}}
-                  {{~line_number set=(add (line_number) (len output))~}}
+                {{~#if (eq ../line_numbers.scope "each_output")~}}
+                  {{~line_number set=1 ~}}
                 {{~/if~}}
+                {{~>number_output_lines output=output line_numbers=../line_numbers~}}
               {{~/if~}}
               <pre>
               {{~#each output as |line|~}}
@@ -203,9 +205,18 @@
 
 {{~#*inline "number_output_lines"}}
 <pre class="line-numbers">
-  {{~#each (range 0 (len output))~}}
-    {{add this (line_number)}}{{#if @last}}{{else}}<br/>{{/if}}
+  {{~#scope skip_line_number=false ~}}
+  {{~#each output as |line|~}}
+    {{~#if (not (skip_line_number))~}}
+      {{line_number}}
+      {{~line_number set=(add 1 (line_number))~}}
+    {{~else~}}
+      {{~#if ../line_numbers.continued.mark}}<b class="cont"></b>{{/if~}}
+    {{~/if~}}
+    {{~#if @last}}{{else}}<br/>{{/if~}}
+    {{~skip_line_number set=(and line.br (ne ../line_numbers.continued "inherit"))~}}
   {{~/each~}}
+  {{~/scope~}}
 </pre>
 {{~/inline~}}
 

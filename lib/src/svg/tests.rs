@@ -7,6 +7,7 @@ use test_casing::test_casing;
 use super::*;
 use crate::{
     style::{Color, Style, StyledSpan},
+    svg::options::LineNumberingOptions,
     ExitStatus, Interaction, UserInput,
 };
 
@@ -426,7 +427,10 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
             interval: 3.0,
             ..ScrollOptions::default()
         }),
-        line_numbers: line_numbers.then_some(LineNumbers::Continuous),
+        line_numbers: line_numbers.then(|| LineNumberingOptions {
+            scope: LineNumbers::Continuous,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::pure_svg(options.validated().unwrap())
@@ -506,6 +510,8 @@ fn rendering_svg_transcript_with_wraps() {
     );
 }
 
+// FIXME: test breaks + line numbers
+
 #[test]
 fn rendering_transcript_with_line_numbers() {
     let mut transcript = Transcript::new();
@@ -520,7 +526,10 @@ fn rendering_transcript_with_line_numbers() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
-        line_numbers: Some(LineNumbers::EachOutput),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::EachOutput,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::new(options.validated().unwrap())
@@ -553,7 +562,10 @@ fn rendering_pure_svg_transcript_with_line_numbers() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        line_numbers: Some(LineNumbers::EachOutput),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::EachOutput,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::pure_svg(options.validated().unwrap())
@@ -584,7 +596,10 @@ fn rendering_transcript_with_continuous_line_numbers() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
-        line_numbers: Some(LineNumbers::ContinuousOutputs),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::ContinuousOutputs,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::new(options.validated().unwrap())
@@ -616,7 +631,10 @@ fn rendering_transcript_with_input_line_numbers() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
-        line_numbers: Some(LineNumbers::Continuous),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::Continuous,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::new(options.validated().unwrap())
@@ -652,7 +670,10 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
-        line_numbers: Some(LineNumbers::Continuous),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::Continuous,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::new(options.validated().unwrap())
@@ -694,7 +715,10 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        line_numbers: Some(LineNumbers::Continuous),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::Continuous,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::pure_svg(options.validated().unwrap())
@@ -743,7 +767,10 @@ fn rendering_pure_svg_transcript_with_input_line_numbers() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        line_numbers: Some(LineNumbers::Continuous),
+        line_numbers: Some(LineNumberingOptions {
+            scope: LineNumbers::Continuous,
+            ..LineNumberingOptions::default()
+        }),
         ..TemplateOptions::default()
     };
     Template::pure_svg(options.validated().unwrap())
