@@ -32,7 +32,7 @@ pub use self::{
     font::{EmbeddedFont, EmbeddedFontFace, FontEmbedder, FontMetrics},
     options::{
         BlinkOptions, ContinuedLineNumbers, LineNumberingOptions, LineNumbers, ScrollOptions,
-        TemplateOptions, ValidTemplateOptions, WrapOptions,
+        TemplateOptions, ValidTemplateOptions, WindowOptions, WrapOptions,
     },
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };

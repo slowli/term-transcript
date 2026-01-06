@@ -4,7 +4,7 @@
 {{! Root template }}
 {{~#*inline "root"}}
 <!-- Created with {{{creator.name}}} v{{{creator.version}}} ({{{creator.repo}}}) -->
-<svg viewBox="0 {{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" height="{{height}}" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 {{#if window}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" height="{{height}}" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       {{>styles}}
@@ -252,7 +252,7 @@
     {{screen_height set=(content_height)}}
   {{~/if~}}
   {{~height set=(add (screen_height) (mul const.WINDOW_PADDING 2))~}}
-  {{~#if window_frame~}}
+  {{~#if window~}}
     {{height set=(add (height) const.WINDOW_FRAME_HEIGHT)}}
   {{~/if~}}
 {{>root~}} {{! <-- All rendering happens here }}

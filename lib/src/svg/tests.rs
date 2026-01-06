@@ -7,7 +7,7 @@ use test_casing::{test_casing, Product};
 use super::*;
 use crate::{
     style::{Color, Style, StyledSpan},
-    svg::options::LineNumberingOptions,
+    svg::options::{LineNumberingOptions, WindowOptions},
     ExitStatus, Interaction, UserInput,
 };
 
@@ -141,7 +141,7 @@ fn rendering_transcript_with_hidden_input() {
     );
 
     let options = TemplateOptions {
-        window_frame: true,
+        window: Some(WindowOptions::default()),
         line_height: Some(18.0 / 14.0),
         ..TemplateOptions::default()
     };
@@ -168,7 +168,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     );
 
     let options = TemplateOptions {
-        window_frame: true,
+        window: Some(WindowOptions::default()),
         line_height: Some(18.0 / 14.0),
         advance_width: Some(0.575), // slightly decreased value
         ..TemplateOptions::default()
@@ -295,14 +295,19 @@ fn rendering_transcript_with_frame() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
-        window_frame: true,
+        window: Some(WindowOptions {
+            title: "Window Title".to_owned(),
+        }),
         ..TemplateOptions::default()
     };
     Template::new(options.validated().unwrap())
         .render(&transcript, &mut buffer)
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
-    assert!(buffer.contains("<circle"));
+    assert!(buffer.contains("<circle"), "{buffer}");
+
+    assert!(buffer.contains(r#"<text x="50%" y="-3.5" "#), "{buffer}");
+    assert!(buffer.contains(">Window Title</text>"), "{buffer}");
 }
 
 #[test]
@@ -315,7 +320,9 @@ fn rendering_pure_svg_transcript_with_frame() {
 
     let mut buffer = vec![];
     let options = TemplateOptions {
-        window_frame: true,
+        window: Some(WindowOptions {
+            title: "Window Title".to_owned(),
+        }),
         ..TemplateOptions::default()
     };
     Template::pure_svg(options.validated().unwrap())
@@ -323,6 +330,9 @@ fn rendering_pure_svg_transcript_with_frame() {
         .unwrap();
     let buffer = String::from_utf8(buffer).unwrap();
     assert!(buffer.contains("<circle"));
+
+    assert!(buffer.contains(r#"<text x="50%" y="-3.5" "#), "{buffer}");
+    assert!(buffer.contains(">Window Title</text>"), "{buffer}");
 }
 
 #[test]

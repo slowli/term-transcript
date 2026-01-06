@@ -138,9 +138,8 @@ pub struct TemplateOptions {
     /// Font family specification in the CSS format. Should be monospace.
     #[serde(default = "TemplateOptions::default_font_family")]
     pub font_family: String,
-    /// Indicates whether to display a window frame around the shell. Default value is `false`.
-    #[serde(default)]
-    pub window_frame: bool,
+    /// Window options.
+    pub window: Option<WindowOptions>,
     /// Options for the scroll animation. If set to `None` (which is the default),
     /// no scrolling will be enabled, and the height of the generated image is not limited.
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -167,7 +166,7 @@ impl Default for TemplateOptions {
             blink: BlinkOptions::default(),
             additional_styles: String::new(),
             font_family: Self::default_font_family(),
-            window_frame: false,
+            window: None,
             scroll: None,
             wrap: Self::default_wrap(),
             line_numbers: None,
@@ -263,6 +262,13 @@ impl TemplateOptions {
     pub fn validated(self) -> anyhow::Result<ValidTemplateOptions> {
         self.try_into()
     }
+}
+
+/// Window frame options.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct WindowOptions {
+    /// Window title. May be empty.
+    pub title: String,
 }
 
 /// Options that influence the scrolling animation.
