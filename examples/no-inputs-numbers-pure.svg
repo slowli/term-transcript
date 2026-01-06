@@ -9,6 +9,7 @@
     .input-bg { fill: #fff; fill-opacity: 0.1; }
     .input-hidden { display: none; }
     .output-bg { stroke-width: 0.5; }
+    .output-sep { stroke: #e5e5e5; stroke-width: 1; stroke-opacity: 0.35; }
     .scrollbar { fill: #fff; fill-opacity: 0.35; }
     .line-numbers { text-anchor: end; fill-opacity: 0.35; user-select: none; }
 
@@ -64,7 +65,7 @@
 </text></g><g transform="translate(39 264.9)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="112">24-bit colors:</text><text>
 </text></g><g transform="translate(39 281.7)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="32" style="fill: #ffbbdd;">pink</text><text x="32"> </text><text x="40" textLength="48" style="fill: #ffaa44;">orange</text><text x="88"> </text><text x="96" textLength="40" style="fill: #9f4010;">brown</text><text x="136"> </text><text x="144" textLength="32" style="fill: #10889f;">teal</text><text x="176"> </text><text>
 </text></g></g><g class="input input-hidden"><g transform="translate(39 304.5)"><text class="prompt" textLength="8">$</text><text x="8" textLength="128"> rainbow --short</text><text>
-</text></g></g><g class="output"><g transform="translate(39 304.5)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="96">Base styles:</text><text>
+</text></g></g><line class="output-sep" x1="0" y1="289.6" x2="100%" y2="289.6" /><g class="output"><g transform="translate(39 304.5)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="96">Base styles:</text><text>
 </text></g><g transform="translate(39 321.3)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="152">     None: Regular </text><text x="152" textLength="32" class="bold fg2">Bold</text><text x="184"> </text><text x="192" textLength="48" class="italic fg3 bg5">Italic</text><text x="240"> </text><text x="248" textLength="88" class="bold italic bg6">Bold+Italic</text><text x="336"> </text><text x="344" textLength="48" class="strike">Strike</text><text>
 </text></g><g transform="translate(39 338.1)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="88">   Dimmed: </text><text x="88" textLength="56" class="dimmed">Regular</text><text x="144"> </text><text x="152" textLength="32" class="bold dimmed fg2">Bold</text><text x="184"> </text><text x="192" textLength="48" class="italic dimmed fg3 bg5">Italic</text><text x="240"> </text><text x="248" textLength="88" class="bold italic dimmed bg6">Bold+Italic</text><text x="336"> </text><text x="344" textLength="48" class="strike dimmed">Strike</text><text>
 </text></g><g transform="translate(39 354.9)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="88">Underline: </text><text x="88" textLength="56" class="underline">Regular</text><text x="144"> </text><text x="152" textLength="32" class="bold underline fg2">Bold</text><text x="184"> </text><text x="192" textLength="48" class="italic underline fg3 bg5">Italic</text><text x="240"> </text><text x="248" textLength="88" class="bold italic underline bg6">Bold+Italic</text><text x="336"> </text><text x="344" textLength="48" class="underline strike">Strike</text><text>

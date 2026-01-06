@@ -12,7 +12,7 @@ use std::{
     collections::HashMap,
     env,
     ffi::OsString,
-    fmt, fs,
+    fmt, fs, io,
     io::BufReader,
     mem,
     path::{Path, PathBuf},
@@ -30,18 +30,19 @@ fn examples_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples")
 }
 
-fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> Vec<String> {
-    #[derive(Debug, PartialEq)]
-    enum ParsingState {
-        Normal { is_escape: bool },
-        Comment,
-        SingleQuote,
-        DoubleQuote,
-        Var { in_double_quote: bool },
-    }
+#[derive(Debug, PartialEq)]
+enum ParsingState {
+    Normal { is_escape: bool },
+    Comment,
+    SingleQuote,
+    DoubleQuote,
+    Var { in_double_quote: bool },
+}
 
+fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> Vec<String> {
     let mut args = vec![];
     let mut current_arg = String::new();
+    let mut current_arg_has_quotes = false;
     let mut current_var = String::new();
     let mut state = ParsingState::Normal { is_escape: false };
     // Add a surrogate ' ' at the end to terminate non-normal states.
@@ -56,8 +57,14 @@ fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> V
                 }
 
                 match ch {
-                    '\'' => state = ParsingState::SingleQuote,
-                    '"' => state = ParsingState::DoubleQuote,
+                    '\'' => {
+                        current_arg_has_quotes = true;
+                        state = ParsingState::SingleQuote;
+                    }
+                    '"' => {
+                        current_arg_has_quotes = true;
+                        state = ParsingState::DoubleQuote;
+                    }
                     '\\' => {
                         assert_eq!(next_char, Some(b'\n'), "escape not supported");
                         // Gobble the escaped newline
@@ -75,8 +82,10 @@ fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> V
                         };
                     }
                     ch if ch.is_ascii_whitespace() => {
-                        if !current_arg.is_empty() {
+                        // **NB.** This is the only place where the current arg is reset.
+                        if !current_arg.is_empty() || current_arg_has_quotes {
                             args.push(mem::take(&mut current_arg));
+                            current_arg_has_quotes = false;
                         }
                     }
                     _ => {
@@ -159,7 +168,7 @@ fn splitting_into_args_works() {
     );
 
     let command =
-        "term-transcript exec -T='100ms' \\\n  # Embed font\n --embed-font=\"$FONT_ROBOTO:$FONT_ROBOTO_ITALIC\"";
+        "term-transcript exec -T='100ms' \\\n  --continued-mark '' \\\n  # Embed font\n--embed-font=\"$FONT_ROBOTO:$FONT_ROBOTO_ITALIC\"";
     let args = split_into_args(command, &env);
     assert_eq!(
         args,
@@ -167,6 +176,8 @@ fn splitting_into_args_works() {
             "term-transcript",
             "exec",
             "-T=100ms",
+            "--continued-mark",
+            "",
             "--embed-font=roboto.ttf:roboto-it.ttf"
         ]
     );
@@ -398,7 +409,11 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
 
     let ref_path = examples_dir().join(&out_path);
     let mut raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
-        panic!("failed reading reference at {}: {err}", ref_path.display());
+        if matches!(err.kind(), io::ErrorKind::NotFound) {
+            String::new() // will lead to a failure later, but that's just what we need
+        } else {
+            panic!("failed reading reference at {}: {err}", ref_path.display());
+        }
     });
     #[cfg(feature = "tracing")]
     tracing::info!(?ref_path, byte_len = raw_reference.len(), "read reference");

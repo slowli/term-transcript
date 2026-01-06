@@ -13,6 +13,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   (threshold for eliding the penultimate scroll keyframe if the last scroll is small).
 - Allow specifying shell initialization commands via `--init`.
 - Allow configuring dimmed text opacity via `--dim-opacity`, and blinking options via `--blink-opacity` / `--blink-interval`.
+- Allow configuring the hard wrap mark via `--hard-wrap-mark`.
+- Provide more options for continued line numbering via `--continued-mark`. Namely, allow skipping numbers for these lines, 
+  or marking them with a configurable mark.
+- Allow setting the window title if a window frame is rendered, by supplying text to the `--window` arg.
 
 ## 0.4.0-beta.1 - 2024-03-03
 

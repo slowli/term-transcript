@@ -29,7 +29,7 @@
 {{! Root template }}
 {{~#*inline "root"}}
 <!-- Created with {{{creator.name}}} v{{{creator.version}}} ({{{creator.repo}}}) -->
-<svg viewBox="0 {{#if window_frame}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" height="{{height}}" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 {{#if window}}-{{const.WINDOW_FRAME_HEIGHT}}{{else}}0{{/if}} {{width}} {{height}}" width="{{width}}" height="{{height}}" xmlns="http://www.w3.org/2000/svg">
   {{>styles}}
   {{>background}}
 
@@ -53,6 +53,7 @@
   .input-bg { fill: #fff; fill-opacity: 0.1; }
   .input-hidden { display: none; }
   .output-bg { stroke-width: 0.5; }
+  .output-sep { stroke: {{ palette.colors.white }}; stroke-width: 1; stroke-opacity: 0.35; }
   {{~#if has_failures}}
 
   .input-bg .input-failure { fill: #ff0041; fill-opacity: 0.15; }
@@ -117,9 +118,12 @@
       {{~#if line_numbers~}}
         {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
       {{~/if~}}
-      {{~#if (eq line_numbers "continuous")~}}
-        {{input_x_pos set=(x_pos)}}
-      {{~/if}}
+
+      {{~#if line_numbers~}}
+        {{~#if (eq line_numbers.scope "continuous")~}}
+          {{~input_x_pos set=(x_pos)~}}
+        {{~/if~}}
+      {{~/if~}}
 
       {{~#each interactions}}
         {{~#if (not input.hidden)}}
@@ -171,6 +175,11 @@
 
         {{! Render output backround and text }}
         {{~#text_fg append=true ~}}
+          {{~#if (and (not @first) input.hidden)~}}
+            {{~#scope line_y_pos=(round (sub (y_pos) (sub (div ../const.BLOCK_MARGIN 2) 1)) digits=1)~}}
+            <line class="output-sep" x1="0" y1="{{line_y_pos}}" x2="100%" y2="{{line_y_pos}}" />
+            {{~/scope~}}
+          {{~/if~}}
           <g class="output">
         {{~/text_fg~}}
         {{~#each output as |line|~}}
@@ -206,13 +215,15 @@
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
           {{~#if line.br~}}
-            {{~#hard_breaks append=true~}}
-              <text x="{{
-                round (add (x_pos) 8 (mul (advance_width) (char_pos))) digits=2
-              }}" y="{{
-                round (add (y_pos) (text_y_offset)) digits=2
-              }}">»</text>
-            {{~/hard_breaks~}}
+            {{~#with ../../wrap.hard_break_at.mark as |mark|~}}
+              {{~#hard_breaks append=true~}}
+                <text x="{{
+                  round (add (x_pos) 8 (mul (advance_width) (char_pos))) digits=2
+                }}" y="{{
+                  round (add (y_pos) (text_y_offset)) digits=2
+                }}">{{mark}}</text>
+              {{~/hard_breaks~}}
+            {{~else}}{{/with~}}
           {{~/if~}}
 
           {{! Append collected `line_bg` to the overall background }}
@@ -255,12 +266,13 @@
     x_pos=(add const.WINDOW_PADDING const.LN_WIDTH)
     y_pos=0
     line_number=1
+    skip_line_number=false
   ~}}
   <g class="container fg7 line-numbers">
-    {{~#each interactions}}
+  {{~#each interactions}}
     {{~#if (not input.hidden)}}
       {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
-      {{~#if (eq ../line_numbers "continuous")}}
+      {{~#if (eq ../line_numbers.scope "continuous")}}
         {{~#each (range 0 (count_lines input.text))~}}
           <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{add this (line_number)}}</text>
           {{~y_pos set=(add (y_pos) (line_height))~}}
@@ -272,17 +284,27 @@
       {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
     {{! Number lines in the output }}
-    {{~#each (range 0 (len output))~}}
-      <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{add this (line_number)}}</text>
+    {{~#if (eq ../line_numbers.scope "each_output")~}}
+      {{~line_number set=1 ~}}
+    {{~/if~}}
+
+    {{~skip_line_number set=false ~}}
+    {{~#each output as |line|~}}
+      {{~#if (not (skip_line_number))~}}
+        <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{line_number}}</text>
+        {{~line_number set=(add 1 (line_number))~}}
+      {{~else~}}
+        {{~#with ../../line_numbers.continued.mark as |mark|~}}
+          <text x="{{add (x_pos) 3}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{mark}}</text>
+        {{~else}}{{/with~}}
+      {{~/if~}}
+      {{~skip_line_number set=(and line.br (ne ../../line_numbers.continued "inherit"))~}}
       {{~y_pos set=(add (y_pos) (line_height))~}}
     {{~/each~}}
     {{~#if (gt (len output) 0)~}}
       {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
-    {{~#if (ne ../line_numbers "each_output")~}}
-      {{line_number set=(add (line_number) (len output))}}
-    {{~/if~}}
-    {{/each~}}
+  {{~/each~}}
   </g>
   {{~/scope~}}
 {{~/inline~}}
@@ -350,7 +372,7 @@
     {{screen_height set=(content_height)}}
   {{~/if~}}
   {{~height set=(add (screen_height) (mul const.WINDOW_PADDING 2))~}}
-  {{~#if window_frame~}}
+  {{~#if window~}}
     {{height set=(add (height) const.WINDOW_FRAME_HEIGHT)}}
   {{~/if~}}
 {{>root~}} {{! <-- All rendering happens here }}

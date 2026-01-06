@@ -34,7 +34,7 @@ Generating command:
 
 ```shell
 term-transcript exec --palette powershell --line-height=18px \
-   --scroll --pty --window rainbow 'rainbow --long-lines'
+   --scroll --pty --window='rainbow, rainbow --long-lines' rainbow 'rainbow --long-lines'
 ```
 
 Note the `--pty` flag to use a pseudo-terminal for capture instead of default pipes,
@@ -125,7 +125,7 @@ term-transcript exec --pure-svg --scroll --palette gjm8 \
 
 ### Numbering with line breaks
 
-As the example below shows, what is numbered are *displayed* lines
+As the example below shows, what is numbered by default are *displayed* lines
 obtained after potential line breaking.
 
 ![Numbering with line breaks](numbers-long.svg)
@@ -134,21 +134,33 @@ Generating command:
 
 ```shell
 term-transcript exec --palette gjm8 \
-  --line-numbers continuous \
+  --line-numbers \
   --line-height 18px \
   'rainbow --long-lines'
 ```
 
-Same snapshot generated using the pure SVG template (i.e., with the additional
-`--pure-svg` flag):
+This behavior can be changed with the `--continued-mark` arg. If set, the mark will be output before each line
+continuation instead of the line number. Similarly, `--hard-wrap-mark` changes the mark placed at the end of wrapped
+lines.
 
-![Numbering with line breaks, pure SVG](numbers-long-pure.svg)
+![Numbering with line breaks and skipped numbering of continued lines, pure SVG](numbers-long-pure.svg)
 
 ```shell
 term-transcript exec --pure-svg --palette gjm8 \
-  --line-numbers continuous \
+  --line-numbers \
+  --continued-mark '' \
   --line-height 18px \
   --advance-width 7.8px \
+  'rainbow --long-lines'
+```
+
+![Numbering with line breaks and marking of continued lines](numbers-long-cont.svg)
+
+```shell
+term-transcript exec --palette gjm8 \
+  --line-numbers \
+  --continued-mark '…' \
+  --hard-wrap-mark '—' \
   'rainbow --long-lines'
 ```
 
@@ -300,7 +312,7 @@ and visually highlighted the default SVG template.
 Generating command:
 
 ```shell
-term-transcript exec --palette gjm8 --window --shell sh \
+term-transcript exec --palette gjm8 --window='sh Failures' --shell sh \
   'which non-existing-command > /dev/null' \
   '[ -x non-existing-file ]' \
   '[ -x non-existing-file ] || echo "File is not there!"'
@@ -316,7 +328,7 @@ Generating command:
 
 ```shell
 term-transcript exec --palette gjm8 \
-  --pty --window --shell bash \
+  --pty --window='bash Failures' --shell bash \
   --init 'export PS1=' \
   --init 'export GREP_COLORS="mt=01;31:ln=:se="' \
   --init 'alias grep="grep --color=always"' \

@@ -1,12 +1,12 @@
 <!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 749 390" width="749" height="390" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 749 366" width="749" height="366" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
         .container {
           padding: 0 10px;
           color: #e5e5e5;
-          line-height: 18px;
+          line-height: 16.8px;
         }
         .container pre {
           padding: 0;
@@ -55,9 +55,11 @@
         .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
         .hard-br { margin-left: 8px; }
         .hard-br:before {
-          content: '»';
+          content: '—';
           color: color-mix(in hsl, currentColor 60%, #1c1c1c);
         }
+          .line-numbers .cont { margin-right: -3px; }
+        .line-numbers .cont:before { content: '…'; }
         .line { display: block; }
         .line span { display: inline-block; text-decoration-thickness: 1px; }
         .fg0,.inv.fg-none { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
@@ -78,11 +80,11 @@
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
-      <svg x="0" y="10" width="749" height="370" viewBox="0 0 749 370" overflow="hidden">
-        <foreignObject width="749" height="370">
+      <svg x="0" y="10" width="749" height="346" viewBox="0 0 749 346" overflow="hidden">
+        <foreignObject width="749" height="346">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
-            <div class="output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20</pre><pre><span class="line">Base colors:
+            <div class="output"><pre class="line-numbers">2<br/>3<br/><b class="cont"></b><br/>4<br/><b class="cont"></b><br/>5<br/>6<br/>7<br/>8<br/>9<br/><b class="cont"></b><br/><b class="cont"></b><br/><b class="cont"></b><br/><b class="cont"></b><br/><b class="cont"></b><br/>10<br/>11<br/>12<br/>13</pre><pre><span class="line">Base colors:
 </span><span class="line"><span class="underline fg0">black</span> <span class="italic underline fg0">black/italic</span> <span class="fg1">red</span> <span class="italic underline fg1">red/italic</span> <span class="underline fg2">green</span> <span class="italic underline fg2">green/italic</span> <span class="fg3">yellow</span> <span class="italic underline fg3">yellow/italic</span> <span class="underline fg4">blue</span> <span class="italic underline fg4">b</span><b class="hard-br"></b>
 </span><span class="line"><span class="italic underline fg4">lue/italic</span> <span class="fg5">magenta</span> <span class="italic underline fg5">magenta/italic</span> <span class="underline fg6">cyan</span> <span class="italic underline fg6">cyan/italic</span> <span class="fg7">white</span> <span class="italic underline fg7">white/italic</span> 
 </span><span class="line"><span class="fg8">black</span> <span class="italic underline fg8">black/italic</span> <span class="underline fg9">red</span> <span class="italic underline fg9">red/italic</span> <span class="fg10">green</span> <span class="italic underline fg10">green/italic</span> <span class="underline fg11">yellow</span> <span class="italic underline fg11">yellow/italic</span> <span class="fg12">blue</span> <span class="italic underline fg12">b</span><b class="hard-br"></b>
@@ -105,7 +107,7 @@
         </foreignObject>
       </svg>
     </g>
-    <text x="10" y="18" style="font: 14px monospace; fill: #ff005b;">
+    <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
       HTML embedding not supported.
       Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
     </text>
