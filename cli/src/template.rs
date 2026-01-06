@@ -44,8 +44,11 @@ impl From<NamedPalette> for svg::NamedPalette {
 
 #[derive(Debug, Clone, ValueEnum)]
 enum LineNumbers {
+    /// Number lines in each output separately. Inputs are not numbered.
     EachOutput,
+    /// Use continuous numbering for the lines in all outputs. Inputs are not numbered.
     ContinuousOutputs,
+    /// Use continuous numbering for the lines in all displayed inputs and outputs.
     Continuous,
 }
 
@@ -126,15 +129,15 @@ pub(crate) struct TemplateArgs {
     /// Color palette to use.
     #[arg(long, short = 'p', default_value = "gjm8", value_enum)]
     palette: NamedPalette,
-    /// Line numbering strategy.
-    #[arg(long, short = 'n', value_enum)]
+    /// Line numbering scope. If the value is not provided, will be set to `continuous`.
+    #[arg(long, short = 'n', value_name = "SCOPE", value_enum)]
     line_numbers: Option<Option<LineNumbers>>,
     /// Mark displayed at the beginning of continued lines instead of the line number. May be empty.
     /// If not specified, continued lines will be numbered along with ordinary lines.
     #[arg(long, value_name = "MARK", requires = "line_numbers")]
     continued_mark: Option<String>,
     /// Adds a window frame around the rendered console.
-    #[arg(long = "window", short = 'w')]
+    #[arg(long = "window", short = 'w', value_name = "TITLE")]
     window_title: Option<Option<String>>,
     /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
     /// to import fonts in conjunction with `--font`.
