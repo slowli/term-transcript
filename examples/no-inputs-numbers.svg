@@ -30,10 +30,13 @@
           width: 22px;
           text-align: right;
           padding-right: 7px;
-          color: color-mix(in hsl, currentColor 35%, #000000 65%);
+          color: color-mix(in hsl, currentColor 35%, #000000);
           user-select: none;
         }
-
+        .output-sep {
+          margin: -3px -10px 2px;
+          border-top: 1px solid color-mix(in hsl, #e5e5e5 35%, #000000);
+        }
         .scrollbar { fill: #fff; fill-opacity: 0.35; }
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
@@ -51,11 +54,10 @@
           }
         }
         .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
-
         .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
-          color: color-mix(in hsl, currentColor 60%, #000000 40%);
+          color: color-mix(in hsl, currentColor 60%, #000000);
         }
         .line { display: block; }
         .line span { display: inline-block; text-decoration-thickness: 1px; }
@@ -99,7 +101,7 @@
 </span><span class="line">24-bit colors:
 </span><span class="line"><span style="color: #ffbbdd;">pink</span> <span style="color: #ffaa44;">orange</span> <span style="color: #9f4010;">brown</span> <span style="color: #10889f;">teal</span> </span></pre></div>
             <div class="input input-hidden" data-exit-status="0"><pre><span class="prompt">$</span> rainbow --short</pre></div>
-            <div class="output"><pre class="line-numbers">18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28<br/>29<br/>30<br/>31<br/>32<br/>33<br/>34</pre><pre><span class="line">Base styles:
+<div class="output-sep"></div>            <div class="output"><pre class="line-numbers">18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28<br/>29<br/>30<br/>31<br/>32<br/>33<br/>34</pre><pre><span class="line">Base styles:
 </span><span class="line">     None: Regular <span class="bold fg2">Bold</span> <span class="italic fg3 bg5">Italic</span> <span class="bold italic bg6">Bold+Italic</span> <span class="strike">Strike</span>
 </span><span class="line">   Dimmed: <span class="dimmed"><span>Regular</span></span> <span class="bold dimmed fg2"><span>Bold</span></span> <span class="italic dimmed dimmed-bg fg3 bg5"><span>Italic</span></span> <span class="bold italic dimmed dimmed-bg bg6"><span>Bold+Italic</span></span> <span class="strike dimmed"><span>Strike</span></span>
 </span><span class="line">Underline: <span class="underline">Regular</span> <span class="bold underline fg2">Bold</span> <span class="italic underline fg3 bg5">Italic</span> <span class="bold italic underline bg6">Bold+Italic</span> <span class="underline strike">Strike</span>

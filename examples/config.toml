@@ -1,10 +1,10 @@
 # Custom template configuration.
 line_height = 1.3
 width = 900
-window_frame = true
-line_numbers = 'continuous'
+window = { title = 'Custom Configuration Example' }
+line_numbers = { scope = 'continuous', continued.mark = '…' }
 dim_opacity = 0.5
-wrap = { hard_break_at = 100 }
+wrap.hard_break_at = { chars = 100, mark = '—' }
 scroll = { max_height = 300, pixels_per_scroll = 18, interval = 1.5 }
 
 [palette.colors]

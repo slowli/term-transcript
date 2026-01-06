@@ -9,6 +9,7 @@
     .input-bg { fill: #fff; fill-opacity: 0.1; }
     .input-hidden { display: none; }
     .output-bg { stroke-width: 0.5; }
+    .output-sep { stroke: #e5e5e5; stroke-width: 1; stroke-opacity: 0.35; }
     .bold,.prompt { font-weight: bold; }
     .italic { font-style: italic; }
     .underline { text-decoration-line: underline; }
