@@ -45,14 +45,20 @@
     line-height: inherit;
   }
   .input {
-    {{#if line_numbers}}{{#if (eq line_numbers.scope "continuous")}}display: flex;{{/if}}{{/if}}
+    {{#if line_numbers~}}
+    {{~#if (eq line_numbers.scope "continuous")}}
+    display: flex;
+    {{/if~}}
+    {{~/if}}
     margin: 0 -{{const.WINDOW_PADDING}}px {{const.BLOCK_MARGIN}}px;
     color: {{ palette.colors.white }};
     background: rgba(255, 255, 255, 0.1);
     padding: 2px {{const.WINDOW_PADDING}}px;
   }
   .input-hidden { display: none; }
-  {{#if line_numbers}}{{#if (eq line_numbers.scope "continuous")}}.input > pre { flex-grow: 1; }{{/if}}{{/if}}
+  {{#if line_numbers}}{{#if (eq line_numbers.scope "continuous")~}}
+  .input > pre { flex-grow: 1; }
+  {{/if}}{{/if~}}
   .output { {{#if line_numbers}}display: flex; {{/if}}margin-bottom: {{const.BLOCK_MARGIN}}px; }
   {{#if line_numbers}}
   .output > pre { flex-grow: 1; }
@@ -69,7 +75,7 @@
     margin: -{{div const.BLOCK_MARGIN 2}}px -{{const.WINDOW_PADDING}}px {{sub (div const.BLOCK_MARGIN 2) 1}}px;
     border-top: 1px solid color-mix(in hsl, {{ palette.colors.white }} 35%, {{ palette.colors.black }});
   }
-  {{#if has_failures}}
+  {{#if has_failures~}}
   .input-failure {
     border-left: 2px solid {{ palette.colors.red }};
     border-right: 2px solid {{ palette.colors.red }};
@@ -77,10 +83,8 @@
   }
   {{/if}}
   {{~#if (scroll_animation)}}
-
   .scrollbar { fill: #fff; fill-opacity: 0.35; }
-  {{~/if}}
-
+  {{/if}}
   {{>common_font_styles}}
   {{!
     For opacity-related styling (.dimmed, .blink), text decoration must be applied to the child <span>,
@@ -159,9 +163,9 @@
                 {{~/if~}}
               {{~/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
-            {{~#if (and (not @first) input.hidden)~}}
+            {{#if (and (not @first) input.hidden)~}}
               <div class="output-sep"></div>
-            {{~/if~}}
+            {{~/if}}
             <div class="output">
               {{~#if ../line_numbers~}}
                 {{~#if (eq ../line_numbers.scope "each_output")~}}
