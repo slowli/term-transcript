@@ -1,6 +1,6 @@
 //! Tests for the SVG rendering logic.
 
-use std::{borrow::Cow, convert::Infallible, num::NonZeroUsize};
+use std::{convert::Infallible, num::NonZeroUsize};
 
 use test_casing::test_casing;
 
@@ -512,12 +512,12 @@ fn rendering_svg_transcript_with_wraps() {
 
 const CONTINUED_NUMBERS: [ContinuedLineNumbers; 3] = [
     ContinuedLineNumbers::Inherit,
-    ContinuedLineNumbers::Skip,
-    ContinuedLineNumbers::Mark(Cow::Borrowed(">>")),
+    ContinuedLineNumbers::mark(""),
+    ContinuedLineNumbers::mark(">>"),
 ];
 
 #[test_casing(3, CONTINUED_NUMBERS)]
-fn rendering_transcript_with_breaks_and_line_numbers(continued: ContinuedLineNumbers) {
+fn rendering_transcript_with_breaks_and_line_numbers(#[map(ref)] continued: &ContinuedLineNumbers) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
@@ -540,7 +540,9 @@ fn rendering_transcript_with_breaks_and_line_numbers(continued: ContinuedLineNum
 
     let expected_numbers = match continued {
         ContinuedLineNumbers::Inherit => r#"<pre class="line-numbers">1<br/>2<br/>3</pre>"#,
-        ContinuedLineNumbers::Skip => r#"<pre class="line-numbers">1<br/><br/></pre>"#,
+        ContinuedLineNumbers::Mark(mark) if mark.is_empty() => {
+            r#"<pre class="line-numbers">1<br/><br/></pre>"#
+        }
         ContinuedLineNumbers::Mark(_) => {
             r#"<pre class="line-numbers">1<br/><b class="cont"></b><br/><b class="cont"></b></pre>"#
         }
@@ -549,7 +551,9 @@ fn rendering_transcript_with_breaks_and_line_numbers(continued: ContinuedLineNum
 }
 
 #[test_casing(3, CONTINUED_NUMBERS)]
-fn rendering_svg_transcript_with_breaks_and_line_numbers(continued: ContinuedLineNumbers) {
+fn rendering_svg_transcript_with_breaks_and_line_numbers(
+    #[map(ref)] continued: &ContinuedLineNumbers,
+) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
@@ -575,7 +579,7 @@ fn rendering_svg_transcript_with_breaks_and_line_numbers(continued: ContinuedLin
         ContinuedLineNumbers::Inherit => {
             r#"<g class="container fg7 line-numbers"><text x="32" y="41.5">1</text><text x="32" y="59.5">2</text><text x="32" y="77.5">3</text></g>"#
         }
-        ContinuedLineNumbers::Skip => {
+        ContinuedLineNumbers::Mark(mark) if mark.is_empty() => {
             r#"<g class="container fg7 line-numbers"><text x="32" y="41.5">1</text></g>"#
         }
         ContinuedLineNumbers::Mark(_) => {

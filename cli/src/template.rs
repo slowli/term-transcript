@@ -15,8 +15,8 @@ use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
     svg::{
-        self, BlinkOptions, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions,
-        ValidTemplateOptions, WrapOptions,
+        self, BlinkOptions, FontFace, FontSubsetter, LineNumberingOptions, ScrollOptions, Template,
+        TemplateOptions, ValidTemplateOptions, WrapOptions,
     },
     Transcript,
 };
@@ -129,6 +129,10 @@ pub(crate) struct TemplateArgs {
     /// Line numbering strategy.
     #[arg(long, short = 'n', value_enum)]
     line_numbers: Option<LineNumbers>,
+    /// Mark displayed at the beginning of continued lines instead of the line number. May be empty.
+    /// If not specified, continued lines will be numbered along with ordinary lines.
+    #[arg(long, value_name = "MARK", requires = "line_numbers")]
+    continued_mark: Option<String>,
     /// Adds a window frame around the rendered console.
     #[arg(long = "window", short = 'w')]
     window_frame: bool,
@@ -254,7 +258,14 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
             line_height: value.line_height.map(CssLength::as_ems),
             advance_width: value.advance_width.map(CssLength::as_ems),
             palette: svg::NamedPalette::from(value.palette).into(),
-            line_numbers: value.line_numbers.map(svg::LineNumbers::from),
+            line_numbers: value.line_numbers.map(|scope| LineNumberingOptions {
+                scope: scope.into(),
+                continued: value
+                    .continued_mark
+                    .map_or(svg::ContinuedLineNumbers::Inherit, |mark| {
+                        svg::ContinuedLineNumbers::Mark(mark.into())
+                    }),
+            }),
             window_frame: value.window_frame,
             dim_opacity: value.dim_opacity,
             blink: BlinkOptions {

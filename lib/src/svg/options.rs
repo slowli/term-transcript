@@ -33,10 +33,15 @@ pub enum ContinuedLineNumbers {
     /// Continued lines are numbered in the same way as the ordinary lines.
     #[default]
     Inherit,
-    /// Continued lines have numbers skipped.
-    Skip,
-    /// Mark continued lines with the specified string.
+    /// Mark continued lines with the specified constant string. The string may be empty.
     Mark(Cow<'static, str>),
+}
+
+impl ContinuedLineNumbers {
+    /// Creates a [`Self::Mark`] variant.
+    pub const fn mark(mark: &'static str) -> Self {
+        Self::Mark(Cow::Borrowed(mark))
+    }
 }
 
 /// Line numbering options.
