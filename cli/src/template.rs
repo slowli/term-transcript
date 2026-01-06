@@ -221,22 +221,30 @@ pub(crate) struct TemplateArgs {
     blink_opacity: f64,
     /// Specifies text wrapping threshold in number of chars.
     #[arg(
-        long = "hard-wrap",
+        long,
         value_name = "CHARS",
         conflicts_with = "no_wrap",
-        default_value = "80"
+        default_value_t = WrapOptions::default_width()
     )]
     hard_wrap: NonZeroUsize,
+    /// Specifies the mark to be placed at the end of broken lines.
+    #[arg(
+        long,
+        value_name = "MARK",
+        conflicts_with = "no_wrap",
+        default_value = WrapOptions::default_mark()
+    )]
+    hard_wrap_mark: String,
     /// Disables text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
     /// will be hidden.
-    #[arg(long = "no-wrap")]
+    #[arg(long)]
     no_wrap: bool,
     /// Employs pure SVG rendering instead of embedding HTML into SVG. Pure SVGs are supported
     /// by more viewers, but there may be rendering artifacts.
-    #[arg(long = "pure-svg", conflicts_with = "template_path")]
+    #[arg(long, conflicts_with = "template_path")]
     pure_svg: bool,
     /// Hides all user inputs; only outputs will be rendered.
-    #[arg(long = "no-inputs")]
+    #[arg(long)]
     pub(crate) no_inputs: bool,
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
@@ -245,7 +253,7 @@ pub(crate) struct TemplateArgs {
     #[arg(long = "tpl")]
     pub(crate) template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.
-    #[arg(long = "out", short = 'o')]
+    #[arg(long, short = 'o')]
     pub(crate) out: Option<PathBuf>,
 }
 
@@ -312,7 +320,10 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
             wrap: if value.no_wrap {
                 None
             } else {
-                Some(WrapOptions::HardBreakAt(value.hard_wrap))
+                Some(WrapOptions::HardBreakAt {
+                    chars: value.hard_wrap,
+                    mark: value.hard_wrap_mark.into(),
+                })
             },
             additional_styles: value.additional_styles.unwrap_or_default(),
             ..Self::default()
