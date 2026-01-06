@@ -109,7 +109,7 @@ impl fmt::Display for CssLength {
 }
 
 #[derive(Debug, Args)]
-#[allow(clippy::struct_excessive_bools)] // required by `clap`
+#[allow(clippy::struct_excessive_bools, clippy::option_option)] // required by `clap`
 pub(crate) struct TemplateArgs {
     /// Path to the configuration TOML file.
     ///
@@ -117,7 +117,7 @@ pub(crate) struct TemplateArgs {
     #[arg(
         long,
         conflicts_with_all = [
-            "palette", "line_numbers", "window_frame", "additional_styles", "font_family", "width",
+            "palette", "line_numbers", "window_title", "additional_styles", "font_family", "width",
             "scroll", "hard_wrap", "no_wrap", "line_height", "advance_width", "dim_opacity", "blink_interval",
             "blink_opacity"
         ]
@@ -128,14 +128,14 @@ pub(crate) struct TemplateArgs {
     palette: NamedPalette,
     /// Line numbering strategy.
     #[arg(long, short = 'n', value_enum)]
-    line_numbers: Option<LineNumbers>,
+    line_numbers: Option<Option<LineNumbers>>,
     /// Mark displayed at the beginning of continued lines instead of the line number. May be empty.
     /// If not specified, continued lines will be numbered along with ordinary lines.
     #[arg(long, value_name = "MARK", requires = "line_numbers")]
     continued_mark: Option<String>,
     /// Adds a window frame around the rendered console.
     #[arg(long = "window", short = 'w')]
-    window_frame: bool,
+    window_title: Option<Option<String>>,
     /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
     /// to import fonts in conjunction with `--font`.
     #[arg(long = "styles")]
@@ -171,7 +171,6 @@ pub(crate) struct TemplateArgs {
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
     /// If not specified, the default height is sufficient to fit 19 lines with the default template.
     #[arg(long, value_name = "HEIGHT")]
-    #[allow(clippy::option_option)] // required by `clap`
     scroll: Option<Option<NonZeroUsize>>,
     /// Interval between keyframes in the scrolling animation.
     #[arg(
@@ -267,14 +266,16 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
             advance_width: value.advance_width.map(CssLength::as_ems),
             palette: svg::NamedPalette::from(value.palette).into(),
             line_numbers: value.line_numbers.map(|scope| LineNumberingOptions {
-                scope: scope.into(),
+                scope: scope.map_or_else(svg::LineNumbers::default, Into::into),
                 continued: value
                     .continued_mark
                     .map_or(svg::ContinuedLineNumbers::Inherit, |mark| {
                         svg::ContinuedLineNumbers::Mark(mark.into())
                     }),
             }),
-            window_frame: value.window_frame,
+            window: value.window_title.map(|title| svg::WindowOptions {
+                title: title.unwrap_or_default(),
+            }),
             dim_opacity: value.dim_opacity,
             blink: BlinkOptions {
                 interval: value.blink_interval.as_secs_f64(),
