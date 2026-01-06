@@ -215,13 +215,15 @@
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
           {{~#if line.br~}}
-            {{~#hard_breaks append=true~}}
-              <text x="{{
-                round (add (x_pos) 8 (mul (advance_width) (char_pos))) digits=2
-              }}" y="{{
-                round (add (y_pos) (text_y_offset)) digits=2
-              }}">»</text>
-            {{~/hard_breaks~}}
+            {{~#with ../../wrap.hard_break_at.mark as |mark|~}}
+              {{~#hard_breaks append=true~}}
+                <text x="{{
+                  round (add (x_pos) 8 (mul (advance_width) (char_pos))) digits=2
+                }}" y="{{
+                  round (add (y_pos) (text_y_offset)) digits=2
+                }}">{{mark}}</text>
+              {{~/hard_breaks~}}
+            {{~else}}{{/with~}}
           {{~/if~}}
 
           {{! Append collected `line_bg` to the overall background }}

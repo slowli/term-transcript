@@ -112,15 +112,17 @@
   {{/if}}
   {{#if wrap}}
   .hard-br { margin-left: 8px; }
+  {{#with wrap.hard_break_at.mark as |mark|}}
   .hard-br:before {
-    content: '»'; {{! TODO: make configurable }}
-    color: color-mix(in hsl, currentColor 60%, {{ palette.colors.black }});
+    content: '{{mark}}';
+    color: color-mix(in hsl, currentColor 60%, {{ ../palette.colors.black }});
   }
-  {{#with line_numbers.continued.mark as |mark|}}
+  {{else}}{{/with~}}
+  {{~#with line_numbers.continued.mark as |mark|}}
   .line-numbers .cont { margin-right: -3px; }
   .line-numbers .cont:before { content: '{{mark}}'; }
-  {{else}}{{/with}}
-  {{/if}}
+  {{else}}{{/with~}}
+  {{~/if~}}
   .line { display: block; }
   .line span { display: inline-block; text-decoration-thickness: 1px; }
   .fg0,.inv.fg-none { color: {{ palette.colors.black }}; } .bg0 { background: {{ palette.colors.black }}; }

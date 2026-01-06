@@ -1,8 +1,8 @@
 //! Tests for the SVG rendering logic.
 
-use std::{convert::Infallible, num::NonZeroUsize};
+use std::{borrow::Cow, convert::Infallible, num::NonZeroUsize};
 
-use test_casing::test_casing;
+use test_casing::{test_casing, Product};
 
 use super::*;
 use crate::{
@@ -461,6 +461,11 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
     assert!(buffer.contains(expected_view_boxes), "{buffer}");
 }
 
+const TEST_WRAP_OPTIONS: WrapOptions = WrapOptions::HardBreakAt {
+    chars: NonZeroUsize::new(5).unwrap(),
+    mark: Cow::Borrowed("..."),
+};
+
 #[test]
 fn rendering_transcript_with_wraps() {
     let mut transcript = Transcript::new();
@@ -472,7 +477,7 @@ fn rendering_transcript_with_wraps() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
+        wrap: Some(TEST_WRAP_OPTIONS),
         ..TemplateOptions::default()
     };
     Template::new(options.validated().unwrap())
@@ -482,6 +487,8 @@ fn rendering_transcript_with_wraps() {
 
     assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
     assert!(buffer.contains("class=\"hard-br\""), "{buffer}");
+    assert!(buffer.contains(".hard-br:before"), "{buffer}");
+    assert!(buffer.contains("content: '...';"), "{buffer}");
 }
 
 #[test]
@@ -495,7 +502,7 @@ fn rendering_svg_transcript_with_wraps() {
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
+        wrap: Some(TEST_WRAP_OPTIONS),
         ..TemplateOptions::default()
     };
     Template::pure_svg(options.validated().unwrap())
@@ -505,7 +512,7 @@ fn rendering_svg_transcript_with_wraps() {
 
     assert!(buffer.contains(r#"viewBox="0 0 720 102""#), "{buffer}");
     assert!(
-        buffer.contains(r#"<g class="container fg7 hard-br"><text x="58" y="41.5">»</text><text x="58" y="59.5">»</text></g>"#),
+        buffer.contains(r#"<g class="container fg7 hard-br"><text x="58" y="41.5">...</text><text x="58" y="59.5">...</text></g>"#),
         "{buffer}"
     );
 }
@@ -526,7 +533,7 @@ fn rendering_transcript_with_breaks_and_line_numbers(#[map(ref)] continued: &Con
 
     let mut buffer = vec![];
     let options = TemplateOptions {
-        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
+        wrap: Some(TEST_WRAP_OPTIONS),
         line_numbers: Some(LineNumberingOptions {
             scope: LineNumbers::EachOutput,
             continued: continued.clone(),
@@ -563,7 +570,7 @@ fn rendering_svg_transcript_with_breaks_and_line_numbers(
     let mut buffer = vec![];
     let options = TemplateOptions {
         line_height: Some(18.0 / 14.0),
-        wrap: Some(WrapOptions::HardBreakAt(NonZeroUsize::new(5).unwrap())),
+        wrap: Some(TEST_WRAP_OPTIONS),
         line_numbers: Some(LineNumberingOptions {
             scope: LineNumbers::EachOutput,
             continued: continued.clone(),
@@ -892,16 +899,20 @@ fn rendering_transcript_with_styles() {
 }
 
 #[derive(Debug)]
-struct TestEmbedder;
+struct TestEmbedder {
+    with_line_numbers: bool,
+}
 
 impl FontEmbedder for TestEmbedder {
     type Error = Infallible;
 
     fn embed_font(&self, used_chars: BTreeSet<char>) -> Result<EmbeddedFont, Self::Error> {
-        assert_eq!(
-            used_chars,
-            "$ test Hello, world! »".chars().collect::<BTreeSet<_>>()
-        );
+        let mut expected_chars: BTreeSet<_> = "$ test Hello, world! —".chars().collect();
+        if self.with_line_numbers {
+            expected_chars.extend("0123456789…".chars());
+        }
+        assert_eq!(used_chars, expected_chars);
+
         Ok(EmbeddedFont {
             family_name: "Fira Mono".to_owned(),
             metrics: FontMetrics {
@@ -926,8 +937,8 @@ impl FontEmbedder for TestEmbedder {
     }
 }
 
-#[test_casing(2, [false, true])]
-fn embedding_font(pure_svg: bool) {
+#[test_casing(4, Product(([false, true], [false, true])))]
+fn embedding_font(pure_svg: bool, with_line_numbers: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
@@ -936,7 +947,15 @@ fn embedding_font(pure_svg: bool) {
 
     let options = TemplateOptions {
         font_family: "./FiraMono.ttf".to_owned(),
-        ..TemplateOptions::default().with_font_embedder(TestEmbedder)
+        wrap: Some(WrapOptions::HardBreakAt {
+            chars: WrapOptions::default_width(),
+            mark: "—".into(),
+        }),
+        line_numbers: with_line_numbers.then(|| LineNumberingOptions {
+            continued: ContinuedLineNumbers::mark("…"),
+            ..LineNumberingOptions::default()
+        }),
+        ..TemplateOptions::default().with_font_embedder(TestEmbedder { with_line_numbers })
     };
     let mut buffer = vec![];
     let template = if pure_svg {
@@ -968,7 +987,8 @@ fn embedding_font(pure_svg: bool) {
         "{buffer}"
     );
 
-    if pure_svg {
+    // Check the background box positioning
+    if pure_svg && !with_line_numbers {
         assert!(
             buffer.contains(r#"<rect x="18.4" y="29.6" width="25.2" height="19.6" class="fg4"/>"#),
             "{buffer}"

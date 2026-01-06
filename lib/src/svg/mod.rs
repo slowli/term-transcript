@@ -89,11 +89,19 @@ impl TemplateOptions {
                 used_chars.extend(input_chars);
             }
         }
-        if self.line_numbers.is_some() {
+        if let Some(line_numbers) = &self.line_numbers {
             used_chars.extend('0'..='9');
+            let additional_chars = match &line_numbers.continued {
+                ContinuedLineNumbers::Mark(mark) => mark.as_ref(),
+                ContinuedLineNumbers::Inherit => "",
+            };
+            used_chars.extend(additional_chars.chars());
         }
-        if self.wrap.is_some() {
-            used_chars.insert('»');
+        if let Some(wrap) = &self.wrap {
+            let additional_chars = match wrap {
+                WrapOptions::HardBreakAt { mark, .. } => mark.as_ref(),
+            };
+            used_chars.extend(additional_chars.chars());
         }
 
         let embedded_font = self
@@ -136,7 +144,7 @@ impl TemplateOptions {
     )]
     fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<Vec<StyledLine>>, TermError> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
-            WrapOptions::HardBreakAt(width) => width.get(),
+            WrapOptions::HardBreakAt { chars, .. } => chars.get(),
         });
 
         transcript

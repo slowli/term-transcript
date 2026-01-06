@@ -118,7 +118,6 @@ pub struct TemplateOptions {
     /// or set to 8px (~0.57em) otherwise.
     ///
     /// For now, advance width is only applied to the pure SVG template.
-    // FIXME: extract to pure SVG options?
     pub advance_width: Option<f64>,
     /// Palette of terminal colors. The default value of [`Palette`] is used by default.
     #[serde(default)]
@@ -358,12 +357,31 @@ impl ScrollOptions {
 pub enum WrapOptions {
     /// Perform a hard break at the specified width of output. The [`Default`] implementation
     /// returns this variant with width 80.
-    HardBreakAt(NonZeroUsize),
+    HardBreakAt {
+        /// Char width of the break.
+        chars: NonZeroUsize,
+        /// Marker placed after the break.
+        mark: Cow<'static, str>,
+    },
 }
 
 impl Default for WrapOptions {
     fn default() -> Self {
-        Self::HardBreakAt(NonZeroUsize::new(80).unwrap())
+        Self::HardBreakAt {
+            chars: Self::default_width(),
+            mark: Self::default_mark().into(),
+        }
+    }
+}
+
+#[doc(hidden)] // Used in CLI; not public API
+impl WrapOptions {
+    pub const fn default_width() -> NonZeroUsize {
+        NonZeroUsize::new(80).unwrap()
+    }
+
+    pub const fn default_mark() -> &'static str {
+        "»"
     }
 }
 
