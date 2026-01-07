@@ -1,10 +1,13 @@
 //! Custom Handlebars helpers.
 
-use std::sync::Mutex;
+use std::{
+    cell::RefCell,
+    collections::{HashSet, VecDeque},
+};
 
 use handlebars::{
-    BlockContext, Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError,
-    RenderErrorReason, Renderable, ScopedJson, StringOutput,
+    BlockContext, Context, Handlebars, Helper, HelperDef, Output, PathAndJson, RenderContext,
+    RenderError, RenderErrorReason, Renderable, ScopedJson, StringOutput,
 };
 use serde_json::Value as Json;
 use unicode_width::UnicodeWidthStr;
@@ -87,54 +90,172 @@ impl HelperDef for ScopeHelper {
             return Err(RenderErrorReason::Other(MESSAGE.to_owned()).into());
         }
 
-        for (name, value) in helper.hash() {
-            let helper = VarHelper::new(value.value().clone());
-            render_ctx.register_local_helper(name, Box::new(helper));
+        let mut pushed_block = false;
+        if render_ctx.block().is_none() {
+            render_ctx.push_block(BlockContext::default());
+            pushed_block = true;
         }
 
+        let current_block = render_ctx.block_mut().unwrap();
+        let mut prev_vars = current_block.local_variables_mut().clone();
+        for (&name, value) in helper.hash() {
+            current_block.set_local_var(name, value.value().clone());
+        }
+
+        let scope_guard = ScopeGuard::default();
         let result = template.render(reg, ctx, render_ctx, out);
-        for name in helper.hash().keys() {
-            render_ctx.unregister_local_helper(name);
+
+        // Reset the current block so that the added / modified block params are reset.
+        if pushed_block {
+            render_ctx.pop_block();
+        } else {
+            // Restore values in the current block to previous values.
+            let current_block = render_ctx.block_mut().unwrap();
+            let mut set_vars = dbg!(scope_guard.set_vars());
+            // Remove vars defined in this scope.
+            for &name in helper.hash().keys() {
+                set_vars.remove(name);
+            }
+
+            // Copy all changed vars.
+            let local_vars = current_block.local_variables_mut();
+            for var_name in set_vars {
+                if prev_vars.get(&var_name).is_some() {
+                    prev_vars.put(&var_name, local_vars.get(&var_name).unwrap().clone());
+                }
+            }
+            *local_vars = prev_vars;
         }
         result
     }
 }
 
 #[derive(Debug)]
-struct VarHelper {
-    value: Mutex<Json>,
+enum SetValue {
+    Json(Json),
+    Append(String),
 }
 
-impl VarHelper {
-    fn new(value: Json) -> Self {
-        Self {
-            value: Mutex::new(value),
+impl SetValue {
+    fn set(self, blocks: &mut VecDeque<BlockContext>, var_name: &str) -> Result<(), RenderError> {
+        let var_parent = blocks
+            .iter_mut()
+            .find(|block| block.get_local_var(var_name).is_some())
+            .ok_or_else(|| {
+                RenderErrorReason::Other(format!("local var `{var_name}` is undefined"))
+            })?;
+        match self {
+            Self::Json(value) => {
+                var_parent.set_local_var(var_name, value);
+            }
+            Self::Append(s) => {
+                let prev_value = var_parent.get_local_var(var_name).unwrap();
+                let prev_value = prev_value.as_str().ok_or_else(|| {
+                    RenderErrorReason::Other(format!(
+                        "cannot append to a non-string local var `{var_name}`"
+                    ))
+                })?;
+
+                let mut new_value = prev_value.to_owned();
+                new_value.push_str(&s);
+                var_parent.set_local_var(var_name, new_value.into());
+            }
         }
+        Ok(())
     }
+}
 
-    fn set_value(&self, value: Json) {
-        #[cfg(feature = "tracing")]
-        tracing::trace!(?value, "overwritten var");
-        *self.value.lock().unwrap() = value;
+thread_local! {
+    static SET_VARS: RefCell<HashSet<String>> = RefCell::default();
+}
+
+#[must_use]
+#[derive(Debug)]
+struct ScopeGuard(HashSet<String>);
+
+impl Default for ScopeGuard {
+    fn default() -> Self {
+        Self(SET_VARS.take())
     }
+}
 
-    fn push_str(&self, s: &str) -> Result<(), RenderErrorReason> {
-        #[cfg(feature = "tracing")]
-        tracing::trace!(s, "appended string");
+impl ScopeGuard {
+    fn set_vars(self) -> HashSet<String> {
+        SET_VARS.replace(self.0)
+    }
+}
 
-        let mut val = self.value.lock().unwrap();
-        if let Json::String(this_s) = &mut *val {
-            this_s.push_str(s);
-            Ok(())
+#[derive(Debug)]
+struct SetHelper;
+
+impl SetHelper {
+    const NAME: &'static str = "set";
+
+    fn call_as_block<'reg: 'rc, 'rc>(
+        helper: &Helper<'rc>,
+        reg: &'reg Handlebars<'reg>,
+        ctx: &'rc Context,
+        render_ctx: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<(), RenderError> {
+        let var_name = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(SetHelper::NAME, 0))?;
+        let var_name: &'rc str = var_name
+            .try_get_constant_value()
+            .and_then(Json::as_str)
+            .ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    SetHelper::NAME,
+                    "0".to_owned(),
+                    "constant string".to_owned(),
+                )
+            })?;
+
+        let is_append = helper
+            .hash_get("append")
+            .is_some_and(|val| val.value().as_bool() == Some(true));
+        let value = if let Some(template) = helper.template() {
+            let mut output = StringOutput::new();
+            template.render(reg, ctx, render_ctx, &mut output)?;
+            let raw_string = output.into_string()?;
+            if is_append {
+                SetValue::Append(raw_string)
+            } else {
+                let json = serde_json::from_str(&raw_string).map_err(RenderErrorReason::from)?;
+                SetValue::Json(json)
+            }
         } else {
-            Err(RenderErrorReason::Other(
-                "current value is not a string".to_owned(),
-            ))
+            SetValue::Json(Json::Null)
+        };
+
+        let mut blocks = render_ctx.replace_blocks(VecDeque::default());
+        let result = value.set(&mut blocks, var_name);
+        render_ctx.replace_blocks(blocks);
+        if result.is_ok() {
+            SET_VARS.with_borrow_mut(|vars| vars.insert(var_name.to_owned()));
         }
+        result
+    }
+
+    fn batch_set<'a, 'rc: 'a>(
+        blocks: &mut VecDeque<BlockContext>,
+        values: impl Iterator<Item = (&'a str, &'a PathAndJson<'rc>)>,
+    ) -> Result<(), RenderError> {
+        for (name, value) in values {
+            let var_parent = blocks
+                .iter_mut()
+                .find(|block| block.get_local_var(name).is_some())
+                .ok_or_else(|| {
+                    RenderErrorReason::Other(format!("local var `{name}` is undefined"))
+                })?;
+            var_parent.set_local_var(name, value.value().clone());
+            SET_VARS.with_borrow_mut(|vars| vars.insert(name.to_owned()));
+        }
+        Ok(())
     }
 }
 
-impl HelperDef for VarHelper {
+impl HelperDef for SetHelper {
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(
@@ -142,9 +263,9 @@ impl HelperDef for VarHelper {
             skip_all, err,
             fields(
                 self = ?self,
-                helper.name = helper.name(),
                 helper.is_block = helper.is_block(),
-                helper.set = ?helper.hash_get("set")
+                helper.var = ?helper.param(0),
+                helper.value = ?helper.param(1)
             )
         )
     )]
@@ -156,47 +277,17 @@ impl HelperDef for VarHelper {
         render_ctx: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
         if helper.is_block() {
-            if !helper.params().is_empty() {
-                let message = "In block form, var helpers must be called without args";
-                return Err(RenderErrorReason::Other(message.to_owned()).into());
-            }
-
-            let is_append = helper
-                .hash_get("append")
-                .is_some_and(|val| val.value().as_bool() == Some(true));
-
-            if let Some(template) = helper.template() {
-                let mut output = StringOutput::new();
-                template.render(reg, ctx, render_ctx, &mut output)?;
-                let raw_string = output.into_string()?;
-                if is_append {
-                    self.push_str(&raw_string)?;
-                } else {
-                    let json =
-                        serde_json::from_str(&raw_string).map_err(RenderErrorReason::from)?;
-                    self.set_value(json);
-                }
-            } else {
-                self.set_value(Json::Null);
-            }
-
-            Ok(ScopedJson::Constant(&Json::Null))
-        } else {
-            if !helper.params().is_empty() {
-                let message = "variable helper misuse; should be called without args";
-                return Err(RenderErrorReason::Other(message.to_owned()).into());
-            }
-
-            if let Some(value) = helper.hash_get("set") {
-                // Variable setter.
-                self.set_value(value.value().clone());
-                Ok(ScopedJson::Constant(&Json::Null))
-            } else {
-                // Variable getter.
-                let value = self.value.lock().unwrap().clone();
-                Ok(ScopedJson::Derived(value))
-            }
+            Self::call_as_block(helper, reg, ctx, render_ctx)?;
+            return Ok(ScopedJson::Constant(&Json::Null));
         }
+
+        let values = helper.hash().iter().map(|(name, value)| (*name, value));
+        let mut blocks = render_ctx.replace_blocks(VecDeque::default());
+        let result = Self::batch_set(&mut blocks, values);
+        render_ctx.replace_blocks(blocks);
+        result?;
+
+        Ok(ScopedJson::Constant(&Json::Null))
     }
 }
 
@@ -809,6 +900,7 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper(LineSplitter::NAME, Box::new(LineSplitter));
     reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
     reg.register_helper("scope", Box::new(ScopeHelper));
+    reg.register_helper(SetHelper::NAME, Box::new(SetHelper));
     reg.register_helper(EvalHelper::NAME, Box::new(EvalHelper));
     reg.register_helper(RepeatHelper::NAME, Box::new(RepeatHelper));
     reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
@@ -850,13 +942,14 @@ mod tests {
     fn reassigning_scope_vars() {
         let template = r#"
             {{#scope test_var="test"}}
-                {{#test_var}}"{{test_var}} value"{{/test_var}}
+                {{#set "test_var"}}"{{test_var}} value"{{/set}}
                 Test var is: {{test_var}}
             {{/scope}}
         "#;
 
         let mut handlebars = Handlebars::new();
         handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
         let data = serde_json::json!({ "test": 3 });
         let rendered = handlebars.render_template(template, &data).unwrap();
         assert_eq!(rendered.trim(), "Test var is: test value");
@@ -866,14 +959,15 @@ mod tests {
     fn reassigning_scope_vars_via_appending() {
         let template = r#"
             {{#scope test_var="test"}}
-                {{#test_var append=true}} value{{/test_var}}
-                {{#test_var append=true}}!{{/test_var}}
+                {{#set "test_var" append=true}} value{{/set}}
+                {{#set "test_var" append=true}}!{{/set}}
                 Test var is: {{test_var}}
             {{/scope}}
         "#;
 
         let mut handlebars = Handlebars::new();
         handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
         let data = serde_json::json!({ "test": 3 });
         let rendered = handlebars.render_template(template, &data).unwrap();
         assert_eq!(rendered.trim(), "Test var is: test value!");
@@ -885,9 +979,9 @@ mod tests {
             {{#scope result=""}}
                 {{#each values}}
                     {{#if @first}}
-                        {{result set=this}}
+                        {{set result=this}}
                     {{else}}
-                        {{#result}}"{{result}}, {{this}}"{{/result}}
+                        {{#set "result"}}"{{result}}, {{this}}"{{/set}}
                     {{/if}}
                 {{/each}}
                 Concatenated: {{result}}
@@ -897,6 +991,7 @@ mod tests {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
         let data = serde_json::json!({ "values": ["foo", "bar", "baz"] });
         let rendered = handlebars.render_template(template, &data).unwrap();
         assert_eq!(rendered.trim(), "Concatenated: foo, bar, baz");
@@ -927,11 +1022,11 @@ mod tests {
         let template = "
             {{#scope lines=0 margins=0}}
                 {{#each values}}
-                    {{lines set=(add (lines) input.line_count output.line_count)}}
+                    {{set lines=(add lines input.line_count output.line_count)}}
                     {{#if (eq output.line_count 0) }}
-                        {{margins set=(add (margins) 1)}}
+                        {{set margins=(add margins 1)}}
                     {{else}}
-                        {{margins set=(add (margins) 2)}}
+                        {{set margins=(add margins 2)}}
                     {{/if}}
                 {{/each}}
                 {{lines}}, {{margins}}
@@ -941,6 +1036,7 @@ mod tests {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
         handlebars.register_helper("add", Box::new(OpsHelper::Add));
 
         let data = serde_json::json!({
@@ -1017,23 +1113,22 @@ mod tests {
             {{#*inline "add_numbers"}}
                 {{#scope sum=0}}
                     {{#each numbers}}
-                        {{sum set=(add (sum) this)}}
+                        {{set sum=(add ../sum this)}}
                     {{/each}}
                     {{sum}}
                 {{/scope}}
             {{/inline}}
-            {{#with this as |$|}}
-                {{#with (eval "add_numbers" numbers=$.num) as |sum|}}
-                {{#with (eval "add_numbers" numbers=$.num) as |other_sum|}}
-                    sum={{sum}}, other_sum={{other_sum}}
-                {{/with}}
-                {{/with}}
+            {{#with (eval "add_numbers" numbers=@root.num) as |sum|}}
+            {{#with (eval "add_numbers" numbers=@root.num) as |other_sum|}}
+                sum={{sum}}, other_sum={{other_sum}}
+            {{/with}}
             {{/with}}
         "#;
 
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
         handlebars.register_helper("eval", Box::new(EvalHelper));
         handlebars.register_helper("add", Box::new(OpsHelper::Add));
         let data = serde_json::json!({ "num": [1, 2, 3, 4] });
@@ -1093,5 +1188,82 @@ mod tests {
 
         let rendered = handlebars.render_template(template, &()).unwrap();
         assert_eq!(rendered.trim(), "█████");
+    }
+
+    #[test]
+    fn set_helper() {
+        let template = "{{#scope test_var=1}}{{set test_var=(add @test_var 1)}}Test var: {{@test_var}}{{/scope}}";
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
+        handlebars.register_helper("add", Box::new(OpsHelper::Add));
+
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(rendered, "Test var: 2");
+    }
+
+    #[test]
+    fn set_helper_as_block() {
+        let template = r#"{{#scope test_var=1 greet="Hello"~}}
+            {{~#set "test_var"}}{{add @test_var 1}}{{/set~}}
+            {{~#set "greet" append=true}}, world!{{/set~}}
+            {{@greet}} {{@test_var}}
+        {{~/scope}}"#;
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
+        handlebars.register_helper("add", Box::new(OpsHelper::Add));
+
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(rendered, "Hello, world! 2");
+    }
+
+    #[test]
+    fn set_helper_with_scope() {
+        let template = "
+            {{~#scope test_var=1~}}
+              {{~#each [1, 2, 3] as |num|~}}
+                {{~set test_var=(add @../test_var num)}}-{{@../test_var~}}
+              {{~/each~}}
+            {{~/scope~}}
+        ";
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
+        handlebars.register_helper("add", Box::new(OpsHelper::Add));
+
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(rendered.trim(), "-2-4-7");
+    }
+
+    #[test]
+    fn embedded_scopes() {
+        let template = r"
+            {{~#scope x=1 z=100~}}
+                x={{@x}},
+                {{~#scope x=2 y=3~}}
+                  x={{@x}},y={{@y}},
+                  {{~set x=4 y=5~}}
+                  x={{@x}},y={{@y}},z={{@z}},
+                  {{~set z=-100~}}
+                  z={{@z}},
+                {{~/scope~}}
+                x={{@x}},z={{@z}}
+            {{~/scope~}}
+        ";
+
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("scope", Box::new(ScopeHelper));
+        handlebars.register_helper("set", Box::new(SetHelper));
+
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(
+            rendered.trim(),
+            "x=1,x=2,y=3,x=4,y=5,z=100,z=-100,x=1,z=-100"
+        );
     }
 }
