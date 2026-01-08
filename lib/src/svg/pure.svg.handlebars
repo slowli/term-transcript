@@ -3,26 +3,26 @@
 
 {{! Renders `class` and/or `style` attributes for a background SVG span }}
 {{~#*inline "svg_bg_tspan_attrs"}}
-  {{~#scope final_bg=bg classes="" styles=""}}
+  {{~#scope bg=bg classes="" styles=""}}
     {{~#if inverted~}}
       {{~#if (eq (typeof fg) "null")~}}
-        {{~final_bg set=7 ~}} {{! indexed white }}
+        {{~set bg=7 ~}} {{! indexed white }}
       {{~else~}}
-        {{~final_bg set=fg ~}}
+        {{~set bg=fg ~}}
       {{~/if~}}
     {{~/if~}}
-    {{~#classes append=true}}
+    {{~#set "classes" append=true}}
       {{~#if dimmed}} dimmed{{/if~}}
       {{~#if blink}} blink{{/if~}}
       {{! Here, we intentionally use the *foreground* class }}
-      {{~#if (eq (typeof (final_bg)) "number")}} fg{{final_bg}}{{/if~}}
-    {{/classes~}}
-    {{~classes set=(trim (classes))~}}
+      {{~#if (eq (typeof @bg) "number")}} fg{{@bg}}{{/if~}}
+    {{/set~}}
+    {{~set classes=(trim @classes)~}}
 
-    {{~#if (eq (typeof (final_bg)) "string")}}
-      {{~#styles append=true}}fill: {{final_bg}}; stroke: {{final_bg}};{{/styles~}}
+    {{~#if (eq (typeof @bg) "string")}}
+      {{~#set "styles" append=true}}fill: {{@bg}}; stroke: {{@bg}};{{/set~}}
     {{~/if~}}
-    {{#if (classes)}} class="{{classes}}"{{/if}}{{#if (styles)}} style="{{styles}}"{{/if}}
+    {{#if @classes}} class="{{@classes}}"{{/if}}{{#if @styles}} style="{{@styles}}"{{/if}}
   {{~/scope~}}
 {{~/inline~}}
 
@@ -34,7 +34,7 @@
   {{>background}}
 
   {{~>content}}
-  {{~#if (scroll_animation)}}
+  {{~#if scroll_animation}}
   {{>scrollbar}}
   {{>scroll_animation}}
   {{/if}}
@@ -47,7 +47,7 @@
   {{>common_styles_header}}
   .container {
     font: {{const.FONT_SIZE}}px {{#if embedded_font}}"{{embedded_font.family_name}}", monospace{{else}}{{font_family}}{{/if}};
-    line-height: {{round (line_height) digits=2}}px;
+    line-height: {{round line_height digits=2}}px;
   }
   text { white-space: pre; text-decoration-thickness: 1px; }
   .input-bg { fill: #fff; fill-opacity: 0.1; }
@@ -59,7 +59,7 @@
   .input-bg .input-failure { fill: #ff0041; fill-opacity: 0.15; }
   .input-failure-hl { fill: #ff0041; fill-opacity: 1; }
   {{/if}}
-  {{~#if (scroll_animation)}}
+  {{~#if scroll_animation}}
 
   .scrollbar { fill: #fff; fill-opacity: 0.35; }
   {{~/if}}
@@ -104,159 +104,161 @@
 {{/inline~}}
 
 {{~#*inline "content"}}
-    <svg{{#if (scroll_animation)}} id="scroll-container"{{/if}} x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
+    <svg{{#if scroll_animation}} id="scroll-container"{{/if}} x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}">
       {{#scope
         x_pos=const.WINDOW_PADDING
         input_x_pos=const.WINDOW_PADDING
         y_pos=0
-        input_height=0
         input_bg=""
         output_bg=""
         text_fg=""
         hard_breaks=""
       ~}}
       {{~#if line_numbers~}}
-        {{x_pos set=(add (x_pos) const.LN_WIDTH const.LN_PADDING)}}
+        {{set x_pos=(add @x_pos const.LN_WIDTH const.LN_PADDING)}}
       {{~/if~}}
 
       {{~#if line_numbers~}}
         {{~#if (eq line_numbers.scope "continuous")~}}
-          {{~input_x_pos set=(x_pos)~}}
+          {{~set input_x_pos=@x_pos~}}
         {{~/if~}}
       {{~/if~}}
 
       {{~#each interactions}}
         {{~#if (not input.hidden)}}
           {{! Render input background }}
-          {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
-          {{~input_height set=(round (add (mul (count_lines input.text) (line_height)) (mul 2 ../const.USER_INPUT_PADDING)) digits=1)~}}
-          {{~#input_bg append=true ~}}
+          {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING)~}}
+          {{~#set "input_bg" append=true ~}}
             {{! `y_pos` refers to the top of the text line, so for <rect>s we need to subtract the top margin }}
-            {{~#scope top_y=(round (sub (y_pos) ../const.USER_INPUT_PADDING) digits=2)~}}
-            <rect x="0" y="{{top_y}}" width="100%" height="{{input_height}}"{{#if failure}} class="input-failure"{{/if}}>
+            {{~#scope
+              top_y=(round (sub @../y_pos ../const.USER_INPUT_PADDING) digits=2)
+              input_height=(round (add (mul (count_lines input.text) ../line_height) (mul 2 ../const.USER_INPUT_PADDING)) digits=1)
+            ~}}
+            <rect x="0" y="{{@top_y}}" width="100%" height="{{@input_height}}"{{#if failure}} class="input-failure"{{/if}}>
             {{~#if failure~}}
               <title>This command exited with non-zero code</title>
             {{~/if~}}
             </rect>
             {{~#if failure~}}
-            <rect x="0" y="{{top_y}}" width="2" height="{{input_height}}" class="input-failure-hl" />
-            <rect x="100%" y="{{top_y}}" width="2" height="{{input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
+            <rect x="0" y="{{@top_y}}" width="2" height="{{@input_height}}" class="input-failure-hl" />
+            <rect x="100%" y="{{@top_y}}" width="2" height="{{@input_height}}" class="input-failure-hl" transform="translate(-2, 0)" />
             {{~/if~}}
             {{~/scope~}}
-          {{~/input_bg~}}
+          {{~/set~}}
         {{~/if~}} {{! if (not input.hidden) }}
 
         {{! The awkward newlines at the end of line <text>s are required for the text to be properly copyable }}
-        {{~#text_fg append=true ~}}
+        {{~#set "text_fg" append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
-            <g transform="translate({{input_x_pos}} {{
-              round (add (y_pos) (text_y_offset)) digits=2
+            <g transform="translate({{@../../input_x_pos}} {{
+              round (add @../../y_pos ../../text_y_offset) digits=2
             }})">{{#scope text_x_offset=0 sp="" ~}}
               {{~#if @first~}}
-                {{~text_x_offset set=(round (mul (char_width ../input.prompt) (advance_width)) digits=2)~}}
-                {{~sp set=" "~}}
-                <text class="prompt"{{#if (adjust_text_length)}} textLength="{{text_x_offset}}"{{/if}}>{{../input.prompt}}</text>
+                {{~set text_x_offset=(round (mul (char_width ../input.prompt) ../../advance_width) digits=2)~}}
+                {{~set sp=" "~}}
+                <text class="prompt"{{#if ../../adjust_text_length}} textLength="{{@text_x_offset}}"{{/if}}>{{../input.prompt}}</text>
               {{~/if~}}
-              <text x="{{text_x_offset}}"{{#if (adjust_text_length)}} textLength="{{
-                round (mul (add (char_width this) (char_width (sp))) (advance_width)) digits=2
-              }}"{{/if}}>{{sp}}{{this}}</text>
+              <text x="{{@text_x_offset}}"{{#if ../../adjust_text_length}} textLength="{{
+                round (mul (add (char_width this) (char_width @sp)) ../../advance_width) digits=2
+              }}"{{/if}}>{{@sp}}{{this}}</text>
             {{~/scope}}<text>
 </text></g>
             {{~#if (not ../input.hidden)~}}
-              {{~y_pos set=(add (y_pos) (line_height))}}
+              {{~set y_pos=(add @../../y_pos ../../line_height)}}
             {{~/if~}}
           {{~/each~}}
         </g>
-        {{~/text_fg~}}
+        {{~/set~}}
         {{~#if (not input.hidden)~}}
-          {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)}}
+          {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)}}
         {{~/if~}}
 
         {{! Render output backround and text }}
-        {{~#text_fg append=true ~}}
+        {{~#set "text_fg" append=true ~}}
           {{~#if (and (not @first) input.hidden)~}}
-            {{~#scope line_y_pos=(round (sub (y_pos) (sub (div ../const.BLOCK_MARGIN 2) 1)) digits=1)~}}
-            <line class="output-sep" x1="0" y1="{{line_y_pos}}" x2="100%" y2="{{line_y_pos}}" />
+            {{~#scope line_y_pos=(round (sub @../y_pos (sub (div ../const.BLOCK_MARGIN 2) 1)) digits=1)~}}
+            <line class="output-sep" x1="0" y1="{{@line_y_pos}}" x2="100%" y2="{{@line_y_pos}}" />
             {{~/scope~}}
           {{~/if~}}
           <g class="output">
-        {{~/text_fg~}}
+        {{~/set~}}
         {{~#each output as |line|~}}
           {{~#scope char_pos=0 line_fg="" line_bg="" ~}}
           {{~#each line.spans as |span|~}}
-            {{~#line_bg append=true ~}}
+            {{~#set "line_bg" append=true ~}}
               {{~#if (or (ne (typeof span.bg) "null") span.inverted)~}}
                 <rect x="{{
-                  round (add (x_pos) (mul (char_pos) (advance_width))) digits=2
+                  round (add @../../../x_pos (mul @../char_pos ../../../advance_width)) digits=2
                 }}" y="{{
-                  round (y_pos) digits=2
+                  round @../../../y_pos digits=2
                 }}" width="{{
-                  round (mul (char_width span.text) (advance_width)) digits=2
+                  round (mul (char_width span.text) ../../../advance_width) digits=2
                 }}" height="{{
-                  round (line_height) digits=2
+                  round ../../../line_height digits=2
                 }}"{{>svg_bg_tspan_attrs span}}/>
               {{~/if~}}
-            {{~/line_bg~}}
+            {{~/set~}}
             {{! Render span foreground }}
-            {{~#line_fg append=true ~}}
+            {{~#set "line_fg" append=true ~}}
               <text x="{{
-                round (mul (char_pos) (advance_width)) digits=2
-              }}"{{#if (and (adjust_text_length) (gt (char_width span.text) 1))}} textLength="{{
-                round (mul (char_width span.text) (advance_width)) digits=2
+                round (mul @../char_pos ../../../advance_width) digits=2
+              }}"{{#if (and ../../../adjust_text_length (gt (char_width span.text) 1))}} textLength="{{
+                round (mul (char_width span.text) ../../../advance_width) digits=2
               }}"{{/if}}{{>svg_tspan_attrs span}}>{{span.text}}</text>
               {{~#if @last~}}
               <text{{#if ../line.br}} class="hard-br"{{/if}}>
 </text>
               {{~/if~}}
-            {{~/line_fg~}}
+            {{~/set~}}
             {{! Update char position on the line }}
-            {{~char_pos set=(add (char_pos) (char_width span.text))~}}
+            {{~set char_pos=(add @../char_pos (char_width span.text))~}}
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
-          {{~#if line.br~}}
-            {{~#with ../../wrap.hard_break_at.mark as |mark|~}}
-              {{~#hard_breaks append=true~}}
+
+          {{~#scope mark=@root.wrap.hard_break_at.mark~}}
+            {{~#if (and line.br @mark)~}}
+              {{~#set "hard_breaks" append=true~}}
                 <text x="{{
-                  round (add (x_pos) 8 (mul (advance_width) (char_pos))) digits=2
+                  round (add @../../x_pos 8 (mul ../../advance_width @char_pos)) digits=2
                 }}" y="{{
-                  round (add (y_pos) (text_y_offset)) digits=2
-                }}">{{mark}}</text>
-              {{~/hard_breaks~}}
-            {{~else}}{{/with~}}
-          {{~/if~}}
+                  round (add @../../y_pos ../../text_y_offset) digits=2
+                }}">{{@mark}}</text>
+              {{~/set~}}
+            {{~/if~}}
+          {{~/scope~}}
 
           {{! Append collected `line_bg` to the overall background }}
-          {{~#output_bg append=true}}{{{line_bg}}}{{/output_bg~}}
+          {{~#set "output_bg" append=true}}{{{@line_bg}}}{{/set~}}
 
           {{! Append collected `line_fg` to the overall text }}
-          {{~#text_fg append=true ~}}
-            {{~#if (line_fg)~}}
-              <g transform="translate({{x_pos}} {{
-                round (add (y_pos) (text_y_offset)) digits=2
-              }})" clip-path="xywh(0 0 100% {{line_height}}px)">{{{line_fg}}}</g>
+          {{~#set "text_fg" append=true ~}}
+            {{~#if @line_fg~}}
+              <g transform="translate({{@../../x_pos}} {{
+                round (add @../../y_pos ../../text_y_offset) digits=2
+              }})" clip-path="xywh(0 0 100% {{../../line_height}}px)">{{{@line_fg}}}</g>
             {{~/if~}}
-          {{~/text_fg~}}
+          {{~/set~}}
           {{~/scope~}}
-          {{~y_pos set=(add (y_pos) (line_height))~}}
+          {{~set y_pos=(add @../../y_pos ../../line_height)~}}
         {{~else~}}{{! The output may be empty }}
         {{~/each~}}
-        {{~#text_fg append=true }}</g>{{/text_fg~}}
+        {{~#set "text_fg" append=true }}</g>{{/set~}}
         {{~#if (ne (len output) 0)}}
-          {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)}}
+          {{~set y_pos=(add @../y_pos ../const.BLOCK_MARGIN)}}
         {{~/if}}
       {{~/each~}}
 
-      <g class="input-bg">{{{input_bg}}}</g>
-      {{~#if (ne (len (output_bg)) 0)~}}
-        <g class="output-bg">{{{output_bg}}}</g>
+      <g class="input-bg">{{{@input_bg}}}</g>
+      {{~#if @output_bg~}}
+        <g class="output-bg">{{{@output_bg}}}</g>
       {{~/if~}}
       {{#if line_numbers}}
 
       {{>number_lines}}
       {{/if~}}
-      {{~#if (hard_breaks)}}<g class="container fg7 hard-br">{{{hard_breaks}}}</g>{{/if~}}
-      <g class="container fg7">{{{text_fg}}}</g>
+      {{~#if @hard_breaks}}<g class="container fg7 hard-br">{{{@hard_breaks}}}</g>{{/if~}}
+      <g class="container fg7">{{{@text_fg}}}</g>
       {{~/scope~}}
     </svg>
 {{/inline~}}
@@ -266,43 +268,45 @@
     x_pos=(add const.WINDOW_PADDING const.LN_WIDTH)
     y_pos=0
     line_number=1
-    skip_line_number=false
   ~}}
   <g class="container fg7 line-numbers">
   {{~#each interactions}}
     {{~#if (not input.hidden)}}
-      {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING)~}}
+      {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING)~}}
       {{~#if (eq ../line_numbers.scope "continuous")}}
         {{~#each (range 0 (count_lines input.text))~}}
-          <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{add this (line_number)}}</text>
-          {{~y_pos set=(add (y_pos) (line_height))~}}
+          <text x="{{@../../x_pos}}" y="{{round (add @../../y_pos ../../text_y_offset) digits=2}}">{{add this @../../line_number}}</text>
+          {{~set y_pos=(add @../../y_pos ../../line_height)~}}
         {{~/each~}}
-        {{~line_number set=(add (line_number) (count_lines input.text))~}}
+        {{~set line_number=(add @../line_number (count_lines input.text))~}}
       {{~else~}}
-        {{~y_pos set=(add (y_pos) (mul (count_lines input.text) (line_height)))~}}
+        {{~set y_pos=(add @../y_pos (mul (count_lines input.text) ../line_height))~}}
       {{~/if~}}
-      {{~y_pos set=(add (y_pos) ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
+      {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
     {{! Number lines in the output }}
     {{~#if (eq ../line_numbers.scope "each_output")~}}
-      {{~line_number set=1 ~}}
+      {{~set line_number=1 ~}}
     {{~/if~}}
 
-    {{~skip_line_number set=false ~}}
+    {{~#scope skip_line_number=false ~}}
     {{~#each output as |line|~}}
-      {{~#if (not (skip_line_number))~}}
-        <text x="{{x_pos}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{line_number}}</text>
-        {{~line_number set=(add 1 (line_number))~}}
+      {{~#if (not @../skip_line_number)~}}
+        <text x="{{@../../x_pos}}" y="{{round (add @../../y_pos ../../text_y_offset) digits=2}}">{{@../../line_number}}</text>
+        {{~set line_number=(add 1 @../../line_number)~}}
       {{~else~}}
-        {{~#with ../../line_numbers.continued.mark as |mark|~}}
-          <text x="{{add (x_pos) 3}}" y="{{round (add (y_pos) (text_y_offset)) digits=2}}">{{mark}}</text>
-        {{~else}}{{/with~}}
+        {{~#scope mark=@root.line_numbers.continued.mark~}}
+          {{~#if @mark~}}
+          <text x="{{add @../../x_pos 3}}" y="{{round (add @../../y_pos ../../text_y_offset) digits=2}}">{{@mark}}</text>
+          {{~/if~}}
+        {{~/scope~}}
       {{~/if~}}
-      {{~skip_line_number set=(and line.br (ne ../../line_numbers.continued "inherit"))~}}
-      {{~y_pos set=(add (y_pos) (line_height))~}}
+      {{~set skip_line_number=(and line.br (ne ../../line_numbers.continued "inherit"))~}}
+      {{~set y_pos=(add @../../y_pos ../../line_height)~}}
     {{~/each~}}
+    {{~/scope~}}
     {{~#if (gt (len output) 0)~}}
-      {{~y_pos set=(add (y_pos) ../const.BLOCK_MARGIN)~}}
+      {{~set y_pos=(add @../y_pos ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
   {{~/each~}}
   </g>
@@ -313,7 +317,6 @@
 {{#scope
   content_height=0
   scroll_animation=null
-  font_metrics=null
   line_height=line_height
   advance_width=advance_width
   adjust_text_length=true
@@ -323,57 +326,56 @@
   width=width
   line_number=1
 }}
-  {{~>set_line_height ~}}
-  {{~content_height set=(round
-    (eval "compute_content_height" const=const line_height=(line_height) interactions=interactions)
+  {{~#set "line_height"}}{{>compute_line_height}}{{/set~}}
+  {{~set content_height=(round
+    (eval "compute_content_height" const=const line_height=@line_height interactions=interactions)
     digits=1
   )~}}
   {{~#if embedded_font~}}
     {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
-      {{~font_metrics set=metrics~}}
-      {{~#if (eq (advance_width) null)~}}
-        {{~advance_width set=metrics.advance_width~}}
-        {{~adjust_text_length set=false~}}
+      {{~#if (eq @../advance_width null)~}}
+        {{~set advance_width=metrics.advance_width~}}
+        {{~set adjust_text_length=false ~}}
       {{~else~}}
         {{! Scale advance width from ems to pixels }}
-        {{~advance_width set=(mul (advance_width) ../const.FONT_SIZE)~}}
+        {{~set advance_width=(mul @../advance_width ../const.FONT_SIZE)~}}
       {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
         and the ascent, i.e. (line_height + ascent + descent) / 2.
       }}
-      {{~text_y_offset set=(div (add (line_height) metrics.ascent metrics.descent) 2)~}}
+      {{~set text_y_offset=(div (add @../line_height metrics.ascent metrics.descent) 2)~}}
     {{~/with~}}
   {{~else~}}
-    {{~#if (eq (advance_width) null)~}}
-      {{~advance_width set=8~}} {{! Set to a reasonable default: ~0.57em }}
+    {{~#if (eq @advance_width null)~}}
+      {{~set advance_width=8 ~}} {{! Set to a reasonable default: ~0.57em }}
     {{~else~}}
       {{! Scale advance width from ems to pixels }}
-      {{~advance_width set=(mul (advance_width) const.FONT_SIZE)~}}
+      {{~set advance_width=(mul @advance_width const.FONT_SIZE)~}}
     {{~/if~}}
     {{! Use the above formula with heuristic values: ascent ~ 1em, descent ~ -0.3em. Hence, their sum is ~0.65em or ~9px. }}
-    {{~text_y_offset set=(div (add (line_height) 9) 2)~}}
+    {{~set text_y_offset=(div (add @line_height 9) 2)~}}
   {{~/if~}}
   {{~#if line_numbers~}}
     {{! Adjust width to take line numbers into account }}
-    {{~width set=(add (width) const.LN_WIDTH const.LN_PADDING)~}}
+    {{~set width=(add @width const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
   {{~#if scroll~}}
-    {{scroll_animation set=(eval "compute_scroll_animation"
+    {{set scroll_animation=(eval "compute_scroll_animation"
       const=const
       scroll=scroll
-      width=(width)
-      content_height=(content_height)
+      width=@width
+      content_height=@content_height
     )}}
   {{~/if~}}
-  {{~#if (scroll_animation)~}}
-    {{screen_height set=scroll.max_height}}
+  {{~#if @scroll_animation~}}
+    {{set screen_height=scroll.max_height}}
   {{~else~}}
-    {{screen_height set=(content_height)}}
+    {{set screen_height=@content_height}}
   {{~/if~}}
-  {{~height set=(add (screen_height) (mul const.WINDOW_PADDING 2))~}}
+  {{~set height=(add @screen_height (mul const.WINDOW_PADDING 2))~}}
   {{~#if window~}}
-    {{height set=(add (height) const.WINDOW_FRAME_HEIGHT)}}
+    {{set height=(add @height const.WINDOW_FRAME_HEIGHT)}}
   {{~/if~}}
-{{>root~}} {{! <-- All rendering happens here }}
+{{>root (splat_vars this)~}} {{! <-- All rendering happens here }}
 {{/scope}}

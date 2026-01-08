@@ -91,30 +91,30 @@
       scrollbar_y=""
       sep=""
     }}
-      {{#each (range 0 (add steps 1))}}
-        {{set pos=(min scroll_height (mul ../scroll.pixels_per_scroll @index))}}
+      {{#each (range 0 (add @steps 1))}}
+        {{set pos=(min @../scroll_height (mul ../scroll.pixels_per_scroll @index))}}
         {{! Skip the penultimate step if its position is too close to the last one }}
-        {{#if (or @last (gt (sub scroll_height pos) (mul ../scroll.pixels_per_scroll ../scroll.elision_threshold)))}}
+        {{#if (or @last (gt (sub @../scroll_height @../pos) (mul ../scroll.pixels_per_scroll ../scroll.elision_threshold)))}}
           {{#set "sep"}}{{#if @first}}""{{else}}";"{{/if}}{{/set}}
-          {{#set "view_box" append=true}}{{sep}}0 {{round (pos) digits=1}} {{../width}} {{../scroll.max_height}}{{/set}}
-          {{#set "scrollbar_y" append=true}}{{sep}}{{round
+          {{#set "view_box" append=true}}{{@../sep}}0 {{round @../pos digits=1}} {{../width}} {{../scroll.max_height}}{{/set}}
+          {{#set "scrollbar_y" append=true}}{{@../sep}}{{round
             (add
-              (mul (div (pos) (scroll_height)) (sub ../scroll.max_height (scrollbar_height)))
+              (mul (div @../pos @../scroll_height) (sub ../scroll.max_height @../scrollbar_height))
               ../const.WINDOW_PADDING
             )
             digits=1
           }}{{/set}}
         {{else}}
-          {{set steps=(sub steps 1)}}
+          {{set steps=(sub @../steps 1)}}
         {{/if}}
       {{/each}}
 
       {
-        "duration": {{mul scroll.interval steps}},
-        "view_box": "{{view_box}}",
-        "scrollbar_height": {{scrollbar_height}},
+        "duration": {{mul scroll.interval @steps}},
+        "view_box": "{{@view_box}}",
+        "scrollbar_height": {{@scrollbar_height}},
         "scrollbar_x": {{sub width (add const.SCROLLBAR_RIGHT_OFFSET 5)}}, {{! 5 is scrollbar width }}
-        "scrollbar_y": "{{scrollbar_y}}"
+        "scrollbar_y": "{{@scrollbar_y}}"
       }
     {{/scope}}
   {{/if}}

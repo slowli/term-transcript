@@ -102,7 +102,7 @@ impl HelperDef for ScopeHelper {
             current_block.set_local_var(name, value.value().clone());
         }
 
-        let scope_guard = ScopeGuard::default();
+        let scope_guard = ScopeGuard::new(helper.hash().keys().map(|&s| s.to_owned()).collect());
         let result = template.render(reg, ctx, render_ctx, out);
 
         // Reset the current block so that the added / modified block params are reset.
@@ -111,7 +111,7 @@ impl HelperDef for ScopeHelper {
         } else {
             // Restore values in the current block to previous values.
             let current_block = render_ctx.block_mut().unwrap();
-            let mut set_vars = dbg!(scope_guard.set_vars());
+            let mut set_vars = scope_guard.set_vars();
             // Remove vars defined in this scope.
             for &name in helper.hash().keys() {
                 set_vars.remove(name);
@@ -168,20 +168,28 @@ impl SetValue {
 thread_local! {
     static SET_VARS: RefCell<HashSet<String>> = RefCell::default();
 }
+thread_local! {
+    static DEFINED_VARS: RefCell<HashSet<String>> = RefCell::default();
+}
 
 #[must_use]
 #[derive(Debug)]
-struct ScopeGuard(HashSet<String>);
-
-impl Default for ScopeGuard {
-    fn default() -> Self {
-        Self(SET_VARS.take())
-    }
+struct ScopeGuard {
+    set_vars: HashSet<String>,
+    defined_vars: HashSet<String>,
 }
 
 impl ScopeGuard {
+    fn new(defined_vars: HashSet<String>) -> Self {
+        Self {
+            set_vars: SET_VARS.take(),
+            defined_vars: DEFINED_VARS.replace(defined_vars),
+        }
+    }
+
     fn set_vars(self) -> HashSet<String> {
-        SET_VARS.replace(self.0)
+        DEFINED_VARS.set(self.defined_vars);
+        SET_VARS.replace(self.set_vars)
     }
 }
 
@@ -265,7 +273,7 @@ impl HelperDef for SetHelper {
                 self = ?self,
                 helper.is_block = helper.is_block(),
                 helper.var = ?helper.param(0),
-                helper.value = ?helper.param(1)
+                helper.hash = ?helper.hash(),
             )
         )
     )]
@@ -406,6 +414,58 @@ impl HelperDef for OpsHelper {
             let message = "all args must be numbers";
             Err(RenderErrorReason::Other(message.to_owned()).into())
         }
+    }
+}
+
+/// Splats local vars (without the '@' prefix) into the provided object.
+#[derive(Debug)]
+struct SplatVarsHelper;
+
+impl SplatVarsHelper {
+    const NAME: &'static str = "splat_vars";
+}
+
+impl HelperDef for SplatVarsHelper {
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(
+            level = "trace",
+            skip_all, err,
+            fields(
+                self = ?self,
+                helper.base = ?helper.param(0),
+            )
+        )
+    )]
+    fn call_inner<'reg: 'rc, 'rc>(
+        &self,
+        helper: &Helper<'rc>,
+        _reg: &'reg Handlebars<'reg>,
+        _ctx: &'rc Context,
+        render_ctx: &mut RenderContext<'reg, 'rc>,
+    ) -> Result<ScopedJson<'rc>, RenderError> {
+        let base = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
+        let base = base.value().as_object().ok_or_else(|| {
+            RenderErrorReason::ParamTypeMismatchForName(
+                Self::NAME,
+                "0".to_owned(),
+                "object".to_owned(),
+            )
+        })?;
+        let mut merged = base.clone();
+
+        if let Some(current_block) = render_ctx.block() {
+            DEFINED_VARS.with_borrow(|var_names| {
+                for name in var_names {
+                    let value = current_block.get_local_var(name).unwrap();
+                    merged.insert(name.clone(), value.clone());
+                }
+            });
+        }
+
+        Ok(ScopedJson::Derived(merged.into()))
     }
 }
 
@@ -901,6 +961,7 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
     reg.register_helper("scope", Box::new(ScopeHelper));
     reg.register_helper(SetHelper::NAME, Box::new(SetHelper));
+    reg.register_helper(SplatVarsHelper::NAME, Box::new(SplatVarsHelper));
     reg.register_helper(EvalHelper::NAME, Box::new(EvalHelper));
     reg.register_helper(RepeatHelper::NAME, Box::new(RepeatHelper));
     reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
@@ -929,7 +990,7 @@ mod tests {
 
     #[test]
     fn scope_helper_basics() {
-        let template = "{{#scope test_var=1}}Test var is: {{test_var}}{{/scope}}";
+        let template = "{{#scope test_var=1}}Test var is: {{@test_var}}{{/scope}}";
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(true);
         handlebars.register_helper("scope", Box::new(ScopeHelper));
@@ -942,8 +1003,8 @@ mod tests {
     fn reassigning_scope_vars() {
         let template = r#"
             {{#scope test_var="test"}}
-                {{#set "test_var"}}"{{test_var}} value"{{/set}}
-                Test var is: {{test_var}}
+                {{#set "test_var"}}"{{@test_var}} value"{{/set}}
+                Test var is: {{@test_var}}
             {{/scope}}
         "#;
 
@@ -961,7 +1022,7 @@ mod tests {
             {{#scope test_var="test"}}
                 {{#set "test_var" append=true}} value{{/set}}
                 {{#set "test_var" append=true}}!{{/set}}
-                Test var is: {{test_var}}
+                Test var is: {{@test_var}}
             {{/scope}}
         "#;
 
@@ -981,10 +1042,10 @@ mod tests {
                     {{#if @first}}
                         {{set result=this}}
                     {{else}}
-                        {{#set "result"}}"{{result}}, {{this}}"{{/set}}
+                        {{#set "result"}}"{{@../result}}, {{this}}"{{/set}}
                     {{/if}}
                 {{/each}}
-                Concatenated: {{result}}
+                Concatenated: {{@result}}
             {{/scope}}
         "#;
 
@@ -1022,14 +1083,14 @@ mod tests {
         let template = "
             {{#scope lines=0 margins=0}}
                 {{#each values}}
-                    {{set lines=(add lines input.line_count output.line_count)}}
+                    {{set lines=(add @../lines input.line_count output.line_count)}}
                     {{#if (eq output.line_count 0) }}
-                        {{set margins=(add margins 1)}}
+                        {{set margins=(add @../margins 1)}}
                     {{else}}
-                        {{set margins=(add margins 2)}}
+                        {{set margins=(add @../margins 2)}}
                     {{/if}}
                 {{/each}}
-                {{lines}}, {{margins}}
+                {{@lines}}, {{@margins}}
             {{/scope}}
         ";
 
@@ -1113,9 +1174,9 @@ mod tests {
             {{#*inline "add_numbers"}}
                 {{#scope sum=0}}
                     {{#each numbers}}
-                        {{set sum=(add ../sum this)}}
+                        {{set sum=(add @../sum this)}}
                     {{/each}}
-                    {{sum}}
+                    {{@sum}}
                 {{/scope}}
             {{/inline}}
             {{#with (eval "add_numbers" numbers=@root.num) as |sum|}}
