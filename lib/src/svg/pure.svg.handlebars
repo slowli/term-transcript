@@ -361,12 +361,9 @@
     {{~set width=(add @width const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
   {{~#if scroll~}}
-    {{set scroll_animation=(eval "compute_scroll_animation"
-      const=const
-      scroll=scroll
-      width=@width
-      content_height=@content_height
-    )}}
+    {{~#set "scroll_animation"~}}
+      {{~>compute_scroll_animation this width=@width content_height=@content_height~}}
+    {{~/set~}}
   {{~/if~}}
   {{~#if @scroll_animation~}}
     {{set screen_height=scroll.max_height}}

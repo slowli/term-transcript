@@ -236,7 +236,7 @@
   {{~/if~}}
   {{~#if scroll~}}
     {{~#set "scroll_animation"~}}
-      {{~>compute_scroll_animation this content_height=@content_height~}}
+      {{~>compute_scroll_animation this width=@width content_height=@content_height~}}
     {{~/set~}}
   {{~/if~}}
   {{~#if @scroll_animation~}}
