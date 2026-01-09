@@ -6,12 +6,17 @@ use handlebars::{
 };
 use serde_json::Value as Json;
 
+#[cfg(feature = "tracing")]
+use self::trace::{helper_hash, helper_params, DebugHelper};
 use self::{
     arith::{OpsHelper, RangeHelper, RoundHelper},
     strings::{CharWidthHelper, LineCounter, LineSplitter, RepeatHelper, TrimHelper},
     vars::{ScopeHelper, SetHelper, SplatVarsHelper},
 };
 
+#[cfg(feature = "tracing")]
+#[macro_use]
+mod trace;
 mod arith;
 mod strings;
 #[cfg(test)]
@@ -26,14 +31,6 @@ impl TypeofHelper {
 }
 
 impl HelperDef for TypeofHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -41,6 +38,9 @@ impl HelperDef for TypeofHelper {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let val = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
@@ -55,6 +55,37 @@ impl HelperDef for TypeofHelper {
         Ok(ScopedJson::Derived(ty.into()))
     }
 }
+
+/// Dummy `DebugHelper` that gobbles input.
+#[cfg(not(feature = "tracing"))]
+mod no_trace {
+    use handlebars::{
+        Context, Handlebars, Helper, HelperDef, RenderContext, RenderError, ScopedJson,
+    };
+    use serde_json::Value as Json;
+
+    pub(super) struct DebugHelper;
+
+    impl DebugHelper {
+        pub(super) const NAME: &'static str = "debug";
+    }
+
+    impl HelperDef for DebugHelper {
+        fn call_inner<'reg: 'rc, 'rc>(
+            &self,
+            _: &Helper<'rc>,
+            _: &'reg Handlebars<'reg>,
+            _: &'rc Context,
+            _: &mut RenderContext<'reg, 'rc>,
+        ) -> Result<ScopedJson<'rc>, RenderError> {
+            // Do nothing. This will gobble all input, same as in the real implementation.
+            Ok(ScopedJson::Constant(&Json::Null))
+        }
+    }
+}
+
+#[cfg(not(feature = "tracing"))]
+use self::no_trace::DebugHelper;
 
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     // Arithmetic routines
@@ -81,4 +112,7 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper("scope", Box::new(ScopeHelper));
     reg.register_helper(SetHelper::NAME, Box::new(SetHelper));
     reg.register_helper(SplatVarsHelper::NAME, Box::new(SplatVarsHelper));
+
+    // Tracing
+    reg.register_helper(DebugHelper::NAME, Box::new(DebugHelper));
 }

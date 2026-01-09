@@ -67,18 +67,6 @@ impl OpsHelper {
 }
 
 impl HelperDef for OpsHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(
-                self = ?self,
-                helper.name = helper.name(),
-                helper.params = ?helper.params()
-            )
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -86,6 +74,9 @@ impl HelperDef for OpsHelper {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         if matches!(self, Self::Sub | Self::Div) && helper.params().len() != 2 {
             let message = format!("`{}` expects exactly 2 number args", self.as_str());
             return Err(RenderErrorReason::Other(message).into());
@@ -141,14 +132,6 @@ impl RangeHelper {
 }
 
 impl HelperDef for RangeHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -156,6 +139,9 @@ impl HelperDef for RangeHelper {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let from = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
@@ -225,14 +211,6 @@ impl RoundHelper {
 }
 
 impl HelperDef for RoundHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params(), mode = ?helper.hash_get("mode"))
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -240,6 +218,9 @@ impl HelperDef for RoundHelper {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let val = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;

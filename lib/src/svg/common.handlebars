@@ -19,6 +19,9 @@
       {{! The last margin is not displayed. }}
       {{set margins=(sub @margins 1)}}
     {{/if}}
+    {{#debug lines=@lines margins=@margins displayed_interactions=@displayed_interactions~}}
+      computed params for content height
+    {{~/debug}}
     {{add (mul @lines line_height)
           (mul @margins const.BLOCK_MARGIN)
           (mul @displayed_interactions (mul 2 const.USER_INPUT_PADDING)) }}
@@ -91,6 +94,7 @@
       scrollbar_y=""
       sep=""
     }}
+      {{#debug steps=@steps scrollbar_height=@scrollbar_height~}}computed scroll animation params{{/debug}}
       {{#each (range 0 (add @steps 1))}}
         {{set pos=(min @../scroll_height (mul ../scroll.pixels_per_scroll @index))}}
         {{! Skip the penultimate step if its position is too close to the last one }}
@@ -105,6 +109,7 @@
             digits=1
           }}{{/set}}
         {{else}}
+          {{#debug}}eliding last scroll keyframe{{/debug}}
           {{set steps=(sub @../steps 1)}}
         {{/if}}
       {{/each}}
@@ -226,12 +231,15 @@
         {{~#set "metrics"~}}
           {{~>scale_font_metrics metrics=embedded_font.metrics font_size=const.FONT_SIZE ~}}
         {{~/set~}}
+        {{~#debug metrics=@metrics}}using line height from font metrics{{/debug~}}
         {{~round (sub (lookup @metrics "ascent") (lookup @metrics "descent")) digits=1~}}
       {{~/scope~}}
     {{~else~}}
+      {{~#debug}}using default line height{{/debug~}}
       16.8 {{! Set to a somewhat reasonable default (1.2 * font_size) }}
     {{~/if~}}
   {{~else~}}
+    {{~#debug line_height=line_height}}using user-provided line height{{/debug~}}
     {{! Scale line height according to the font size }}
     {{~round (mul line_height const.FONT_SIZE) digits=1~}}
   {{~/if~}}

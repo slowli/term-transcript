@@ -327,10 +327,14 @@
   line_number=1
 }}
   {{~#set "line_height"}}{{>compute_line_height}}{{/set~}}
+  {{~#debug line_height=@line_height}}computed line height{{/debug~}}
+
   {{~#set "content_height"~}}
     {{~>compute_content_height this line_height=@line_height ~}}
   {{~/set~}}
   {{~set content_height=(round @content_height digits=1)~}}
+  {{~#debug content_height=@content_height}}computed content height{{/debug~}}
+
   {{~#if embedded_font~}}
     {{~#scope metrics=null ~}}
       {{~#set "metrics"~}}
@@ -338,9 +342,11 @@
       {{~/set~}}
       {{~#if (eq @advance_width null)~}}
         {{~set advance_width=(lookup @metrics "advance_width")~}}
+        {{~#debug metrics=@metrics}}using advance width from font metrics{{/debug~}}
         {{~set adjust_text_length=false ~}}
       {{~else~}}
         {{! Scale advance width from ems to pixels }}
+        {{~#debug advance_width=@advance_width}}using user-provided advance width{{/debug~}}
         {{~set advance_width=(mul @advance_width const.FONT_SIZE)~}}
       {{~/if~}}
       {{!
@@ -348,9 +354,11 @@
         and the ascent, i.e. (line_height + ascent + descent) / 2.
       }}
       {{~set text_y_offset=(div (add @line_height (lookup @metrics "ascent") (lookup @metrics "descent")) 2)~}}
+      {{~#debug metrics=@metrics text_y_offset=@text_y_offset}}computed Y offset for text baseline from font metrics{{/debug~}}
     {{~/scope~}}
   {{~else~}}
     {{~#if (eq @advance_width null)~}}
+      {{~#debug}}using default advance width{{/debug~}}
       {{~set advance_width=8 ~}} {{! Set to a reasonable default: ~0.57em }}
     {{~else~}}
       {{! Scale advance width from ems to pixels }}
@@ -358,6 +366,7 @@
     {{~/if~}}
     {{! Use the above formula with heuristic values: ascent ~ 1em, descent ~ -0.3em. Hence, their sum is ~0.65em or ~9px. }}
     {{~set text_y_offset=(div (add @line_height 9) 2)~}}
+    {{~#debug text_y_offset=@text_y_offset}}computed Y offset for text baseline heuristically{{/debug~}}
   {{~/if~}}
   {{~#if line_numbers~}}
     {{! Adjust width to take line numbers into account }}

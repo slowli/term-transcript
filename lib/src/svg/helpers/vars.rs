@@ -15,10 +15,6 @@ use serde_json::Value as Json;
 pub(super) struct ScopeHelper;
 
 impl HelperDef for ScopeHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(level = "trace", skip_all, err, fields(helper.hash = ?helper.hash()))
-    )]
     fn call<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -28,6 +24,9 @@ impl HelperDef for ScopeHelper {
         out: &mut dyn Output,
     ) -> Result<(), RenderError> {
         const MESSAGE: &str = "`scope` must be called as block helper";
+
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
 
         let template = helper
             .template()
@@ -210,19 +209,6 @@ impl SetHelper {
 }
 
 impl HelperDef for SetHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(
-                self = ?self,
-                helper.is_block = helper.is_block(),
-                helper.var = ?helper.param(0),
-                helper.hash = ?helper.hash(),
-            )
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -230,6 +216,9 @@ impl HelperDef for SetHelper {
         ctx: &'rc Context,
         render_ctx: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         if helper.is_block() {
             Self::call_as_block(helper, reg, ctx, render_ctx)?;
             return Ok(ScopedJson::Constant(&Json::Null));
@@ -254,17 +243,6 @@ impl SplatVarsHelper {
 }
 
 impl HelperDef for SplatVarsHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(
-                self = ?self,
-                helper.base = ?helper.param(0),
-            )
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -272,6 +250,9 @@ impl HelperDef for SplatVarsHelper {
         _ctx: &'rc Context,
         render_ctx: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let base = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;

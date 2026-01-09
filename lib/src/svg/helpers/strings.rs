@@ -15,14 +15,6 @@ impl LineCounter {
 }
 
 impl HelperDef for LineCounter {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params(), helper.format = ?helper.hash_get("format"))
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -30,6 +22,9 @@ impl HelperDef for LineCounter {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let string = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
@@ -60,14 +55,6 @@ impl LineSplitter {
 }
 
 impl HelperDef for LineSplitter {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -75,6 +62,9 @@ impl HelperDef for LineSplitter {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let string = helper
             .param(0)
             .ok_or_else(|| RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
@@ -107,14 +97,6 @@ impl RepeatHelper {
 }
 
 impl HelperDef for RepeatHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -122,6 +104,9 @@ impl HelperDef for RepeatHelper {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let repeated_str = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
@@ -160,14 +145,6 @@ impl TrimHelper {
 }
 
 impl HelperDef for TrimHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -175,6 +152,9 @@ impl HelperDef for TrimHelper {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let val = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
@@ -224,14 +204,6 @@ impl CharWidthHelper {
 }
 
 impl HelperDef for CharWidthHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         helper: &Helper<'rc>,
@@ -239,6 +211,9 @@ impl HelperDef for CharWidthHelper {
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
     ) -> Result<ScopedJson<'rc>, RenderError> {
+        #[cfg(feature = "tracing")]
+        let _entered_span = helper_span!(helper);
+
         let val = helper
             .param(0)
             .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;

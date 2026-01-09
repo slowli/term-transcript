@@ -226,10 +226,14 @@
   line_height=0
 }}
   {{~#set "line_height"}}{{>compute_line_height}}{{/set~}}
+  {{~#debug line_height=@line_height}}computed line height{{/debug~}}
+
   {{~#set "content_height"~}}
     {{~>compute_content_height this line_height=@line_height ~}}
   {{~/set~}}
   {{~set content_height=(round @content_height digits=1)~}}
+  {{~#debug content_height=@content_height}}computed content height{{/debug~}}
+
   {{~#if line_numbers~}}
     {{! Adjust width to take line numbers into account }}
     {{~set width=(add width const.LN_WIDTH const.LN_PADDING)~}}
