@@ -80,11 +80,11 @@
     null
   {{else}}
     {{#scope
-      steps=(div (sub content_height scroll.max_height) scroll.pixels_per_scroll round="up")
+      steps=(round (div (sub content_height scroll.max_height) scroll.pixels_per_scroll) mode="up")
       scroll_height=(sub content_height scroll.max_height)
       scrollbar_height=(max
         (min scroll.min_scrollbar_height scroll.max_height)
-        (mul scroll.max_height (div scroll.max_height content_height) round=true)
+        (round (mul scroll.max_height (div scroll.max_height content_height)))
       )
       pos=0
       view_box=""

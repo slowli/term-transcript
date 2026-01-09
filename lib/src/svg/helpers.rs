@@ -315,8 +315,7 @@ impl HelperDef for OpsHelper {
             fields(
                 self = ?self,
                 helper.name = helper.name(),
-                helper.params = ?helper.params(),
-                helper.round = ?helper.hash_get("round")
+                helper.params = ?helper.params()
             )
         )
     )]
@@ -356,16 +355,7 @@ impl HelperDef for OpsHelper {
                 .params()
                 .iter()
                 .map(|param| param.value().as_f64().unwrap());
-            let mut acc = self.accumulate_f64(values);
-            if let Some(rounding) = helper.hash_get("round") {
-                if matches!(rounding.value(), Json::Bool(true)) {
-                    acc = acc.round();
-                } else if rounding.value().as_str() == Some("up") {
-                    acc = acc.ceil();
-                } else if rounding.value().as_str() == Some("down") {
-                    acc = acc.floor();
-                }
-            }
+            let acc = self.accumulate_f64(values);
             // Try to present the value as `i64` (this could be beneficial for other helpers).
             // If this doesn't work, present it as an original floating-point value.
             let acc: Json = to_i64(acc).map_or_else(|| acc.into(), Into::into);
@@ -629,6 +619,40 @@ impl HelperDef for RepeatHelper {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+enum RoundingMode {
+    Up,
+    Down,
+    #[default]
+    Nearest,
+}
+
+impl RoundingMode {
+    const EXPECTED: &'static str = "one of 'up' / 'ceil', 'down' / 'floor', or 'nearest' / 'round'";
+
+    fn new(raw: &str) -> Result<Self, String> {
+        Ok(match raw {
+            "up" | "ceil" => Self::Up,
+            "down" | "floor" => Self::Down,
+            "nearest" | "round" => Self::Nearest,
+            _ => {
+                return Err(format!(
+                    "Unknown rounding mode: {raw}; expected {exp}",
+                    exp = Self::EXPECTED
+                ))
+            }
+        })
+    }
+
+    fn apply(self, val: f64) -> f64 {
+        match self {
+            Self::Up => val.ceil(),
+            Self::Down => val.floor(),
+            Self::Nearest => val.round(),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct RoundHelper;
 
@@ -643,7 +667,7 @@ impl HelperDef for RoundHelper {
         tracing::instrument(
             level = "trace",
             skip_all, err,
-            fields(helper.params = ?helper.params())
+            fields(helper.params = ?helper.params(), mode = ?helper.hash_get("mode"))
         )
     )]
     fn call_inner<'reg: 'rc, 'rc>(
@@ -680,6 +704,21 @@ impl HelperDef for RoundHelper {
             return Err(RenderErrorReason::Other(msg).into());
         }
 
+        let mode = if let Some(mode) = helper.hash_get("mode") {
+            let mode = mode.value().as_str().ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    Self::NAME,
+                    "mode".to_owned(),
+                    RoundingMode::EXPECTED.to_owned(),
+                )
+            })?;
+            RoundingMode::new(mode).map_err(|err| {
+                RenderErrorReason::ParamTypeMismatchForName(Self::NAME, "mode".to_owned(), err)
+            })?
+        } else {
+            RoundingMode::default()
+        };
+
         #[allow(
             clippy::cast_precision_loss,
             clippy::cast_possible_truncation,
@@ -688,7 +727,7 @@ impl HelperDef for RoundHelper {
         // ^ Partially guarded by checks; the remaining precision loss is OK
         let rounded: Json = {
             let pow10 = 10.0_f64.powi(digits.try_into().unwrap());
-            let rounded = (val * pow10).round() / pow10;
+            let rounded = mode.apply(val * pow10) / pow10;
             to_i64(rounded).map_or_else(|| rounded.into(), Into::into)
         };
         Ok(ScopedJson::Derived(rounded))
@@ -993,20 +1032,6 @@ mod tests {
     }
 
     #[test]
-    fn rounding_in_arithmetic_helpers() {
-        let template = r#"
-            {{div x y}}, {{div x y round=true}}, {{div x y round="down"}}, {{div x y round="up"}}
-        "#;
-        let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(true);
-        handlebars.register_helper("div", Box::new(OpsHelper::Div));
-
-        let data = serde_json::json!({ "x": 9, "y": 4 });
-        let rendered = handlebars.render_template(template, &data).unwrap();
-        assert_eq!(rendered.trim(), "2.25, 2, 2, 3");
-    }
-
-    #[test]
     fn rounding_helper() {
         let template = "
             {{round 10.5}}, {{round 10.5 digits=2}}, {{round (mul 14 (div 1050 1000)) digits=2}}
@@ -1018,6 +1043,20 @@ mod tests {
         handlebars.register_helper("round", Box::new(RoundHelper));
         let rendered = handlebars.render_template(template, &()).unwrap();
         assert_eq!(rendered.trim(), "11, 10.5, 14.7");
+    }
+
+    #[test]
+    fn rounding_helper_with_mode() {
+        let template = r#"
+            {{round 10.6 mode="nearest"}}, {{round 10.513 digits=2 mode="down"}}, {{round 11.001 digits=1 mode="up"}}
+        "#;
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("mul", Box::new(OpsHelper::Mul));
+        handlebars.register_helper("div", Box::new(OpsHelper::Div));
+        handlebars.register_helper("round", Box::new(RoundHelper));
+        let rendered = handlebars.render_template(template, &()).unwrap();
+        assert_eq!(rendered.trim(), "11, 10.51, 11.1");
     }
 
     #[test]
