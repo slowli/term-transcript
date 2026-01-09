@@ -26,46 +26,6 @@ fn to_i64(value: f64) -> Option<i64> {
 }
 
 #[derive(Debug)]
-struct PtrHelper;
-
-impl PtrHelper {
-    const NAME: &'static str = "ptr";
-}
-
-impl HelperDef for PtrHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(level = "trace", skip_all, err, fields(helper.params = ?helper.params()))
-    )]
-    fn call_inner<'reg: 'rc, 'rc>(
-        &self,
-        helper: &Helper<'rc>,
-        _reg: &'reg Handlebars<'reg>,
-        _ctx: &'rc Context,
-        _render_ctx: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'rc>, RenderError> {
-        let value = helper
-            .param(0)
-            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
-        let value = value.value();
-
-        let ptr = helper
-            .param(1)
-            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 1))?;
-        let ptr = ptr.value().as_str().ok_or_else(|| {
-            RenderErrorReason::ParamTypeMismatchForName(
-                Self::NAME,
-                "1".to_owned(),
-                "string".to_owned(),
-            )
-        })?;
-
-        let output = value.pointer(ptr).cloned().unwrap_or(Json::Null);
-        Ok(ScopedJson::Derived(output))
-    }
-}
-
-#[derive(Debug)]
 struct ScopeHelper;
 
 impl HelperDef for ScopeHelper {
@@ -895,7 +855,6 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
     reg.register_helper(CharWidthHelper::NAME, Box::new(CharWidthHelper));
 
     // Introspection helpers
-    reg.register_helper(PtrHelper::NAME, Box::new(PtrHelper));
     reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
 
     // Variable definition helpers
@@ -907,21 +866,6 @@ pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn ptr_helper_basics() {
-        let template =
-            r#"{{ptr this "/test/str"}}, {{ptr this "/test/missing"}}, {{ptr this "/array/0"}}"#;
-        let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(true);
-        handlebars.register_helper("ptr", Box::new(PtrHelper));
-        let data = serde_json::json!({
-            "test": { "str": "!" },
-            "array": [2, 3],
-        });
-        let rendered = handlebars.render_template(template, &data).unwrap();
-        assert_eq!(rendered, "!, , 2");
-    }
 
     #[test]
     fn scope_helper_basics() {
