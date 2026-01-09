@@ -470,76 +470,6 @@ impl HelperDef for SplatVarsHelper {
 }
 
 #[derive(Debug)]
-struct EvalHelper;
-
-impl EvalHelper {
-    const NAME: &'static str = "eval";
-}
-
-impl HelperDef for EvalHelper {
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(
-            level = "trace",
-            skip_all, err,
-            fields(helper.params = ?helper.params())
-        )
-    )]
-    fn call_inner<'reg: 'rc, 'rc>(
-        &self,
-        helper: &Helper<'rc>,
-        reg: &'reg Handlebars<'reg>,
-        ctx: &'rc Context,
-        render_ctx: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'rc>, RenderError> {
-        let partial_name = helper
-            .param(0)
-            .ok_or(RenderErrorReason::ParamNotFoundForIndex(Self::NAME, 0))?;
-        let mut partial_name = partial_name.value().as_str().ok_or_else(|| {
-            RenderErrorReason::ParamTypeMismatchForName(
-                Self::NAME,
-                "0".to_owned(),
-                "string".to_owned(),
-            )
-        })?;
-
-        let mut is_raw = false;
-        if let Some(name) = partial_name.strip_prefix(">") {
-            is_raw = true;
-            partial_name = name;
-        }
-
-        let partial = render_ctx
-            .get_partial(partial_name)
-            .ok_or_else(|| RenderErrorReason::PartialNotFound(partial_name.to_owned()))?;
-
-        let object: serde_json::Map<String, Json> = helper
-            .hash()
-            .iter()
-            .map(|(&name, value)| (name.to_owned(), value.value().clone()))
-            .collect();
-
-        let mut render_ctx = render_ctx.clone();
-        while render_ctx.block().is_some() {
-            render_ctx.pop_block();
-        }
-        let mut block_ctx = BlockContext::new();
-        block_ctx.set_base_value(Json::from(object));
-        render_ctx.push_block(block_ctx);
-
-        let mut output = StringOutput::new();
-        partial.render(reg, ctx, &mut render_ctx, &mut output)?;
-        let output = output.into_string()?;
-        let json: Json = if is_raw {
-            output.into()
-        } else {
-            serde_json::from_str(&output).map_err(RenderErrorReason::from)?
-        };
-        Ok(ScopedJson::Derived(json))
-    }
-}
-
-#[derive(Debug)]
 struct LineCounter;
 
 impl LineCounter {
@@ -947,26 +877,31 @@ impl HelperDef for CharWidthHelper {
 }
 
 pub(super) fn register_helpers(reg: &mut Handlebars<'_>) {
+    // Arithmetic routines
     reg.register_helper("add", Box::new(OpsHelper::Add));
     reg.register_helper("sub", Box::new(OpsHelper::Sub));
     reg.register_helper("mul", Box::new(OpsHelper::Mul));
     reg.register_helper("div", Box::new(OpsHelper::Div));
     reg.register_helper("min", Box::new(OpsHelper::Min));
     reg.register_helper("max", Box::new(OpsHelper::Max));
-
-    reg.register_helper(PtrHelper::NAME, Box::new(PtrHelper));
     reg.register_helper(RoundHelper::NAME, Box::new(RoundHelper));
+    reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
+
+    // String routines
     reg.register_helper(LineCounter::NAME, Box::new(LineCounter));
     reg.register_helper(LineSplitter::NAME, Box::new(LineSplitter));
-    reg.register_helper(RangeHelper::NAME, Box::new(RangeHelper));
+    reg.register_helper(RepeatHelper::NAME, Box::new(RepeatHelper));
+    reg.register_helper(TrimHelper::NAME, Box::new(TrimHelper));
+    reg.register_helper(CharWidthHelper::NAME, Box::new(CharWidthHelper));
+
+    // Introspection helpers
+    reg.register_helper(PtrHelper::NAME, Box::new(PtrHelper));
+    reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
+
+    // Variable definition helpers
     reg.register_helper("scope", Box::new(ScopeHelper));
     reg.register_helper(SetHelper::NAME, Box::new(SetHelper));
     reg.register_helper(SplatVarsHelper::NAME, Box::new(SplatVarsHelper));
-    reg.register_helper(EvalHelper::NAME, Box::new(EvalHelper));
-    reg.register_helper(RepeatHelper::NAME, Box::new(RepeatHelper));
-    reg.register_helper(TypeofHelper::NAME, Box::new(TypeofHelper));
-    reg.register_helper(TrimHelper::NAME, Box::new(TrimHelper));
-    reg.register_helper(CharWidthHelper::NAME, Box::new(CharWidthHelper));
 }
 
 #[cfg(test)]
@@ -1139,62 +1074,6 @@ mod tests {
         handlebars.register_helper("round", Box::new(RoundHelper));
         let rendered = handlebars.render_template(template, &()).unwrap();
         assert_eq!(rendered.trim(), "11, 10.5, 14.7");
-    }
-
-    #[test]
-    fn eval_basics() {
-        let template = r#"
-            {{#*inline "define_constants"}}
-            {
-                {{! Bottom margin for each input or output block }}
-                "BLOCK_MARGIN": 6,
-                "USER_INPUT_PADDING": 10
-            }
-            {{/inline}}
-            {{#with this as |$|}}
-            {{#with (eval "define_constants") as |const|}}
-            {{#with $}}
-                {{margin}}: {{const.BLOCK_MARGIN}}px;
-            {{/with}}
-            {{/with}}
-            {{/with}}
-        "#;
-
-        let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(true);
-        handlebars.register_helper("eval", Box::new(EvalHelper));
-        let data = serde_json::json!({ "margin": "margin" });
-        let rendered = handlebars.render_template(template, &data).unwrap();
-        assert_eq!(rendered.trim(), "margin: 6px;");
-    }
-
-    #[test]
-    fn eval_with_args() {
-        let template = r#"
-            {{#*inline "add_numbers"}}
-                {{#scope sum=0}}
-                    {{#each numbers}}
-                        {{set sum=(add @../sum this)}}
-                    {{/each}}
-                    {{@sum}}
-                {{/scope}}
-            {{/inline}}
-            {{#with (eval "add_numbers" numbers=@root.num) as |sum|}}
-            {{#with (eval "add_numbers" numbers=@root.num) as |other_sum|}}
-                sum={{sum}}, other_sum={{other_sum}}
-            {{/with}}
-            {{/with}}
-        "#;
-
-        let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(true);
-        handlebars.register_helper("scope", Box::new(ScopeHelper));
-        handlebars.register_helper("set", Box::new(SetHelper));
-        handlebars.register_helper("eval", Box::new(EvalHelper));
-        handlebars.register_helper("add", Box::new(OpsHelper::Add));
-        let data = serde_json::json!({ "num": [1, 2, 3, 4] });
-        let rendered = handlebars.render_template(template, &data).unwrap();
-        assert_eq!(rendered.trim(), "sum=10, other_sum=10");
     }
 
     #[test]

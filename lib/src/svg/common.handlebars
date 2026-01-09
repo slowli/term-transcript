@@ -222,9 +222,12 @@
 {{~#*inline "compute_line_height"}}
   {{~#if (eq line_height null) ~}}
     {{#if embedded_font}}
-      {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
-        {{~round (sub metrics.ascent metrics.descent) digits=1~}}
-      {{~/with~}}
+      {{~#scope metrics=null ~}}
+        {{~#set "metrics"~}}
+          {{~>scale_font_metrics metrics=embedded_font.metrics font_size=const.FONT_SIZE ~}}
+        {{~/set~}}
+        {{~round (sub (lookup @metrics "ascent") (lookup @metrics "descent")) digits=1~}}
+      {{~/scope~}}
     {{~else~}}
       16.8 {{! Set to a somewhat reasonable default (1.2 * font_size) }}
     {{~/if~}}

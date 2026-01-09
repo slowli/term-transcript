@@ -226,10 +226,10 @@
   line_height=0
 }}
   {{~#set "line_height"}}{{>compute_line_height}}{{/set~}}
-  {{~set content_height=(round
-    (eval "compute_content_height" const=const line_height=@line_height interactions=interactions)
-    digits=1
-  )~}}
+  {{~#set "content_height"~}}
+    {{~>compute_content_height this line_height=@line_height ~}}
+  {{~/set~}}
+  {{~set content_height=(round @content_height digits=1)~}}
   {{~#if line_numbers~}}
     {{! Adjust width to take line numbers into account }}
     {{~set width=(add width const.LN_WIDTH const.LN_PADDING)~}}

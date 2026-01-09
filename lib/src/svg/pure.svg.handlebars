@@ -327,25 +327,28 @@
   line_number=1
 }}
   {{~#set "line_height"}}{{>compute_line_height}}{{/set~}}
-  {{~set content_height=(round
-    (eval "compute_content_height" const=const line_height=@line_height interactions=interactions)
-    digits=1
-  )~}}
+  {{~#set "content_height"~}}
+    {{~>compute_content_height this line_height=@line_height ~}}
+  {{~/set~}}
+  {{~set content_height=(round @content_height digits=1)~}}
   {{~#if embedded_font~}}
-    {{~#with (eval "scale_font_metrics" metrics=embedded_font.metrics font_size=const.FONT_SIZE) as |metrics|~}}
-      {{~#if (eq @../advance_width null)~}}
-        {{~set advance_width=metrics.advance_width~}}
+    {{~#scope metrics=null ~}}
+      {{~#set "metrics"~}}
+        {{~>scale_font_metrics metrics=embedded_font.metrics font_size=const.FONT_SIZE ~}}
+      {{~/set~}}
+      {{~#if (eq @advance_width null)~}}
+        {{~set advance_width=(lookup @metrics "advance_width")~}}
         {{~set adjust_text_length=false ~}}
       {{~else~}}
         {{! Scale advance width from ems to pixels }}
-        {{~set advance_width=(mul @../advance_width ../const.FONT_SIZE)~}}
+        {{~set advance_width=(mul @advance_width const.FONT_SIZE)~}}
       {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
         and the ascent, i.e. (line_height + ascent + descent) / 2.
       }}
-      {{~set text_y_offset=(div (add @../line_height metrics.ascent metrics.descent) 2)~}}
-    {{~/with~}}
+      {{~set text_y_offset=(div (add @line_height (lookup @metrics "ascent") (lookup @metrics "descent")) 2)~}}
+    {{~/scope~}}
   {{~else~}}
     {{~#if (eq @advance_width null)~}}
       {{~set advance_width=8 ~}} {{! Set to a reasonable default: ~0.57em }}
