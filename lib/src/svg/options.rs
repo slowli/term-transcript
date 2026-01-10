@@ -68,8 +68,8 @@ pub struct LineNumberingOptions {
 /// let options_toml = r#"
 /// width = 900
 /// window_frame = true
-/// line_numbers = 'continuous'
-/// wrap.hard_break_at = 100
+/// line_numbers.scope = 'continuous'
+/// wrap.hard_break_at.chars = 100
 /// scroll = { max_height = 300, pixels_per_scroll = 18, interval = 1.5 }
 ///
 /// [palette.colors]
@@ -97,7 +97,7 @@ pub struct LineNumberingOptions {
 /// assert_eq!(options.width.get(), 900);
 /// assert_matches!(
 ///     options.wrap,
-///     Some(WrapOptions::HardBreakAt(width)) if width.get() == 100
+///     Some(WrapOptions::HardBreakAt { chars, .. }) if chars.get() == 100
 /// );
 /// assert_eq!(
 ///     options.palette.colors.green,
@@ -365,8 +365,10 @@ pub enum WrapOptions {
     /// returns this variant with width 80.
     HardBreakAt {
         /// Char width of the break.
+        #[serde(default = "WrapOptions::default_width")]
         chars: NonZeroUsize,
         /// Marker placed after the break.
+        #[serde(default = "WrapOptions::serde_default_mark")]
         mark: Cow<'static, str>,
     },
 }
@@ -388,6 +390,10 @@ impl WrapOptions {
 
     pub const fn default_mark() -> &'static str {
         "»"
+    }
+
+    const fn serde_default_mark() -> Cow<'static, str> {
+        Cow::Borrowed(Self::default_mark())
     }
 }
 

@@ -61,9 +61,12 @@ use crate::{
 ///         },
 ///     },
 ///     "font_family": "Consolas, Menlo, monospace",
-///     "window_frame": false,
+///     "window": null,
 ///     "wrap": {
-///         "hard_break_at": 80,
+///         "hard_break_at": {
+///             "chars": 80,
+///             "mark": "»",
+///         },
 ///     },
 ///     "line_numbers": null,
 ///     "dim_opacity": 0.7,
