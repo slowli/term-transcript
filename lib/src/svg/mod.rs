@@ -186,26 +186,33 @@ impl TemplateOptions {
 /// extensively used by the [default template]; thus, studying it may be a good place to start
 /// customizing. Another example is an [HTML template] from the crate examples.
 ///
-/// ## Arithmetic helpers: `add`, `sub`, `mul`, `div`
+/// ## Arithmetic operations: `add`, `sub`, `mul`, `div`
 ///
 /// Perform the specified arithmetic operation on the supplied args.
 /// `add` and `mul` support any number of numeric args; `sub` and `div` exactly 2 numeric args.
-/// `div` also supports rounding via `round` hash option. `round=true` rounds to the nearest
-/// integer; `round="up"` / `round="down"` perform rounding in the specified direction.
 ///
 /// ```handlebars
 /// {{add 2 3 5}}
-/// {{div (len xs) 3 round="up"}}
+/// {{div (len xs) 3}}
+/// ```
+///
+/// ## Rounding
+///
+/// Rounds the provided value with a configurable number of decimal digits. Also allows specifying
+/// the rounding mode: up / ceil, down / floor, or nearest / round (default).
+///
+/// ```handlebars
+/// {{round 7.8}} {{! 8 }}
+/// {{round 7.13 digits=1}} {{! 7.1 }}
+/// {{round 7.13 digits=1 mode="up"}} {{! 7.2 }}
 /// ```
 ///
 /// ## Counting lines: `count_lines`
 ///
-/// Counts the number of lines in the supplied string. If `format="html"` hash option is included,
-/// line breaks introduced by `<br/>` tags are also counted.
+/// Counts the number of lines in the supplied string.
 ///
 /// ```handlebars
 /// {{count_lines test}}
-/// {{count_lines test format="html"}}
 /// ```
 ///
 /// ## Integer ranges: `range`
@@ -218,42 +225,25 @@ impl TemplateOptions {
 /// {{! Will output `0, 1, 2,` }}
 /// ```
 ///
-/// ## Variable scope: `scope`
+/// ## Variable scope: `scope`, `set`
 ///
 /// A block helper that creates a scope with variables specified in the options hash.
-/// In the block, each variable can be obtained or set using an eponymous helper:
+/// In the block, each variable can be obtained using local variable syntax (e.g., `@test`).
+/// Variables can be set with the `set` helper:
 ///
-/// - If the variable helper is called as a block helper, the variable is set to the contents
+/// - If `set` is called as a block helper, the variable is set to the contents
 ///   of the block, which is treated as JSON.
-/// - If the variable helper is called as an inline helper with the `set` option, the variable
-///   is set to the value of the option.
-/// - Otherwise, the variable helper acts as a getter for the current value of the variable.
+/// - If `set` is called as a block helper with `append=true`, then the contents of the block
+///   is appended to the var, which must be a string.
+/// - If the `set` helper is called as an inline helper, it sets values of the listed variables.
 ///
 /// ```handlebars
 /// {{#scope test=""}}
-///   {{test set="Hello"}}
-///   {{test}} {{! Outputs `Hello` }}
-///   {{#test}}{{test}}, world!{{/test}}
-///   {{test}} {{! Outputs `Hello, world!` }}
+///   {{set test="Hello"}}
+///   {{@test}} {{! Outputs `Hello` }}
+///   {{#set "test"}}"{{@test}}, world!"{{/set}}
+///   {{@test}} {{! Outputs `Hello, world!` }}
 /// {{/scope}}
-/// ```
-///
-/// Since variable getters are helpers, not "real" variables, they should be enclosed
-/// in parentheses `()` if used as args / options for other helpers, e.g. `{{add (test) 2}}`.
-///
-/// ## Partial evaluation: `eval`
-///
-/// Evaluates a partial with the provided name and parses its output as JSON. This can be used
-/// to define "functions" for better code structuring. Function args can be supplied in options
-/// hash.
-///
-/// ```handlebars
-/// {{#*inline "some_function"}}
-///   {{add x y}}
-/// {{/inline}}
-/// {{#with (eval "some_function" x=3 y=5) as |sum|}}
-///   {{sum}} {{! Outputs 8 }}
-/// {{/with}}
 /// ```
 ///
 /// [SVG]: https://developer.mozilla.org/en-US/docs/Web/SVG

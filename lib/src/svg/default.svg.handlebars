@@ -165,7 +165,7 @@
                       {{add this @../../line_number}}{{#if (not @last)}}<br/>{{/if}}
                     {{~/each~}}
                   </pre>
-                  {{~set line_number=(add @../line_number (count_lines input.text))~}}
+                  {{~set @../line_number (add @../line_number (count_lines input.text))~}}
                 {{~/if~}}
               {{~/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
@@ -175,19 +175,19 @@
             <div class="output">
               {{~#if ../line_numbers~}}
                 {{~#if (eq ../line_numbers.scope "each_output")~}}
-                  {{~set line_number=1 ~}}
+                  {{~set @../line_number 1 ~}}
                 {{~/if~}}
                 <pre class="line-numbers">
                   {{~#scope skip_line_number=false ~}}
                     {{~#each output as |line|~}}
                       {{~#if (not @../skip_line_number)~}}
                         {{@../../line_number}}
-                        {{~set line_number=(add 1 @../../line_number)~}}
+                        {{~set @../../line_number (add 1 @../../line_number)~}}
                       {{~else~}}
                         {{~#if ../../line_numbers.continued.mark}}<b class="cont"></b>{{/if~}}
                       {{~/if~}}
                       {{~#if @last}}{{else}}<br/>{{/if~}}
-                      {{~set skip_line_number=(and line.br (ne ../../line_numbers.continued "inherit"))~}}
+                      {{~set @../skip_line_number (and line.br (ne ../../line_numbers.continued "inherit"))~}}
                     {{~/each~}}
                   {{~/scope~}}
                 </pre>
@@ -225,32 +225,32 @@
   width=width
   line_height=0
 }}
-  {{~#set "line_height"}}{{>compute_line_height}}{{/set~}}
+  {{~#set @line_height}}{{>compute_line_height}}{{/set~}}
   {{~#debug line_height=@line_height}}computed line height{{/debug~}}
 
-  {{~#set "content_height"~}}
+  {{~#set @content_height~}}
     {{~>compute_content_height this line_height=@line_height ~}}
   {{~/set~}}
-  {{~set content_height=(round @content_height digits=1)~}}
+  {{~set @content_height (round @content_height digits=1)~}}
   {{~#debug content_height=@content_height}}computed content height{{/debug~}}
 
   {{~#if line_numbers~}}
     {{! Adjust width to take line numbers into account }}
-    {{~set width=(add width const.LN_WIDTH const.LN_PADDING)~}}
+    {{~set @width (add width const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
   {{~#if scroll~}}
-    {{~#set "scroll_animation"~}}
+    {{~#set @scroll_animation~}}
       {{~>compute_scroll_animation this width=@width content_height=@content_height~}}
     {{~/set~}}
   {{~/if~}}
   {{~#if @scroll_animation~}}
-    {{set screen_height=scroll.max_height}}
+    {{set @screen_height scroll.max_height}}
   {{~else~}}
-    {{set screen_height=@content_height}}
+    {{set @screen_height @content_height}}
   {{~/if~}}
-  {{~set height=(add @screen_height (mul const.WINDOW_PADDING 2))~}}
+  {{~set @height (add @screen_height (mul const.WINDOW_PADDING 2))~}}
   {{~#if window~}}
-    {{set height=(add @height const.WINDOW_FRAME_HEIGHT)}}
+    {{set @height (add @height const.WINDOW_FRAME_HEIGHT)}}
   {{~/if~}}
 {{>root (splat_vars this)~}} {{! <-- All rendering happens here }}
 {{/scope}}

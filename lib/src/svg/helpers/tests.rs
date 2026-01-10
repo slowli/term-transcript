@@ -15,7 +15,7 @@ fn scope_helper_basics() {
 fn reassigning_scope_vars() {
     let template = r#"
             {{#scope test_var="test"}}
-                {{#set "test_var"}}"{{@test_var}} value"{{/set}}
+                {{#set @test_var}}"{{@test_var}} value"{{/set}}
                 Test var is: {{@test_var}}
             {{/scope}}
         "#;
@@ -32,8 +32,8 @@ fn reassigning_scope_vars() {
 fn reassigning_scope_vars_via_appending() {
     let template = r#"
             {{#scope test_var="test"}}
-                {{#set "test_var" append=true}} value{{/set}}
-                {{#set "test_var" append=true}}!{{/set}}
+                {{#set @test_var append=true}} value{{/set}}
+                {{#set @test_var append=true}}!{{/set}}
                 Test var is: {{@test_var}}
             {{/scope}}
         "#;
@@ -52,9 +52,9 @@ fn scope_helper_with_control_flow() {
             {{#scope result=""}}
                 {{#each values}}
                     {{#if @first}}
-                        {{set result=this}}
+                        {{set @../result this}}
                     {{else}}
-                        {{#set "result"}}"{{@../result}}, {{this}}"{{/set}}
+                        {{#set @../result}}"{{@../result}}, {{this}}"{{/set}}
                     {{/if}}
                 {{/each}}
                 Concatenated: {{@result}}
@@ -95,11 +95,11 @@ fn add_with_scope_var() {
     let template = "
             {{#scope lines=0 margins=0}}
                 {{#each values}}
-                    {{set lines=(add @../lines input.line_count output.line_count)}}
+                    {{set @../lines (add @../lines input.line_count output.line_count)}}
                     {{#if (eq output.line_count 0) }}
-                        {{set margins=(add @../margins 1)}}
+                        {{set @../margins (add @../margins 1)}}
                     {{else}}
-                        {{set margins=(add @../margins 2)}}
+                        {{set @../margins (add @../margins 2)}}
                     {{/if}}
                 {{/each}}
                 {{@lines}}, {{@margins}}
@@ -210,7 +210,7 @@ fn repeat_helper_basics() {
 #[test]
 fn set_helper() {
     let template =
-        "{{#scope test_var=1}}{{set test_var=(add @test_var 1)}}Test var: {{@test_var}}{{/scope}}";
+        "{{#scope test_var=1}}{{set @test_var (add @test_var 1)}}Test var: {{@test_var}}{{/scope}}";
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(true);
     handlebars.register_helper("scope", Box::new(ScopeHelper));
@@ -224,8 +224,8 @@ fn set_helper() {
 #[test]
 fn set_helper_as_block() {
     let template = r#"{{#scope test_var=1 greet="Hello"~}}
-            {{~#set "test_var"}}{{add @test_var 1}}{{/set~}}
-            {{~#set "greet" append=true}}, world!{{/set~}}
+            {{~#set @test_var}}{{add @test_var 1}}{{/set~}}
+            {{~#set @greet append=true}}, world!{{/set~}}
             {{@greet}} {{@test_var}}
         {{~/scope}}"#;
     let mut handlebars = Handlebars::new();
@@ -243,7 +243,7 @@ fn set_helper_with_scope() {
     let template = "
             {{~#scope test_var=1~}}
               {{~#each [1, 2, 3] as |num|~}}
-                {{~set test_var=(add @../test_var num)}}-{{@../test_var~}}
+                {{~set @../test_var (add @../test_var num)}}:{{@../test_var~}}
               {{~/each~}}
             {{~/scope~}}
         ";
@@ -254,7 +254,7 @@ fn set_helper_with_scope() {
     handlebars.register_helper("add", Box::new(OpsHelper::Add));
 
     let rendered = handlebars.render_template(template, &()).unwrap();
-    assert_eq!(rendered.trim(), "-2-4-7");
+    assert_eq!(rendered.trim(), ":2:4:7");
 }
 
 #[test]
@@ -264,9 +264,10 @@ fn embedded_scopes() {
                 x={{@x}},
                 {{~#scope x=2 y=3~}}
                   x={{@x}},y={{@y}},
-                  {{~set x=4 y=5~}}
+                  {{~set @x 4~}}
+                  {{~set @y 5~}}
                   x={{@x}},y={{@y}},z={{@z}},
-                  {{~set z=-100~}}
+                  {{~set @z -100~}}
                   z={{@z}},
                 {{~/scope~}}
                 x={{@x}},z={{@z}}

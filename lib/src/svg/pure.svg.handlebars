@@ -6,21 +6,21 @@
   {{~#scope bg=bg classes="" styles=""}}
     {{~#if inverted~}}
       {{~#if (eq (typeof fg) "null")~}}
-        {{~set bg=7 ~}} {{! indexed white }}
+        {{~set @bg 7 ~}} {{! indexed white }}
       {{~else~}}
-        {{~set bg=fg ~}}
+        {{~set @bg fg ~}}
       {{~/if~}}
     {{~/if~}}
-    {{~#set "classes" append=true}}
+    {{~#set @classes append=true}}
       {{~#if dimmed}} dimmed{{/if~}}
       {{~#if blink}} blink{{/if~}}
       {{! Here, we intentionally use the *foreground* class }}
       {{~#if (eq (typeof @bg) "number")}} fg{{@bg}}{{/if~}}
     {{/set~}}
-    {{~set classes=(trim @classes)~}}
+    {{~set @classes (trim @classes)~}}
 
     {{~#if (eq (typeof @bg) "string")}}
-      {{~#set "styles" append=true}}fill: {{@bg}}; stroke: {{@bg}};{{/set~}}
+      {{~#set @styles append=true}}fill: {{@bg}}; stroke: {{@bg}};{{/set~}}
     {{~/if~}}
     {{#if @classes}} class="{{@classes}}"{{/if}}{{#if @styles}} style="{{@styles}}"{{/if}}
   {{~/scope~}}
@@ -115,20 +115,20 @@
         hard_breaks=""
       ~}}
       {{~#if line_numbers~}}
-        {{set x_pos=(add @x_pos const.LN_WIDTH const.LN_PADDING)}}
+        {{set @x_pos (add @x_pos const.LN_WIDTH const.LN_PADDING)}}
       {{~/if~}}
 
       {{~#if line_numbers~}}
         {{~#if (eq line_numbers.scope "continuous")~}}
-          {{~set input_x_pos=@x_pos~}}
+          {{~set @input_x_pos @x_pos~}}
         {{~/if~}}
       {{~/if~}}
 
       {{~#each interactions}}
         {{~#if (not input.hidden)}}
           {{! Render input background }}
-          {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING)~}}
-          {{~#set "input_bg" append=true ~}}
+          {{~set @../y_pos (add @../y_pos ../const.USER_INPUT_PADDING)~}}
+          {{~#set @../input_bg append=true ~}}
             {{! `y_pos` refers to the top of the text line, so for <rect>s we need to subtract the top margin }}
             {{~#scope
               top_y=(round (sub @../y_pos ../const.USER_INPUT_PADDING) digits=2)
@@ -148,15 +148,15 @@
         {{~/if~}} {{! if (not input.hidden) }}
 
         {{! The awkward newlines at the end of line <text>s are required for the text to be properly copyable }}
-        {{~#set "text_fg" append=true ~}}
+        {{~#set @../text_fg append=true ~}}
         <g class="input{{#if input.hidden}} input-hidden{{/if}}{{#if failure}} input-failure{{/if}}">
           {{~#each (split_lines input.text)~}}
             <g transform="translate({{@../../input_x_pos}} {{
               round (add @../../y_pos ../../text_y_offset) digits=2
             }})">{{#scope text_x_offset=0 sp="" ~}}
               {{~#if @first~}}
-                {{~set text_x_offset=(round (mul (char_width ../input.prompt) ../../advance_width) digits=2)~}}
-                {{~set sp=" "~}}
+                {{~set @text_x_offset (round (mul (char_width ../input.prompt) ../../advance_width) digits=2)~}}
+                {{~set @sp " "~}}
                 <text class="prompt"{{#if ../../adjust_text_length}} textLength="{{@text_x_offset}}"{{/if}}>{{../input.prompt}}</text>
               {{~/if~}}
               <text x="{{@text_x_offset}}"{{#if ../../adjust_text_length}} textLength="{{
@@ -165,17 +165,17 @@
             {{~/scope}}<text>
 </text></g>
             {{~#if (not ../input.hidden)~}}
-              {{~set y_pos=(add @../../y_pos ../../line_height)}}
+              {{~set @../../y_pos (add @../../y_pos ../../line_height)}}
             {{~/if~}}
           {{~/each~}}
         </g>
         {{~/set~}}
         {{~#if (not input.hidden)~}}
-          {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)}}
+          {{~set @../y_pos (add @../y_pos ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)}}
         {{~/if~}}
 
         {{! Render output backround and text }}
-        {{~#set "text_fg" append=true ~}}
+        {{~#set @../text_fg append=true ~}}
           {{~#if (and (not @first) input.hidden)~}}
             {{~#scope line_y_pos=(round (sub @../y_pos (sub (div ../const.BLOCK_MARGIN 2) 1)) digits=1)~}}
             <line class="output-sep" x1="0" y1="{{@line_y_pos}}" x2="100%" y2="{{@line_y_pos}}" />
@@ -186,7 +186,7 @@
         {{~#each output as |line|~}}
           {{~#scope char_pos=0 line_fg="" line_bg="" ~}}
           {{~#each line.spans as |span|~}}
-            {{~#set "line_bg" append=true ~}}
+            {{~#set @../line_bg append=true ~}}
               {{~#if (or (ne (typeof span.bg) "null") span.inverted)~}}
                 <rect x="{{
                   round (add @../../../x_pos (mul @../char_pos ../../../advance_width)) digits=2
@@ -200,7 +200,7 @@
               {{~/if~}}
             {{~/set~}}
             {{! Render span foreground }}
-            {{~#set "line_fg" append=true ~}}
+            {{~#set @../line_fg append=true ~}}
               <text x="{{
                 round (mul @../char_pos ../../../advance_width) digits=2
               }}"{{#if (and ../../../adjust_text_length (gt (char_width span.text) 1))}} textLength="{{
@@ -212,13 +212,13 @@
               {{~/if~}}
             {{~/set~}}
             {{! Update char position on the line }}
-            {{~set char_pos=(add @../char_pos (char_width span.text))~}}
+            {{~set @../char_pos (add @../char_pos (char_width span.text))~}}
           {{~else~}}{{! The line may be empty }}
           {{~/each~}}
 
           {{~#scope mark=@root.wrap.hard_break_at.mark~}}
             {{~#if (and line.br @mark)~}}
-              {{~#set "hard_breaks" append=true~}}
+              {{~#set @../../hard_breaks append=true~}}
                 <text x="{{
                   round (add @../../x_pos 8 (mul ../../advance_width @char_pos)) digits=2
                 }}" y="{{
@@ -229,10 +229,10 @@
           {{~/scope~}}
 
           {{! Append collected `line_bg` to the overall background }}
-          {{~#set "output_bg" append=true}}{{{@line_bg}}}{{/set~}}
+          {{~#set @../../output_bg append=true}}{{{@line_bg}}}{{/set~}}
 
           {{! Append collected `line_fg` to the overall text }}
-          {{~#set "text_fg" append=true ~}}
+          {{~#set @../../text_fg append=true ~}}
             {{~#if @line_fg~}}
               <g transform="translate({{@../../x_pos}} {{
                 round (add @../../y_pos ../../text_y_offset) digits=2
@@ -240,12 +240,12 @@
             {{~/if~}}
           {{~/set~}}
           {{~/scope~}}
-          {{~set y_pos=(add @../../y_pos ../../line_height)~}}
+          {{~set @../../y_pos (add @../../y_pos ../../line_height)~}}
         {{~else~}}{{! The output may be empty }}
         {{~/each~}}
-        {{~#set "text_fg" append=true }}</g>{{/set~}}
+        {{~#set @../text_fg append=true }}</g>{{/set~}}
         {{~#if (ne (len output) 0)}}
-          {{~set y_pos=(add @../y_pos ../const.BLOCK_MARGIN)}}
+          {{~set @../y_pos (add @../y_pos ../const.BLOCK_MARGIN)}}
         {{~/if}}
       {{~/each~}}
 
@@ -272,28 +272,28 @@
   <g class="container fg7 line-numbers">
   {{~#each interactions}}
     {{~#if (not input.hidden)}}
-      {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING)~}}
+      {{~set @../y_pos (add @../y_pos ../const.USER_INPUT_PADDING)~}}
       {{~#if (eq ../line_numbers.scope "continuous")}}
         {{~#each (range 0 (count_lines input.text))~}}
           <text x="{{@../../x_pos}}" y="{{round (add @../../y_pos ../../text_y_offset) digits=2}}">{{add this @../../line_number}}</text>
-          {{~set y_pos=(add @../../y_pos ../../line_height)~}}
+          {{~set @../../y_pos (add @../../y_pos ../../line_height)~}}
         {{~/each~}}
-        {{~set line_number=(add @../line_number (count_lines input.text))~}}
+        {{~set @../line_number (add @../line_number (count_lines input.text))~}}
       {{~else~}}
-        {{~set y_pos=(add @../y_pos (mul (count_lines input.text) ../line_height))~}}
+        {{~set @../y_pos (add @../y_pos (mul (count_lines input.text) ../line_height))~}}
       {{~/if~}}
-      {{~set y_pos=(add @../y_pos ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
+      {{~set @../y_pos (add @../y_pos ../const.USER_INPUT_PADDING ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
     {{! Number lines in the output }}
     {{~#if (eq ../line_numbers.scope "each_output")~}}
-      {{~set line_number=1 ~}}
+      {{~set @../line_number 1 ~}}
     {{~/if~}}
 
     {{~#scope skip_line_number=false ~}}
     {{~#each output as |line|~}}
       {{~#if (not @../skip_line_number)~}}
         <text x="{{@../../x_pos}}" y="{{round (add @../../y_pos ../../text_y_offset) digits=2}}">{{@../../line_number}}</text>
-        {{~set line_number=(add 1 @../../line_number)~}}
+        {{~set @../../line_number (add 1 @../../line_number)~}}
       {{~else~}}
         {{~#scope mark=@root.line_numbers.continued.mark~}}
           {{~#if @mark~}}
@@ -301,12 +301,12 @@
           {{~/if~}}
         {{~/scope~}}
       {{~/if~}}
-      {{~set skip_line_number=(and line.br (ne ../../line_numbers.continued "inherit"))~}}
-      {{~set y_pos=(add @../../y_pos ../../line_height)~}}
+      {{~set @../skip_line_number (and line.br (ne ../../line_numbers.continued "inherit"))~}}
+      {{~set @../../y_pos (add @../../y_pos ../../line_height)~}}
     {{~/each~}}
     {{~/scope~}}
     {{~#if (gt (len output) 0)~}}
-      {{~set y_pos=(add @../y_pos ../const.BLOCK_MARGIN)~}}
+      {{~set @../y_pos (add @../y_pos ../const.BLOCK_MARGIN)~}}
     {{~/if~}}
   {{~/each~}}
   </g>
@@ -326,65 +326,65 @@
   width=width
   line_number=1
 }}
-  {{~#set "line_height"}}{{>compute_line_height}}{{/set~}}
+  {{~#set @line_height}}{{>compute_line_height}}{{/set~}}
   {{~#debug line_height=@line_height}}computed line height{{/debug~}}
 
-  {{~#set "content_height"~}}
+  {{~#set @content_height~}}
     {{~>compute_content_height this line_height=@line_height ~}}
   {{~/set~}}
-  {{~set content_height=(round @content_height digits=1)~}}
+  {{~set @content_height (round @content_height digits=1)~}}
   {{~#debug content_height=@content_height}}computed content height{{/debug~}}
 
   {{~#if embedded_font~}}
     {{~#scope metrics=null ~}}
-      {{~#set "metrics"~}}
+      {{~#set @metrics~}}
         {{~>scale_font_metrics metrics=embedded_font.metrics font_size=const.FONT_SIZE ~}}
       {{~/set~}}
       {{~#if (eq @advance_width null)~}}
-        {{~set advance_width=(lookup @metrics "advance_width")~}}
+        {{~set @advance_width (lookup @metrics "advance_width")~}}
         {{~#debug metrics=@metrics}}using advance width from font metrics{{/debug~}}
-        {{~set adjust_text_length=false ~}}
+        {{~set @adjust_text_length false ~}}
       {{~else~}}
         {{! Scale advance width from ems to pixels }}
         {{~#debug advance_width=@advance_width}}using user-provided advance width{{/debug~}}
-        {{~set advance_width=(mul @advance_width const.FONT_SIZE)~}}
+        {{~set @advance_width (mul @advance_width const.FONT_SIZE)~}}
       {{~/if~}}
       {{!
         Top and bottom marigns are (line_height - (ascent - descent)) / 2. To get an Y offset, we need to add the top margin
         and the ascent, i.e. (line_height + ascent + descent) / 2.
       }}
-      {{~set text_y_offset=(div (add @line_height (lookup @metrics "ascent") (lookup @metrics "descent")) 2)~}}
+      {{~set @text_y_offset (div (add @line_height (lookup @metrics "ascent") (lookup @metrics "descent")) 2)~}}
       {{~#debug metrics=@metrics text_y_offset=@text_y_offset}}computed Y offset for text baseline from font metrics{{/debug~}}
     {{~/scope~}}
   {{~else~}}
     {{~#if (eq @advance_width null)~}}
       {{~#debug}}using default advance width{{/debug~}}
-      {{~set advance_width=8 ~}} {{! Set to a reasonable default: ~0.57em }}
+      {{~set @advance_width 8 ~}} {{! Set to a reasonable default: ~0.57em }}
     {{~else~}}
       {{! Scale advance width from ems to pixels }}
-      {{~set advance_width=(mul @advance_width const.FONT_SIZE)~}}
+      {{~set @advance_width (mul @advance_width const.FONT_SIZE)~}}
     {{~/if~}}
     {{! Use the above formula with heuristic values: ascent ~ 1em, descent ~ -0.3em. Hence, their sum is ~0.65em or ~9px. }}
-    {{~set text_y_offset=(div (add @line_height 9) 2)~}}
+    {{~set @text_y_offset (div (add @line_height 9) 2)~}}
     {{~#debug text_y_offset=@text_y_offset}}computed Y offset for text baseline heuristically{{/debug~}}
   {{~/if~}}
   {{~#if line_numbers~}}
     {{! Adjust width to take line numbers into account }}
-    {{~set width=(add @width const.LN_WIDTH const.LN_PADDING)~}}
+    {{~set @width (add @width const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
   {{~#if scroll~}}
-    {{~#set "scroll_animation"~}}
+    {{~#set @scroll_animation~}}
       {{~>compute_scroll_animation this width=@width content_height=@content_height~}}
     {{~/set~}}
   {{~/if~}}
   {{~#if @scroll_animation~}}
-    {{set screen_height=scroll.max_height}}
+    {{set @screen_height scroll.max_height}}
   {{~else~}}
-    {{set screen_height=@content_height}}
+    {{set @screen_height @content_height}}
   {{~/if~}}
-  {{~set height=(add @screen_height (mul const.WINDOW_PADDING 2))~}}
+  {{~set @height (add @screen_height (mul const.WINDOW_PADDING 2))~}}
   {{~#if window~}}
-    {{set height=(add @height const.WINDOW_FRAME_HEIGHT)}}
+    {{set @height (add @height const.WINDOW_FRAME_HEIGHT)}}
   {{~/if~}}
 {{>root (splat_vars this)~}} {{! <-- All rendering happens here }}
 {{/scope}}

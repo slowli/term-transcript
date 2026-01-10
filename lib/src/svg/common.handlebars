@@ -6,18 +6,18 @@
   {{#scope lines=0 margins=0 displayed_interactions=0}}
     {{#each interactions}}
       {{#if (not input.hidden)}}
-        {{set lines=(add @../lines (count_lines input.text))}}
-        {{set margins=(add @../margins 1)}}
-        {{set displayed_interactions=(add @../displayed_interactions 1)}}
+        {{set @../lines (add @../lines (count_lines input.text))}}
+        {{set @../margins (add @../margins 1)}}
+        {{set @../displayed_interactions (add @../displayed_interactions 1)}}
       {{/if}}
-      {{set lines=(add @../lines (len output))}}
+      {{set @../lines (add @../lines (len output))}}
       {{#if (ne 0 (len output))}}
-        {{set margins=(add @../margins 1)}}
+        {{set @../margins (add @../margins 1)}}
       {{/if}}
     {{/each}}
     {{#if (gt @margins 0)}}
       {{! The last margin is not displayed. }}
-      {{set margins=(sub @margins 1)}}
+      {{set @margins (sub @margins 1)}}
     {{/if}}
     {{#debug lines=@lines margins=@margins displayed_interactions=@displayed_interactions~}}
       computed params for content height
@@ -96,12 +96,12 @@
     }}
       {{#debug steps=@steps scrollbar_height=@scrollbar_height~}}computed scroll animation params{{/debug}}
       {{#each (range 0 (add @steps 1))}}
-        {{set pos=(min @../scroll_height (mul ../scroll.pixels_per_scroll @index))}}
+        {{set @../pos (min @../scroll_height (mul ../scroll.pixels_per_scroll @index))}}
         {{! Skip the penultimate step if its position is too close to the last one }}
         {{#if (or @last (gt (sub @../scroll_height @../pos) (mul ../scroll.pixels_per_scroll ../scroll.elision_threshold)))}}
-          {{#set "sep"}}{{#if @first}}""{{else}}";"{{/if}}{{/set}}
-          {{#set "view_box" append=true}}{{@../sep}}0 {{round @../pos digits=1}} {{../width}} {{../scroll.max_height}}{{/set}}
-          {{#set "scrollbar_y" append=true}}{{@../sep}}{{round
+          {{#set @../sep}}{{#if @first}}""{{else}}";"{{/if}}{{/set}}
+          {{#set @../view_box append=true}}{{@../sep}}0 {{round @../pos digits=1}} {{../width}} {{../scroll.max_height}}{{/set}}
+          {{#set @../scrollbar_y append=true}}{{@../sep}}{{round
             (add
               (mul (div @../pos @../scroll_height) (sub ../scroll.max_height @../scrollbar_height))
               ../const.WINDOW_PADDING
@@ -110,7 +110,7 @@
           }}{{/set}}
         {{else}}
           {{#debug}}eliding last scroll keyframe{{/debug}}
-          {{set steps=(sub @../steps 1)}}
+          {{set @../steps (sub @../steps 1)}}
         {{/if}}
       {{/each}}
 
@@ -145,21 +145,21 @@
   {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
     {{~#scope fg=fg bg=bg classes="" styles=""~}}
     {{~#if inverted~}}
-      {{~set fg=bg~}}
-      {{~set bg=fg~}}
+      {{~set @fg bg~}}
+      {{~set @bg fg~}}
     {{~/if~}}
-    {{~#set "classes" append=true}}
+    {{~#set @classes append=true}}
       {{~>common_span_classes this fg=@fg bg=@bg~}}
       {{~#if (and dimmed (ne (typeof @bg) "null"))}} dimmed-bg{{/if~}}
       {{~#if (eq (typeof @fg) "number")}} fg{{@fg}}{{/if~}}
       {{~#if (eq (typeof @bg) "number")}} bg{{@bg}}{{/if~}}
     {{/set~}}
-    {{~set classes=(trim @classes)~}}
-    {{~#set "styles" append=true}}
+    {{~set @classes (trim @classes)~}}
+    {{~#set @styles append=true}}
       {{~#if (eq (typeof @fg) "string")}} color: {{@fg}};{{/if~}}
       {{~#if (eq (typeof @bg) "string")}} background: {{@bg}};{{/if~}}
     {{/set~}}
-    {{~set styles=(trim @styles)~}}
+    {{~set @styles (trim @styles)~}}
     <span{{#if @classes}} class="{{@classes}}"{{/if}}{{#if @styles}} style="{{@styles}}"{{/if}}>
     {{~/scope~}}
   {{~/if~}}
@@ -175,7 +175,6 @@
 
 {{! Swaps background and foreground colors. If any are not specified, use the default palette colors. }}
 {{~#*inline "common_span_classes"}}
-  {{~#scope}}{{/scope~}}
   {{~#if bold}} bold{{/if~}}
   {{~#if italic}} italic{{/if~}}
   {{~#if underline}} underline{{/if~}}
@@ -193,17 +192,17 @@
   {{~#scope fg=fg bg=bg classes="" styles=""}}
   {{~#if (gt (len this) 1)~}}{{! Are there any style properties in `span`? }}
     {{~#if inverted~}}
-      {{~set fg=bg~}}
-      {{~set bg=fg~}}
+      {{~set @fg bg~}}
+      {{~set @bg fg~}}
     {{~/if~}}
-    {{~#set "classes" append=true}}
+    {{~#set @classes append=true}}
       {{~>common_span_classes this fg=@fg bg=@bg~}}
       {{~#if (eq (typeof @fg) "number")}} fg{{@fg}}{{/if~}}
       {{! Unlike with HTML <span>s, we add the bg class in any case to assist with parsing }}
       {{~#if (ne (typeof @bg) "null")}} bg{{@bg}}{{/if~}}
     {{/set~}}
-    {{~set classes=(trim @classes)~}}
-    {{~#set "styles" append=true}}
+    {{~set @classes (trim @classes)~}}
+    {{~#set @styles append=true}}
       {{~#if (eq (typeof @fg) "string")}}fill: {{@fg}};{{/if~}}
     {{/set~}}
   {{~/if~}}
@@ -228,7 +227,7 @@
   {{~#if (eq line_height null) ~}}
     {{#if embedded_font}}
       {{~#scope metrics=null ~}}
-        {{~#set "metrics"~}}
+        {{~#set @metrics~}}
           {{~>scale_font_metrics metrics=embedded_font.metrics font_size=const.FONT_SIZE ~}}
         {{~/set~}}
         {{~#debug metrics=@metrics}}using line height from font metrics{{/debug~}}

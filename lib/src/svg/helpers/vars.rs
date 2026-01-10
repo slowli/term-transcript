@@ -6,8 +6,8 @@ use std::{
 };
 
 use handlebars::{
-    BlockContext, Context, Handlebars, Helper, HelperDef, Output, PathAndJson, RenderContext,
-    RenderError, RenderErrorReason, Renderable, ScopedJson, StringOutput,
+    BlockContext, Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError,
+    RenderErrorReason, Renderable, ScopedJson, StringOutput,
 };
 use serde_json::Value as Json;
 
@@ -82,13 +82,7 @@ enum SetValue {
 }
 
 impl SetValue {
-    fn set(self, blocks: &mut VecDeque<BlockContext>, var_name: &str) -> Result<(), RenderError> {
-        let var_parent = blocks
-            .iter_mut()
-            .find(|block| block.get_local_var(var_name).is_some())
-            .ok_or_else(|| {
-                RenderErrorReason::Other(format!("local var `{var_name}` is undefined"))
-            })?;
+    fn set(self, var_parent: &mut BlockContext, var_name: &str) -> Result<(), RenderError> {
         match self {
             Self::Json(value) => {
                 var_parent.set_local_var(var_name, value);
@@ -149,21 +143,9 @@ impl SetHelper {
         reg: &'reg Handlebars<'reg>,
         ctx: &'rc Context,
         render_ctx: &mut RenderContext<'reg, 'rc>,
+        var_name: &str,
+        block_depth: usize,
     ) -> Result<(), RenderError> {
-        let var_name = helper
-            .param(0)
-            .ok_or(RenderErrorReason::ParamNotFoundForIndex(SetHelper::NAME, 0))?;
-        let var_name: &'rc str = var_name
-            .try_get_constant_value()
-            .and_then(Json::as_str)
-            .ok_or_else(|| {
-                RenderErrorReason::ParamTypeMismatchForName(
-                    SetHelper::NAME,
-                    "0".to_owned(),
-                    "constant string".to_owned(),
-                )
-            })?;
-
         let is_append = helper
             .hash_get("append")
             .is_some_and(|val| val.value().as_bool() == Some(true));
@@ -182,7 +164,8 @@ impl SetHelper {
         };
 
         let mut blocks = render_ctx.replace_blocks(VecDeque::default());
-        let result = value.set(&mut blocks, var_name);
+        let result = Self::get_parent(&mut blocks, var_name, block_depth)
+            .and_then(|var_parent| value.set(var_parent, var_name));
         render_ctx.replace_blocks(blocks);
         if result.is_ok() {
             SET_VARS.with_borrow_mut(|vars| vars.insert(var_name.to_owned()));
@@ -190,20 +173,32 @@ impl SetHelper {
         result
     }
 
-    fn batch_set<'a, 'rc: 'a>(
+    fn get_parent<'block, 'rc>(
+        blocks: &'block mut VecDeque<BlockContext<'rc>>,
+        var_name: &str,
+        block_depth: usize,
+    ) -> Result<&'block mut BlockContext<'rc>, RenderError> {
+        blocks
+            .get_mut(block_depth)
+            .filter(|block| block.get_local_var(var_name).is_some())
+            .ok_or_else(|| {
+                RenderErrorReason::Other(format!("local var `{var_name}` is undefined")).into()
+            })
+    }
+
+    fn set_var(
+        helper: &Helper<'_>,
         blocks: &mut VecDeque<BlockContext>,
-        values: impl Iterator<Item = (&'a str, &'a PathAndJson<'rc>)>,
+        var_name: &str,
+        block_depth: usize,
     ) -> Result<(), RenderError> {
-        for (name, value) in values {
-            let var_parent = blocks
-                .iter_mut()
-                .find(|block| block.get_local_var(name).is_some())
-                .ok_or_else(|| {
-                    RenderErrorReason::Other(format!("local var `{name}` is undefined"))
-                })?;
-            var_parent.set_local_var(name, value.value().clone());
-            SET_VARS.with_borrow_mut(|vars| vars.insert(name.to_owned()));
-        }
+        let new_value = helper
+            .param(1)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(SetHelper::NAME, 1))?;
+
+        let var_parent = Self::get_parent(blocks, var_name, block_depth)?;
+        var_parent.set_local_var(var_name, new_value.value().clone());
+        SET_VARS.with_borrow_mut(|vars| vars.insert(var_name.to_owned()));
         Ok(())
     }
 }
@@ -219,16 +214,38 @@ impl HelperDef for SetHelper {
         #[cfg(feature = "tracing")]
         let _entered_span = helper_span!(helper);
 
-        if helper.is_block() {
-            Self::call_as_block(helper, reg, ctx, render_ctx)?;
-            return Ok(ScopedJson::Constant(&Json::Null));
+        let var = helper
+            .param(0)
+            .ok_or(RenderErrorReason::ParamNotFoundForIndex(SetHelper::NAME, 0))?;
+        let mut var_name = var
+            .relative_path()
+            .and_then(|name| name.strip_prefix('@'))
+            .ok_or_else(|| {
+                RenderErrorReason::ParamTypeMismatchForName(
+                    SetHelper::NAME,
+                    "0".to_owned(),
+                    "path to local variable".to_owned(),
+                )
+            })?;
+        if var.is_value_missing() {
+            let err = RenderErrorReason::MissingVariable(Some(format!("@{var_name}")));
+            return Err(err.into());
         }
 
-        let values = helper.hash().iter().map(|(name, value)| (*name, value));
-        let mut blocks = render_ctx.replace_blocks(VecDeque::default());
-        let result = Self::batch_set(&mut blocks, values);
-        render_ctx.replace_blocks(blocks);
-        result?;
+        let mut block_depth = 0;
+        while let Some(tail) = var_name.strip_prefix("../") {
+            var_name = tail;
+            block_depth += 1;
+        }
+
+        if helper.is_block() {
+            Self::call_as_block(helper, reg, ctx, render_ctx, var_name, block_depth)?;
+        } else {
+            let mut blocks = render_ctx.replace_blocks(VecDeque::default());
+            let result = Self::set_var(helper, &mut blocks, var_name, block_depth);
+            render_ctx.replace_blocks(blocks);
+            result?;
+        }
 
         Ok(ScopedJson::Constant(&Json::Null))
     }
