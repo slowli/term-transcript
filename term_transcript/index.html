@@ -1,0 +1,112 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Snapshot testing for CLI / REPL applications, in a fun way."><title>term_transcript - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="term_transcript" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (bd3ac0330 2025-11-01)" data-channel="nightly" data-search-js="search-5c29b3b5.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate term_transcript</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../term_transcript/index.html">term_<wbr>transcript</a><span class="version">0.4.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#what-it-does" title="What it does">What it does</a></li><li><a href="#design-decisions" title="Design decisions">Design decisions</a></li><li><a href="#limitations" title="Limitations">Limitations</a></li><li><a href="#alternatives--similar-tools" title="Alternatives / similar tools">Alternatives / similar tools</a></li><li><a href="#crate-features" title="Crate features">Crate features</a><ul><li><a href="#portable-pty" title="`portable-pty`"><code>portable-pty</code></a></li><li><a href="#svg" title="`svg`"><code>svg</code></a></li><li><a href="#font-subset" title="`font-subset`"><code>font-subset</code></a></li><li><a href="#test" title="`test`"><code>test</code></a></li><li><a href="#pretty_assertions" title="`pretty_assertions`"><code>pretty_assertions</code></a></li><li><a href="#tracing" title="`tracing`"><code>tracing</code></a></li></ul></li><li><a href="#examples" title="Examples">Examples</a></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#traits" title="Traits">Traits</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>term_<wbr>transcript</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/term_transcript/lib.rs.html#1-486">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Snapshot testing for CLI / REPL applications, in a fun way.</p>
+<h2 id="what-it-does"><a class="doc-anchor" href="#what-it-does">§</a>What it does</h2>
+<p>This crate allows to:</p>
+<ul>
+<li>Create <a href="struct.Transcript.html" title="struct term_transcript::Transcript"><code>Transcript</code></a>s of interacting with a terminal, capturing both the output text
+and <a href="https://en.wikipedia.org/wiki/ANSI_escape_code#SGR">ANSI-compatible color info</a>.</li>
+<li>Save these transcripts in the <a href="https://developer.mozilla.org/en-US/docs/Web/SVG">SVG</a> format, so that they can be easily embedded as images
+into HTML / Markdown documents. (Output format customization
+<a href="svg/struct.Template.html#customization" title="struct term_transcript::svg::Template">is also supported</a> via <a href="https://handlebarsjs.com/">Handlebars</a> templates.)</li>
+<li>Parse transcripts from SVG</li>
+<li>Test that a parsed transcript actually corresponds to the terminal output (either as text
+or text + colors).</li>
+</ul>
+<p>The primary use case is easy to create and maintain end-to-end tests for CLI / REPL apps.
+Such tests can be embedded into a readme file.</p>
+<h2 id="design-decisions"><a class="doc-anchor" href="#design-decisions">§</a>Design decisions</h2>
+<ul>
+<li>
+<p><strong>Static capturing.</strong> Capturing dynamic interaction with the terminal essentially
+requires writing / hacking together a new terminal, which looks like an overkill
+for the motivating use case (snapshot testing).</p>
+</li>
+<li>
+<p><strong>(Primarily) static SVGs.</strong> Animated SVGs create visual noise and make simple things
+(e.g., copying text from an SVG) harder than they should be.</p>
+</li>
+<li>
+<p><strong>Self-contained tests.</strong> Unlike generic snapshot files, <a href="struct.Transcript.html" title="struct term_transcript::Transcript"><code>Transcript</code></a>s contain
+both user inputs and outputs. This allows using them as images with little additional
+explanation.</p>
+</li>
+</ul>
+<h2 id="limitations"><a class="doc-anchor" href="#limitations">§</a>Limitations</h2>
+<ul>
+<li>Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
+are supported even on Windows nowadays, this shouldn’t be a significant problem.)</li>
+<li>ANSI escape sequences other than <a href="https://en.wikipedia.org/wiki/ANSI_escape_code#SGR">SGR</a> ones are either dropped (in case of <a href="https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences">CSI</a>
+and OSC sequences), or lead to <a href="enum.TermError.html#variant.UnrecognizedSequence" title="variant term_transcript::TermError::UnrecognizedSequence"><code>TermError::UnrecognizedSequence</code></a>.</li>
+<li>By default, the crate exposes APIs to perform capture via OS pipes.
+Since the terminal is not emulated in this case, programs dependent on <a href="https://man7.org/linux/man-pages/man3/isatty.3.html"><code>isatty</code></a> checks
+or getting term size can produce different output than if launched in an actual shell
+(no coloring, no line wrapping etc.).</li>
+<li>It is possible to capture output from a pseudo-terminal (PTY) using the <code>portable-pty</code>
+crate feature. However, since most escape sequences are dropped, this is still not a good
+option to capture complex outputs (e.g., ones moving cursor).</li>
+</ul>
+<h2 id="alternatives--similar-tools"><a class="doc-anchor" href="#alternatives--similar-tools">§</a>Alternatives / similar tools</h2>
+<ul>
+<li><a href="https://crates.io/crates/insta"><code>insta</code></a> is a generic snapshot testing library, which
+is amazing in general, but <em>kind of</em> too low-level for E2E CLI testing.</li>
+<li><a href="https://crates.io/crates/rexpect"><code>rexpect</code></a> allows testing CLI / REPL applications
+by scripting interactions with them in tests. It works in Unix only.</li>
+<li><a href="https://crates.io/crates/trybuild"><code>trybuild</code></a> snapshot-tests output
+of a particular program (the Rust compiler).</li>
+<li><a href="https://crates.io/crates/trycmd"><code>trycmd</code></a> snapshot-tests CLI apps using
+a text-based format.</li>
+<li>Tools like <a href="https://github.com/nbedos/termtosvg"><code>termtosvg</code></a> and
+<a href="https://asciinema.org/">Asciinema</a> allow recording terminal sessions and save them to SVG.
+The output of these tools is inherently <em>dynamic</em> (which, e.g., results in animated SVGs).
+This crate <a href="#design-decisions">intentionally chooses</a> a simpler static format, which
+makes snapshot testing easier.</li>
+</ul>
+<h2 id="crate-features"><a class="doc-anchor" href="#crate-features">§</a>Crate features</h2><h3 id="portable-pty"><a class="doc-anchor" href="#portable-pty">§</a><code>portable-pty</code></h3>
+<p><em>(Off by default)</em></p>
+<p>Allows using pseudo-terminal (PTY) to capture terminal output rather than pipes.
+Uses <a href="https://docs.rs/portable-pty/">the eponymous crate</a> under the hood.</p>
+<h3 id="svg"><a class="doc-anchor" href="#svg">§</a><code>svg</code></h3>
+<p><em>(On by default)</em></p>
+<p>Exposes <a href="svg/index.html" title="mod term_transcript::svg">the eponymous module</a> that allows rendering <a href="struct.Transcript.html" title="struct term_transcript::Transcript"><code>Transcript</code></a>s
+into the SVG format.</p>
+<h3 id="font-subset"><a class="doc-anchor" href="#font-subset">§</a><code>font-subset</code></h3>
+<p><em>(Off by default)</em></p>
+<p>Enables subsetting and embedding OpenType fonts into snapshots. Requires the <code>svg</code> feature.</p>
+<h3 id="test"><a class="doc-anchor" href="#test">§</a><code>test</code></h3>
+<p><em>(On by default)</em></p>
+<p>Exposes <a href="test/index.html" title="mod term_transcript::test">the eponymous module</a> that allows parsing <a href="struct.Transcript.html" title="struct term_transcript::Transcript"><code>Transcript</code></a>s
+from SVG files and testing them.</p>
+<h3 id="pretty_assertions"><a class="doc-anchor" href="#pretty_assertions">§</a><code>pretty_assertions</code></h3>
+<p><em>(On by default)</em></p>
+<p>Uses <a href="https://docs.rs/pretty_assertions/">the eponymous crate</a> when testing SVG files.
+Only really makes sense together with the <code>test</code> feature.</p>
+<h3 id="tracing"><a class="doc-anchor" href="#tracing">§</a><code>tracing</code></h3>
+<p><em>(Off by default)</em></p>
+<p>Uses <a href="https://docs.rs/tracing/">the eponymous facade</a> to trace main operations, which could be useful
+for debugging. Tracing is mostly performed on the <code>DEBUG</code> level.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<p>Creating a terminal <a href="struct.Transcript.html" title="struct term_transcript::Transcript"><code>Transcript</code></a> and rendering it to SVG.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>term_transcript::{
+    svg::{Template, TemplateOptions}, ShellOptions, Transcript, UserInput,
+};
+
+<span class="kw">let </span>transcript = Transcript::from_inputs(
+    <span class="kw-2">&amp;mut </span>ShellOptions::default(),
+    <span class="macro">vec!</span>[UserInput::command(<span class="string">r#"echo "Hello world!""#</span>)],
+)<span class="question-mark">?</span>;
+<span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="macro">vec!</span>[];
+<span class="comment">// ^ Any `std::io::Write` implementation will do, such as a `File`.
+</span>Template::default().render(<span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;mut </span>writer)<span class="question-mark">?</span>;
+<span class="macro">println!</span>(<span class="string">"{}"</span>, str::from_utf8(<span class="kw-2">&amp;</span>writer)<span class="question-mark">?</span>);</code></pre></div>
+<p>Snapshot testing. See the <a href="test/index.html" title="mod term_transcript::test"><code>test</code> module</a> for more examples.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>term_transcript::{test::TestConfig, ShellOptions};
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>echo_works() {
+    TestConfig::new(ShellOptions::default()).test(
+        <span class="string">"tests/__snapshots__/echo.svg"</span>,
+        <span class="kw-2">&amp;</span>[<span class="string">r#"echo "Hello world!""#</span>],
+    );
+}</code></pre></div></div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="svg/index.html" title="mod term_transcript::svg">svg</a><wbr><span class="stab portability" title="Available on crate feature `svg` only"><code>svg</code></span></dt><dd>Provides templating logic for rendering terminal output in a visual format.</dd><dt><a class="mod" href="test/index.html" title="mod term_transcript::test">test</a><wbr><span class="stab portability" title="Available on crate feature `test` only"><code>test</code></span></dt><dd>Snapshot testing tools for <a href="struct.Transcript.html" title="struct term_transcript::Transcript"><code>Transcript</code></a>s.</dd><dt><a class="mod" href="traits/index.html" title="mod term_transcript::traits">traits</a></dt><dd>Traits for interaction with the terminal.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Captured.html" title="struct term_transcript::Captured">Captured</a></dt><dd>Output captured from the terminal.</dd><dt><a class="struct" href="struct.ExitStatus.html" title="struct term_transcript::ExitStatus">Exit<wbr>Status</a></dt><dd>Portable, platform-independent version of <a href="struct.ExitStatus.html" title="struct term_transcript::ExitStatus"><code>ExitStatus</code></a> from the standard library.</dd><dt><a class="struct" href="struct.Interaction.html" title="struct term_transcript::Interaction">Interaction</a></dt><dd>One-time interaction with the terminal.</dd><dt><a class="struct" href="struct.PtyCommand.html" title="struct term_transcript::PtyCommand">PtyCommand</a><wbr><span class="stab portability" title="Available on crate feature `portable-pty` only"><code>portable-pty</code></span></dt><dd>Command to spawn in a pseudo-terminal (PTY).</dd><dt><a class="struct" href="struct.PtyShell.html" title="struct term_transcript::PtyShell">PtyShell</a><wbr><span class="stab portability" title="Available on crate feature `portable-pty` only"><code>portable-pty</code></span></dt><dd>Spawned shell process connected to pseudo-terminal (PTY).</dd><dt><a class="struct" href="struct.ShellOptions.html" title="struct term_transcript::ShellOptions">Shell<wbr>Options</a></dt><dd>Options for executing commands in the shell. Used in <a href="struct.Transcript.html#method.from_inputs" title="associated function term_transcript::Transcript::from_inputs"><code>Transcript::from_inputs()</code></a>
+and in <a href="test/struct.TestConfig.html" title="struct term_transcript::test::TestConfig"><code>TestConfig</code></a>.</dd><dt><a class="struct" href="struct.StdShell.html" title="struct term_transcript::StdShell">StdShell</a></dt><dd>Shell interpreter that brings additional functionality for <a href="struct.ShellOptions.html" title="struct term_transcript::ShellOptions"><code>ShellOptions</code></a>.</dd><dt><a class="struct" href="struct.Transcript.html" title="struct term_transcript::Transcript">Transcript</a></dt><dd>Transcript of a user interacting with the terminal.</dd><dt><a class="struct" href="struct.UserInput.html" title="struct term_transcript::UserInput">User<wbr>Input</a></dt><dd>User input during interaction with a terminal.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.TermError.html" title="enum term_transcript::TermError">Term<wbr>Error</a></dt><dd>Errors that can occur when processing terminal output.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.TermOutput.html" title="trait term_transcript::TermOutput">Term<wbr>Output</a></dt><dd>Marker trait for supported types of terminal output.</dd></dl></section></div></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Echoing","SpawnedShell"],"trait":["ConfigureCommand","ShellProcess","SpawnShell"]};

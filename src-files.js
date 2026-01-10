@@ -1,0 +1,2 @@
+createSrcSidebar('[["term_transcript",["",[["shell",[],["mod.rs","standard.rs","transcript_impl.rs"]],["svg",[["helpers",[],["arith.rs","mod.rs","strings.rs","trace.rs","vars.rs"]],["write",[],["mod.rs"]]],["data.rs","font.rs","mod.rs","options.rs","palette.rs","subset.rs"]],["term",[],["mod.rs","parser.rs"]],["test",[["color_diff",[],["mod.rs"]],["parser",[],["mod.rs","text.rs"]]],["config_impl.rs","mod.rs","utils.rs"]]],["lib.rs","pty.rs","style.rs","traits.rs","utils.rs"]]]]');
+//{"start":19,"fragment_lengths":[462]}

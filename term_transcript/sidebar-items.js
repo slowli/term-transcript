@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TermError"],"mod":["svg","test","traits"],"struct":["Captured","ExitStatus","Interaction","PtyCommand","PtyShell","ShellOptions","StdShell","Transcript","UserInput"],"trait":["TermOutput"]};
