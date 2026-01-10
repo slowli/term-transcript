@@ -30,10 +30,13 @@
           width: 22px;
           text-align: right;
           padding-right: 7px;
-          color: color-mix(in hsl, currentColor 35%, #3c3836 65%);
+          color: color-mix(in hsl, currentColor 35%, #3c3836);
           user-select: none;
         }
-
+        .output-sep {
+          margin: -3px -10px 2px;
+          border-top: 1px solid color-mix(in hsl, #a89984 35%, #3c3836);
+        }
         .scrollbar { fill: #fff; fill-opacity: 0.35; }
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
@@ -51,12 +54,13 @@
           }
         }
         .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
-
         .hard-br { margin-left: 8px; }
         .hard-br:before {
-          content: '»';
-          color: color-mix(in hsl, currentColor 60%, #3c3836 40%);
+          content: '—';
+          color: color-mix(in hsl, currentColor 60%, #3c3836);
         }
+          .line-numbers .cont { margin-right: -3px; }
+        .line-numbers .cont:before { content: '…'; }
         .line { display: block; }
         .line span { display: inline-block; text-decoration-thickness: 1px; }
         .fg0,.inv.fg-none { color: #3c3836; } .bg0 { background: #3c3836; }
@@ -81,11 +85,12 @@
       <circle cx="17" cy="-9" r="7" style="fill: #b85651;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #c18f41;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #8f9a52;"/>
+      <text x="50%" y="-3.5" style="font: bold 14px system-ui, sans-serif; text-anchor: middle; fill: #a89984;">Custom Configuration Example</text>
       <svg id="scroll-container" x="0" y="10" width="929" height="300" viewBox="0 0 929 300" overflow="hidden">
         <foreignObject width="929" height="355.8">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre class="line-numbers">1</pre><pre><span class="prompt">$</span> rainbow --long-lines</pre></div>
-            <div class="output"><pre class="line-numbers">2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19</pre><pre><span class="line">Base colors:
+            <div class="output"><pre class="line-numbers">2<br/>3<br/><b class="cont"></b><br/>4<br/><b class="cont"></b><br/>5<br/>6<br/>7<br/>8<br/>9<br/><b class="cont"></b><br/><b class="cont"></b><br/><b class="cont"></b><br/><b class="cont"></b><br/>10<br/>11<br/>12<br/>13</pre><pre><span class="line">Base colors:
 </span><span class="line"><span class="underline fg0">black</span> <span class="italic underline fg0">black/italic</span> <span class="fg1">red</span> <span class="italic underline fg1">red/italic</span> <span class="underline fg2">green</span> <span class="italic underline fg2">green/italic</span> <span class="fg3">yellow</span> <span class="italic underline fg3">yellow/italic</span> <span class="underline fg4">blue</span> <span class="italic underline fg4">blue/italic</span> <span class="fg5">magenta</span> <span class="italic underline fg5">m</span><b class="hard-br"></b>
 </span><span class="line"><span class="italic underline fg5">agenta/italic</span> <span class="underline fg6">cyan</span> <span class="italic underline fg6">cyan/italic</span> <span class="fg7">white</span> <span class="italic underline fg7">white/italic</span> 
 </span><span class="line"><span class="fg8">black</span> <span class="italic underline fg8">black/italic</span> <span class="underline fg9">red</span> <span class="italic underline fg9">red/italic</span> <span class="fg10">green</span> <span class="italic underline fg10">green/italic</span> <span class="underline fg11">yellow</span> <span class="italic underline fg11">yellow/italic</span> <span class="fg12">blue</span> <span class="italic underline fg12">blue/italic</span> <span class="underline fg13">magenta</span> <span class="italic underline fg13">m</span><b class="hard-br"></b>

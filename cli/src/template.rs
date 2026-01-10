@@ -15,8 +15,8 @@ use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
     svg::{
-        self, BlinkOptions, FontFace, FontSubsetter, ScrollOptions, Template, TemplateOptions,
-        ValidTemplateOptions, WrapOptions,
+        self, BlinkOptions, FontFace, FontSubsetter, LineNumberingOptions, ScrollOptions, Template,
+        TemplateOptions, ValidTemplateOptions, WrapOptions,
     },
     Transcript,
 };
@@ -44,8 +44,11 @@ impl From<NamedPalette> for svg::NamedPalette {
 
 #[derive(Debug, Clone, ValueEnum)]
 enum LineNumbers {
+    /// Number lines in each output separately. Inputs are not numbered.
     EachOutput,
+    /// Use continuous numbering for the lines in all outputs. Inputs are not numbered.
     ContinuousOutputs,
+    /// Use continuous numbering for the lines in all displayed inputs and outputs.
     Continuous,
 }
 
@@ -109,7 +112,7 @@ impl fmt::Display for CssLength {
 }
 
 #[derive(Debug, Args)]
-#[allow(clippy::struct_excessive_bools)] // required by `clap`
+#[allow(clippy::struct_excessive_bools, clippy::option_option)] // required by `clap`
 pub(crate) struct TemplateArgs {
     /// Path to the configuration TOML file.
     ///
@@ -117,7 +120,7 @@ pub(crate) struct TemplateArgs {
     #[arg(
         long,
         conflicts_with_all = [
-            "palette", "line_numbers", "window_frame", "additional_styles", "font_family", "width",
+            "palette", "line_numbers", "window_title", "additional_styles", "font_family", "width",
             "scroll", "hard_wrap", "no_wrap", "line_height", "advance_width", "dim_opacity", "blink_interval",
             "blink_opacity"
         ]
@@ -126,12 +129,16 @@ pub(crate) struct TemplateArgs {
     /// Color palette to use.
     #[arg(long, short = 'p', default_value = "gjm8", value_enum)]
     palette: NamedPalette,
-    /// Line numbering strategy.
-    #[arg(long, short = 'n', value_enum)]
-    line_numbers: Option<LineNumbers>,
+    /// Line numbering scope. If the value is not provided, will be set to `continuous`.
+    #[arg(long, short = 'n', value_name = "SCOPE", value_enum)]
+    line_numbers: Option<Option<LineNumbers>>,
+    /// Mark displayed at the beginning of continued lines instead of the line number. May be empty.
+    /// If not specified, continued lines will be numbered along with ordinary lines.
+    #[arg(long, value_name = "MARK", requires = "line_numbers")]
+    continued_mark: Option<String>,
     /// Adds a window frame around the rendered console.
-    #[arg(long = "window", short = 'w')]
-    window_frame: bool,
+    #[arg(long = "window", short = 'w', value_name = "TITLE")]
+    window_title: Option<Option<String>>,
     /// CSS instructions to add at the beginning of the SVG `<style>` tag. This is mostly useful
     /// to import fonts in conjunction with `--font`.
     #[arg(long = "styles")]
@@ -167,7 +174,6 @@ pub(crate) struct TemplateArgs {
     /// Enables scrolling animation, but only if the snapshot height exceeds a threshold height (in SVG units).
     /// If not specified, the default height is sufficient to fit 19 lines with the default template.
     #[arg(long, value_name = "HEIGHT")]
-    #[allow(clippy::option_option)] // required by `clap`
     scroll: Option<Option<NonZeroUsize>>,
     /// Interval between keyframes in the scrolling animation.
     #[arg(
@@ -217,22 +223,30 @@ pub(crate) struct TemplateArgs {
     blink_opacity: f64,
     /// Specifies text wrapping threshold in number of chars.
     #[arg(
-        long = "hard-wrap",
+        long,
         value_name = "CHARS",
         conflicts_with = "no_wrap",
-        default_value = "80"
+        default_value_t = WrapOptions::default_width()
     )]
     hard_wrap: NonZeroUsize,
+    /// Specifies the mark to be placed at the end of broken lines.
+    #[arg(
+        long,
+        value_name = "MARK",
+        conflicts_with = "no_wrap",
+        default_value = WrapOptions::default_mark()
+    )]
+    hard_wrap_mark: String,
     /// Disables text wrapping (by default, text is hard-wrapped at 80 chars). Line overflows
     /// will be hidden.
-    #[arg(long = "no-wrap")]
+    #[arg(long)]
     no_wrap: bool,
     /// Employs pure SVG rendering instead of embedding HTML into SVG. Pure SVGs are supported
     /// by more viewers, but there may be rendering artifacts.
-    #[arg(long = "pure-svg", conflicts_with = "template_path")]
+    #[arg(long, conflicts_with = "template_path")]
     pure_svg: bool,
     /// Hides all user inputs; only outputs will be rendered.
-    #[arg(long = "no-inputs")]
+    #[arg(long)]
     pub(crate) no_inputs: bool,
     /// Path to a custom Handlebars template to use. `-` means not to use a template at all,
     /// and instead output JSON data that would be fed to a template.
@@ -241,7 +255,7 @@ pub(crate) struct TemplateArgs {
     #[arg(long = "tpl")]
     pub(crate) template_path: Option<PathBuf>,
     /// File to save the rendered SVG into. If omitted, the output will be printed to stdout.
-    #[arg(long = "out", short = 'o')]
+    #[arg(long, short = 'o')]
     pub(crate) out: Option<PathBuf>,
 }
 
@@ -254,8 +268,17 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
             line_height: value.line_height.map(CssLength::as_ems),
             advance_width: value.advance_width.map(CssLength::as_ems),
             palette: svg::NamedPalette::from(value.palette).into(),
-            line_numbers: value.line_numbers.map(svg::LineNumbers::from),
-            window_frame: value.window_frame,
+            line_numbers: value.line_numbers.map(|scope| LineNumberingOptions {
+                scope: scope.map_or_else(svg::LineNumbers::default, Into::into),
+                continued: value
+                    .continued_mark
+                    .map_or(svg::ContinuedLineNumbers::Inherit, |mark| {
+                        svg::ContinuedLineNumbers::Mark(mark.into())
+                    }),
+            }),
+            window: value.window_title.map(|title| svg::WindowOptions {
+                title: title.unwrap_or_default(),
+            }),
             dim_opacity: value.dim_opacity,
             blink: BlinkOptions {
                 interval: value.blink_interval.as_secs_f64(),
@@ -301,7 +324,10 @@ impl TryFrom<TemplateArgs> for TemplateOptions {
             wrap: if value.no_wrap {
                 None
             } else {
-                Some(WrapOptions::HardBreakAt(value.hard_wrap))
+                Some(WrapOptions::HardBreakAt {
+                    chars: value.hard_wrap,
+                    mark: value.hard_wrap_mark.into(),
+                })
             },
             additional_styles: value.additional_styles.unwrap_or_default(),
             ..Self::default()

@@ -23,6 +23,10 @@
         }
         .input-hidden { display: none; }
         .output { margin-bottom: 6px; }
+        .output-sep {
+          margin: -3px -10px 2px;
+          border-top: 1px solid color-mix(in hsl, #e5e5e5 35%, #1c1c1c);
+        }
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
         .underline:not(.dimmed, .blink), .underline:is(.dimmed, .blink) > span { text-decoration-line: underline; }
@@ -39,11 +43,10 @@
           }
         }
         .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
-
         .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
-          color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
+          color: color-mix(in hsl, currentColor 60%, #1c1c1c);
         }
         .line { display: block; }
         .line span { display: inline-block; text-decoration-thickness: 1px; }
@@ -69,6 +72,7 @@
       <circle cx="17" cy="-9" r="7" style="fill: #ff005b;"/>
       <circle cx="37" cy="-9" r="7" style="fill: #ffe755;"/>
       <circle cx="57" cy="-9" r="7" style="fill: #cee318;"/>
+
       <svg x="0" y="10" width="720" height="312.4" viewBox="0 0 720 312.4" overflow="hidden">
         <foreignObject width="720" height="312.4">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">

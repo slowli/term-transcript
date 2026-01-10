@@ -9,7 +9,7 @@ use std::{
 
 use tempfile::{tempdir, TempDir};
 use term_transcript::{
-    svg::{ScrollOptions, Template, TemplateOptions},
+    svg::{ScrollOptions, Template, TemplateOptions, WindowOptions},
     test::{MatchKind, TestConfig},
     ShellOptions, StdShell,
 };
@@ -40,7 +40,7 @@ fn test_config() -> (TestConfig<StdShell>, TempDir) {
 
 fn scrolled_template() -> Template {
     let template_options = TemplateOptions {
-        window_frame: true,
+        window: Some(WindowOptions::default()),
         scroll: Some(ScrollOptions::default()),
         ..TemplateOptions::default()
     };

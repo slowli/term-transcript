@@ -17,6 +17,11 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Allow configuring dimmed text opacity via `TemplateOptions`.
 - Support strike-through, blinking, concealed and inverted text styles. Blinking opacity and interval are configurable
   via `TemplateOptions`.
+- Separate outputs with a horizontal rule if the corresponding input is hidden.
+- Allow configuring the hard wrap mark (previously was hard-coded).
+- Provide more options for continued line numbering. Namely, allow skipping numbers for these lines, or marking
+  them with a configurable mark.
+- Allow setting the window title if a window frame is rendered.
 
 ### Changed
 
