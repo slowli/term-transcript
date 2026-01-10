@@ -11,7 +11,7 @@
       {{>background}}
 
       {{~>content}}
-      {{~#if (scroll_animation)}}
+      {{~#if scroll_animation}}
       {{>scrollbar}}
       {{>scroll_animation}}
       {{/if}}
@@ -82,7 +82,7 @@
     background: rgba(255, 0, 65, 0.15);
   }
   {{/if}}
-  {{~#if (scroll_animation)}}
+  {{~#if scroll_animation}}
   .scrollbar { fill: #fff; fill-opacity: 0.35; }
   {{/if}}
   {{>common_font_styles}}
@@ -98,9 +98,9 @@
     (incl. opacity) correctly.
   }}
   {{#scope opacity=(round (mul 100 dim_opacity) digits=1)}}
-  .dimmed > span { color: color-mix(in hsl, currentColor {{opacity}}%, transparent); }
+  .dimmed > span { color: color-mix(in hsl, currentColor {{@opacity}}%, transparent); }
   {{! Overlay the default background color with the complementary opacity }}
-  .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / {{round (sub 100 (opacity)) digits=1}}%); }
+  .dimmed-bg > span { background: rgb(from {{ palette.colors.black }} r g b / {{round (sub 100 @opacity) digits=1}}%); }
   {{/scope}}
   {{! Only text is concealed, background is not }}
   .concealed { color: rgba(0, 0, 0, 0) !important; }
@@ -149,7 +149,8 @@
 {{/inline~}}
 
 {{~#*inline "content"}}
-      <svg{{#if (scroll_animation)}} id="scroll-container"{{/if}} x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}" overflow="hidden">
+  {{~#scope line_number=1}}
+      <svg{{#if scroll_animation}} id="scroll-container"{{/if}} x="0" y="{{const.WINDOW_PADDING}}" width="{{width}}" height="{{screen_height}}" viewBox="0 0 {{width}} {{screen_height}}" overflow="hidden">
         <foreignObject width="{{width}}" height="{{content_height}}">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             {{~#each interactions}}
@@ -158,8 +159,13 @@
               {{~#if (ne exit_status null)}} data-exit-status="{{exit_status}}"{{/if~}}
               {{~#if failure}} title="This command exited with non-zero code"{{/if}}>
               {{~#if ../line_numbers~}}
-                {{~#if (and (eq ../line_numbers.scope "continuous") (not input.hidden))}}
-                  {{~>number_input_lines}}
+                {{~#if (and (eq ../line_numbers.scope "continuous") (not input.hidden))~}}
+                  <pre class="line-numbers">
+                    {{~#each (range 0 (count_lines input.text))~}}
+                      {{add this @../../line_number}}{{#if (not @last)}}<br/>{{/if}}
+                    {{~/each~}}
+                  </pre>
+                  {{~set @../line_number (add @../line_number (count_lines input.text))~}}
                 {{~/if~}}
               {{~/if~}}
               <pre><span class="prompt">{{ input.prompt }}</span> {{ input.text }}</pre></div>
@@ -169,9 +175,22 @@
             <div class="output">
               {{~#if ../line_numbers~}}
                 {{~#if (eq ../line_numbers.scope "each_output")~}}
-                  {{~line_number set=1 ~}}
+                  {{~set @../line_number 1 ~}}
                 {{~/if~}}
-                {{~>number_output_lines output=output line_numbers=../line_numbers~}}
+                <pre class="line-numbers">
+                  {{~#scope skip_line_number=false ~}}
+                    {{~#each output as |line|~}}
+                      {{~#if (not @../skip_line_number)~}}
+                        {{@../../line_number}}
+                        {{~set @../../line_number (add 1 @../../line_number)~}}
+                      {{~else~}}
+                        {{~#if ../../line_numbers.continued.mark}}<b class="cont"></b>{{/if~}}
+                      {{~/if~}}
+                      {{~#if @last}}{{else}}<br/>{{/if~}}
+                      {{~set @../skip_line_number (and line.br (ne ../../line_numbers.continued "inherit"))~}}
+                    {{~/each~}}
+                  {{~/scope~}}
+                </pre>
               {{~/if~}}
               <pre>
               {{~#each output as |line|~}}
@@ -194,33 +213,8 @@
           </div>
         </foreignObject>
       </svg>
+  {{/scope}}
 {{/inline~}}
-
-{{~#*inline "number_input_lines"~}}
-  <pre class="line-numbers">
-    {{~#each (range 0 (count_lines input.text))~}}
-      {{add this (line_number)}}{{#if @last}}{{else}}<br/>{{/if}}
-    {{~/each~}}
-  </pre>
-  {{~line_number set=(add (line_number) (count_lines input.text))~}}
-{{~/inline~}}
-
-{{~#*inline "number_output_lines"}}
-<pre class="line-numbers">
-  {{~#scope skip_line_number=false ~}}
-  {{~#each output as |line|~}}
-    {{~#if (not (skip_line_number))~}}
-      {{line_number}}
-      {{~line_number set=(add 1 (line_number))~}}
-    {{~else~}}
-      {{~#if ../line_numbers.continued.mark}}<b class="cont"></b>{{/if~}}
-    {{~/if~}}
-    {{~#if @last}}{{else}}<br/>{{/if~}}
-    {{~skip_line_number set=(and line.br (ne ../line_numbers.continued "inherit"))~}}
-  {{~/each~}}
-  {{~/scope~}}
-</pre>
-{{~/inline~}}
 
 {{! Main logic }}
 {{#scope
@@ -229,35 +223,34 @@
   screen_height=0
   height=0
   width=width
-  line_height=line_height
-  letter_spacing_ems=0
-  line_number=1
+  line_height=0
 }}
-  {{~>set_line_height ~}}
-  {{~content_height set=(round
-    (eval "compute_content_height" const=const line_height=(line_height) interactions=interactions)
-    digits=1
-  )~}}
+  {{~#set @line_height}}{{>compute_line_height}}{{/set~}}
+  {{~#debug line_height=@line_height}}computed line height{{/debug~}}
+
+  {{~#set @content_height~}}
+    {{~>compute_content_height this line_height=@line_height ~}}
+  {{~/set~}}
+  {{~set @content_height (round @content_height digits=1)~}}
+  {{~#debug content_height=@content_height}}computed content height{{/debug~}}
+
   {{~#if line_numbers~}}
     {{! Adjust width to take line numbers into account }}
-    {{~width set=(add (width) const.LN_WIDTH const.LN_PADDING)~}}
+    {{~set @width (add width const.LN_WIDTH const.LN_PADDING)~}}
   {{~/if~}}
   {{~#if scroll~}}
-    {{scroll_animation set=(eval "compute_scroll_animation"
-      const=const
-      scroll=scroll
-      width=(width)
-      content_height=(content_height)
-    )}}
+    {{~#set @scroll_animation~}}
+      {{~>compute_scroll_animation this width=@width content_height=@content_height~}}
+    {{~/set~}}
   {{~/if~}}
-  {{~#if (scroll_animation)~}}
-    {{screen_height set=scroll.max_height}}
+  {{~#if @scroll_animation~}}
+    {{set @screen_height scroll.max_height}}
   {{~else~}}
-    {{screen_height set=(content_height)}}
+    {{set @screen_height @content_height}}
   {{~/if~}}
-  {{~height set=(add (screen_height) (mul const.WINDOW_PADDING 2))~}}
+  {{~set @height (add @screen_height (mul const.WINDOW_PADDING 2))~}}
   {{~#if window~}}
-    {{height set=(add (height) const.WINDOW_FRAME_HEIGHT)}}
+    {{set @height (add @height const.WINDOW_FRAME_HEIGHT)}}
   {{~/if~}}
-{{>root~}} {{! <-- All rendering happens here }}
+{{>root (splat_vars this)~}} {{! <-- All rendering happens here }}
 {{/scope}}

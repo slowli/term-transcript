@@ -35,7 +35,10 @@ fn rendering_simple_transcript() {
         // ^-- allows for different newline chars in Windows
         "unexpected rendering result: {buffer}"
     );
-    assert!(buffer.contains(r#"Hello, <span class="fg2">world</span>!"#));
+    assert!(
+        buffer.contains(r#"Hello, <span class="fg2">world</span>!"#),
+        "{buffer}"
+    );
     assert!(!buffer.contains("data-exit-status"));
     assert!(!buffer.contains("<circle"));
 
