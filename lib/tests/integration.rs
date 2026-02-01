@@ -457,3 +457,13 @@ fn transcript_roundtrip_for_rainbow_outputs(
     );
     Ok(())
 }
+
+#[test_casing(2, [false, true])]
+#[decorate(TRACING)]
+fn transcript_roundtrip_with_empty_lines(pure_svg: bool) -> anyhow::Result<()> {
+    let test_output = TestOutput {
+        name: "(with-empty-lines)",
+        content: "test\n\ntest",
+    };
+    transcript_roundtrip_for_rainbow_outputs(test_output, pure_svg)
+}
