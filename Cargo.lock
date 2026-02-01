@@ -1217,8 +1217,6 @@ dependencies = [
  "tempfile",
  "term-transcript",
  "test-casing",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1242,16 +1240,20 @@ dependencies = [
 
 [[package]]
 name = "test-casing"
-version = "0.1.3"
-source = "git+https://github.com/slowli/test-casing.git?rev=d143322a3e152436823c5616b0e56739380fe59d#d143322a3e152436823c5616b0e56739380fe59d"
+version = "0.2.0-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3daeaea95548ac27e70c4e55f6bd871d69ba6463af5d73b9b627b44f8b520adc"
 dependencies = [
  "test-casing-macro",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
 name = "test-casing-macro"
-version = "0.1.3"
-source = "git+https://github.com/slowli/test-casing.git?rev=d143322a3e152436823c5616b0e56739380fe59d#d143322a3e152436823c5616b0e56739380fe59d"
+version = "0.2.0-beta.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cff5b5423c2f88c9fc1c139eda0e1f13b88367e9b5eb53d03f5f640f7d23070e"
 dependencies = [
  "proc-macro2",
  "quote",

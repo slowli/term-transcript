@@ -22,9 +22,7 @@ features = ["tracing"]
 handlebars.workspace = true
 pretty_assertions.workspace = true
 tempfile.workspace = true
-test-casing.workspace = true
-tracing.workspace = true
-tracing-subscriber = { workspace = true, features = ["env-filter"] }
+test-casing = { workspace = true, features = ["tracing"] }
 
 [features]
 portable-pty = ["term-transcript/portable-pty"]
