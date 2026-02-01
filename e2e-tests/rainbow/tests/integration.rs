@@ -17,24 +17,15 @@ use term_transcript::{
     test::{compare_transcripts, MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ExitStatus, ShellOptions, Transcript, UserInput,
 };
-use test_casing::{decorate, decorators::Retry, test_casing, Product};
-use tracing::{subscriber::DefaultGuard, Subscriber};
-use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
+use test_casing::{
+    decorate,
+    decorators::{Retry, Trace},
+    test_casing, Product,
+};
 
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
 
-fn create_fmt_subscriber() -> impl Subscriber {
-    FmtSubscriber::builder()
-        .pretty()
-        .with_span_events(FmtSpan::CLOSE)
-        .with_test_writer()
-        .with_env_filter("info,term_transcript=debug")
-        .finish()
-}
-
-fn enable_tracing() -> DefaultGuard {
-    tracing::subscriber::set_default(create_fmt_subscriber())
-}
+static TRACING: Trace = Trace::new("info,term_transcript=debug");
 
 fn examples_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples")
@@ -66,9 +57,8 @@ fn aliased_snapshot_path() -> &'static Path {
 }
 
 #[test_casing(2, [false, true])]
-#[test]
+#[decorate(TRACING)]
 fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
-    let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
@@ -118,9 +108,9 @@ fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[decorate(TRACING)]
 #[test]
 fn snapshot_with_custom_template() -> anyhow::Result<()> {
-    let _guard = enable_tracing();
     let mut shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let transcript =
         Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
@@ -190,9 +180,8 @@ fn snapshot_testing_low_level() -> anyhow::Result<()> {
 }
 
 #[test_casing(2, [false, true])]
-#[test]
+#[decorate(TRACING)]
 fn snapshot_testing(pure_svg: bool) {
-    let _guard = enable_tracing();
     let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options);
     if pure_svg {
@@ -203,9 +192,8 @@ fn snapshot_testing(pure_svg: bool) {
 
 #[cfg(feature = "portable-pty")]
 #[test_casing(2, [false, true])]
-#[test]
+#[decorate(TRACING)]
 fn snapshot_testing_with_pty(pure_svg: bool) {
-    let _guard = enable_tracing();
     let shell_options = ShellOptions::new(PtyCommand::default())
         .with_io_timeout(Duration::from_secs(2))
         .with_additional_path(rainbow_dir());
@@ -217,6 +205,7 @@ fn snapshot_testing_with_pty(pure_svg: bool) {
 }
 
 #[test_casing(2, [false, true])]
+#[decorate(TRACING)]
 fn animated_snapshot_testing(pure_svg: bool) {
     let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options);
@@ -230,6 +219,7 @@ fn animated_snapshot_testing(pure_svg: bool) {
 }
 
 #[test_casing(2, [false, true])]
+#[decorate(TRACING)]
 fn snapshot_testing_with_custom_settings(pure_svg: bool) {
     let shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut config = TestConfig::new(shell_options)
@@ -243,6 +233,7 @@ fn snapshot_testing_with_custom_settings(pure_svg: bool) {
 
 #[cfg(unix)]
 #[test_casing(2, [false, true])]
+#[decorate(TRACING)]
 fn sh_shell_example(pure_svg: bool) {
     let rainbow_path = rainbow_dir().join("rainbow");
     let rainbow_path = rainbow_path.to_str().expect("non-UTF8 path");
@@ -256,10 +247,11 @@ fn sh_shell_example(pure_svg: bool) {
     config.test(aliased_snapshot_path(), ["colored-output"]);
 }
 
-#[cfg(unix)]
-#[test_casing(2, [false, true])]
 // Although `bash` can be present on Windows, `with_alias` will most probably work
 // improperly because of Windows-style paths.
+#[cfg(unix)]
+#[test_casing(2, [false, true])]
+#[decorate(TRACING)]
 fn bash_shell_example(pure_svg: bool) {
     fn bash_exists() -> bool {
         let exit_status = Command::new("bash")
@@ -289,7 +281,7 @@ fn bash_shell_example(pure_svg: bool) {
 }
 
 #[test_casing(2, [false, true])]
-#[decorate(Retry::times(3))] // PowerShell can be quite slow
+#[decorate(TRACING, Retry::times(3))] // PowerShell can be quite slow
 fn powershell_example(pure_svg: bool) {
     fn powershell_exists() -> bool {
         let exit_status = Command::new("pwsh")
@@ -325,8 +317,8 @@ fn powershell_example(pure_svg: bool) {
 }
 
 #[test_casing(2, [false, true])]
+#[decorate(TRACING)]
 fn repl_snapshot_testing(pure_svg: bool) {
-    let _guard = enable_tracing();
     let shell_options = ShellOptions::from(Command::new(PATH_TO_REPL_BIN));
     let mut config = TestConfig::new(shell_options).with_match_kind(MatchKind::Precise);
     if pure_svg {

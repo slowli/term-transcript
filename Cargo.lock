@@ -1217,8 +1217,6 @@ dependencies = [
  "tempfile",
  "term-transcript",
  "test-casing",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
