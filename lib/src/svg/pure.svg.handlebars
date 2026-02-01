@@ -237,6 +237,10 @@
               <g transform="translate({{@../../x_pos}} {{
                 round (add @../../y_pos ../../text_y_offset) digits=2
               }})" clip-path="xywh(0 0 100% {{../../line_height}}px)">{{{@line_fg}}}</g>
+            {{~else~}}
+              {{! The line is empty. In this case, append an empty `<text>` so that the output is correctly parsed. }}
+              <text>
+</text>
             {{~/if~}}
           {{~/set~}}
           {{~/scope~}}
