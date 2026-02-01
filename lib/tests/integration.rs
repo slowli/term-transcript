@@ -1,6 +1,7 @@
 //! Tests the full lifecycle of `Transcript`s.
 
 use std::{
+    cell::Cell,
     fmt, io,
     path::Path,
     process::{Command, Stdio},
@@ -14,31 +15,39 @@ use term_transcript::{
     test::{compare_transcripts, MatchKind},
     ShellOptions, Transcript, UserInput,
 };
-use test_casing::{decorate, decorators::Retry, test_casing, Product};
-use tracing::{subscriber::DefaultGuard, Subscriber};
-use tracing_capture::{CaptureLayer, CapturedSpan, SharedStorage, Storage};
-use tracing_subscriber::{
-    fmt::format::FmtSpan, layer::SubscriberExt, registry::LookupSpan, FmtSubscriber,
+use test_casing::{
+    decorate, decorators,
+    decorators::{Retry, Trace},
+    test_casing, Product,
 };
+use tracing_capture::{CaptureLayer, CapturedSpan, SharedStorage, Storage};
+use tracing_subscriber::layer::SubscriberExt;
 
-fn create_fmt_subscriber() -> impl Subscriber + for<'a> LookupSpan<'a> {
-    FmtSubscriber::builder()
-        .pretty()
-        .with_span_events(FmtSpan::CLOSE)
-        .with_test_writer()
-        .with_env_filter("term_transcript=debug")
-        .finish()
+static TRACING: Trace = Trace::new("info,term_transcript=debug");
+
+#[derive(Debug)]
+struct TracingWithStorage;
+
+thread_local! {
+    static TRACING_STORAGE: Cell<Option<SharedStorage>> = Cell::default();
 }
 
-fn enable_tracing() -> DefaultGuard {
-    tracing::subscriber::set_default(create_fmt_subscriber())
+impl TracingWithStorage {
+    fn take_storage() -> SharedStorage {
+        TRACING_STORAGE.take().expect("no injected storage")
+    }
 }
 
-fn enable_tracing_assertions() -> (DefaultGuard, SharedStorage) {
-    let storage = SharedStorage::default();
-    let subscriber = create_fmt_subscriber().with(CaptureLayer::new(&storage));
-    let guard = tracing::subscriber::set_default(subscriber);
-    (guard, storage)
+impl<R> decorators::DecorateTest<R> for TracingWithStorage {
+    fn decorate_and_test<F: decorators::TestFn<R>>(&'static self, test_fn: F) -> R {
+        let storage = SharedStorage::default();
+        let subscriber = TRACING
+            .create_subscriber()
+            .with(CaptureLayer::new(&storage));
+        let _guard = tracing::subscriber::set_default(subscriber);
+        TRACING_STORAGE.set(Some(storage));
+        test_fn()
+    }
 }
 
 #[cfg(unix)]
@@ -56,9 +65,10 @@ fn echo_command() -> Command {
 }
 
 #[test_casing(2, [false, true])]
+#[decorate(TracingWithStorage)]
 #[test]
 fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
-    let (_guard, tracing_storage) = enable_tracing_assertions();
+    let tracing_storage = TracingWithStorage::take_storage();
     let mut transcript = Transcript::new();
 
     // 1. Capture output from a command.
@@ -98,7 +108,7 @@ fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
 
 fn assert_tracing_for_output_capture(storage: &Storage) {
     let span = storage
-        .root_spans()
+        .all_spans()
         .find(|span| span.metadata().name() == "capture_output")
         .expect("`capture_output` span not found");
     assert!(span["command"].as_debug_str().is_some());
@@ -118,7 +128,7 @@ fn assert_tracing_for_output_capture(storage: &Storage) {
 
 fn assert_tracing_for_parsing(storage: &Storage) {
     let span = storage
-        .root_spans()
+        .all_spans()
         .find(|span| span.metadata().name() == "from_svg")
         .expect("`from_svg` span not found");
 
@@ -144,13 +154,14 @@ const MUTE_OUTPUT_CASES: [&[bool]; 6] = [
 ];
 
 #[test_casing(12, Product((MUTE_OUTPUT_CASES, [false, true])))]
+#[decorate(TracingWithStorage)]
 fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow::Result<()> {
     #[cfg(unix)]
     const NULL_FILE: &str = "/dev/null";
     #[cfg(windows)]
     const NULL_FILE: &str = "NUL";
 
-    let (_guard, tracing_storage) = enable_tracing_assertions();
+    let tracing_storage = TracingWithStorage::take_storage();
     let inputs = mute_outputs.iter().map(|&mute| {
         if mute {
             UserInput::command(format!("echo \"Hello, world!\" > {NULL_FILE}"))
@@ -188,7 +199,7 @@ fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow
 
 fn assert_tracing_for_transcript_from_inputs(storage: &Storage) {
     let root_span = storage
-        .root_spans()
+        .all_spans()
         .find(|span| span.metadata().name() == "from_inputs")
         .expect("`from_inputs` span not found");
     assert!(root_span["options.io_timeout"].is_debug(&Duration::from_millis(200)));
@@ -231,9 +242,9 @@ fn assert_tracing_for_transcript_from_inputs(storage: &Storage) {
 }
 
 #[cfg(unix)]
+#[decorate(TRACING)]
 #[test]
 fn command_exit_status_in_sh() -> anyhow::Result<()> {
-    let _guard = enable_tracing();
     let mut options = ShellOptions::sh();
     // ^ The error output is locale-specific and is not always UTF-8
     let inputs = [
@@ -250,7 +261,7 @@ fn command_exit_status_in_sh() -> anyhow::Result<()> {
 }
 
 #[test]
-#[decorate(Retry::times(3))] // PowerShell can be quite slow
+#[decorate(TracingWithStorage, Retry::times(3))] // PowerShell can be quite slow
 fn command_exit_status_in_powershell() -> anyhow::Result<()> {
     fn powershell_exists() -> bool {
         let exit_status = Command::new("pwsh")
@@ -262,7 +273,7 @@ fn command_exit_status_in_powershell() -> anyhow::Result<()> {
         matches!(exit_status, Ok(status) if status.success())
     }
 
-    let (_guard, tracing_storage) = enable_tracing_assertions();
+    let tracing_storage = TracingWithStorage::take_storage();
     if !powershell_exists() {
         println!("pwsh not found; exiting");
         return Ok(());
@@ -315,9 +326,9 @@ fn assert_tracing_for_powershell(storage: &Storage) {
 /// (e.g., `dir` may output non-breakable space in file sizes as 0xff).
 /// Here, we test that the codepage is switched to UTF-8.
 #[cfg(windows)]
+#[decorate(TRACING)]
 #[test]
 fn cmd_shell_with_non_utf8_output() {
-    let _guard = enable_tracing();
     let input = UserInput::command(format!("dir {}", env!("CARGO_MANIFEST_DIR")));
     let transcript = Transcript::from_inputs(&mut ShellOptions::default(), vec![input]).unwrap();
 
@@ -328,11 +339,11 @@ fn cmd_shell_with_non_utf8_output() {
 }
 
 #[cfg(all(windows, feature = "portable-pty"))]
+#[decorate(TRACING)]
 #[test]
 fn cmd_shell_with_utf8_output_in_pty() {
     use term_transcript::PtyCommand;
 
-    let _guard = enable_tracing();
     let input = UserInput::command(format!("dir {}", env!("CARGO_MANIFEST_DIR")));
     let mut options = ShellOptions::new(PtyCommand::default());
     let transcript = Transcript::from_inputs(&mut options, vec![input]).unwrap();
@@ -349,13 +360,13 @@ fn cmd_shell_with_utf8_output_in_pty() {
 }
 
 #[test_casing(2, [false, true])]
+#[decorate(TRACING)]
 fn non_utf8_shell_output(lossy: bool) -> anyhow::Result<()> {
     #[cfg(unix)]
     const CAT_COMMAND: &str = "cat";
     #[cfg(windows)]
     const CAT_COMMAND: &str = "type";
 
-    let _guard = enable_tracing();
     let non_utf8_file = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("non-utf8.txt");
@@ -410,13 +421,11 @@ const RAINBOW_OUTPUTS: [TestOutput; 3] = [
 ];
 
 #[test_casing(6, Product((RAINBOW_OUTPUTS, [false, true])))]
-#[tracing::instrument]
+#[decorate(TRACING)]
 fn transcript_roundtrip_for_rainbow_outputs(
     output: TestOutput,
     pure_svg: bool,
 ) -> anyhow::Result<()> {
-    let _guard = enable_tracing();
-
     // 1. Prepare a transcript from the predefined output.
     let mut transcript = Transcript::new();
     transcript.add_interaction(output.name, output.content);

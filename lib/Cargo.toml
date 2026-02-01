@@ -39,7 +39,7 @@ unicode-width.workspace = true
 [dev-dependencies]
 assert_matches.workspace = true
 doc-comment.workspace = true
-test-casing.workspace = true
+test-casing = { workspace = true, features = ["tracing"] }
 toml.workspace = true
 tracing-capture.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
