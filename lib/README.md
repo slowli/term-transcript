@@ -45,7 +45,7 @@ let mut writer = vec![];
 // ^ Any `std::io::Write` implementation will do, such as a `File`.
 Template::default().render(&transcript, &mut writer)?;
 println!("{}", str::from_utf8(&writer)?);
-Ok::<_, anyhow::Error>(())
+anyhow::Ok(())
 ```
 
 See more examples in the crate docs and the [FAQ](../FAQ.md) for some tips

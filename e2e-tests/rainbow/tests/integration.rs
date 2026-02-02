@@ -27,16 +27,16 @@ const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");
 
 static TRACING: Trace = Trace::new("info,term_transcript=debug");
 
-fn examples_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples")
+fn assets_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/src/assets")
 }
 
 fn rainbow_dir() -> PathBuf {
-    examples_dir().join("rainbow")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("bin")
 }
 
 fn main_snapshot_path() -> PathBuf {
-    examples_dir().join("rainbow.svg")
+    assets_dir().join("rainbow.svg")
 }
 
 fn read_main_snapshot() -> io::Result<BufReader<File>> {
@@ -44,11 +44,11 @@ fn read_main_snapshot() -> io::Result<BufReader<File>> {
 }
 
 fn read_pure_snapshot() -> io::Result<BufReader<File>> {
-    File::open(examples_dir().join("rainbow-pure.svg")).map(BufReader::new)
+    File::open(assets_dir().join("rainbow-pure.svg")).map(BufReader::new)
 }
 
 fn read_custom_template() -> anyhow::Result<HandlebarsTemplate> {
-    let template_string = fs::read_to_string(examples_dir().join("custom.html.handlebars"))?;
+    let template_string = fs::read_to_string(assets_dir().join("custom.html.handlebars"))?;
     HandlebarsTemplate::compile(&template_string).map_err(Into::into)
 }
 
@@ -213,7 +213,7 @@ fn animated_snapshot_testing(pure_svg: bool) {
         config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(
-        examples_dir().join("animated.svg"),
+        assets_dir().join("animated.svg"),
         ["rainbow", "rainbow --long-lines"],
     );
 }

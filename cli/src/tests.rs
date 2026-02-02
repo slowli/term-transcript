@@ -26,8 +26,18 @@ use term_transcript::Transcript;
 
 use crate::{shell::ShellArgs, Cli, Command};
 
-fn examples_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples")
+/// Directory with SVG snapshots.
+fn assets_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/src/assets")
+}
+
+/// Directory with Markdown files linking to SVG snapshots.
+fn markdown_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/src/examples")
+}
+
+fn rainbow_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e-tests/rainbow/bin")
 }
 
 #[derive(Debug, PartialEq)]
@@ -200,15 +210,52 @@ fn examples_are_consistent() {
     #[cfg(feature = "tracing")]
     setup_test_tracing();
 
-    let examples_dir = examples_dir();
-    env::set_current_dir(&examples_dir).expect("cannot change current dir");
-    let readme_path = examples_dir.join("README.md");
+    let assets_dir = assets_dir();
+    env::set_current_dir(&assets_dir).expect("cannot change current dir");
 
-    let readme = fs::read_to_string(readme_path).expect("cannot read readme");
-    let parser = Parser::new(&readme);
+    let markdown_dir = markdown_dir();
+    let dir = fs::read_dir(&markdown_dir).unwrap();
+    let markdown_files = dir.filter_map(|file| {
+        let file = file.unwrap();
+        if !file.file_type().unwrap().is_file() {
+            return None;
+        }
+        let path = file.path();
+        path.extension()
+            .is_some_and(|ext| ext == "md")
+            .then_some(path)
+    });
+
     let temp_dir = tempfile::tempdir().unwrap();
     let img_filter = env::var("TT_IMG_FILTER").unwrap_or_else(|_| String::new());
     let img_skip_filter = env::var("TT_IMG_SKIP").ok();
+    let threads: Vec<_> = markdown_files
+        .flat_map(|file_path| {
+            parse_markdown_file(
+                &file_path,
+                temp_dir.path(),
+                &img_filter,
+                img_skip_filter.as_deref(),
+            )
+        })
+        .collect();
+
+    // Wait for all snapshot generation threads to finish.
+    let failures: Vec<_> = threads
+        .into_iter()
+        .filter_map(|(img_path, handle)| handle.join().is_err().then_some(img_path))
+        .collect();
+    assert!(failures.is_empty(), "Some examples failed: {failures:#?}");
+}
+
+fn parse_markdown_file(
+    file_path: &Path,
+    temp_dir: &Path,
+    img_filter: &str,
+    img_skip_filter: Option<&str>,
+) -> Vec<(String, thread::JoinHandle<()>)> {
+    let markdown = fs::read_to_string(file_path).expect("cannot read readme");
+    let parser = Parser::new(&markdown);
 
     let mut shell_command = None;
     let mut img_path = None;
@@ -219,7 +266,7 @@ fn examples_are_consistent() {
                 img_path = Some(path);
             }
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang)))
-                if lang.as_ref() == "shell" =>
+                if lang.as_ref() == "bash" =>
             {
                 assert!(shell_command.is_none(), "Embedded code samples");
                 shell_command = Some(String::with_capacity(1_024));
@@ -258,7 +305,7 @@ fn examples_are_consistent() {
                     continue;
                 }
 
-                if !img_path.contains(&img_filter) {
+                if !img_path.contains(img_filter) {
                     #[cfg(feature = "tracing")]
                     tracing::info!(img_path, img_filter, "snapshot filtered out");
                     continue;
@@ -272,7 +319,7 @@ fn examples_are_consistent() {
                 }
 
                 // Spawn snapshot generation into a separate thread so that it's effectively parallelized.
-                let temp_dir = temp_dir.path().to_owned();
+                let temp_dir = temp_dir.to_owned();
                 let handle = thread::spawn(move || {
                     check_snapshot(cli, &temp_dir);
                 });
@@ -286,23 +333,17 @@ fn examples_are_consistent() {
             _ => { /* do nothing */ }
         }
     }
-
-    // Wait for all snapshot generation threads to finish.
-    let failures: Vec<_> = threads
-        .into_iter()
-        .filter_map(|(img_path, handle)| handle.join().is_err().then_some(img_path))
-        .collect();
-    assert!(failures.is_empty(), "Some examples failed: {failures:#?}");
+    threads
 }
 
 fn prepare_cli(command: &str, img_path: Option<&str>) -> Option<Cli> {
-    let rainbow_dir = examples_dir().join("rainbow");
+    let rainbow_dir = rainbow_dir();
 
     let command = command.trim_end();
-    assert!(
-        command.starts_with("term-transcript exec "),
-        "Unexpected command: {command}"
-    );
+    if !command.starts_with("term-transcript exec") {
+        tracing::info!(?command, "skipping non-exec command");
+        return None;
+    }
     let args = split_into_args(command, &HashMap::new());
     #[cfg(feature = "tracing")]
     tracing::info!(?args, "split command-line args");
@@ -375,12 +416,19 @@ impl fmt::Debug for DebugStr<'_> {
 fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
     let out_path = extract_out_path(&cli).to_owned();
     assert!(out_path.is_relative());
+
+    let path_in_assets = out_path.strip_prefix("../assets").unwrap_or(&out_path);
+    assert!(
+        !path_in_assets.starts_with(".."),
+        "bogus out path: {out_path:?}"
+    );
+
     #[cfg(feature = "tracing")]
-    tracing::Span::current().record("out", tracing::field::display(out_path.display()));
+    tracing::Span::current().record("out", tracing::field::display(path_in_assets.display()));
 
     let (full_out_path, is_custom_template) =
         if let Command::Exec { template, .. } = &mut cli.command {
-            let full_out_path = temp_dir.join(&out_path);
+            let full_out_path = temp_dir.join(path_in_assets);
             template.out = Some(full_out_path.clone());
             (full_out_path, template.template_path.is_some())
         } else {
@@ -407,7 +455,7 @@ fn check_snapshot(mut cli: Cli, temp_dir: &Path) {
         assert!(!parsed.interactions().is_empty());
     }
 
-    let ref_path = examples_dir().join(&out_path);
+    let ref_path = assets_dir().join(path_in_assets);
     let mut raw_reference = fs::read_to_string(&ref_path).unwrap_or_else(|err| {
         if matches!(err.kind(), io::ErrorKind::NotFound) {
             String::new() // will lead to a failure later, but that's just what we need
