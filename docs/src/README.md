@@ -16,7 +16,7 @@ Such tests can be embedded into a readme file.
 
 ## Usage
 
-`term-transcript` comes in two flavors: a [Rust library](library.md), and a [CLI app](cli/README.md).
+`term-transcript` comes in two flavors: a [Rust library](library.md), and a [CLI app](cli).
 The CLI app has slightly less functionality, but does not require Rust knowledge.
 See their docs and the [FAQ](FAQ.md) for usage guidelines and troubleshooting advice.
 

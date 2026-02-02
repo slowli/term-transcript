@@ -5,13 +5,21 @@ into a single TOML file.
 
 ## Custom template
 
-Using the `--tpl` option, it's possible to use a custom [Handlebars](https://handlebarsjs.com/) template
-rather than the standard ones. As an example, [this template](../assets/custom.html.handlebars) renders a transcript [into HTML](../assets/rainbow.html).
+The `--tpl` option allows to configure a custom [Handlebars](https://handlebarsjs.com/) template
+rather than the standard ones. As an example, it's possible to render a transcript [into HTML](../assets/rainbow.html).
 
 ```bash
 term-transcript exec --tpl custom.html.handlebars \
   -o rainbow.html rainbow 'rainbow --short'
 ```
+
+<details>
+<summary><strong>Used Handlebars template</strong> (click to expand)</summary>
+
+```handlebars+html
+{{#include ../assets/custom.html.handlebars}}
+```
+</details>
 
 ## Configuration file
 
@@ -20,6 +28,14 @@ configuring low-level template details. The snapshot below uses a [configuration
 to customize palette colors and scroll animation step / interval.
 
 ![Snapshot with config read from file](../assets/custom-config.svg)
+
+<details>
+<summary><strong>Configuration file</strong> (click to expand)</summary>
+
+```toml
+{{#include ../assets/config.toml}}
+```
+</details>
 
 Generating command:
 

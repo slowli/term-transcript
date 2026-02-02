@@ -2,8 +2,8 @@
 
 [Introduction](README.md)
 
-- [Library](library.md)
-- [CLI](cli/README.md)
+- [Rust library](library.md)
+- [CLI app](cli/README.md)
   - [Docker image](cli/docker.md)
   <!-- TODO: downloads -->
 - [Examples](examples/README.md)

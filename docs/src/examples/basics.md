@@ -10,7 +10,9 @@ Generating command:
 term-transcript exec --palette gjm8 rainbow
 ```
 
-(`rainbow` is an executable script for [end-to-end tests](rainbow/rainbow).)
+> [!NOTE]
+>
+> `rainbow` is an [executable script](./#rainbow-script) for end-to-end tests.
 
 ## Static snapshot (pure SVG)
 
@@ -34,5 +36,34 @@ term-transcript exec --palette powershell --line-height=18px \
    rainbow 'rainbow --long-lines'
 ```
 
-Note the `--pty` flag to use a pseudo-terminal for capture instead of default pipes,
-and an increased line height.
+> [!NOTE]
+>
+> The `--pty` flag creates a pseudo-terminal for capture instead of default pipes.
+
+> [!TIP]
+>
+> Scroll animation is highly customizable! See [*Window Appearance*](window.md#scroll-animation) section for details.
+
+## Line height
+
+In the example above, `--line-height` explicitly sets the line height for the snapshot.
+It can be specified both in pixels or in ems (i.e., relative to the font size which is hard-coded to 14px).
+By default, line height is set to 1.2em = 16.8px, unless [a font is embedded](fonts.md#embedding-custom-fonts),
+in which case the optimal line height is obtained from the font metrics.
+
+## Advance width
+
+`--advance-width` sets the advance width (aka char width) of a font. Similarly to `--line-height`,
+it can be measured in either pixels or ems.
+
+Advance width is important for [pure SVG](#static-snapshot-pure-svg) since it's relied upon
+to correctly position background color boxes. If [a font is embedded](fonts.md#embedding-custom-fonts),
+advance width is obtained from font metrics. Otherwise, it's estimated as 8px (~0.57em),
+which may lead to stretched or compressed layout, depending on the font used. You may want to override
+the advance width in this case, or to embed the font into the snapshot in this case.
+
+> [!IMPORTANT]
+> 
+> Currently, advance width is ignored for the default (HTML-in-SVG) template.
+
+See [font examples](fonts.md) for the examples of setting `--advance-width`.

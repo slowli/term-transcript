@@ -3,6 +3,14 @@
 `--line-numbers` option and some others described below control how lines are numbered
 in the generated snapshot.
 
+`--line-numbers` accepts following values:
+
+- [`continuous-outputs`](#continuous-numbering-for-outputs) *(default)*:
+  Uses a single numbering scope for all outputs. Inputs are not numbered.
+- [`continuous`](#continuous-numbering-for-inputs-and-outputs): Uses a single numbering scope
+  throughout all inputs and outputs.
+- [`each-output`](#separate-numbering-for-each-output): Numbers each output separately. Inputs are not numbered.
+
 ## Separate numbering for each output
 
 ![Separate numbering for outputs](../assets/numbers-each-output.svg)

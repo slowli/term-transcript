@@ -2,7 +2,7 @@
 
 There are dedicated args to control window sizing and title.
 
-## Setting width
+## Width
 
 ![Wide snapshot](../assets/rainbow-wide.svg)
 
@@ -18,7 +18,7 @@ term-transcript exec --palette gjm8 \
   --hard-wrap=100 --width=900 'rainbow --long-lines'
 ```
 
-## Setting scroll height
+## Scroll height
 
 ![Small snapshot](../assets/rainbow-small.svg)
 
@@ -31,6 +31,18 @@ term-transcript exec --palette gjm8 \
   --hard-wrap=50 --width=450 --scroll=180 rainbow
 ```
 
-## Setting window title
+## Scroll animation
 
-TODO
+Besides the scroll height, the following command-line args control the scroll animation:
+
+- `--scroll-interval` (e.g., `2s`): Configures the interval between animation frames.
+- `--scroll-len` (e.g., `3em`): Height scrolled during each animation frame (other than possibly the last frame).
+
+See [line numbering snapshots](line-numbering.md) for examples.
+
+## Window frame and title
+
+`--window` arg allows to add a macOS-like window frame to the snapshot.
+The same arg can be used to set the window title. (If not specified, the title will be empty.)
+
+See [an animated snapshot](basics.md#animated-snapshot) for an example.
