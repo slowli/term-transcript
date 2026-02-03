@@ -26,7 +26,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 ### Changed
 
 - Update `quick-xml` dependency.
-- Bump minimum supported Rust version to 1.83.
+- Bump minimum supported Rust version to 1.85 and switch to 2024 Rust edition.
 - Align the view box bottom during the last scroll animation frame, so that there's no overscroll.
 - Consistently trim the ending newline for captured outputs.
 - Change the hard break char to `»` so that it is covered by more fonts. Do not style the hard break as the surrounding text.
