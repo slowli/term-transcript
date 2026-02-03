@@ -5,7 +5,8 @@
 ![rust 1.83+ required](https://img.shields.io/badge/rust-1.83+-blue.svg?label=Required%20Rust)
 
 **Documentation:** [![Docs.rs](https://docs.rs/term-transcript/badge.svg)](https://docs.rs/term-transcript/)
-[![crate docs (master)](https://img.shields.io/badge/master-yellow.svg?label=docs)](https://slowli.github.io/term-transcript/term_transcript/)
+[![crate docs (master)](https://img.shields.io/badge/master-yellow.svg?label=docs)](https://slowli.github.io/term-transcript/crates/term_transcript/)
+[![The Book](https://img.shields.io/badge/The%20Book-yellow?logo=mdbook)](https://slowli.github.io/term-transcript/)
 
 This crate allows to:
 
@@ -50,7 +51,7 @@ anyhow::Ok(())
 ```
 <!-- ANCHOR_END: example -->
 
-See more examples in [the Book](FIXME).
+See more examples in [the Book](https://slowli.github.io/term-transcript/library.html).
 
 ### CLI app
 

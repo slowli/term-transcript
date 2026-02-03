@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/slowli/term-transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/slowli/term-transcript/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
+[![The Book](https://img.shields.io/badge/The%20Book-yellow?logo=mdbook)](https://slowli.github.io/term-transcript/)
 
 `term-transcript` is a Rust library and a CLI app that allow to:
 
@@ -21,7 +22,7 @@ Such tests can be embedded into a readme file.
 
 `term-transcript` comes in two flavors: a [Rust library](lib), and a [CLI app](cli).
 The CLI app has slightly less functionality, but does not require Rust knowledge.
-See [the Book](FIXME) for usage guidelines.
+See [the Book](https://slowli.github.io/term-transcript/) for usage guidelines.
 
 ### Examples
 
@@ -34,7 +35,7 @@ A snapshot of the same example with the scrolling animation and window frame:
 
 ![Animated snapshot of rainbow example](examples/animated.svg)
 
-See [the Book](FIXME) for more examples.
+See [the Book](https://slowli.github.io/term-transcript/examples/) for more examples.
 
 ## Contributing
 

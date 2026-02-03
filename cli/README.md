@@ -2,13 +2,12 @@
 
 [![CI](https://github.com/slowli/term-transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/slowli/term-transcript/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
+[![The Book](https://img.shields.io/badge/The%20Book-yellow?logo=mdbook)](https://slowli.github.io/term-transcript/)
 
 This crate provides command-line interface for [`term-transcript`]. It allows capturing
 terminal output to SVG and testing the captured snapshots.
 
 ## Installation
-
-<!-- FIXME: link to the Book instead -->
 
 Install with
 
@@ -19,7 +18,7 @@ cargo install --locked term-transcript-cli
 term-transcript --help
 ```
 
-See [the Book](FIXME) for more installation options.
+See [the Book](https://slowli.github.io/term-transcript/cli/#installation-options) for more installation options.
 
 ## Usage
 
@@ -31,7 +30,7 @@ See [the Book](FIXME) for more installation options.
 - The `print` subcommand parses an SVG snapshot and outputs it to the command line.
 
 Launch the CLI app with the `--help` option for more details about arguments
-for each subcommand. See [the Book](FIXME) for more detailed overview of command-line args and options.
+for each subcommand. See [the Book](https://slowli.github.io/term-transcript/examples/) for more detailed overview of command-line args and options.
 
 ### Examples
 

@@ -125,7 +125,7 @@ jobs:
 
       - name: Build the Book
         working-directory: ./docs
-        run: mdbook build
+        run: mdbook clean && mdbook build
       - name: Build crate docs
         run: |
           cargo clean --doc
