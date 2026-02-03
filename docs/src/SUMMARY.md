@@ -4,8 +4,8 @@
 
 - [Rust library](library.md)
 - [CLI app](cli/README.md)
+  - [Build from sources](cli/build.md) 
   - [Docker image](cli/docker.md)
-  <!-- TODO: downloads -->
 - [Examples](examples/README.md)
   - [Basics](examples/basics.md)
   - [Window appearance](examples/window.md)

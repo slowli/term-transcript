@@ -130,11 +130,11 @@ jobs:
       - name: Download binary artifacts
         uses: actions/download-artifact@v7
         with:
-          path: docs/book/downloads
+          path: docs/book/assets
           pattern: term-transcript-*
           merge-multiple: true
       - name: List binaries
-        run: ls -al docs/book/downloads
+        run: ls -al docs/book/term-transcript-*
 
       - name: Setup Pages
         id: pages

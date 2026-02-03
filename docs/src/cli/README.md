@@ -1,55 +1,25 @@
 # term-transcript CLI
 
-## Installation
+`term-transcript` CLI app is the 
 
-Install with
+## Installation options
 
-```bash
-cargo install --locked term-transcript-cli
-# This will install `term-transcript` executable, which can be checked
-# as follows:
-term-transcript --help
-```
+- [Use a pre-built binary](#downloads) for popular targets (x86_64 for Linux / macOS / Windows
+  and AArch64 for macOS) from the `master` branch.
+- Use a pre-built binary for popular targets from [GitHub Releases](https://github.com/slowli/term-transcript/releases).
+- [Use the app Docker image](docker.md).
+- [Build from sources](build.md) using Rust / `cargo`.
 
-Alternatively, you may use [the app Docker image](docker.md),
-or download a pre-built app binary for popular targets (x86_64 for Linux / macOS / Windows
-and AArch64 for macOS)
-from [GitHub Releases](https://github.com/slowli/term-transcript/releases).
+## Downloads
 
-### Minimum supported Rust version
+> [!IMPORTANT]
+>
+> The binaries are updated on each push to the git repo branch. Hence, they may contain more bugs
+> than the release binaries mentioned above.
 
-The crate supports the latest stable Rust version. It may support previous stable Rust versions,
-but this is not guaranteed.
-
-### Crate feature: `portable-pty`
-
-Specify `--features portable-pty` in the installation command
-to enable the pseudo-terminal (PTY) support (note that PTY capturing still needs
-to be explicitly switched on when running `term-transcript` commands).
-Without this feature, console app output is captured via OS pipes,
-which means that programs dependent on [`isatty`] checks
-or getting term size can produce different output than if launched in an actual shell
-(no coloring, no line wrapping etc.).
-
-### Crate feature: `tracing`
-
-Specify `--features tracing` in the installation command to enable tracing
-of the main performed operations. This could be useful for debugging purposes.
-Tracing is performed with the `term_transcript::*` targets, mostly on the `DEBUG` level.
-Tracing events are output to the stderr using [the standard subscriber][fmt-subscriber];
-its filtering can be configured using the `RUST_LOG` env variable
-(e.g., `RUST_LOG=term_transcript=debug`).
-
-## Usage
-
-- The `capture` subcommand captures output from stdin, renders it to SVG and
-  outputs SVG to stdout.
-- The `exec` subcommand executes one or more commands in the shell, captures
-  their outputs, renders to an SVG image and outputs it to stdout.
-- The `test` subcommand allows testing snapshots from the command line.
-- The `print` subcommand parses an SVG snapshot and outputs it to the command line.
-
-Launch the CLI app with the `--help` option for more details about arguments
-for each subcommand. See also the [FAQ](../FAQ.md) for some tips and troubleshooting advice.
-
-[fmt-subscriber]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/index.html
+| Platform | Architecture | Download link                                                                                                     |
+|:---------|:-------------|:------------------------------------------------------------------------------------------------------------------|
+| Linux    | x86_64, GNU  | [<i class="fa-solid fa-download"></i> Download](../assets/term-transcript-master-x86_64-unknown-linux-gnu.tar.gz) |
+| macOS    | x86_64       | [<i class="fa-solid fa-download"></i> Download](../assets/term-transcript-master-x86_64-apple-darwin.tar.gz)      |
+| macOS    | arm64        | [<i class="fa-solid fa-download"></i> Download](../assets/term-transcript-master-aarch64-apple-darwin.tar.gz)     |
+| Windows  | x86_64       | [<i class="fa-solid fa-download"></i> Download](../assets/term-transcript-master-x86_64-pc-windows-msvc.zip)      |
