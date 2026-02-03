@@ -4,7 +4,13 @@ on:
   push:
     branches: [ master ]
     tags: [ "v*" ]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      label:
+        type: string
+        description: Overrides the label for binaries (by default, branch or tag name)
+        required: false
+        default: ''
 
 defaults:
   run:
@@ -72,7 +78,7 @@ jobs:
         env:
           OS: ${{ matrix.os }}
           TARGET: ${{ matrix.target }}
-          REF: ${{ github.ref }}
+          REF: ${{ inputs.label || github.ref }}
       - name: Publish archive
         uses: softprops/action-gh-release@v1
         if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -134,7 +140,7 @@ jobs:
           pattern: term-transcript-*
           merge-multiple: true
       - name: List binaries
-        run: ls -al docs/book/term-transcript-*
+        run: ls -al docs/book/assets/term-transcript-*
 
       - name: Setup Pages
         id: pages
