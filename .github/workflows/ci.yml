@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [ master ]
+    # Need to run on tags in order to publish tagged Docker images
+    tags: [ "v*" ]
   pull_request:
     branches: [ master ]
 
