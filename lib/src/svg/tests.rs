@@ -2,13 +2,13 @@
 
 use std::{borrow::Cow, convert::Infallible, num::NonZeroUsize};
 
-use test_casing::{test_casing, Product};
+use test_casing::{Product, test_casing};
 
 use super::*;
 use crate::{
+    ExitStatus, Interaction, UserInput,
     style::{Color, Style, StyledSpan},
     svg::options::{LineNumberingOptions, WindowOptions},
-    ExitStatus, Interaction, UserInput,
 };
 
 #[test]

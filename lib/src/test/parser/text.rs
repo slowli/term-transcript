@@ -3,11 +3,11 @@
 use std::{borrow::Cow, fmt, mem, ops, str};
 
 use quick_xml::{
-    escape::{resolve_xml_entity, EscapeError},
+    escape::{EscapeError, resolve_xml_entity},
     events::{BytesStart, Event},
 };
 
-use super::{extract_base_class, map_utf8_error, parse_classes, ParseError, Parsed};
+use super::{ParseError, Parsed, extract_base_class, map_utf8_error, parse_classes};
 use crate::{
     style::{Color, RgbColor, Style, WriteStyled},
     test::color_diff::ColorSpansWriter,

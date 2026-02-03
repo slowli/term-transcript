@@ -13,14 +13,14 @@ use tempfile::tempdir;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{
-    svg::{NamedPalette, Template, TemplateOptions, ValidTemplateOptions},
-    test::{compare_transcripts, MatchKind, TestConfig, TestOutputConfig, UpdateMode},
     ExitStatus, ShellOptions, Transcript, UserInput,
+    svg::{NamedPalette, Template, TemplateOptions, ValidTemplateOptions},
+    test::{MatchKind, TestConfig, TestOutputConfig, UpdateMode, compare_transcripts},
 };
 use test_casing::{
-    decorate,
+    Product, decorate,
     decorators::{Retry, Trace},
-    test_casing, Product,
+    test_casing,
 };
 
 const PATH_TO_REPL_BIN: &str = env!("CARGO_BIN_EXE_rainbow-repl");

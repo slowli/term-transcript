@@ -188,7 +188,7 @@ impl RoundingMode {
                 return Err(format!(
                     "Unknown rounding mode: {raw}; expected {exp}",
                     exp = Self::EXPECTED
-                ))
+                ));
             }
         })
     }

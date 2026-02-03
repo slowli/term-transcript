@@ -4,8 +4,8 @@
 use std::str;
 
 use crate::{
-    style::{Color, RgbColor, Style, WriteStyled},
     TermError,
+    style::{Color, RgbColor, Style, WriteStyled},
 };
 
 const ANSI_ESC: u8 = 0x1b;

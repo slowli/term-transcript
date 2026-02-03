@@ -24,7 +24,7 @@ use clap::Parser as _;
 use pulldown_cmark::{CodeBlockKind, Event, LinkType, Parser, Tag};
 use term_transcript::Transcript;
 
-use crate::{shell::ShellArgs, Cli, Command};
+use crate::{Cli, Command, shell::ShellArgs};
 
 /// Directory with SVG snapshots.
 fn assets_dir() -> PathBuf {
@@ -177,8 +177,7 @@ fn splitting_into_args_works() {
         ["term-transcript", "exec", "-T=100ms", "--palette", "gjm8"]
     );
 
-    let command =
-        "term-transcript exec -T='100ms' \\\n  --continued-mark '' \\\n  # Embed font\n--embed-font=\"$FONT_ROBOTO:$FONT_ROBOTO_ITALIC\"";
+    let command = "term-transcript exec -T='100ms' \\\n  --continued-mark '' \\\n  # Embed font\n--embed-font=\"$FONT_ROBOTO:$FONT_ROBOTO_ITALIC\"";
     let args = split_into_args(command, &env);
     assert_eq!(
         args,

@@ -2,7 +2,7 @@ use anstream::StripStream;
 use test_casing::test_casing;
 
 use super::*;
-use crate::{style::StyledSpan, svg::Template, Captured, Interaction, Transcript, UserInput};
+use crate::{Captured, Interaction, Transcript, UserInput, style::StyledSpan, svg::Template};
 
 #[test_casing(2, [MatchKind::TextOnly, MatchKind::Precise])]
 fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {

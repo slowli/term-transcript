@@ -7,7 +7,7 @@ use handlebars::{
 use serde_json::Value as Json;
 
 #[cfg(feature = "tracing")]
-use self::trace::{helper_hash, helper_params, DebugHelper};
+use self::trace::{DebugHelper, helper_hash, helper_params};
 use self::{
     arith::{OpsHelper, RangeHelper, RoundHelper},
     strings::{CharWidthHelper, LineCounter, LineSplitter, RepeatHelper, TrimHelper},

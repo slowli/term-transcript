@@ -11,8 +11,8 @@ use std::{
 
 use super::ShellOptions;
 use crate::{
-    traits::{ShellProcess, SpawnShell, SpawnedShell},
     Captured, Interaction, Transcript, UserInput,
+    traits::{ShellProcess, SpawnShell, SpawnedShell},
 };
 
 #[derive(Debug)]

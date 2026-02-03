@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{utils::normalize_newlines, TermError};
+use crate::{TermError, utils::normalize_newlines};
 
 mod parser;
 #[cfg(test)]
