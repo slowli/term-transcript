@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.5.0-beta.1 - 2026-02-03
+
 ### Added
 
 - Support font embedding and subsetting with the help of `--embed-font`.
@@ -17,6 +19,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 - Provide more options for continued line numbering via `--continued-mark`. Namely, allow skipping numbers for these lines, 
   or marking them with a configurable mark.
 - Allow setting the window title if a window frame is rendered, by supplying text to the `--window` arg.
+
+## 0.4.0 - 2025-06-01
+
+*(No substantial changes compared to the [0.4.0-beta.1 release](#040-beta1---2024-03-03))*
 
 ## 0.4.0-beta.1 - 2024-03-03
 

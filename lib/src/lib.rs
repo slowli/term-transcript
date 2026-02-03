@@ -149,7 +149,7 @@
 //! ```
 
 // Documentation settings.
-#![doc(html_root_url = "https://docs.rs/term-transcript/0.4.0")]
+#![doc(html_root_url = "https://docs.rs/term-transcript/0.5.0-beta.1")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError, str::Utf8Error};

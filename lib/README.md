@@ -29,7 +29,7 @@ Add this to your `Crate.toml`:
 
 ```toml
 [dependencies]
-term-transcript = "0.4.0"
+term-transcript = "0.5.0-beta.1"
 ```
 
 Example of usage:

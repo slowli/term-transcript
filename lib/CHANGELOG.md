@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.5.0-beta.1 - 2026-02-03
+
 ### Added
 
 - Add location info for transcript parsing errors and make error types public.

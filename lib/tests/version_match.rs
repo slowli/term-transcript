@@ -8,6 +8,11 @@ fn readme_is_in_sync() {
 }
 
 #[test]
+fn docs_chapter_is_in_sync() {
+    assert_markdown_deps_updated!("../docs/src/library.md");
+}
+
+#[test]
 fn html_root_url_is_in_sync() {
     assert_html_root_url_updated!("src/lib.rs");
 }
