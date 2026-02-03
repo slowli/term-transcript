@@ -4,7 +4,11 @@ authors = ["term-transcript developers"]
 description = "This book documents term-transcript library and command-line app"
 language = "en"
 
+[rust]
+edition = "2021"
+
 [output.html]
+site-url = "/term-transcript"
 smart-punctuation = true
 git-repository-url = "https://github.com/slowli/term-transcript/tree/master/docs"
 edit-url-template = "https://github.com/slowli/term-transcript/tree/master/docs/{path}"

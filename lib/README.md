@@ -33,6 +33,7 @@ term-transcript = "0.4.0"
 
 Example of usage:
 
+<!-- ANCHOR: example -->
 ```rust
 use term_transcript::{svg::Template, ShellOptions, Transcript, UserInput};
 use std::str;
@@ -47,6 +48,7 @@ Template::default().render(&transcript, &mut writer)?;
 println!("{}", str::from_utf8(&writer)?);
 anyhow::Ok(())
 ```
+<!-- ANCHOR_END: example -->
 
 See more examples in the crate docs and the [FAQ](../FAQ.md) for some tips
 and troubleshooting advice.
