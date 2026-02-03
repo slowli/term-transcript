@@ -2,12 +2,24 @@ name: Release
 
 on:
   push:
+    branches: [ master ]
     tags: [ "v*" ]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      label:
+        type: string
+        description: Overrides the label for binaries (by default, branch or tag name)
+        required: false
+        default: ''
 
 defaults:
   run:
     shell: bash
+env:
+  # Nightly Rust necessary for building docs.
+  nightly: nightly-2025-11-02
+  # `mdbook` version used
+  MDBOOK_VERSION: 0.5.2
 
 jobs:
   release:
@@ -29,7 +41,7 @@ jobs:
     name: Release ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Determine release type
         id: release-type
@@ -47,7 +59,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-release-cargo-${{ hashFiles('Cargo.lock') }}
@@ -66,17 +78,91 @@ jobs:
         env:
           OS: ${{ matrix.os }}
           TARGET: ${{ matrix.target }}
-          REF: ${{ github.ref }}
+          REF: ${{ inputs.label || github.ref }}
       - name: Publish archive
         uses: softprops/action-gh-release@v1
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_type == 'tag'
         with:
           draft: false
           files: ${{ steps.package.outputs.archive }}
           prerelease: ${{ steps.release-type.outputs.type == 'prerelease' }}
       - name: Attach archive to workflow
-        uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v6
+        if: github.ref_type == 'branch'
         with:
           name: term-transcript-${{ matrix.target }}
           path: ${{ steps.package.outputs.archive }}
+
+  document:
+    # Build and deploy docs on each push to the default branch
+    if: github.ref_type == 'branch'
+    needs: release
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.nightly }}
+      - name: Install mdbook
+        run: |
+          mkdir -p .bin
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v$MDBOOK_VERSION/mdbook-v$MDBOOK_VERSION-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=.bin
+          sudo install .bin/mdbook /usr/local/bin
+          mdbook --version
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-document-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-document
+
+      - name: Build the Book
+        working-directory: ./docs
+        run: mdbook clean && mdbook build
+      - name: Build crate docs
+        run: |
+          cargo clean --doc
+          cargo rustdoc -p term-transcript --all-features -- -D warnings --cfg docsrs
+          mkdir -p docs/book/crates
+          mv target/doc/* docs/book/crates
+
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: docs/book/assets
+          pattern: term-transcript-*
+          merge-multiple: true
+      - name: List binaries
+        run: ls -al docs/book/assets/term-transcript-*
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/book
+
+  deploy-pages:
+    needs: document
+    if: github.ref_type == 'branch'
+    permissions:
+      pages: write
+      id-token: write
+
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

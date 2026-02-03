@@ -1,0 +1,28 @@
+[book]
+title = "term-transcript Documentation"
+authors = ["term-transcript developers"]
+description = "This book documents term-transcript library and command-line app"
+language = "en"
+
+[rust]
+edition = "2021"
+
+[output.html]
+site-url = "/term-transcript"
+smart-punctuation = true
+git-repository-url = "https://github.com/slowli/term-transcript/tree/master/docs"
+edit-url-template = "https://github.com/slowli/term-transcript/tree/master/docs/{path}"
+
+[output.html.search]
+limit-results = 20
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 2
+boost-paragraph = 1
+expand = true
+heading-split-level = 2
+
+[output.html.redirect]
+# Cheaply implemented redirect from the previously used crate docs location.
+# Only works for the root link to the crate docs.
+"/term_transcript/index.html" = "../crates/term_transcript"

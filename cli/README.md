@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/slowli/term-transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/slowli/term-transcript/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/term-transcript#license)
+[![The Book](https://img.shields.io/badge/The%20Book-yellow?logo=mdbook)](https://slowli.github.io/term-transcript/)
 
 This crate provides command-line interface for [`term-transcript`]. It allows capturing
 terminal output to SVG and testing the captured snapshots.
@@ -17,34 +18,7 @@ cargo install --locked term-transcript-cli
 term-transcript --help
 ```
 
-Alternatively, you may use the app Docker image [as described below](#using-docker-image),
-or download a pre-built app binary for popular targets (x86_64 for Linux / macOS / Windows
-and AArch64 for macOS)
-from [GitHub Releases](https://github.com/slowli/term-transcript/releases).
-
-### Minimum supported Rust version
-
-The crate supports the latest stable Rust version. It may support previous stable Rust versions,
-but this is not guaranteed.
-
-### Crate feature: `portable-pty`
-
-Specify `--features portable-pty` in the installation command 
-to enable the pseudo-terminal (PTY) support (note that PTY capturing still needs
-to be explicitly switched on when running `term-transcript` commands).
-Without this feature, console app output is captured via OS pipes,
-which means that programs dependent on [`isatty`] checks
-or getting term size can produce different output than if launched in an actual shell
-(no coloring, no line wrapping etc.).
-
-### Crate feature: `tracing`
-
-Specify `--features tracing` in the installation command to enable tracing
-of the main performed operations. This could be useful for debugging purposes.
-Tracing is performed with the `term_transcript::*` targets, mostly on the `DEBUG` level.
-Tracing events are output to the stderr using [the standard subscriber][fmt-subscriber];
-its filtering can be configured using the `RUST_LOG` env variable
-(e.g., `RUST_LOG=term_transcript=debug`).
+See [the Book](https://slowli.github.io/term-transcript/cli/#installation-options) for more installation options.
 
 ## Usage
 
@@ -56,62 +30,7 @@ its filtering can be configured using the `RUST_LOG` env variable
 - The `print` subcommand parses an SVG snapshot and outputs it to the command line.
 
 Launch the CLI app with the `--help` option for more details about arguments
-for each subcommand. See also the [FAQ] for some tips and troubleshooting advice.
-
-### Using Docker image
-
-As a lower-cost alternative to the local installation, you may install and use the CLI app
-from the [GitHub Container registry](https://github.com/slowli/term-transcript/pkgs/container/term-transcript).
-To run the app in a Docker container, use a command like
-
-```shell
-docker run -i --rm --env COLOR=always \
-  ghcr.io/slowli/term-transcript:master \
-  print - < examples/rainbow.svg
-```
-
-Here, the `COLOR` env variable sets the coloring preference for the output,
-and the `-` arg for the `print` subcommand instructs reading from stdin.
-
-Running `exec` and `test` subcommands from a Docker container is more tricky
-since normally this would require taking the entire environment for the executed commands
-into the container. In order to avoid this, you can establish a bidirectional channel
-with the host using [`nc`](https://linux.die.net/man/1/nc), which is pre-installed
-in the Docker image:
-
-```shell
-docker run --rm -v /tmp/shell.sock:/tmp/shell.sock \
-  ghcr.io/slowli/term-transcript:master \
-  exec --shell nc --echoing --args=-U --args=/tmp/shell.sock 'ls -al'
-```
-
-Here, the complete shell command connects `nc` to the Unix domain socket
-at `/tmp/shell.sock`, which is mounted to the container using the `-v` option.
-
-On the host side, connecting the `bash` shell to the socket could look like this:
-
-```shell
-mkfifo /tmp/shell.fifo
-cat /tmp/shell.fifo | bash -i 2>&1 | nc -lU /tmp/shell.sock > /tmp/shell.fifo &
-```
-
-Here, `/tmp/shell.fifo` is a FIFO pipe used to exchange data between `nc` and `bash`.
-The drawback of this approach is that the shell executable 
-would not run in a (pseudo-)terminal and thus could look differently (no coloring etc.).
-To connect a shell in a pseudo-terminal, you can use [`socat`](http://www.dest-unreach.org/socat/doc/socat.html),
-changing the host command as follows:
-
-```shell
-socat UNIX-LISTEN:/tmp/shell.sock,fork EXEC:"bash -i",pty,setsid,ctty,stderr &
-```
-
-TCP sockets can be used instead of Unix sockets, but are not recommended
-if Unix sockets are available since they are less secure. Indeed, care should be taken
-that the host "server" is not bound to a publicly accessible IP address, which
-would create a remote execution backdoor to the host system. As usual, caveats apply;
-e.g., one can spawn the shell in another Docker container connecting it and the `term-transcript`
-container in a single Docker network. In this case, TCP sockets are secure and arguably
-easier to use given Docker built-in DNS resolution machinery.
+for each subcommand. See [the Book](https://slowli.github.io/term-transcript/examples/) for more detailed overview of command-line args and options.
 
 ### Examples
 
@@ -135,8 +54,6 @@ Another snapshot created by capturing help output from a pseudo-terminal
 Using PTY enables coloring output by default and formatting dependent
 on the terminal size.
 
-See also [a dedicated file][examples-readme] showcasing all major commands and options of the CLI app.
-
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
@@ -148,11 +65,9 @@ shall be dual licensed as above, without any additional terms or conditions.
 
 [`term-transcript`]: https://crates.io/crates/term-transcript
 [fmt-subscriber]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/index.html
-[FAQ]: ../FAQ.md
-[rainbow-script-link]: examples/rainbow/rainbow
+[rainbow-script-link]: ../e2e-tests/rainbow/bin/rainbow
 [test-snapshot-link]: tests/snapshots/test.svg
 [test-color-snapshot-link]: tests/snapshots/test-fail.svg
 [test-link]: tests/e2e.rs
 [help-snapshot-link]: tests/snapshots/help.svg
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
-[examples-readme]: examples/README.md

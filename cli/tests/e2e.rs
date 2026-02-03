@@ -1,4 +1,4 @@
-//! End-to-end CLI tests.
+//! End-to-end CLI tests. Includes anchors for including file portions to the Book.
 
 #![cfg(unix)]
 
@@ -14,17 +14,20 @@ use term_transcript::{
     ShellOptions, StdShell,
 };
 
+// ANCHOR: snapshots_path
 fn svg_snapshot(name: &str) -> PathBuf {
     let mut snapshot_path = Path::new("tests/snapshots").join(name);
     snapshot_path.set_extension("svg");
     snapshot_path
 }
+// ANCHOR_END: snapshots_path
 
+// ANCHOR: config
 // Executes commands in a temporary dir, with paths to the `term-transcript` binary and
 // the `rainbow` script added to PATH.
 fn test_config() -> (TestConfig<StdShell>, TempDir) {
     let temp_dir = tempdir().expect("cannot create temporary directory");
-    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples/rainbow");
+    let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e-tests/rainbow/bin");
 
     let shell_options = ShellOptions::sh()
         .with_env("COLOR", "always")
@@ -37,7 +40,9 @@ fn test_config() -> (TestConfig<StdShell>, TempDir) {
     let config = TestConfig::new(shell_options).with_match_kind(MatchKind::Precise);
     (config, temp_dir)
 }
+// ANCHOR_END: config
 
+// ANCHOR: template
 fn scrolled_template() -> Template {
     let template_options = TemplateOptions {
         window: Some(WindowOptions::default()),
@@ -46,6 +51,7 @@ fn scrolled_template() -> Template {
     };
     Template::new(template_options.validated().unwrap())
 }
+// ANCHOR_END: template
 
 #[cfg(feature = "portable-pty")]
 #[test]
@@ -86,6 +92,7 @@ fn test_failure_example() {
     );
 }
 
+// ANCHOR: simple_test
 #[test]
 fn print_example() {
     let (mut config, _dir) = test_config();
@@ -97,6 +104,7 @@ fn print_example() {
         ],
     );
 }
+// ANCHOR_END: simple_test
 
 #[test]
 fn print_example_with_failures() {

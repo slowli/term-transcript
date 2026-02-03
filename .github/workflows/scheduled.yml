@@ -1,9 +1,0 @@
-name: Scheduled checks
-
-on:
-  schedule:
-    - cron: "0 2 * * MON"
-
-jobs:
-  build:
-    uses: ./.github/workflows/build-reusable.yml

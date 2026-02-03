@@ -5,7 +5,8 @@
 ![rust 1.83+ required](https://img.shields.io/badge/rust-1.83+-blue.svg?label=Required%20Rust)
 
 **Documentation:** [![Docs.rs](https://docs.rs/term-transcript/badge.svg)](https://docs.rs/term-transcript/)
-[![crate docs (master)](https://img.shields.io/badge/master-yellow.svg?label=docs)](https://slowli.github.io/term-transcript/term_transcript/)
+[![crate docs (master)](https://img.shields.io/badge/master-yellow.svg?label=docs)](https://slowli.github.io/term-transcript/crates/term_transcript/)
+[![The Book](https://img.shields.io/badge/The%20Book-yellow?logo=mdbook)](https://slowli.github.io/term-transcript/)
 
 This crate allows to:
 
@@ -14,7 +15,7 @@ This crate allows to:
 - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
   into HTML / Markdown documents. Rendering logic can be customized via [Handlebars] template engine;
   thus, other output formats besides SVG (e.g., HTML) are possible.
-  See [crate docs][custom-templates] for an intro to custom templates.
+  See [the crate docs][custom-templates] for an intro to custom templates.
 - Parse transcripts from SVG.
 - Test that a parsed transcript actually corresponds to the terminal output (either as text
   or text + colors).
@@ -33,6 +34,7 @@ term-transcript = "0.4.0"
 
 Example of usage:
 
+<!-- ANCHOR: example -->
 ```rust
 use term_transcript::{svg::Template, ShellOptions, Transcript, UserInput};
 use std::str;
@@ -45,11 +47,11 @@ let mut writer = vec![];
 // ^ Any `std::io::Write` implementation will do, such as a `File`.
 Template::default().render(&transcript, &mut writer)?;
 println!("{}", str::from_utf8(&writer)?);
-Ok::<_, anyhow::Error>(())
+anyhow::Ok(())
 ```
+<!-- ANCHOR_END: example -->
 
-See more examples in the crate docs and the [FAQ](../FAQ.md) for some tips
-and troubleshooting advice.
+See more examples in [the Book](https://slowli.github.io/term-transcript/library.html).
 
 ### CLI app
 
@@ -59,7 +61,7 @@ for the installation and usage guides.
 
 ### Snapshot examples
 
-An SVG snapshot of [the `rainbow` script](../examples/rainbow/rainbow)
+An SVG snapshot of [the `rainbow` script](../e2e-tests/rainbow/bin/rainbow)
 produced by this crate:
 
 ![Snapshot of rainbow example][rainbow-snapshot-link]
@@ -123,7 +125,7 @@ shall be dual licensed as above, without any additional terms or conditions.
 [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
 [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
-[custom-templates]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.Template.html#customization
+[custom-templates]: https://slowli.github.io/term-transcript/crates/term_transcript/svg/struct.Template.html#customization
 [term-transcript-cli]: https://crates.io/crates/term-transcript-cli
 [rainbow-snapshot-link]: ../examples/rainbow.svg
 [animated-snapshot-link]: ../examples/animated.svg

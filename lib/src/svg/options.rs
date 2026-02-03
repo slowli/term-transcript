@@ -55,7 +55,7 @@ pub struct LineNumberingOptions {
     pub continued: ContinuedLineNumbers,
 }
 
-/// Configurable options of a [`Template`].
+/// Configurable options of a [`Template`](super::Template).
 ///
 /// # Serialization
 ///
