@@ -3,7 +3,6 @@ name: CI
 on:
   push:
     branches: [ master ]
-    tags: [ "v*" ]
   pull_request:
     branches: [ master ]
 
@@ -12,9 +11,13 @@ env:
   msrv: 1.83.0
   # Nightly Rust necessary for building docs.
   nightly: nightly-2025-11-02
+  # `mdbook` version used
+  MDBOOK_VERSION: 0.5.2
 
 jobs:
   build-msrv:
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -28,7 +31,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -36,7 +39,7 @@ jobs:
           toolchain: ${{ env.msrv }}
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}${{ matrix.features }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -48,6 +51,8 @@ jobs:
         run: cargo test -p term-transcript ${{ matrix.features }} --doc
 
   build:
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -58,7 +63,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -73,7 +78,7 @@ jobs:
           version: "^0.18.9"
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -115,20 +120,56 @@ jobs:
           cargo run -p term-transcript-cli --all-features -- \
           exec 'echo Hello' 2>&1 | grep DEBUG
 
+  build-nightly:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.nightly }}
+      - name: Install mdbook
+        run: |
+          mkdir -p .bin
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/$MDBOOK_VERSION/mdbook-$MDBOOK_VERSION-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=.bin
+          sudo install .bin/mdbook /usr/local/bin
+          mdbook --version
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-nightly-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-nightly
+
+      - name: Build the Book
+        working-directory: ./docs
+        run: mdbook build
+      - name: Build docs
+        run: |
+          cargo clean --doc && \
+          cargo rustdoc -p term-transcript --all-features -- -D warnings --cfg docsrs
+
   build-docker:
     needs:
       - build
       - build-msrv
+      - build-nightly
     permissions:
       contents: read
       packages: write
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Cache Docker build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target/docker
           key: ${{ runner.os }}-docker-buildkit-${{ hashFiles('Cargo.lock') }}
@@ -223,44 +264,3 @@ jobs:
         run: docker push "$IMAGE_TAG"
         env:
           IMAGE_TAG: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
-
-  document:
-    needs:
-      - build
-      - build-msrv
-    if: github.event_name == 'push' && github.ref_type == 'branch'
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.nightly }}
-
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-document-${{ hashFiles('Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-document
-
-      - name: Build docs
-        run: |
-          cargo clean --doc && \
-          cargo rustdoc -p term-transcript --all-features -- --cfg docsrs
-
-      - name: Copy examples
-        run: |
-          mkdir -p target/doc/examples && \
-          cp examples/rainbow.html target/doc/examples
-
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: gh-pages
-          folder: target/doc
-          single-commit: true
