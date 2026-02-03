@@ -102,7 +102,7 @@ jobs:
         run: cargo deny --workspace --all-features check
         if: matrix.all_checks
       - name: Check rainbow script outputs
-        run: ./examples/rainbow/regenerate-rainbow-out.sh --check
+        run: ./e2e-tests/rainbow/bin/regenerate-rainbow-out.sh --check
         if: matrix.all_checks
 
       - name: Run tests
@@ -135,7 +135,7 @@ jobs:
       - name: Install mdbook
         run: |
           mkdir -p .bin
-          curl -sSL https://github.com/rust-lang/mdBook/releases/download/$MDBOOK_VERSION/mdbook-$MDBOOK_VERSION-x86_64-unknown-linux-gnu.tar.gz \
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v$MDBOOK_VERSION/mdbook-v$MDBOOK_VERSION-x86_64-unknown-linux-gnu.tar.gz \
             | tar -xz --directory=.bin
           sudo install .bin/mdbook /usr/local/bin
           mdbook --version
