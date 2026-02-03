@@ -31,7 +31,7 @@ See [the Book](FIXME) for more installation options.
 - The `print` subcommand parses an SVG snapshot and outputs it to the command line.
 
 Launch the CLI app with the `--help` option for more details about arguments
-for each subcommand. See also the [FAQ] for some tips and troubleshooting advice.
+for each subcommand. See [the Book](FIXME) for more detailed overview of command-line args and options.
 
 ### Examples
 
@@ -55,8 +55,6 @@ Another snapshot created by capturing help output from a pseudo-terminal
 Using PTY enables coloring output by default and formatting dependent
 on the terminal size.
 
-See also [a dedicated file][examples-readme] showcasing all major commands and options of the CLI app.
-
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)
@@ -68,11 +66,9 @@ shall be dual licensed as above, without any additional terms or conditions.
 
 [`term-transcript`]: https://crates.io/crates/term-transcript
 [fmt-subscriber]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/index.html
-[FAQ]: ../FAQ.md
-[rainbow-script-link]: examples/rainbow/rainbow
+[rainbow-script-link]: ../e2e-tests/rainbow/bin/rainbow
 [test-snapshot-link]: tests/snapshots/test.svg
 [test-color-snapshot-link]: tests/snapshots/test-fail.svg
 [test-link]: tests/e2e.rs
 [help-snapshot-link]: tests/snapshots/help.svg
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
-[examples-readme]: examples/README.md

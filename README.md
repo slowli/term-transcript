@@ -21,11 +21,11 @@ Such tests can be embedded into a readme file.
 
 `term-transcript` comes in two flavors: a [Rust library](lib), and a [CLI app](cli).
 The CLI app has slightly less functionality, but does not require Rust knowledge.
-See their docs and the [FAQ](FAQ.md) for usage guidelines and troubleshooting advice.
+See [the Book](FIXME) for usage guidelines.
 
 ### Examples
 
-An SVG snapshot of [the `rainbow` script](examples/rainbow/rainbow)
+An SVG snapshot of [the test `rainbow` script](e2e-tests/rainbow/bin/rainbow)
 produced by this crate:
 
 ![Snapshot of rainbow example](examples/rainbow.svg)
@@ -34,10 +34,7 @@ A snapshot of the same example with the scrolling animation and window frame:
 
 ![Animated snapshot of rainbow example](examples/animated.svg)
 
-A snapshot of a similar example rendered to HTML using [a custom template](examples/custom.html.handlebars)
-is available [as a source file](examples/rainbow.html) and [in the rendered form][html-example].
-
-See the [`examples` directory](examples) for more snapshot examples.
+See [the Book](FIXME) for more examples.
 
 ## Contributing
 
@@ -57,4 +54,3 @@ shall be dual licensed as above, without any additional terms or conditions.
 [Handlebars]: https://handlebarsjs.com/
 [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
 [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
-[html-example]: https://slowli.github.io/term-transcript/examples/rainbow.html

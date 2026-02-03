@@ -50,8 +50,7 @@ anyhow::Ok(())
 ```
 <!-- ANCHOR_END: example -->
 
-See more examples in the crate docs and the [FAQ](../FAQ.md) for some tips
-and troubleshooting advice.
+See more examples in [the Book](FIXME).
 
 ### CLI app
 
@@ -61,7 +60,7 @@ for the installation and usage guides.
 
 ### Snapshot examples
 
-An SVG snapshot of [the `rainbow` script](../examples/rainbow/rainbow)
+An SVG snapshot of [the `rainbow` script](../e2e-tests/rainbow/bin/rainbow)
 produced by this crate:
 
 ![Snapshot of rainbow example][rainbow-snapshot-link]
