@@ -78,7 +78,7 @@ jobs:
         env:
           OS: ${{ matrix.os }}
           TARGET: ${{ matrix.target }}
-          REF: ${{ inputs.label || github.ref }}
+          REF: ${{ inputs.label == '' && github.ref || inputs.label }}
       - name: Publish archive
         uses: softprops/action-gh-release@v1
         if: github.event_name == 'push' && github.ref_type == 'tag'
