@@ -7,6 +7,8 @@ Add this to your `Crate.toml`:
 term-transcript = "0.4.0"
 ```
 
+See [the library docs](crates/term_transcript) for detailed description of its API.
+
 ## Basic workflow
 
 The code snippet below executes a single `echo` command in the default shell

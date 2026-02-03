@@ -21,3 +21,8 @@ boost-hierarchy = 2
 boost-paragraph = 1
 expand = true
 heading-split-level = 2
+
+[output.html.redirect]
+# Cheaply implemented redirect from the previously used crate docs location.
+# Only works for the root link to the crate docs.
+"/term_transcript/index.html" = "/crates/term_transcript"
