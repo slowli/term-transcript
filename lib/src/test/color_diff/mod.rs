@@ -12,9 +12,9 @@ use unicode_width::UnicodeWidthStr;
 mod tests;
 
 use crate::{
+    TermError,
     style::{Color, RgbColor, Style, StyledSpan, WriteStyled},
     term::TermOutputParser,
-    TermError,
 };
 
 impl StyledSpan<usize> {

@@ -7,11 +7,11 @@ use std::{
     time::Duration,
 };
 
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 use term_transcript::{
+    ShellOptions, StdShell,
     svg::{ScrollOptions, Template, TemplateOptions, WindowOptions},
     test::{MatchKind, TestConfig},
-    ShellOptions, StdShell,
 };
 
 // ANCHOR: snapshots_path

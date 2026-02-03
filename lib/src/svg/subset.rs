@@ -223,7 +223,7 @@ impl FontSubsetter {
                 _ => {
                     return Err(SubsettingError::UnsupportedFontCategories(vec![
                         first_cat, second_cat,
-                    ]))
+                    ]));
                 }
             }
         } else {
@@ -302,8 +302,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        svg::{Template, TemplateOptions},
         Transcript, UserInput,
+        svg::{Template, TemplateOptions},
     };
 
     fn read_font(path: &str) -> FontFace {

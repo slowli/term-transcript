@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "font-subset")]
 use super::subset::FontSubsetter;
-use super::{font::BoxedErrorEmbedder, FontEmbedder, HandlebarsData, Palette};
+use super::{FontEmbedder, HandlebarsData, Palette, font::BoxedErrorEmbedder};
 use crate::{BoxedError, TermError, Transcript};
 
 /// Line numbering scope.

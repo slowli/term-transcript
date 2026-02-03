@@ -9,8 +9,8 @@ use std::{
 
 use super::ShellOptions;
 use crate::{
-    traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
     Captured, ExitStatus,
+    traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
 };
 
 #[derive(Debug, Clone, Copy)]

@@ -12,13 +12,13 @@ use std::{
 };
 
 use quick_xml::{
-    encoding::EncodingError,
-    events::{attributes::Attributes, Event},
     Reader as XmlReader,
+    encoding::EncodingError,
+    events::{Event, attributes::Attributes},
 };
 
 use self::text::TextReadingState;
-use crate::{style::StyledSpan, ExitStatus, Interaction, TermOutput, Transcript, UserInput};
+use crate::{ExitStatus, Interaction, TermOutput, Transcript, UserInput, style::StyledSpan};
 
 #[cfg(test)]
 mod tests;

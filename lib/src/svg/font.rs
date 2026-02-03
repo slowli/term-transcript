@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeSet, fmt};
 
-use base64::{prelude::BASE64_STANDARD, Engine};
+use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Serialize, Serializer};
 
 use crate::BoxedError;

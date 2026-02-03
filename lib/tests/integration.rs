@@ -11,14 +11,14 @@ use std::{
 
 use assert_matches::assert_matches;
 use term_transcript::{
-    svg::{Template, ValidTemplateOptions},
-    test::{compare_transcripts, MatchKind},
     ShellOptions, Transcript, UserInput,
+    svg::{Template, ValidTemplateOptions},
+    test::{MatchKind, compare_transcripts},
 };
 use test_casing::{
-    decorate, decorators,
+    Product, decorate, decorators,
     decorators::{Retry, Trace},
-    test_casing, Product,
+    test_casing,
 };
 use tracing_capture::{CaptureLayer, CapturedSpan, SharedStorage, Storage};
 use tracing_subscriber::layer::SubscriberExt;
@@ -136,8 +136,10 @@ fn assert_tracing_for_parsing(storage: &Storage) {
         .events()
         .find(|event| event.message() == Some("parsed interaction"))
         .expect("new interaction event not found");
-    assert!(interaction_event["interaction.input"]
-        .is_debug(&UserInput::command(r#"echo "Hello, world!""#)));
+    assert!(
+        interaction_event["interaction.input"]
+            .is_debug(&UserInput::command(r#"echo "Hello, world!""#))
+    );
     let output = interaction_event["interaction.output"]
         .as_debug_str()
         .unwrap();
@@ -307,9 +309,11 @@ fn assert_tracing_for_powershell(storage: &Storage) {
         .filter(|span| span.metadata().name() == "read_echo")
         .collect();
 
-    assert!(echo_spans
-        .iter()
-        .any(|span| span["input_line"].as_str() == Some("cargo what")));
+    assert!(
+        echo_spans
+            .iter()
+            .any(|span| span["input_line"].as_str() == Some("cargo what"))
+    );
 
     let received_line_events: Vec<_> = echo_spans
         .iter()

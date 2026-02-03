@@ -14,9 +14,9 @@ use anstyle::{AnsiColor, Color, Style};
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
 use term_transcript::{
+    Transcript, UserInput,
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     traits::SpawnShell,
-    Transcript, UserInput,
 };
 
 mod shell;
@@ -199,11 +199,7 @@ impl Command {
 
     fn create_input(command: String, no_inputs: bool) -> UserInput {
         let input = UserInput::command(command);
-        if no_inputs {
-            input.hide()
-        } else {
-            input
-        }
+        if no_inputs { input.hide() } else { input }
     }
 
     fn process_file<Cmd: SpawnShell + fmt::Debug>(

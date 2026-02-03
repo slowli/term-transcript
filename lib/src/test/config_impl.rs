@@ -11,15 +11,15 @@ use std::{
 use anstream::{AutoStream, ColorChoice};
 
 use super::{
+    MatchKind, TestConfig, TestOutputConfig, TestStats,
     color_diff::ColorDiff,
     parser::Parsed,
     utils::{ChoiceWriter, IndentingWriter, PrintlnWriter},
-    MatchKind, TestConfig, TestOutputConfig, TestStats,
 };
 use crate::{
+    Interaction, TermError, Transcript, UserInput,
     style::{Color, Style, StyledSpan},
     traits::SpawnShell,
-    Interaction, TermError, Transcript, UserInput,
 };
 
 const SUCCESS: Style = Style {

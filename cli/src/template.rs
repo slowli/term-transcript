@@ -14,11 +14,11 @@ use anyhow::Context;
 use clap::{Args, ValueEnum};
 use handlebars::Template as HandlebarsTemplate;
 use term_transcript::{
+    Transcript,
     svg::{
         self, BlinkOptions, FontFace, FontSubsetter, LineNumberingOptions, ScrollOptions, Template,
         TemplateOptions, ValidTemplateOptions, WrapOptions,
     },
-    Transcript,
 };
 
 #[derive(Debug, Clone, ValueEnum)]

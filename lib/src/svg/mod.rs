@@ -37,7 +37,7 @@ pub use self::{
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
 pub use crate::style::{RgbColor, RgbColorParseError};
-use crate::{term::TermOutputParser, Captured, TermError, Transcript};
+use crate::{Captured, TermError, Transcript, term::TermOutputParser};
 
 mod data;
 mod font;

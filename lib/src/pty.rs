@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtyPair, PtySize};
+use portable_pty::{Child, CommandBuilder, MasterPty, PtyPair, PtySize, native_pty_system};
 
 use crate::{
     traits::{ConfigureCommand, ShellProcess, SpawnShell, SpawnedShell},

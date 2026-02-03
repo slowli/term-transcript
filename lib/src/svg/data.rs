@@ -6,8 +6,8 @@ use serde::Serialize;
 
 use super::write::StyledLine;
 use crate::{
-    svg::{EmbeddedFont, TemplateOptions},
     UserInput,
+    svg::{EmbeddedFont, TemplateOptions},
 };
 
 /// Root data structure sent to the Handlebars template.

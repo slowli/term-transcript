@@ -64,7 +64,7 @@ pub use self::{
 };
 #[cfg(feature = "svg")]
 use crate::svg::Template;
-use crate::{traits::SpawnShell, ShellOptions, Transcript};
+use crate::{ShellOptions, Transcript, traits::SpawnShell};
 
 mod color_diff;
 mod config_impl;

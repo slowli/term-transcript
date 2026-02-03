@@ -5,7 +5,7 @@ use std::{env, ffi::OsString, io, process::Command};
 use clap::Args;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
-use term_transcript::{traits::Echoing, Captured, ExitStatus, ShellOptions, Transcript, UserInput};
+use term_transcript::{Captured, ExitStatus, ShellOptions, Transcript, UserInput, traits::Echoing};
 
 #[cfg(feature = "portable-pty")]
 mod pty {
@@ -54,11 +54,7 @@ enum ExitCodeCheck {
 
 impl ExitCodeCheck {
     fn for_default_shell() -> Option<Self> {
-        if cfg!(unix) {
-            Some(Self::Sh)
-        } else {
-            None
-        }
+        if cfg!(unix) { Some(Self::Sh) } else { None }
     }
 
     fn detect(shell_command: &OsString) -> Option<Self> {

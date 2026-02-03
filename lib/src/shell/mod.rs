@@ -15,8 +15,8 @@ mod transcript_impl;
 
 pub use self::standard::StdShell;
 use crate::{
-    traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
     Captured, ExitStatus,
+    traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
 };
 
 type StatusCheckerFn = dyn Fn(&Captured) -> Option<ExitStatus>;
