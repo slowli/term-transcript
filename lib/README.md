@@ -15,7 +15,7 @@ This crate allows to:
 - Save these transcripts in the [SVG] format, so that they can be easily embedded as images
   into HTML / Markdown documents. Rendering logic can be customized via [Handlebars] template engine;
   thus, other output formats besides SVG (e.g., HTML) are possible.
-  See [crate docs][custom-templates] for an intro to custom templates.
+  See [the crate docs][custom-templates] for an intro to custom templates.
 - Parse transcripts from SVG.
 - Test that a parsed transcript actually corresponds to the terminal output (either as text
   or text + colors).
@@ -125,7 +125,7 @@ shall be dual licensed as above, without any additional terms or conditions.
 [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
 [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
-[custom-templates]: https://slowli.github.io/term-transcript/term_transcript/svg/struct.Template.html#customization
+[custom-templates]: https://slowli.github.io/term-transcript/crates/term_transcript/svg/struct.Template.html#customization
 [term-transcript-cli]: https://crates.io/crates/term-transcript-cli
 [rainbow-snapshot-link]: ../examples/rainbow.svg
 [animated-snapshot-link]: ../examples/animated.svg

@@ -38,17 +38,5 @@ Tracing events are output to the stderr using [the standard subscriber][fmt-subs
 its filtering can be configured using the `RUST_LOG` env variable
 (e.g., `RUST_LOG=term_transcript=debug`).
 
-## Usage
-
-- The `capture` subcommand captures output from stdin, renders it to SVG and
-  outputs SVG to stdout.
-- The `exec` subcommand executes one or more commands in the shell, captures
-  their outputs, renders to an SVG image and outputs it to stdout.
-- The `test` subcommand allows testing snapshots from the command line.
-- The `print` subcommand parses an SVG snapshot and outputs it to the command line.
-
-Launch the CLI app with the `--help` option for more details about arguments
-for each subcommand. See also the [FAQ](../FAQ.md) for some tips and troubleshooting advice.
-
 [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
 [fmt-subscriber]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/index.html

@@ -10,11 +10,19 @@ Generating command:
 term-transcript exec --palette gjm8 rainbow
 ```
 
+Here, `--palette` defines the color palette to use for the 16 base ANSI colors.
+
 > [!NOTE]
 >
 > `rainbow` is an [executable script](./#rainbow-script) for end-to-end tests.
 
 ## Static snapshot (pure SVG)
+
+`--pure-svg` flag makes `term-transcript` to produce pure SVG instead of default HTML-in-SVG.
+This is more compatible (HTML-in-SVG is not supported by all SVG browsers), but has its quirks.
+In particular, [font advance width](#advance-width) is set to an imprecise hard-coded value
+unless a font [is embedded](fonts.md#embedding-custom-fonts) into the snapshot; this may lead
+to various display artifacts, such as stretched or compressed text, interrupted underlines, etc.
 
 ![Snapshot of rainbow example](../assets/rainbow-pure.svg)
 
