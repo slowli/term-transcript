@@ -6,7 +6,7 @@ use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 use crate::{
     DynStyled, ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
-    utils::{Stack, StackStr, StrCursor, normalize_style},
+    utils::{Stack, StackStr, StrCursor, is_same_style, normalize_style},
 };
 
 impl Styled {
@@ -91,7 +91,7 @@ impl<'a> RichParser<'a> {
                     None
                 };
 
-                self.current_style = const_try!(self.cursor.parse_style());
+                self.current_style = const_try!(self.cursor.parse_style(&self.current_style));
                 self.style_end_pos = self.cursor.pos();
 
                 if let Some(span_and_text_start) = span_and_text_start {
@@ -141,17 +141,18 @@ impl StrCursor<'_> {
     }
 
     /// The cursor is positioned just after the opening `[[`.
-    const fn parse_style(&mut self) -> Result<Style, ParseError> {
+    const fn parse_style(&mut self, current_style: &Style) -> Result<Style, ParseError> {
         let mut style = Style::new();
         let mut is_initial = true;
+        let mut style_copied = false;
         while !self.is_eof() {
-            if self.gobble("]]") {
-                return Ok(normalize_style(style));
+            self.gobble_whitespace();
+            if !is_initial && self.gobble_punct() {
+                self.gobble_whitespace();
             }
 
-            self.skip_whitespace();
-            if !is_initial && self.gobble_punct() {
-                self.skip_whitespace();
+            if self.gobble("]]") {
+                return Ok(normalize_style(style));
             }
 
             if self.is_eof() {
@@ -166,29 +167,13 @@ impl StrCursor<'_> {
                     return Err(self.error_on_empty_token(ParseErrorKind::UnfinishedStyle));
                 }
 
-                b"bold" | b"b" => {
-                    style = style.bold();
-                }
-                b"italic" | b"i" => {
-                    style = style.italic();
-                }
-                b"underline" | b"u" | b"ul" => {
-                    style = style.underline();
-                }
-                b"strikethrough" | b"strike" | b"s" => {
-                    style = style.strikethrough();
-                }
-                b"dim" | b"dimmed" => {
-                    style = style.dimmed();
-                }
-                b"invert" | b"inverted" | b"inv" => {
-                    style = style.invert();
-                }
-                b"blink" => {
-                    style = style.blink();
-                }
-                b"hide" | b"hidden" | b"conceal" | b"concealed" => {
-                    style = style.hidden();
+                b"*" => {
+                    if is_initial {
+                        style_copied = true;
+                        style = *current_style;
+                    } else {
+                        return Err(ParseErrorKind::NonInitialCopy.with_pos(token_range));
+                    }
                 }
 
                 b"on" => {
@@ -196,7 +181,7 @@ impl StrCursor<'_> {
                         return Err(ParseErrorKind::RedefinedBackground.with_pos(token_range));
                     }
 
-                    self.skip_whitespace();
+                    self.gobble_whitespace();
                     if self.is_eof() {
                         return Err(self.error(ParseErrorKind::UnfinishedStyle));
                     }
@@ -216,21 +201,60 @@ impl StrCursor<'_> {
                     style = style.bg_color(Some(color));
                 }
 
-                _ => {
-                    let color = match Self::parse_color(token) {
-                        Ok(Some(color)) => color,
-                        Ok(None) => {
-                            return Err(ParseErrorKind::UnsupportedStyle.with_pos(token_range));
-                        }
-                        Err(err) => return Err(err.with_pos(token_range)),
+                // TODO: does it make sense to implement strict checks (allow negating only set styles)?
+                // TODO: does it make sense to implement redundancy checks (the same flag cannot be negated or set multiple times)?
+                b"-color" | b"-fg" | b"!color" | b"!fg" => {
+                    style = style.fg_color(None);
+                }
+                b"-on" | b"-bg" | b"!on" | b"!bg" => {
+                    style = style.bg_color(None);
+                }
+                neg if neg[0] == b'-' || neg[0] == b'!' => {
+                    let (_, token_without_prefix) = token.split_at(1);
+                    let Some(effects) = Self::parse_effects(token_without_prefix) else {
+                        return Err(ParseErrorKind::UnsupportedEffect.with_pos(token_range));
                     };
-                    style = style.fg_color(Some(color));
+                    if !style_copied {
+                        // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                        // on a bogus specifier.
+                        return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                    }
+                    style = style.effects(style.get_effects().remove(effects));
+                }
+
+                _ => {
+                    if let Some(effects) = Self::parse_effects(token) {
+                        style = style.effects(style.get_effects().insert(effects));
+                    } else {
+                        let color = match Self::parse_color(token) {
+                            Ok(Some(color)) => color,
+                            Ok(None) => {
+                                return Err(ParseErrorKind::UnsupportedStyle.with_pos(token_range));
+                            }
+                            Err(err) => return Err(err.with_pos(token_range)),
+                        };
+                        style = style.fg_color(Some(color));
+                    }
                 }
             }
 
             is_initial = false;
         }
         Err(self.error(ParseErrorKind::UnfinishedStyle))
+    }
+
+    const fn parse_effects(token: &[u8]) -> Option<Effects> {
+        Some(match token {
+            b"bold" | b"b" => Effects::BOLD,
+            b"italic" | b"i" => Effects::ITALIC,
+            b"underline" | b"u" | b"ul" => Effects::UNDERLINE,
+            b"strikethrough" | b"strike" | b"s" => Effects::STRIKETHROUGH,
+            b"dim" | b"dimmed" => Effects::DIMMED,
+            b"invert" | b"inverted" | b"inv" => Effects::INVERT,
+            b"blink" => Effects::BLINK,
+            b"hide" | b"hidden" | b"conceal" | b"concealed" => Effects::HIDDEN,
+            _ => return None,
+        })
     }
 
     const fn parse_hex_digit(ch: u8) -> Result<u8, ParseErrorKind> {
@@ -316,7 +340,7 @@ impl StrCursor<'_> {
         })
     }
 
-    const fn skip_whitespace(&mut self) {
+    const fn gobble_whitespace(&mut self) {
         while !self.is_eof() {
             let ch = self.current_byte();
             if ch.is_ascii_whitespace() {
@@ -359,7 +383,15 @@ impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CA
         });
 
         while let ops::ControlFlow::Continue((span, text_start)) = const_try!(parser.step()) {
-            if spans.push(span).is_err() {
+            let mut span_extended = false;
+            if let Some(last_span) = spans.last_mut() {
+                if is_same_style(&last_span.style, &span.style) {
+                    last_span.len += span.len;
+                    span_extended = true;
+                }
+            }
+
+            if !span_extended && spans.push(span).is_err() {
                 return Err(parser.cursor.error(ParseErrorKind::SpanOverflow));
             }
 
@@ -469,6 +501,29 @@ fn ansi_color_str(color: AnsiColor) -> &'static str {
     }
 }
 
+/// Escapes sequences of >=2 opening brackets (i.e., `[[`, `[[[` etc.) by appending `[[*]]` to each sequence
+/// (a no-op style copy).
+#[derive(Debug)]
+pub(crate) struct EscapedText<'a>(pub(crate) &'a str);
+
+impl fmt::Display for EscapedText<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut remainder = self.0;
+        while let Some(mut pos) = remainder.find("[[") {
+            // Increase `pos` until it points at a non-`[` char.
+            pos += 2;
+            while remainder.as_bytes().get(pos).copied() == Some(b'[') {
+                pos += 1;
+            }
+
+            let head;
+            (head, remainder) = remainder.split_at(pos);
+            write!(formatter, "{head}[[*]]")?;
+        }
+        write!(formatter, "{remainder}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -494,7 +549,7 @@ mod tests {
     #[test]
     fn parsing_style() {
         let mut cursor = StrCursor::new("bold, ul magenta on yellow*]]");
-        let style = cursor.parse_style().unwrap();
+        let style = cursor.parse_style(&Style::new()).unwrap();
         let expected_style = Style::new()
             .bold()
             .underline()
@@ -507,7 +562,7 @@ mod tests {
     #[test]
     fn parsing_style_with_complex_colors() {
         let mut cursor = StrCursor::new("dim i invert; blink; 42 on #c0ffee]]");
-        let style = cursor.parse_style().unwrap();
+        let style = cursor.parse_style(&Style::new()).unwrap();
         let expected_style = Style::new()
             .dimmed()
             .blink()
@@ -517,5 +572,17 @@ mod tests {
             .bg_color(Some(RgbColor(0xc0, 0xff, 0xee).into()));
         assert_eq!(style, expected_style);
         assert!(cursor.is_eof(), "{cursor:?}");
+    }
+
+    #[test]
+    fn escaping_text() {
+        assert_eq!(EscapedText("test: [OK]").to_string(), "test: [OK]");
+
+        assert_eq!(EscapedText("test: [[OK]]").to_string(), "test: [[[[*]]OK]]");
+
+        assert_eq!(
+            EscapedText("[[OK]] test :[[[").to_string(),
+            "[[[[*]]OK]] test :[[[[[*]]"
+        );
     }
 }

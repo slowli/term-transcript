@@ -78,6 +78,37 @@ pub(crate) const fn normalize_style(mut style: Style) -> Style {
     style
 }
 
+pub(crate) const fn is_same_style(lhs: &Style, rhs: &Style) -> bool {
+    let lhs_effects = lhs.get_effects();
+    let rhs_effects = rhs.get_effects();
+    if !lhs_effects.contains(rhs_effects) || !rhs_effects.contains(lhs_effects) {
+        // Ideally, we'd want to compare effects directly, but this isn't constant-time
+        return false;
+    }
+
+    is_same_color_opt(lhs.get_fg_color(), rhs.get_fg_color())
+        && is_same_color_opt(lhs.get_bg_color(), rhs.get_bg_color())
+}
+
+const fn is_same_color_opt(lhs: Option<Color>, rhs: Option<Color>) -> bool {
+    match (lhs, rhs) {
+        (None, None) => true,
+        (Some(_), None) | (None, Some(_)) => false,
+        (Some(lhs), Some(rhs)) => is_same_color(lhs, rhs),
+    }
+}
+
+const fn is_same_color(lhs: Color, rhs: Color) -> bool {
+    match (lhs, rhs) {
+        (Color::Ansi(lhs), Color::Ansi(rhs)) => lhs as u8 == rhs as u8,
+        (Color::Ansi256(Ansi256Color(lhs)), Color::Ansi256(Ansi256Color(rhs))) => lhs == rhs,
+        (Color::Rgb(RgbColor(rl, gl, bl)), Color::Rgb(RgbColor(rr, gr, br))) => {
+            rl == rr && gl == gr && bl == br
+        }
+        _ => false,
+    }
+}
+
 const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;
 const UTF8_CONTINUATION_MARKER: u8 = 0b1000_0000;
 
@@ -129,6 +160,14 @@ impl<T: Copy, const N: usize> Stack<T, N> {
             self.inner[self.len] = item;
             self.len += 1;
             Ok(())
+        }
+    }
+
+    pub(crate) const fn last_mut(&mut self) -> Option<&mut T> {
+        if self.len == 0 {
+            None
+        } else {
+            Some(&mut self.inner[self.len - 1])
         }
     }
 }

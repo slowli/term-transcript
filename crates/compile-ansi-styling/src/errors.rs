@@ -14,6 +14,9 @@ pub enum ParseErrorKind {
     RedefinedBackground,
     UnfinishedBackground,
     BogusDelimiter,
+    NonInitialCopy,
+    UnsupportedEffect,
+    NegationWithoutCopy,
     SpanOverflow,
     TextOverflow,
 }
@@ -32,6 +35,9 @@ impl ParseErrorKind {
             Self::UnfinishedBackground => "no background specified after `on` keyword",
             Self::RedefinedBackground => "redefined background color",
             Self::BogusDelimiter => "bogus delimiter",
+            Self::NonInitialCopy => "* (copy) specifier must come first",
+            Self::UnsupportedEffect => "unsupported effect",
+            Self::NegationWithoutCopy => "negation without * (copy) specifier",
             Self::SpanOverflow => "too many spans",
             Self::TextOverflow => "too much text",
         }
@@ -69,7 +75,7 @@ impl ParseError {
             "invalid regex at ",
             self.pos.start => compile_fmt::fmt::<usize>(), "..", self.pos.end => compile_fmt::fmt::<usize>(),
             " ('", hl => compile_fmt::clip(64, "…"),
-            "'): ", self.kind.as_ascii_str() => compile_fmt::clip_ascii(32, "")
+            "'): ", self.kind.as_ascii_str() => compile_fmt::clip_ascii(40, "")
         );
     }
 }

@@ -85,6 +85,29 @@ fn parsing_with_unstyled_ends() {
 }
 
 #[test]
+fn parsing_with_style_copy() {
+    const STYLED: Styled = styled!("[[green]]Hello[[* b,i]],[[* -bold]] world[[* -fg on red]]!");
+
+    assert_eq!(
+        STYLED.to_string(),
+        "[[green]]Hello[[bold italic green]],[[italic green]] world[[italic on red]]!"
+    );
+    assert_eq!(STYLED.spans().len(), 4);
+}
+
+#[test]
+fn parsing_with_no_op_style_copy() {
+    const STYLED: Styled = styled!(
+        r"[[[[*]]Brack[[*
+        ]]ets!]]"
+    );
+
+    assert_eq!(STYLED.text(), "[[Brackets!]]");
+    assert_eq!(STYLED.spans().len(), 1);
+    assert_eq!(STYLED.to_string(), "[[[[*]]Brackets!]]");
+}
+
+#[test]
 fn unfinished_errors() {
     for raw in ["[[red", "[[red ", "[[red, "] {
         let err = raw.parse::<DynStyled>().unwrap_err();
@@ -166,7 +189,7 @@ fn invalid_color_error() {
 
     let raw = "[[-1]]";
     let err = raw.parse::<DynStyled>().unwrap_err();
-    assert_matches!(err.kind(), ParseErrorKind::UnsupportedStyle);
+    assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
     assert_eq!(err.pos(), 2..4);
 
     let raw = "[[#cfg]]";
@@ -178,4 +201,37 @@ fn invalid_color_error() {
     let err = raw.parse::<DynStyled>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::InvalidHexColor);
     assert_eq!(err.pos(), 2..9);
+}
+
+#[test]
+fn negation_errors() {
+    let raw = "[[-]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
+    assert_eq!(err.pos(), 2..3);
+
+    let raw = "[[* -]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
+    assert_eq!(err.pos(), 4..5);
+
+    let raw = "[[* !green]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
+    assert_eq!(err.pos(), 4..10);
+
+    let raw = "[[!bold]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::NegationWithoutCopy);
+    assert_eq!(err.pos(), 2..7);
+
+    let raw = "[[ -bold ]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::NegationWithoutCopy);
+    assert_eq!(err.pos(), 3..8);
+
+    let raw = "[[bold *]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::NonInitialCopy);
+    assert_eq!(err.pos(), 7..8);
 }

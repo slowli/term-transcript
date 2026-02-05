@@ -7,7 +7,7 @@ use anstyle::Style;
 use crate::{
     AnsiError,
     ansi_parser::AnsiParser,
-    rich_parser::RichStyle,
+    rich_parser::{EscapedText, RichStyle},
     utils::{Stack, StackStr},
 };
 
@@ -89,8 +89,6 @@ where
 }
 
 /// Outputs a string with rich syntax.
-// FIXME: this only works if the text doesn't contain a `[[` in the same style span.
-//  Deal with by escaping `[[` -> `[[[[*]]`?
 impl<T, S> fmt::Display for Styled<T, S>
 where
     T: ops::Deref<Target = str>,
@@ -102,12 +100,13 @@ where
             let text = &self.text[pos..pos + span.len];
             if i == 0 && span.style.is_plain() {
                 // Special case: do not output an extra `[[]]` at the string start.
-                formatter.write_str(text)?;
+                write!(formatter, "{}", EscapedText(text))?;
             } else {
                 write!(
                     formatter,
                     "[[{style}]]{text}",
-                    style = RichStyle(&span.style).to_string().trim_end()
+                    style = RichStyle(&span.style).to_string().trim_end(),
+                    text = EscapedText(text)
                 )?;
             }
             pos += span.len;
