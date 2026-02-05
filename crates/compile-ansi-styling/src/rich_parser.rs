@@ -64,7 +64,18 @@ impl SetStyleFields {
         Self(0)
     }
 
-    #[must_use = "`false` should be converted to error"]
+    const fn from_style(style: &Style) -> Self {
+        let mut this = Self::new();
+        this.set_effects(style.get_effects());
+        if style.get_fg_color().is_some() {
+            this.set_fg();
+        }
+        if style.get_bg_color().is_some() {
+            this.set_bg();
+        }
+        this
+    }
+
     const fn set_effects(&mut self, effects: Effects) -> bool {
         let prev = self.0;
 
@@ -96,14 +107,12 @@ impl SetStyleFields {
         self.0 != prev
     }
 
-    #[must_use = "`false` should be converted to error"]
     const fn set_fg(&mut self) -> bool {
         let prev = self.0;
         self.0 |= Self::FG;
         self.0 != prev
     }
 
-    #[must_use = "`false` should be converted to error"]
     const fn set_bg(&mut self) -> bool {
         let prev = self.0;
         self.0 |= Self::BG;
@@ -208,10 +217,11 @@ impl StrCursor<'_> {
     }
 
     /// The cursor is positioned just after the opening `[[`.
+    #[allow(clippy::too_many_lines)] // FIXME: split into parts
     const fn parse_style(&mut self, current_style: &Style) -> Result<Style, ParseError> {
         let mut style = Style::new();
         let mut is_initial = true;
-        let mut style_copied = false;
+        let mut copied_fields = None;
         let mut set_fields = SetStyleFields::new();
 
         while !self.is_eof() {
@@ -238,7 +248,7 @@ impl StrCursor<'_> {
 
                 b"*" => {
                     if is_initial {
-                        style_copied = true;
+                        copied_fields = Some(SetStyleFields::from_style(current_style));
                         style = *current_style;
                     } else {
                         return Err(ParseErrorKind::NonInitialCopy.with_pos(token_range));
@@ -270,16 +280,33 @@ impl StrCursor<'_> {
                     style = style.bg_color(Some(color));
                 }
 
-                // TODO: does it make sense to implement strict checks (allow negating only set styles)?
                 b"-color" | b"-fg" | b"!color" | b"!fg" => {
                     if !set_fields.set_fg() {
                         return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+                    let Some(copied_fields) = &mut copied_fields else {
+                        // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                        // on a bogus specifier.
+                        return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                    };
+                    if copied_fields.set_fg() {
+                        // The effect wasn't set in the copied style
+                        return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
                     }
                     style = style.fg_color(None);
                 }
                 b"-on" | b"-bg" | b"!on" | b"!bg" => {
                     if !set_fields.set_bg() {
                         return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+                    let Some(copied_fields) = &mut copied_fields else {
+                        // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                        // on a bogus specifier.
+                        return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                    };
+                    if copied_fields.set_bg() {
+                        // The effect wasn't set in the copied style
+                        return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
                     }
                     style = style.bg_color(None);
                 }
@@ -288,13 +315,18 @@ impl StrCursor<'_> {
                     let Some(effects) = Self::parse_effects(token_without_prefix) else {
                         return Err(ParseErrorKind::UnsupportedEffect.with_pos(token_range));
                     };
-                    if !style_copied {
+                    let Some(copied_fields) = &mut copied_fields else {
                         // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
                         // on a bogus specifier.
                         return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
-                    }
+                    };
+
                     if !set_fields.set_effects(effects) {
                         return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+                    if copied_fields.set_effects(effects) {
+                        // The effect wasn't set in the copied style
+                        return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
                     }
 
                     style = style.effects(style.get_effects().remove(effects));

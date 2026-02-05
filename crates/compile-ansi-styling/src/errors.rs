@@ -18,6 +18,7 @@ pub enum ParseErrorKind {
     UnsupportedEffect,
     NegationWithoutCopy,
     DuplicateSpecifier,
+    RedundantNegation,
     SpanOverflow,
     TextOverflow,
 }
@@ -40,6 +41,7 @@ impl ParseErrorKind {
             Self::UnsupportedEffect => "unsupported effect",
             Self::NegationWithoutCopy => "negation without * (copy) specifier",
             Self::DuplicateSpecifier => "duplicate specifier",
+            Self::RedundantNegation => "redundant negation",
             Self::SpanOverflow => "too many spans",
             Self::TextOverflow => "too much text",
         }

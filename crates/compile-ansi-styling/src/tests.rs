@@ -253,13 +253,31 @@ fn duplicate_style_errors() {
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 13..20);
 
-    let raw = "[[* -bold bold]]";
+    let raw = "[[bold]]![[* -bold bold]]";
     let err = raw.parse::<DynStyled>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
-    assert_eq!(err.pos(), 10..14);
+    assert_eq!(err.pos(), 19..23);
 
-    let raw = "[[* -fg green]]";
+    let raw = "[[red]]![[* -fg green]]";
     let err = raw.parse::<DynStyled>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
-    assert_eq!(err.pos(), 8..13);
+    assert_eq!(err.pos(), 16..21);
+}
+
+#[test]
+fn redundant_negation_errors() {
+    let raw = "[[* -bold]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::RedundantNegation);
+    assert_eq!(err.pos(), 4..9);
+
+    let raw = "[[* !fg]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::RedundantNegation);
+    assert_eq!(err.pos(), 4..7);
+
+    let raw = "[[red]]~[[* !fg]]~[[* !fg]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::RedundantNegation);
+    assert_eq!(err.pos(), 22..25);
 }
