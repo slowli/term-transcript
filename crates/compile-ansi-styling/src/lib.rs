@@ -3,12 +3,14 @@
 #![allow(missing_docs)] // FIXME
 
 pub use crate::{
+    ansi_parser::AnsiError,
     errors::{ParseError, ParseErrorKind},
     types::{DynStyled, StackStyled, Styled, StyledSpan},
 };
 
 #[macro_use]
 mod utils;
+mod ansi_parser;
 mod errors;
 mod rich_parser;
 #[cfg(test)]

@@ -2,6 +2,8 @@
 
 use core::{fmt, ops, str};
 
+use anstyle::{Ansi256Color, AnsiColor, Color, RgbColor, Style};
+
 /// Version of `try!` / `?` that can be used in const fns.
 macro_rules! const_try {
     ($res:expr) => {
@@ -10,6 +12,70 @@ macro_rules! const_try {
             Err(err) => return Err(err),
         }
     };
+}
+
+const fn color_cube_color(index: u8) -> u8 {
+    match index {
+        0 => 0,
+        1 => 0x5f,
+        2 => 0x87,
+        3 => 0xaf,
+        4 => 0xd7,
+        5 => 0xff,
+        _ => unreachable!(),
+    }
+}
+
+const fn normalize_color(color: Color) -> Color {
+    const STD_COLORS: [AnsiColor; 16] = [
+        AnsiColor::Black,
+        AnsiColor::Red,
+        AnsiColor::Green,
+        AnsiColor::Yellow,
+        AnsiColor::Blue,
+        AnsiColor::Magenta,
+        AnsiColor::Cyan,
+        AnsiColor::White,
+        AnsiColor::BrightBlack,
+        AnsiColor::BrightRed,
+        AnsiColor::BrightGreen,
+        AnsiColor::BrightYellow,
+        AnsiColor::BrightBlue,
+        AnsiColor::BrightMagenta,
+        AnsiColor::BrightCyan,
+        AnsiColor::BrightWhite,
+    ];
+
+    if let Color::Ansi256(Ansi256Color(index)) = color {
+        match index {
+            0..=15 => Color::Ansi(STD_COLORS[index as usize]),
+
+            16..=231 => {
+                let index = index - 16;
+                let r = color_cube_color(index / 36);
+                let g = color_cube_color((index / 6) % 6);
+                let b = color_cube_color(index % 6);
+                Color::Rgb(RgbColor(r, g, b))
+            }
+
+            _ => {
+                let gray = 10 * (index - 232) + 8;
+                Color::Rgb(RgbColor(gray, gray, gray))
+            }
+        }
+    } else {
+        color
+    }
+}
+
+pub(crate) const fn normalize_style(mut style: Style) -> Style {
+    if let Some(color) = style.get_fg_color() {
+        style = style.fg_color(Some(normalize_color(color)));
+    }
+    if let Some(color) = style.get_bg_color() {
+        style = style.bg_color(Some(normalize_color(color)));
+    }
+    style
 }
 
 const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;

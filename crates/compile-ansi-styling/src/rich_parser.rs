@@ -6,7 +6,7 @@ use anstyle::{Ansi256Color, AnsiColor, Color, RgbColor, Style};
 
 use crate::{
     DynStyled, ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
-    utils::{Stack, StackStr, StrCursor},
+    utils::{Stack, StackStr, StrCursor, normalize_style},
 };
 
 impl Styled {
@@ -146,7 +146,7 @@ impl StrCursor<'_> {
         let mut is_initial = true;
         while !self.is_eof() {
             if self.gobble("]]") {
-                return Ok(style);
+                return Ok(normalize_style(style));
             }
 
             self.skip_whitespace();
@@ -436,7 +436,7 @@ mod tests {
             .blink()
             .invert()
             .italic()
-            .fg_color(Some(Ansi256Color(42).into()))
+            .fg_color(Some(RgbColor(0, 215, 135).into()))
             .bg_color(Some(RgbColor(0xc0, 0xff, 0xee).into()));
         assert_eq!(style, expected_style);
         assert!(cursor.is_eof(), "{cursor:?}");
