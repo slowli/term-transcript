@@ -1,8 +1,8 @@
 //! Rich style parsing (incl. in compile time).
 
-use core::{ops, str::FromStr};
+use core::{fmt, ops, str::FromStr};
 
-use anstyle::{Ansi256Color, AnsiColor, Color, RgbColor, Style};
+use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 use crate::{
     DynStyled, ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
@@ -389,6 +389,83 @@ impl FromStr for DynStyled {
             text.push_str(&raw[text_start..text_start + span.len]);
         }
         Ok(Self { text, spans })
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct RichStyle<'a>(pub(crate) &'a Style);
+
+impl fmt::Display for RichStyle<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let effects = self.0.get_effects();
+        if effects.contains(Effects::BOLD) {
+            write!(formatter, "bold ")?;
+        }
+        if effects.contains(Effects::ITALIC) {
+            write!(formatter, "italic ")?;
+        }
+        if effects.contains(Effects::DIMMED) {
+            write!(formatter, "dim ")?;
+        }
+        if effects.contains(Effects::UNDERLINE) {
+            write!(formatter, "underline ")?;
+        }
+        if effects.contains(Effects::STRIKETHROUGH) {
+            write!(formatter, "strike ")?;
+        }
+        if effects.contains(Effects::INVERT) {
+            write!(formatter, "invert ")?;
+        }
+        if effects.contains(Effects::BLINK) {
+            write!(formatter, "blink ")?;
+        }
+        if effects.contains(Effects::HIDDEN) {
+            write!(formatter, "hidden ")?;
+        }
+
+        if let Some(color) = self.0.get_fg_color() {
+            write_color(formatter, color)?;
+            formatter.write_str(" ")?;
+        }
+
+        if let Some(color) = self.0.get_bg_color() {
+            write!(formatter, "on ")?;
+            write_color(formatter, color)?;
+        }
+        Ok(())
+    }
+}
+
+fn write_color(formatter: &mut fmt::Formatter<'_>, color: Color) -> fmt::Result {
+    match color {
+        Color::Ansi(color) => write!(
+            formatter,
+            "{base}{bright}",
+            base = ansi_color_str(color),
+            bright = if color.is_bright() { "*" } else { "" }
+        ),
+        Color::Ansi256(Ansi256Color(idx)) => write!(formatter, "{idx}"),
+        Color::Rgb(RgbColor(r, g, b)) => {
+            if r % 17 == 0 && g % 17 == 0 && b % 17 == 0 {
+                write!(formatter, "#{:x}{:x}{:x}", r / 17, g / 17, b / 17)
+            } else {
+                write!(formatter, "#{r:02x}{g:02x}{b:02x}")
+            }
+        }
+    }
+}
+
+fn ansi_color_str(color: AnsiColor) -> &'static str {
+    match color.bright(false) {
+        AnsiColor::Black => "black",
+        AnsiColor::Red => "red",
+        AnsiColor::Green => "green",
+        AnsiColor::Yellow => "yellow",
+        AnsiColor::Blue => "blue",
+        AnsiColor::Magenta => "magenta",
+        AnsiColor::Cyan => "cyan",
+        AnsiColor::White => "white",
+        _ => unreachable!(),
     }
 }
 

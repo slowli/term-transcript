@@ -37,6 +37,11 @@ fn parsing_styled_str() {
     let styled: DynStyled = SIMPLE_INPUT.parse().unwrap();
     assert_eq!(styled.text, "Hello world!");
     assert_eq!(styled.spans, SIMPLE_STYLES);
+
+    assert_eq!(
+        styled.to_string(),
+        "[[bold underline magenta on yellow*]]Hello[[]] world[[bold strike invert]]!"
+    );
 }
 
 #[test]
@@ -72,6 +77,11 @@ fn parsing_with_unstyled_ends() {
     let styled: DynStyled = TEST_INPUT.parse().unwrap();
     assert_eq!(styled.text, "test.rs: [[DEBUG]] Hello");
     assert_eq!(styled.spans, expected_spans);
+
+    assert_eq!(
+        styled.to_string(),
+        "test.rs: [[[bold green*]][DEBUG][[]]] Hello"
+    );
 }
 
 #[test]

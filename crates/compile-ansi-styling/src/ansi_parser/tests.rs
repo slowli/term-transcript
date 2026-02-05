@@ -19,6 +19,11 @@ fn term_roundtrip_with_multiple_colors() {
     let ansi = STYLED.ansi().to_string();
     let restored = DynStyled::from_ansi(ansi.as_bytes()).unwrap();
     assert_eq!(STYLED, restored);
+
+    assert_eq!(
+        STYLED.to_string(),
+        "He[[black on white]]ll[[magenta]]o [[italic strike green on yellow]]world[[dim underline on cyan]]!"
+    );
 }
 
 #[test]
@@ -28,6 +33,11 @@ fn roundtrip_with_indexed_colors() {
     let ansi = STYLED.ansi().to_string();
     let restored = DynStyled::from_ansi(ansi.as_bytes()).unwrap();
     assert_eq!(STYLED, restored);
+
+    assert_eq!(
+        STYLED.to_string(),
+        "H[[magenta]]e[[on yellow*]]l[[#0087ff]]l[[on #bcbcbc]]o"
+    );
 }
 
 #[test]
@@ -37,6 +47,11 @@ fn roundtrip_with_rgb_colors() {
     let ansi = STYLED.ansi().to_string();
     let restored = DynStyled::from_ansi(ansi.as_bytes()).unwrap();
     assert_eq!(STYLED, restored);
+
+    assert_eq!(
+        STYLED.to_string(),
+        "H[[#101e2f]]e[[on #fffefd]]l[[#000]]l[[#00a080]]o"
+    );
 }
 
 #[test]

@@ -7,6 +7,7 @@ use anstyle::Style;
 use crate::{
     AnsiError,
     ansi_parser::AnsiParser,
+    rich_parser::RichStyle,
     utils::{Stack, StackStr},
 };
 
@@ -73,7 +74,6 @@ impl DynStyled {
     }
 }
 
-// FIXME: also implement fmt::Display outputting rich styles
 impl<T, S> Styled<T, S>
 where
     T: ops::Deref<Target = str>,
@@ -85,6 +85,34 @@ where
             text: &self.text,
             spans: &self.spans,
         }
+    }
+}
+
+/// Outputs a string with rich syntax.
+// FIXME: this only works if the text doesn't contain a `[[` in the same style span.
+//  Deal with by escaping `[[` -> `[[[[*]]`?
+impl<T, S> fmt::Display for Styled<T, S>
+where
+    T: ops::Deref<Target = str>,
+    S: ops::Deref<Target = [StyledSpan]>,
+{
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut pos = 0;
+        for (i, span) in self.spans.iter().enumerate() {
+            let text = &self.text[pos..pos + span.len];
+            if i == 0 && span.style.is_plain() {
+                // Special case: do not output an extra `[[]]` at the string start.
+                formatter.write_str(text)?;
+            } else {
+                write!(
+                    formatter,
+                    "[[{style}]]{text}",
+                    style = RichStyle(&span.style).to_string().trim_end()
+                )?;
+            }
+            pos += span.len;
+        }
+        Ok(())
     }
 }
 
