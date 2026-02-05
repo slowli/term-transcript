@@ -1,0 +1,15 @@
+[package]
+name = "compile-ansi-styling"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+
+[dependencies]
+anstyle.workspace = true
+
+[lints]
+workspace = true

@@ -1,5 +1,10 @@
 [workspace]
-members = ["lib", "cli", "e2e-tests/rainbow"]
+members = [
+  "lib",
+  "cli",
+  "crates/compile-ansi-styling",
+  "e2e-tests/rainbow"
+]
 resolver = "2"
 
 [workspace.package]
