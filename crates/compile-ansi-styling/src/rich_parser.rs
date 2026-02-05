@@ -44,6 +44,73 @@ impl Styled {
     }
 }
 
+#[derive(Debug)]
+struct SetStyleFields(u16);
+
+impl SetStyleFields {
+    const BOLD: u16 = 1;
+    const ITALIC: u16 = 2;
+    const UNDERLINE: u16 = 4;
+    const STRIKETHROUGH: u16 = 8;
+    const BLINK: u16 = 16;
+    const INVERT: u16 = 32;
+    const HIDDEN: u16 = 64;
+    const DIMMED: u16 = 128;
+
+    const FG: u16 = 256;
+    const BG: u16 = 512;
+
+    const fn new() -> Self {
+        Self(0)
+    }
+
+    #[must_use = "`false` should be converted to error"]
+    const fn set_effects(&mut self, effects: Effects) -> bool {
+        let prev = self.0;
+
+        if effects.contains(Effects::BOLD) {
+            self.0 |= Self::BOLD;
+        }
+        if effects.contains(Effects::ITALIC) {
+            self.0 |= Self::ITALIC;
+        }
+        if effects.contains(Effects::UNDERLINE) {
+            self.0 |= Self::UNDERLINE;
+        }
+        if effects.contains(Effects::STRIKETHROUGH) {
+            self.0 |= Self::STRIKETHROUGH;
+        }
+        if effects.contains(Effects::BLINK) {
+            self.0 |= Self::BLINK;
+        }
+        if effects.contains(Effects::INVERT) {
+            self.0 |= Self::INVERT;
+        }
+        if effects.contains(Effects::HIDDEN) {
+            self.0 |= Self::HIDDEN;
+        }
+        if effects.contains(Effects::DIMMED) {
+            self.0 |= Self::DIMMED;
+        }
+
+        self.0 != prev
+    }
+
+    #[must_use = "`false` should be converted to error"]
+    const fn set_fg(&mut self) -> bool {
+        let prev = self.0;
+        self.0 |= Self::FG;
+        self.0 != prev
+    }
+
+    #[must_use = "`false` should be converted to error"]
+    const fn set_bg(&mut self) -> bool {
+        let prev = self.0;
+        self.0 |= Self::BG;
+        self.0 != prev
+    }
+}
+
 /// Parser for `rich` like styling, e.g. `[[bold red on white]]text[[]]`.
 // TODO: make the number of opening / closing brackets configurable?
 #[derive(Debug)]
@@ -145,6 +212,8 @@ impl StrCursor<'_> {
         let mut style = Style::new();
         let mut is_initial = true;
         let mut style_copied = false;
+        let mut set_fields = SetStyleFields::new();
+
         while !self.is_eof() {
             self.gobble_whitespace();
             if !is_initial && self.gobble_punct() {
@@ -177,8 +246,8 @@ impl StrCursor<'_> {
                 }
 
                 b"on" => {
-                    if style.get_bg_color().is_some() {
-                        return Err(ParseErrorKind::RedefinedBackground.with_pos(token_range));
+                    if !set_fields.set_bg() {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
                     }
 
                     self.gobble_whitespace();
@@ -202,11 +271,16 @@ impl StrCursor<'_> {
                 }
 
                 // TODO: does it make sense to implement strict checks (allow negating only set styles)?
-                // TODO: does it make sense to implement redundancy checks (the same flag cannot be negated or set multiple times)?
                 b"-color" | b"-fg" | b"!color" | b"!fg" => {
+                    if !set_fields.set_fg() {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
                     style = style.fg_color(None);
                 }
                 b"-on" | b"-bg" | b"!on" | b"!bg" => {
+                    if !set_fields.set_bg() {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
                     style = style.bg_color(None);
                 }
                 neg if neg[0] == b'-' || neg[0] == b'!' => {
@@ -219,11 +293,18 @@ impl StrCursor<'_> {
                         // on a bogus specifier.
                         return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
                     }
+                    if !set_fields.set_effects(effects) {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+
                     style = style.effects(style.get_effects().remove(effects));
                 }
 
                 _ => {
                     if let Some(effects) = Self::parse_effects(token) {
+                        if !set_fields.set_effects(effects) {
+                            return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                        }
                         style = style.effects(style.get_effects().insert(effects));
                     } else {
                         let color = match Self::parse_color(token) {
@@ -233,6 +314,9 @@ impl StrCursor<'_> {
                             }
                             Err(err) => return Err(err.with_pos(token_range)),
                         };
+                        if !set_fields.set_fg() {
+                            return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                        }
                         style = style.fg_color(Some(color));
                     }
                 }

@@ -17,6 +17,7 @@ pub enum ParseErrorKind {
     NonInitialCopy,
     UnsupportedEffect,
     NegationWithoutCopy,
+    DuplicateSpecifier,
     SpanOverflow,
     TextOverflow,
 }
@@ -38,6 +39,7 @@ impl ParseErrorKind {
             Self::NonInitialCopy => "* (copy) specifier must come first",
             Self::UnsupportedEffect => "unsupported effect",
             Self::NegationWithoutCopy => "negation without * (copy) specifier",
+            Self::DuplicateSpecifier => "duplicate specifier",
             Self::SpanOverflow => "too many spans",
             Self::TextOverflow => "too much text",
         }

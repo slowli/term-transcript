@@ -235,3 +235,31 @@ fn negation_errors() {
     assert_matches!(err.kind(), ParseErrorKind::NonInitialCopy);
     assert_eq!(err.pos(), 7..8);
 }
+
+#[test]
+fn duplicate_style_errors() {
+    let raw = "[[3 green]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
+    assert_eq!(err.pos(), 4..9);
+
+    let raw = "[[on green on yellow*]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
+    assert_eq!(err.pos(), 11..13);
+
+    let raw = "[[bold green #c0ffee]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
+    assert_eq!(err.pos(), 13..20);
+
+    let raw = "[[* -bold bold]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
+    assert_eq!(err.pos(), 10..14);
+
+    let raw = "[[* -fg green]]";
+    let err = raw.parse::<DynStyled>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
+    assert_eq!(err.pos(), 8..13);
+}
