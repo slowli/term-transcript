@@ -34,6 +34,9 @@ impl Styled {
     }
 }
 
+/// Dynamic (i.e., non-compile time) variation of [`Styled`].
+pub type DynStyled = Styled<String, Vec<StyledSpan>>;
+
 /// Stack-allocated version of [`Styled`] for use in compile-time parsing of rich styling strings.
 #[doc(hidden)]
 #[derive(Debug)]
@@ -48,12 +51,11 @@ impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CA
     /// # Panics
     ///
     /// Panics if the rich syntax is invalid.
+    #[track_caller]
     pub const fn new(raw: &str) -> Self {
         match Self::parse(raw) {
             Ok(styled) => styled,
-            Err(_) => {
-                panic!("parse error"); // FIXME: output details
-            }
+            Err(err) => err.compile_panic(raw),
         }
     }
 

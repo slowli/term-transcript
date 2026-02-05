@@ -1,11 +1,11 @@
 //! Rich style parsing (incl. in compile time).
 
-use core::ops;
+use core::{ops, str::FromStr};
 
 use anstyle::{Ansi256Color, AnsiColor, Color, RgbColor, Style};
 
 use crate::{
-    ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
+    DynStyled, ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
     utils::{Stack, StackStr, StrCursor},
 };
 
@@ -18,28 +18,34 @@ impl Styled {
         let mut style_end_pos = 0;
         while !cursor.is_eof() {
             if cursor.gobble("[[") {
+                while !cursor.is_eof() && cursor.current_byte() == b'[' {
+                    cursor.advance_byte();
+                }
+
                 let end_pos = cursor.pos() - 2;
                 if end_pos - style_end_pos > 0 {
                     span_count += 1;
+                    text_len += end_pos - style_end_pos;
                 }
-                while !cursor.gobble("]]") {
+                while !cursor.is_eof() && !cursor.gobble("]]") {
                     cursor.advance_byte();
                 }
                 style_end_pos = cursor.pos();
             } else {
-                text_len += 1;
                 cursor.advance_byte();
             }
         }
 
         if raw.len() - style_end_pos > 0 {
             span_count += 1;
+            text_len += raw.len() - style_end_pos;
         }
         (text_len, span_count)
     }
 }
 
 /// Parser for `rich` like styling, e.g. `[[bold red on white]]text[[]]`.
+// TODO: make the number of opening / closing brackets configurable?
 #[derive(Debug)]
 struct RichParser<'a> {
     cursor: StrCursor<'a>,
@@ -64,6 +70,15 @@ impl<'a> RichParser<'a> {
 
         while !self.cursor.is_eof() {
             if self.cursor.gobble("[[") {
+                // Gobble any additional `[`s. It's always right to interpret the rightmost sequence of `[`
+                // as the start of the style, because the style itself cannot contain `[`s.
+                while !self.cursor.is_eof() && self.cursor.current_byte() == b'[' {
+                    self.cursor.advance_byte();
+                }
+                if self.cursor.is_eof() {
+                    return Err(self.cursor.error(ParseErrorKind::UnfinishedStyle));
+                }
+
                 // Push the previous styled span
                 let end_pos = self.cursor.pos() - 2;
                 let span_and_text_start = if end_pos - self.style_end_pos > 0 {
@@ -106,16 +121,39 @@ impl<'a> RichParser<'a> {
 }
 
 impl StrCursor<'_> {
+    /// Produces the error spanned at the next char.
     const fn error(&self, kind: ParseErrorKind) -> ParseError {
-        kind.with_pos(self.pos()..self.pos() + 1)
+        let range = if self.is_eof() {
+            self.pos()..self.pos()
+        } else {
+            self.expand_to_char_boundaries(self.pos()..self.pos() + 1)
+        };
+        kind.with_pos(range)
+    }
+
+    const fn error_on_empty_token(&self, unfinished: ParseErrorKind) -> ParseError {
+        if self.is_eof() {
+            unfinished.with_pos(self.pos()..self.pos())
+        } else {
+            let next_char_pos = self.expand_to_char_boundaries(self.pos()..self.pos() + 1);
+            ParseErrorKind::BogusDelimiter.with_pos(next_char_pos)
+        }
     }
 
     /// The cursor is positioned just after the opening `[[`.
     const fn parse_style(&mut self) -> Result<Style, ParseError> {
         let mut style = Style::new();
         let mut is_initial = true;
-        while !self.is_eof() && !self.gobble("]]") {
-            self.skip_whitespace(is_initial);
+        while !self.is_eof() {
+            if self.gobble("]]") {
+                return Ok(style);
+            }
+
+            self.skip_whitespace();
+            if !is_initial && self.gobble_punct() {
+                self.skip_whitespace();
+            }
+
             if self.is_eof() {
                 return Err(self.error(ParseErrorKind::UnfinishedStyle));
             }
@@ -124,6 +162,10 @@ impl StrCursor<'_> {
             let token = self.range(&token_range);
 
             match token {
+                b"" => {
+                    return Err(self.error_on_empty_token(ParseErrorKind::UnfinishedStyle));
+                }
+
                 b"bold" | b"b" => {
                     style = style.bold();
                 }
@@ -154,17 +196,20 @@ impl StrCursor<'_> {
                         return Err(ParseErrorKind::RedefinedBackground.with_pos(token_range));
                     }
 
-                    self.skip_whitespace(false);
+                    self.skip_whitespace();
                     if self.is_eof() {
                         return Err(self.error(ParseErrorKind::UnfinishedStyle));
                     }
 
+                    let on_token_range = token_range;
                     let token_range = self.take_token();
                     let token = self.range(&token_range);
                     let color = match Self::parse_color(token) {
                         Ok(Some(color)) => color,
                         Ok(None) => {
-                            return Err(ParseErrorKind::UnfinishedBackground.with_pos(token_range));
+                            return Err(
+                                ParseErrorKind::UnfinishedBackground.with_pos(on_token_range)
+                            );
                         }
                         Err(err) => return Err(err.with_pos(token_range)),
                     };
@@ -185,7 +230,7 @@ impl StrCursor<'_> {
 
             is_initial = false;
         }
-        Ok(style)
+        Err(self.error(ParseErrorKind::UnfinishedStyle))
     }
 
     const fn parse_hex_digit(ch: u8) -> Result<u8, ParseErrorKind> {
@@ -198,9 +243,11 @@ impl StrCursor<'_> {
     }
 
     const fn parse_index(s: &[u8]) -> Result<u8, ParseErrorKind> {
-        if s.len() > 3 {
+        if s.len() > 3 || s[0] == b'0' {
+            // We disallow colors starting from `0` (e.g., `001`) to avoid ambiguity.
             return Err(ParseErrorKind::InvalidIndexColor);
         }
+
         let mut i = 0;
         let mut index = 0_u8;
         while i < s.len() {
@@ -269,14 +316,23 @@ impl StrCursor<'_> {
         })
     }
 
-    const fn skip_whitespace(&mut self, is_initial: bool) {
+    const fn skip_whitespace(&mut self) {
         while !self.is_eof() {
             let ch = self.current_byte();
-            if ch.is_ascii_whitespace() || (!is_initial && matches!(ch, b',' | b';')) {
+            if ch.is_ascii_whitespace() {
                 self.advance_byte();
             } else {
                 break;
             }
+        }
+    }
+
+    const fn gobble_punct(&mut self) -> bool {
+        if !self.is_eof() && matches!(self.current_byte(), b',' | b';') {
+            self.advance_byte();
+            true
+        } else {
+            false
         }
     }
 
@@ -320,6 +376,22 @@ impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CA
     }
 }
 
+impl FromStr for DynStyled {
+    type Err = ParseError;
+
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        let mut parser = RichParser::new(raw);
+        let mut text = String::new();
+        let mut spans = Vec::new();
+
+        while let ops::ControlFlow::Continue((span, text_start)) = parser.step()? {
+            spans.push(span);
+            text.push_str(&raw[text_start..text_start + span.len]);
+        }
+        Ok(Self { text, spans })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -344,7 +416,7 @@ mod tests {
 
     #[test]
     fn parsing_style() {
-        let mut cursor = StrCursor::new("bold, ul magenta on yellow*");
+        let mut cursor = StrCursor::new("bold, ul magenta on yellow*]]");
         let style = cursor.parse_style().unwrap();
         let expected_style = Style::new()
             .bold()
@@ -357,7 +429,7 @@ mod tests {
 
     #[test]
     fn parsing_style_with_complex_colors() {
-        let mut cursor = StrCursor::new("dim i invert; blink; 42 on #c0ffee");
+        let mut cursor = StrCursor::new("dim i invert; blink; 42 on #c0ffee]]");
         let style = cursor.parse_style().unwrap();
         let expected_style = Style::new()
             .dimmed()

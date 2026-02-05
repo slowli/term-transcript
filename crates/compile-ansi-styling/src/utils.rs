@@ -12,6 +12,27 @@ macro_rules! const_try {
     };
 }
 
+const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;
+const UTF8_CONTINUATION_MARKER: u8 = 0b1000_0000;
+
+const fn ceil_char_boundary(bytes: &[u8], mut pos: usize) -> usize {
+    assert!(pos <= bytes.len());
+
+    while pos < bytes.len() && bytes[pos] & UTF8_CONTINUATION_MASK == UTF8_CONTINUATION_MARKER {
+        pos += 1;
+    }
+    pos
+}
+
+const fn floor_char_boundary(bytes: &[u8], mut pos: usize) -> usize {
+    assert!(pos <= bytes.len());
+
+    while pos > 0 && bytes[pos] & UTF8_CONTINUATION_MASK == UTF8_CONTINUATION_MARKER {
+        pos -= 1;
+    }
+    pos
+}
+
 #[derive(Debug)]
 pub(crate) struct PushError;
 
@@ -167,5 +188,17 @@ impl<'a> StrCursor<'a> {
         } else {
             false
         }
+    }
+
+    pub(crate) const fn expand_to_char_boundaries(
+        &self,
+        range: ops::Range<usize>,
+    ) -> ops::Range<usize> {
+        assert!(range.start <= range.end);
+        assert!(range.start < self.bytes.len());
+
+        let start = floor_char_boundary(self.bytes, range.start);
+        let end = ceil_char_boundary(self.bytes, range.end);
+        start..end
     }
 }
