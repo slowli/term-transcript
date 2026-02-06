@@ -48,6 +48,45 @@ fn parsing_styled_str() {
 fn parsing_styled_in_compile_time() {
     assert_eq!(SIMPLE_STYLED.text(), "Hello world!");
     assert_eq!(SIMPLE_STYLED.spans(), SIMPLE_STYLES);
+
+    SIMPLE_STYLED.diff(&SIMPLE_STYLED).unwrap();
+}
+
+#[test]
+fn diff_by_text() {
+    const EXPECTED_DIFF: Styled = styled!(
+        "Styled strings differ by text\n\
+        [[bold]]Diff[[]] [[red]]< left[[]] / [[green]]right >[[]] :\n\
+        [[red]]<Hello world![[]]\n\
+        [[green]]>Hello[[bold green on #005f00]],[[green]] world![[]]\n"
+    );
+
+    let other_style = styled!("Hello, [[bold green]]world[[]]!");
+    let diff = SIMPLE_STYLED.diff(&other_style).unwrap_err();
+    let output = DynStyled::from_ansi(&diff.to_string()).unwrap();
+    assert_eq!(output, EXPECTED_DIFF);
+}
+
+#[test]
+fn diff_by_style() {
+    const EXPECTED_DIFF: Styled = styled!(
+        r"Styled strings differ by style
+[[red]]> [[bold underline magenta on yellow*]]Hello[[]] world[[bold strike invert]]![[]]
+[[red]]> [[white on red]]^^^^^[[]] [[white on red]]^^^^^[[black on yellow]]![[]]
+
+[[bold]]Positions         Left style                Right style       [[*]]
+========== ========================= =========================[[]]
+      0..5 [[bold underline magenta on yellow*]]bold underline magenta on[[]]          (none)          [[*]]
+           [[bold underline magenta on yellow*]]         yellow*         [[]]                          [[*]]
+     6..11          (none)           [[bold green]]       bold green        [[]]
+    11..12 [[bold strike invert]]   bold strike invert    [[]]          (none)          [[*]]
+"
+    );
+
+    let other_style = styled!("Hello [[bold green]]world[[]]!");
+    let diff = SIMPLE_STYLED.diff(&other_style).unwrap_err();
+    let output = DynStyled::from_ansi(&diff.to_string()).unwrap();
+    assert_eq!(output, EXPECTED_DIFF);
 }
 
 #[test]

@@ -14,6 +14,7 @@ anstyle.workspace = true
 
 # Private dependencies
 compile-fmt.workspace = true
+pretty_assertions.workspace = true
 unicode-width.workspace = true
 
 [dev-dependencies]

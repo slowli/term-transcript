@@ -237,8 +237,8 @@ impl<'a> StyleDiff<'a> {
             formatter,
             "{TABLE_HEAD}{pos:^POS_WIDTH$} {lhs:^STYLE_WIDTH$} {rhs:^STYLE_WIDTH$}",
             pos = "Positions",
-            lhs = "Expected style",
-            rhs = "Actual style"
+            lhs = "Left style",
+            rhs = "Right style"
         )?;
         writeln!(
             formatter,

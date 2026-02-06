@@ -5,7 +5,7 @@ use core::{fmt, ops};
 use anstyle::Style;
 
 use crate::{
-    AnsiError,
+    AnsiError, StyleDiff,
     ansi_parser::AnsiParser,
     rich_parser::{EscapedText, RichStyle},
     utils::{Stack, StackStr},
@@ -27,18 +27,6 @@ pub struct StyledSpan {
 pub struct Styled<T = &'static str, S = &'static [StyledSpan]> {
     pub(crate) text: T,
     pub(crate) spans: S,
-}
-
-impl Styled {
-    /// Gets the text without styling.
-    pub const fn text(&self) -> &str {
-        self.text
-    }
-
-    /// Gets the spans for the text.
-    pub const fn spans(&self) -> &[StyledSpan] {
-        self.spans
-    }
 }
 
 /// Dynamic (i.e., non-compile time) variation of [`Styled`].
@@ -86,6 +74,45 @@ where
     T: ops::Deref<Target = str>,
     S: ops::Deref<Target = [StyledSpan]>,
 {
+    /// Returns the unstyled text.
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// Returns the style spans.
+    pub fn spans(&self) -> &[StyledSpan] {
+        &self.spans
+    }
+
+    /// Diffs this against the `other` styled string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the styled strings differ either in text, or in applied styles.
+    pub fn diff<'s, Tr, Sr>(&'s self, other: &'s Styled<Tr, Sr>) -> Result<(), Diff<'s>>
+    where
+        Tr: ops::Deref<Target = str>,
+        Sr: ops::Deref<Target = [StyledSpan]>,
+    {
+        let this_text = self.text();
+        let other_text = other.text();
+        if this_text == other_text {
+            let this_spans = self.spans();
+            let other_spans = other.spans();
+            let style_diff = StyleDiff::new(this_text, this_spans, other_spans);
+            if style_diff.is_empty() {
+                Ok(())
+            } else {
+                Err(Diff::Style(style_diff))
+            }
+        } else {
+            Err(Diff::Text(TextDiff {
+                lhs: this_text,
+                rhs: other_text,
+            }))
+        }
+    }
+
     /// Returns a string with embedded ANSI escapes.
     pub fn ansi(&self) -> impl fmt::Display + '_ {
         Ansi {
@@ -152,6 +179,58 @@ where
 {
     fn eq(&self, other: &Styled<Tr, Sr>) -> bool {
         *self.text == *other.text && *self.spans == *other.spans
+    }
+}
+
+#[derive(Debug)]
+pub struct TextDiff<'a> {
+    lhs: &'a str,
+    rhs: &'a str,
+}
+
+impl fmt::Display for TextDiff<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use pretty_assertions::Comparison;
+
+        // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
+        // to switch to `fmt::Display`.
+        struct DebugStr<'a>(&'a str);
+
+        impl fmt::Debug for DebugStr<'_> {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(formatter, "{}", self.0)
+            }
+        }
+
+        write!(
+            formatter,
+            "{}",
+            Comparison::new(&DebugStr(self.lhs), &DebugStr(self.rhs))
+        )
+    }
+}
+
+pub enum Diff<'a> {
+    Text(TextDiff<'a>),
+    Style(StyleDiff<'a>),
+}
+
+impl fmt::Display for Diff<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Text(diff) => write!(formatter, "Styled strings differ by text\n{diff}"),
+            Self::Style(diff) => write!(
+                formatter,
+                "Styled strings differ by style\n{diff}\n{diff:#}"
+            ),
+        }
+    }
+}
+
+// Delegates to `Display` to get better panic messages on `.diff(_).unwrap()`.
+impl fmt::Debug for Diff<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, formatter)
     }
 }
 

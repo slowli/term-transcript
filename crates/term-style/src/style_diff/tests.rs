@@ -91,7 +91,7 @@ fn writing_color_spec() {
 #[test]
 fn writing_color_diff_table() {
     const EXPECTED: Styled = styled!(
-        r"[[bold]]Positions       Expected style             Actual style       [[*]]
+        r"[[bold]]Positions         Left style                Right style       [[*]]
 ========== ========================= =========================[[]]
       0..2          (none)           [[bold strike blink red on white]]bold strike blink red on [[]]
                                      [[bold strike blink red on white]]          white          [[]]
