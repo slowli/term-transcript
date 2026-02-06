@@ -2,7 +2,7 @@
 members = [
   "lib",
   "cli",
-  "crates/compile-ansi-styling",
+  "crates/term-style",
   "e2e-tests/rainbow"
 ]
 resolver = "2"

@@ -1,4 +1,4 @@
-//! Compile-time ANSI styling.
+//! Terminal ANSI styling tools.
 
 #![allow(missing_docs)] // FIXME
 
