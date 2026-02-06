@@ -48,7 +48,14 @@ impl DynStyled {
     /// # Errors
     ///
     /// Returns an error if the input is not a valid ANSI escaped string.
-    pub fn from_ansi(ansi_bytes: &[u8]) -> Result<Self, AnsiError> {
+    pub fn from_ansi(ansi_str: &str) -> Result<Self, AnsiError> {
+        AnsiParser::parse(ansi_str.as_bytes())
+    }
+
+    /// # Errors
+    ///
+    /// Returns an error if the input is not a valid ANSI escaped string.
+    pub fn from_ansi_bytes(ansi_bytes: &[u8]) -> Result<Self, AnsiError> {
         AnsiParser::parse(ansi_bytes)
     }
 
@@ -105,7 +112,7 @@ where
                 write!(
                     formatter,
                     "[[{style}]]{text}",
-                    style = RichStyle(&span.style).to_string().trim_end(),
+                    style = RichStyle(&span.style),
                     text = EscapedText(text)
                 )?;
             }

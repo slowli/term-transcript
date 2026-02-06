@@ -1,6 +1,7 @@
 //! Rich style parsing (incl. in compile time).
 
 use core::{fmt, ops, str::FromStr};
+use std::borrow::Cow;
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
@@ -540,67 +541,86 @@ impl FromStr for DynStyled {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct RichStyle<'a>(pub(crate) &'a Style);
 
-impl fmt::Display for RichStyle<'_> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl RichStyle<'_> {
+    pub(crate) fn tokens(self) -> Vec<Cow<'static, str>> {
+        let mut tokens = vec![];
+
         let effects = self.0.get_effects();
         if effects.contains(Effects::BOLD) {
-            write!(formatter, "bold ")?;
+            tokens.push("bold".into());
         }
         if effects.contains(Effects::ITALIC) {
-            write!(formatter, "italic ")?;
+            tokens.push("italic".into());
         }
         if effects.contains(Effects::DIMMED) {
-            write!(formatter, "dim ")?;
+            tokens.push("dim".into());
         }
         if effects.contains(Effects::UNDERLINE) {
-            write!(formatter, "underline ")?;
+            tokens.push("underline".into());
         }
         if effects.contains(Effects::STRIKETHROUGH) {
-            write!(formatter, "strike ")?;
+            tokens.push("strike".into());
         }
         if effects.contains(Effects::INVERT) {
-            write!(formatter, "invert ")?;
+            tokens.push("invert".into());
         }
         if effects.contains(Effects::BLINK) {
-            write!(formatter, "blink ")?;
+            tokens.push("blink".into());
         }
         if effects.contains(Effects::HIDDEN) {
-            write!(formatter, "hidden ")?;
+            tokens.push("hidden".into());
         }
 
         if let Some(color) = self.0.get_fg_color() {
-            write_color(formatter, color)?;
-            formatter.write_str(" ")?;
+            tokens.push(write_color(color).into());
         }
 
         if let Some(color) = self.0.get_bg_color() {
-            write!(formatter, "on ")?;
-            write_color(formatter, color)?;
+            tokens.push("on".into());
+            tokens.push(write_color(color).into());
+        }
+        tokens
+    }
+}
+
+impl fmt::Display for RichStyle<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let tokens = self.tokens();
+        for (i, token) in tokens.iter().enumerate() {
+            write!(formatter, "{token}")?;
+            if i + 1 < tokens.len() {
+                formatter.write_str(" ")?;
+            }
         }
         Ok(())
     }
 }
 
-fn write_color(formatter: &mut fmt::Formatter<'_>, color: Color) -> fmt::Result {
+fn write_color(color: Color) -> String {
+    use core::fmt::Write as _;
+
+    let mut buffer = String::new();
     match color {
         Color::Ansi(color) => write!(
-            formatter,
+            &mut buffer,
             "{base}{bright}",
             base = ansi_color_str(color),
             bright = if color.is_bright() { "*" } else { "" }
-        ),
-        Color::Ansi256(Ansi256Color(idx)) => write!(formatter, "{idx}"),
+        )
+        .unwrap(),
+        Color::Ansi256(Ansi256Color(idx)) => write!(&mut buffer, "{idx}").unwrap(),
         Color::Rgb(RgbColor(r, g, b)) => {
             if r % 17 == 0 && g % 17 == 0 && b % 17 == 0 {
-                write!(formatter, "#{:x}{:x}{:x}", r / 17, g / 17, b / 17)
+                write!(&mut buffer, "#{:x}{:x}{:x}", r / 17, g / 17, b / 17).unwrap();
             } else {
-                write!(formatter, "#{r:02x}{g:02x}{b:02x}")
+                write!(&mut buffer, "#{r:02x}{g:02x}{b:02x}").unwrap();
             }
         }
     }
+    buffer
 }
 
 fn ansi_color_str(color: AnsiColor) -> &'static str {

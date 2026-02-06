@@ -1167,6 +1167,7 @@ dependencies = [
  "anstyle",
  "assert_matches",
  "compile-fmt",
+ "unicode-width",
 ]
 
 [[package]]

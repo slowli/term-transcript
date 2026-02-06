@@ -9,8 +9,12 @@ repository.workspace = true
 readme = "README.md"
 
 [dependencies]
+# Public dependencies
 anstyle.workspace = true
+
+# Private dependencies
 compile-fmt.workspace = true
+unicode-width.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true

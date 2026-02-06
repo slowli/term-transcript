@@ -5,6 +5,7 @@
 pub use crate::{
     ansi_parser::AnsiError,
     errors::{ParseError, ParseErrorKind},
+    style_diff::StyleDiff,
     types::{DynStyled, StackStyled, Styled, StyledSpan},
 };
 
@@ -13,6 +14,7 @@ mod utils;
 mod ansi_parser;
 mod errors;
 mod rich_parser;
+mod style_diff;
 #[cfg(test)]
 mod tests;
 mod types;
@@ -21,6 +23,6 @@ mod types;
 macro_rules! styled {
     ($raw:expr) => {{
         const __CAPACITIES: (usize, usize) = $crate::Styled::capacities($raw);
-        $crate::StackStyled::<{ __CAPACITIES.0 }, { __CAPACITIES.1 }>::new($raw).as_ref()
+        const { $crate::StackStyled::<{ __CAPACITIES.0 }, { __CAPACITIES.1 }>::new($raw) }.as_ref()
     }};
 }
