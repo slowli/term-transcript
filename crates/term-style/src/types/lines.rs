@@ -2,65 +2,26 @@
 
 use core::mem;
 
-use crate::{Styled, StyledSpan, StyledStr};
+use crate::{Styled, StyledSpan, StyledStr, types::SpansSlice};
 
 #[derive(Debug)]
 pub struct Lines<'a> {
     text: &'a str,
-    spans: &'a [StyledSpan],
-    first_span_len: usize,
+    spans: SpansSlice<'a>,
 }
 
 impl<'a> Lines<'a> {
     pub(super) fn new(str: StyledStr<'a>) -> Self {
         Self {
             text: str.text,
-            spans: str.spans,
-            first_span_len: str.spans.first().map_or(0, |span| span.len),
+            spans: SpansSlice::new(str.spans),
         }
     }
 
     fn take_spans(&mut self, text_len: usize) -> Vec<StyledSpan> {
         assert!(text_len > 0);
-
-        let mut total_len = 0;
-        for (i, span) in self.spans.iter().enumerate() {
-            let effective_len = if i == 0 {
-                debug_assert!(self.first_span_len > 0);
-                debug_assert!(self.first_span_len <= span.len);
-                self.first_span_len
-            } else {
-                span.len
-            };
-
-            total_len += effective_len;
-            if total_len > text_len {
-                let (head, tail) = self.spans.split_at(i);
-                let mut output = head.to_vec();
-                if let Some(first) = output.first_mut() {
-                    first.len = self.first_span_len;
-                }
-
-                let last_span_consumed_len = text_len - (total_len - effective_len);
-                if last_span_consumed_len > 0 {
-                    output.push(StyledSpan {
-                        style: span.style,
-                        len: last_span_consumed_len,
-                    });
-                }
-
-                self.spans = tail;
-                self.first_span_len = total_len - text_len;
-                return output;
-            }
-        }
-
-        // If we're here, `text_len` covers all text
-        let mut spans = mem::take(&mut self.spans).to_vec();
-        if let Some(first) = spans.first_mut() {
-            first.len = self.first_span_len;
-        }
-        spans
+        let tail = self.spans.split_off(text_len);
+        mem::replace(&mut self.spans, tail).to_vec()
     }
 }
 

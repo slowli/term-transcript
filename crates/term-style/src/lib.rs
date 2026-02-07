@@ -7,8 +7,10 @@ pub use crate::{
     errors::{HexColorError, ParseError, ParseErrorKind},
     rich_parser::{parse_hex_color, rgb_color_to_hex},
     style_diff::StyleDiff,
-    traits::PopChar,
-    types::{Diff, Lines, StackStyled, Styled, StyledSpan, StyledStr, StyledString, TextDiff},
+    types::{
+        Diff, Lines, PopChar, SpansSlice, StackStyled, Styled, StyledSpan, StyledStr, StyledString,
+        TextDiff,
+    },
 };
 
 #[macro_use]
@@ -19,7 +21,6 @@ mod rich_parser;
 mod style_diff;
 #[cfg(test)]
 mod tests;
-mod traits;
 mod types;
 
 #[macro_export]

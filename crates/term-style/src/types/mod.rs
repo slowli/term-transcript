@@ -4,15 +4,17 @@ use core::{fmt, ops};
 
 use anstyle::Style;
 
-pub use self::lines::Lines;
+pub use self::{lines::Lines, slice::SpansSlice, traits::PopChar};
 use crate::{
-    AnsiError, PopChar, StyleDiff,
+    AnsiError, StyleDiff,
     ansi_parser::AnsiParser,
     rich_parser::{EscapedText, RichStyle},
     utils::{Stack, StackStr, normalize_style},
 };
 
 mod lines;
+mod slice;
+mod traits;
 
 /// Continuous span of styled text.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -47,6 +49,11 @@ impl<'a> StyledStr<'a> {
         } else {
             Err(Diff::Text(TextDiff::new(self.text, other.text)))
         }
+    }
+
+    /// Splits this text by lines.
+    pub fn lines(self) -> Lines<'a> {
+        Lines::new(self)
     }
 }
 
@@ -156,11 +163,6 @@ where
             text: &self.text,
             spans: &self.spans,
         }
-    }
-
-    /// Splits this text by lines.
-    pub fn lines(&self) -> Lines<'_> {
-        Lines::new(self.as_ref())
     }
 }
 
