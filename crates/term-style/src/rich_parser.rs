@@ -561,7 +561,7 @@ impl FromStr for StyledString {
             spans.push(span);
             text.push_str(&raw[text_start..text_start + span.len]);
         }
-        Ok(Self { text, spans })
+        Ok(Self::from_parts(text, spans))
     }
 }
 

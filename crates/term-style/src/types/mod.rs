@@ -4,12 +4,15 @@ use core::{fmt, ops};
 
 use anstyle::Style;
 
+pub use self::lines::Lines;
 use crate::{
-    AnsiError, StyleDiff,
+    AnsiError, PopChar, StyleDiff,
     ansi_parser::AnsiParser,
     rich_parser::{EscapedText, RichStyle},
-    utils::{Stack, StackStr},
+    utils::{Stack, StackStr, normalize_style},
 };
+
+mod lines;
 
 /// Continuous span of styled text.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -51,6 +54,27 @@ impl<'a> StyledStr<'a> {
 pub type StyledString = Styled<String, Vec<StyledSpan>>;
 
 impl StyledString {
+    pub const EMPTY: Self = Self {
+        text: String::new(),
+        spans: Vec::new(),
+    };
+
+    /// # Panics
+    ///
+    /// Panics if `text` and `spans` have differing lengths.
+    pub fn from_parts(text: String, mut spans: Vec<StyledSpan>) -> Self {
+        assert_eq!(
+            spans.iter().map(|span| span.len).sum::<usize>(),
+            text.len(),
+            "Mismatch between total length of spans and text length"
+        );
+
+        for span in &mut spans {
+            span.style = normalize_style(span.style);
+        }
+        Self { text, spans }.shrink()
+    }
+
     /// # Errors
     ///
     /// Returns an error if the input is not a valid ANSI escaped string.
@@ -109,6 +133,10 @@ where
         }
     }
 
+    pub fn into_parts(self) -> (T, S) {
+        (self.text, self.spans)
+    }
+
     /// Diffs this against the `other` styled string.
     ///
     /// # Errors
@@ -128,6 +156,35 @@ where
             text: &self.text,
             spans: &self.spans,
         }
+    }
+
+    /// Splits this text by lines.
+    pub fn lines(&self) -> Lines<'_> {
+        Lines::new(self.as_ref())
+    }
+}
+
+impl<T> Styled<T, Vec<StyledSpan>>
+where
+    T: ops::Deref<Target = str> + PopChar,
+{
+    /// Pops a single char from the end of the string.
+    #[allow(clippy::missing_panics_doc)] // internal errors; should never be triggered
+    pub fn pop(&mut self) -> Option<(char, Style)> {
+        let ch = self.text.pop_char()?;
+        let ch_len = ch.len_utf8();
+
+        let last_span = self
+            .spans
+            .last_mut()
+            .expect("internal error: text is empty, but spans aren't");
+        assert!(last_span.len >= ch_len, "style span divides char");
+        let style = last_span.style;
+        last_span.len -= ch_len;
+        if last_span.len == 0 {
+            self.spans.pop();
+        }
+        Some((ch, style))
     }
 }
 
