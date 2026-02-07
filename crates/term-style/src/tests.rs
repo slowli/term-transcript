@@ -6,7 +6,7 @@ use assert_matches::assert_matches;
 use super::*;
 
 const SIMPLE_INPUT: &str = "[[magenta on yellow*, bold, ul]]Hello[[]] world[[bold strike inv]]!";
-const SIMPLE_STYLED: Styled = styled!(SIMPLE_INPUT);
+const SIMPLE_STYLED: StyledStr = styled!(SIMPLE_INPUT);
 const SIMPLE_STYLES: &[StyledSpan] = &[
     StyledSpan {
         style: Style::new()
@@ -34,7 +34,7 @@ fn parsing_styled_str() {
     assert_eq!(styled.text.as_str(), "Hello world!");
     assert_eq!(styled.spans.as_slice(), SIMPLE_STYLES);
 
-    let styled: DynStyled = SIMPLE_INPUT.parse().unwrap();
+    let styled: StyledString = SIMPLE_INPUT.parse().unwrap();
     assert_eq!(styled.text, "Hello world!");
     assert_eq!(styled.spans, SIMPLE_STYLES);
 
@@ -54,7 +54,7 @@ fn parsing_styled_in_compile_time() {
 
 #[test]
 fn diff_by_text() {
-    const EXPECTED_DIFF: Styled = styled!(
+    const EXPECTED_DIFF: StyledStr = styled!(
         "Styled strings differ by text\n\
         [[bold]]Diff[[]] [[red]]< left[[]] / [[green]]right >[[]] :\n\
         [[red]]<Hello world![[]]\n\
@@ -63,13 +63,13 @@ fn diff_by_text() {
 
     let other_style = styled!("Hello, [[bold green]]world[[]]!");
     let diff = SIMPLE_STYLED.diff(&other_style).unwrap_err();
-    let output = DynStyled::from_ansi(&diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED_DIFF);
 }
 
 #[test]
 fn diff_by_style() {
-    const EXPECTED_DIFF: Styled = styled!(
+    const EXPECTED_DIFF: StyledStr = styled!(
         r"Styled strings differ by style
 [[red]]> [[bold underline magenta on yellow*]]Hello[[]] world[[bold strike invert]]![[]]
 [[red]]> [[white on red]]^^^^^[[]] [[white on red]]^^^^^[[black on yellow]]![[]]
@@ -85,14 +85,14 @@ fn diff_by_style() {
 
     let other_style = styled!("Hello [[bold green]]world[[]]!");
     let diff = SIMPLE_STYLED.diff(&other_style).unwrap_err();
-    let output = DynStyled::from_ansi(&diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED_DIFF);
 }
 
 #[test]
 fn parsing_with_unstyled_ends() {
     const TEST_INPUT: &str = "test.rs: [[[bold green*]][DEBUG][[]]] Hello";
-    const STYLED: Styled = styled!(TEST_INPUT);
+    const STYLED: StyledStr = styled!(TEST_INPUT);
 
     assert_eq!(STYLED.text(), "test.rs: [[DEBUG]] Hello");
     let expected_spans = [
@@ -113,7 +113,7 @@ fn parsing_with_unstyled_ends() {
     ];
     assert_eq!(STYLED.spans(), expected_spans);
 
-    let styled: DynStyled = TEST_INPUT.parse().unwrap();
+    let styled: StyledString = TEST_INPUT.parse().unwrap();
     assert_eq!(styled.text, "test.rs: [[DEBUG]] Hello");
     assert_eq!(styled.spans, expected_spans);
 
@@ -125,7 +125,7 @@ fn parsing_with_unstyled_ends() {
 
 #[test]
 fn parsing_with_style_copy() {
-    const STYLED: Styled = styled!("[[green]]Hello[[* b,i]],[[* -bold]] world[[* -fg on red]]!");
+    const STYLED: StyledStr = styled!("[[green]]Hello[[* b,i]],[[* -bold]] world[[* -fg on red]]!");
 
     assert_eq!(
         STYLED.to_string(),
@@ -136,7 +136,7 @@ fn parsing_with_style_copy() {
 
 #[test]
 fn parsing_with_no_op_style_copy() {
-    const STYLED: Styled = styled!(
+    const STYLED: StyledStr = styled!(
         r"[[[[*]]Brack[[*
         ]]ets!]]"
     );
@@ -149,13 +149,13 @@ fn parsing_with_no_op_style_copy() {
 #[test]
 fn unfinished_errors() {
     for raw in ["[[red", "[[red ", "[[red, "] {
-        let err = raw.parse::<DynStyled>().unwrap_err();
+        let err = raw.parse::<StyledString>().unwrap_err();
         assert_matches!(err.kind(), ParseErrorKind::UnfinishedStyle);
         assert_eq!(err.pos(), raw.len()..raw.len());
     }
 
     let raw = "[[red]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::BogusDelimiter);
     assert_eq!(err.pos(), 5..6);
 }
@@ -163,12 +163,12 @@ fn unfinished_errors() {
 #[test]
 fn bogus_delimiter_error() {
     let raw = "[[red,  , bold]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::BogusDelimiter);
     assert_eq!(err.pos(), 8..9);
 
     let raw = "[[red,  ; bold]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::BogusDelimiter);
     assert_eq!(err.pos(), 8..9);
 }
@@ -176,17 +176,17 @@ fn bogus_delimiter_error() {
 #[test]
 fn unfinished_background_error() {
     let raw = "[[red on, white]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnfinishedBackground);
     assert_eq!(err.pos(), 6..8);
 
     let raw = "[[red on]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnfinishedBackground);
     assert_eq!(err.pos(), 6..8);
 
     let raw = "[[red on bold]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnfinishedBackground);
     assert_eq!(err.pos(), 6..8);
 }
@@ -194,17 +194,17 @@ fn unfinished_background_error() {
 #[test]
 fn unsupported_token_error() {
     let raw = "[[what]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnsupportedStyle);
     assert_eq!(err.pos(), 2..6);
 
     let raw = "[[bold what]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnsupportedStyle);
     assert_eq!(err.pos(), 7..11);
 
     let raw = "[[bold,what]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnsupportedStyle);
     assert_eq!(err.pos(), 7..11);
 }
@@ -212,27 +212,27 @@ fn unsupported_token_error() {
 #[test]
 fn invalid_color_error() {
     let raw = "[[1000]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
     assert_eq!(err.pos(), 2..6);
 
     let raw = "[[256]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
     assert_eq!(err.pos(), 2..5);
 
     let raw = "[[001]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
     assert_eq!(err.pos(), 2..5);
 
     let raw = "[[-1]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
     assert_eq!(err.pos(), 2..4);
 
     let raw = "[[#cfg]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(
         err.kind(),
         ParseErrorKind::HexColor(HexColorError::InvalidHexDigit)
@@ -240,7 +240,7 @@ fn invalid_color_error() {
     assert_eq!(err.pos(), 2..6);
 
     let raw = "[[#c0ffeg]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(
         err.kind(),
         ParseErrorKind::HexColor(HexColorError::InvalidHexDigit)
@@ -251,32 +251,32 @@ fn invalid_color_error() {
 #[test]
 fn negation_errors() {
     let raw = "[[-]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
     assert_eq!(err.pos(), 2..3);
 
     let raw = "[[* -]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
     assert_eq!(err.pos(), 4..5);
 
     let raw = "[[* !green]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
     assert_eq!(err.pos(), 4..10);
 
     let raw = "[[!bold]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::NegationWithoutCopy);
     assert_eq!(err.pos(), 2..7);
 
     let raw = "[[ -bold ]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::NegationWithoutCopy);
     assert_eq!(err.pos(), 3..8);
 
     let raw = "[[bold *]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::NonInitialCopy);
     assert_eq!(err.pos(), 7..8);
 }
@@ -284,27 +284,27 @@ fn negation_errors() {
 #[test]
 fn duplicate_style_errors() {
     let raw = "[[3 green]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 4..9);
 
     let raw = "[[on green on yellow*]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 11..13);
 
     let raw = "[[bold green #c0ffee]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 13..20);
 
     let raw = "[[bold]]![[* -bold bold]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 19..23);
 
     let raw = "[[red]]![[* -fg green]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 16..21);
 }
@@ -312,17 +312,17 @@ fn duplicate_style_errors() {
 #[test]
 fn redundant_negation_errors() {
     let raw = "[[* -bold]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::RedundantNegation);
     assert_eq!(err.pos(), 4..9);
 
     let raw = "[[* !fg]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::RedundantNegation);
     assert_eq!(err.pos(), 4..7);
 
     let raw = "[[red]]~[[* !fg]]~[[* !fg]]";
-    let err = raw.parse::<DynStyled>().unwrap_err();
+    let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::RedundantNegation);
     assert_eq!(err.pos(), 22..25);
 }

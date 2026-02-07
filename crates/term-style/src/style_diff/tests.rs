@@ -3,7 +3,7 @@
 use anstyle::RgbColor;
 
 use super::*;
-use crate::{DynStyled, Styled, styled};
+use crate::{StyledString, styled};
 
 #[test]
 fn creating_color_diff_basics() {
@@ -20,7 +20,16 @@ fn creating_color_diff_basics() {
         StyledSpan { len: 3, style: red },
     ];
 
-    let color_diff = StyleDiff::new("Hello", &lhs, &rhs);
+    let color_diff = StyleDiff::new(
+        StyledStr {
+            text: "Hello",
+            spans: &lhs,
+        },
+        StyledStr {
+            text: "Hello",
+            spans: &rhs,
+        },
+    );
 
     assert_eq!(color_diff.differing_spans.len(), 1);
     let diff_span = &color_diff.differing_spans[0];
@@ -54,7 +63,16 @@ fn creating_color_diff_overlapping_spans() {
         },
     ];
 
-    let color_diff = StyleDiff::new("Hello", &lhs, &rhs);
+    let color_diff = StyleDiff::new(
+        StyledStr {
+            text: "Hello",
+            spans: &lhs,
+        },
+        StyledStr {
+            text: "Hello",
+            spans: &rhs,
+        },
+    );
     assert_eq!(color_diff.differing_spans.len(), 2);
     assert_eq!(color_diff.differing_spans[0].start, 1);
     assert_eq!(color_diff.differing_spans[0].len, 1);
@@ -90,7 +108,7 @@ fn writing_color_spec() {
 
 #[test]
 fn writing_color_diff_table() {
-    const EXPECTED: Styled = styled!(
+    const EXPECTED: StyledStr = styled!(
         r"[[bold]]Positions         Left style                Right style       [[*]]
 ========== ========================= =========================[[]]
       0..2          (none)           [[bold strike blink red on white]]bold strike blink red on [[]]
@@ -114,7 +132,7 @@ fn writing_color_diff_table() {
             rhs_color_spec: red,
         }],
     };
-    let out = DynStyled::from_ansi(&format!("{color_diff:#}")).unwrap();
+    let out = StyledString::from_ansi(&format!("{color_diff:#}")).unwrap();
     assert_eq!(out, EXPECTED);
 }
 
@@ -129,7 +147,7 @@ fn diff_span(start: usize, len: usize) -> DiffStyleSpan {
 
 #[test]
 fn highlighting_diff_on_text() {
-    const EXPECTED: Styled = styled!(
+    const EXPECTED: StyledStr = styled!(
         "[[red]]> [[]]He[[green]]llo, world![[]]\n\
          [[red]]> [[white on red]]^^[[black on yellow]]!![[white on red]]^[[]]     [[white on red]]^[[]]\n"
     );
@@ -156,13 +174,13 @@ fn highlighting_diff_on_text() {
         ],
     };
 
-    let output = DynStyled::from_ansi(&color_diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&color_diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED);
 }
 
 #[test]
 fn spans_on_multiple_lines() {
-    const EXPECTED: Styled = styled!(
+    const EXPECTED: StyledStr = styled!(
         "= [[green]]Hello,[[]]\n\
          [[red]]> [[green]]wo[[]]rld!\n\
          [[red]]> [[]]  [[white on red]]^^^[[]]\n"
@@ -185,13 +203,13 @@ fn spans_on_multiple_lines() {
         lhs_spans: &color_spans,
         differing_spans: vec![diff_span(9, 3)],
     };
-    let output = DynStyled::from_ansi(&color_diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&color_diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED);
 }
 
 #[test]
 fn spans_with_multiple_sequential_line_breaks() {
-    const EXPECTED: Styled = styled!(
+    const EXPECTED: StyledStr = styled!(
         "= [[green]]Hello,[[]]\n\
          = \n\
          [[red]]> [[]]wo[[green]]rld![[]]\n\
@@ -219,13 +237,13 @@ fn spans_with_multiple_sequential_line_breaks() {
         lhs_spans: &color_spans,
         differing_spans: vec![diff_span(10, 3)],
     };
-    let output = DynStyled::from_ansi(&color_diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&color_diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED);
 }
 
 #[test]
 fn plaintext_highlight_simple() {
-    const EXPECTED: Styled = styled!(
+    const EXPECTED: StyledStr = styled!(
         "[[red]]> [[]]Hello, world!\n\
          [[red]]> [[white on red]]^^[[black on yellow]]!![[white on red]]^[[]]     [[white on red]]^[[]]\n"
     );
@@ -245,7 +263,7 @@ fn plaintext_highlight_simple() {
         ],
     };
 
-    let output = DynStyled::from_ansi(&color_diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&color_diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED);
 }
 
@@ -261,7 +279,7 @@ fn plaintext_highlight_with_multiple_lines() {
         differing_spans: vec![diff_span(4, 12)],
     };
 
-    let output = DynStyled::from_ansi(&color_diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&color_diff.to_string()).unwrap();
     let expected_buffer = // (prevents formatter from breaking alignment)
         "> Hello,\n\
          >     ^^\n\
@@ -284,7 +302,7 @@ fn plaintext_highlight_with_skipped_lines() {
         differing_spans: vec![diff_span(4, 6), diff_span(26, 2)],
     };
 
-    let output = DynStyled::from_ansi(&color_diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&color_diff.to_string()).unwrap();
     let expected_buffer = // (prevents formatter from breaking alignment)
         "> Hello,\n\
          >     ^^\n\
@@ -316,7 +334,7 @@ fn highlighting_works_with_non_ascii_text() {
         }
     }
 
-    let output = DynStyled::from_ansi(&Test.to_string()).unwrap();
+    let output = StyledString::from_ansi(&Test.to_string()).unwrap();
     assert_eq!(output, styled!("  [[white on red]]^^[[]]\n"));
 }
 
@@ -343,7 +361,7 @@ fn plaintext_highlight_with_non_ascii_text() {
         ],
     };
 
-    let output = DynStyled::from_ansi(&color_diff.to_string()).unwrap();
+    let output = StyledString::from_ansi(&color_diff.to_string()).unwrap();
     let expected_buffer = "= error[EVAL]: Variable `foo` is not defined\n\
     >   ┌─ Snippet #1:1:1\n\
     >   ^^\n\

@@ -10,7 +10,7 @@ use core::{
 use anstyle::{AnsiColor, Color, Style};
 use unicode_width::UnicodeWidthStr;
 
-use crate::{StyledSpan, rich_parser::RichStyle};
+use crate::{StyledSpan, rich_parser::RichStyle, types::StyledStr};
 
 #[cfg(test)]
 mod tests;
@@ -77,25 +77,27 @@ impl fmt::Display for StyleDiff<'_> {
 }
 
 impl<'a> StyleDiff<'a> {
-    #[doc(hidden)] // FIXME: rework interface
-    pub fn new(text: &'a str, lhs_spans: &'a [StyledSpan], rhs_spans: &'a [StyledSpan]) -> Self {
-        debug_assert_eq!(
-            lhs_spans.iter().map(|span| span.len).sum::<usize>(),
-            rhs_spans.iter().map(|span| span.len).sum::<usize>(),
-            "Spans {lhs_spans:?} and {rhs_spans:?} must have equal total covered length"
+    /// # Panics
+    ///
+    /// Panics if `lhs` and `rhs` have differing lengths.
+    pub fn new(lhs: StyledStr<'a>, rhs: StyledStr<'a>) -> Self {
+        assert_eq!(
+            lhs.text.len(),
+            rhs.text.len(),
+            "Compared strings must have same length"
         );
 
         let mut this = Self {
-            text,
-            lhs_spans,
+            text: lhs.text,
+            lhs_spans: lhs.spans,
             differing_spans: Vec::new(),
         };
         let mut pos = 0;
-        let mut lhs_iter = lhs_spans.iter().copied();
+        let mut lhs_iter = lhs.spans.iter().copied();
         let Some(mut lhs_span) = lhs_iter.next() else {
             return this;
         };
-        let mut rhs_iter = rhs_spans.iter().copied();
+        let mut rhs_iter = rhs.spans.iter().copied();
         let Some(mut rhs_span) = rhs_iter.next() else {
             return this;
         };

@@ -23,17 +23,34 @@ pub struct StyledSpan {
 /// ANSI-styled text.
 ///
 /// FIXME: ways to create
-// FIXME: rename (StyledStr / StyledString); as_ref()
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Styled<T = &'static str, S = &'static [StyledSpan]> {
+pub struct Styled<T, S> {
     pub(crate) text: T,
     pub(crate) spans: S,
 }
 
-/// Dynamic (i.e., non-compile time) variation of [`Styled`].
-pub type DynStyled = Styled<String, Vec<StyledSpan>>;
+/// Borrowed version of [`Styled`].
+pub type StyledStr<'a> = Styled<&'a str, &'a [StyledSpan]>;
 
-impl DynStyled {
+impl<'a> StyledStr<'a> {
+    fn diff_inner(self, other: Self) -> Result<(), Diff<'a>> {
+        if self.text == other.text {
+            let style_diff = StyleDiff::new(self, other);
+            if style_diff.is_empty() {
+                Ok(())
+            } else {
+                Err(Diff::Style(style_diff))
+            }
+        } else {
+            Err(Diff::Text(TextDiff::new(self.text, other.text)))
+        }
+    }
+}
+
+/// Dynamic (i.e., non-compile time) variation of [`Styled`].
+pub type StyledString = Styled<String, Vec<StyledSpan>>;
+
+impl StyledString {
     /// # Errors
     ///
     /// Returns an error if the input is not a valid ANSI escaped string.
@@ -85,6 +102,13 @@ where
         &self.spans
     }
 
+    pub fn as_ref(&self) -> StyledStr<'_> {
+        Styled {
+            text: self.text(),
+            spans: self.spans(),
+        }
+    }
+
     /// Diffs this against the `other` styled string.
     ///
     /// # Errors
@@ -95,23 +119,7 @@ where
         Tr: ops::Deref<Target = str>,
         Sr: ops::Deref<Target = [StyledSpan]>,
     {
-        let this_text = self.text();
-        let other_text = other.text();
-        if this_text == other_text {
-            let this_spans = self.spans();
-            let other_spans = other.spans();
-            let style_diff = StyleDiff::new(this_text, this_spans, other_spans);
-            if style_diff.is_empty() {
-                Ok(())
-            } else {
-                Err(Diff::Style(style_diff))
-            }
-        } else {
-            Err(Diff::Text(TextDiff {
-                lhs: this_text,
-                rhs: other_text,
-            }))
-        }
+        self.as_ref().diff_inner(other.as_ref())
     }
 
     /// Returns a string with embedded ANSI escapes.
@@ -288,7 +296,7 @@ impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CA
         }
     }
 
-    pub const fn as_ref(&'static self) -> Styled {
+    pub const fn as_ref(&'static self) -> StyledStr<'static> {
         Styled {
             text: self.text.as_str(),
             spans: self.spans.as_slice(),

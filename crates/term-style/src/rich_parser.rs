@@ -6,7 +6,8 @@ use std::borrow::Cow;
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 use crate::{
-    DynStyled, HexColorError, ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
+    HexColorError, ParseError, ParseErrorKind, StackStyled, StyledSpan, StyledString,
+    types::StyledStr,
     utils::{Stack, StackStr, StrCursor, is_same_style, normalize_style},
 };
 
@@ -56,7 +57,7 @@ pub fn rgb_color_to_hex(RgbColor(r, g, b): RgbColor) -> String {
     buffer
 }
 
-impl Styled {
+impl StyledStr<'static> {
     #[doc(hidden)] // used in the `styled!` macro; logically private
     pub const fn capacities(raw: &str) -> (usize, usize) {
         let mut cursor = StrCursor::new(raw);
@@ -548,7 +549,7 @@ impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CA
     }
 }
 
-impl FromStr for DynStyled {
+impl FromStr for StyledString {
     type Err = ParseError;
 
     fn from_str(raw: &str) -> Result<Self, Self::Err> {

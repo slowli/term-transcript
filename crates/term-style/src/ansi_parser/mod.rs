@@ -6,7 +6,7 @@ use core::str;
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 pub use self::errors::AnsiError;
-use crate::{DynStyled, StyledSpan, utils::normalize_style};
+use crate::{StyledSpan, StyledString, utils::normalize_style};
 
 mod errors;
 #[cfg(test)]
@@ -20,12 +20,12 @@ const ANSI_OCS: u8 = b']';
 /// Parses terminal output.
 #[derive(Debug, Default)]
 pub(crate) struct AnsiParser {
-    output: DynStyled,
+    output: StyledString,
     current_style: Style,
 }
 
 impl AnsiParser {
-    pub(crate) fn parse(ansi_bytes: &[u8]) -> Result<DynStyled, AnsiError> {
+    pub(crate) fn parse(ansi_bytes: &[u8]) -> Result<StyledString, AnsiError> {
         let mut this = Self::default();
         this.process(ansi_bytes)?;
         Ok(this.into_styled())
@@ -115,7 +115,7 @@ impl AnsiParser {
         Ok(())
     }
 
-    fn into_styled(self) -> DynStyled {
+    fn into_styled(self) -> StyledString {
         self.output.shrink()
     }
 
