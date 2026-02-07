@@ -77,11 +77,8 @@ impl fmt::Display for StyleDiff<'_> {
 }
 
 impl<'a> StyleDiff<'a> {
-    pub(crate) fn new(
-        text: &'a str,
-        lhs_spans: &'a [StyledSpan],
-        rhs_spans: &'a [StyledSpan],
-    ) -> Self {
+    #[doc(hidden)] // FIXME: rework interface
+    pub fn new(text: &'a str, lhs_spans: &'a [StyledSpan], rhs_spans: &'a [StyledSpan]) -> Self {
         debug_assert_eq!(
             lhs_spans.iter().map(|span| span.len).sum::<usize>(),
             rhs_spans.iter().map(|span| span.len).sum::<usize>(),
@@ -143,7 +140,7 @@ impl<'a> StyleDiff<'a> {
         }
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.differing_spans.is_empty()
     }
 

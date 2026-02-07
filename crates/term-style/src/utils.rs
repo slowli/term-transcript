@@ -26,6 +26,7 @@ const fn color_cube_color(index: u8) -> u8 {
     }
 }
 
+// FIXME: reverse normalization for indexed colors (i.e. rgb -> index if possible)
 const fn normalize_color(color: Color) -> Color {
     const STD_COLORS: [AnsiColor; 16] = [
         AnsiColor::Black,

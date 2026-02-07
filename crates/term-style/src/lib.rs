@@ -4,9 +4,10 @@
 
 pub use crate::{
     ansi_parser::AnsiError,
-    errors::{ParseError, ParseErrorKind},
+    errors::{HexColorError, ParseError, ParseErrorKind},
+    rich_parser::{parse_hex_color, rgb_color_to_hex},
     style_diff::StyleDiff,
-    types::{DynStyled, StackStyled, Styled, StyledSpan},
+    types::{Diff, DynStyled, StackStyled, Styled, StyledSpan, TextDiff},
 };
 
 #[macro_use]

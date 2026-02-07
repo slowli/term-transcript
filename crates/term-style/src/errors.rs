@@ -1,15 +1,43 @@
 //! Error types.
 
-use core::{ops, str};
+use core::{fmt, ops, str};
 
 use compile_fmt::{Ascii, compile_panic};
+
+/// Error parsing hexadecimal RGB color.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum HexColorError {
+    /// Color string doesn't start with a hash `#`.
+    NoHash,
+    /// Color string has unexpected length (not 4 or 7).
+    InvalidLen,
+    /// Color string contains an invalid hex digit.
+    InvalidHexDigit,
+}
+
+impl fmt::Display for HexColorError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl HexColorError {
+    const fn as_str(&self) -> &'static str {
+        match self {
+            Self::NoHash => "color string doesn't start with a hash `#`",
+            Self::InvalidLen => "color string has unexpected length (not 4 or 7)",
+            Self::InvalidHexDigit => "color string contains an invalid hex digit",
+        }
+    }
+}
 
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ParseErrorKind {
     UnfinishedStyle,
     UnsupportedStyle,
-    InvalidHexColor,
+    HexColor(HexColorError),
     InvalidIndexColor,
     RedefinedBackground,
     UnfinishedBackground,
@@ -32,7 +60,7 @@ impl ParseErrorKind {
         match self {
             Self::UnfinishedStyle => "unfinished style definition",
             Self::UnsupportedStyle => "unsupported style specifier",
-            Self::InvalidHexColor => "invalid hex color definition",
+            Self::HexColor(err) => err.as_str(),
             Self::InvalidIndexColor => "invalid indexed color",
             Self::UnfinishedBackground => "no background specified after `on` keyword",
             Self::RedefinedBackground => "redefined background color",

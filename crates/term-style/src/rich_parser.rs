@@ -6,9 +6,55 @@ use std::borrow::Cow;
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 use crate::{
-    DynStyled, ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
+    DynStyled, HexColorError, ParseError, ParseErrorKind, StackStyled, Styled, StyledSpan,
     utils::{Stack, StackStr, StrCursor, is_same_style, normalize_style},
 };
+
+/// Parses a hexadecimal RGB color like `#c0ffee` or `#fa4`.
+///
+/// # Errors
+///
+/// Returns a parsing error if the string is invalid.
+pub const fn parse_hex_color(hex: &[u8]) -> Result<RgbColor, HexColorError> {
+    if hex.is_empty() || hex[0] != b'#' {
+        return Err(HexColorError::NoHash);
+    }
+
+    if hex.len() == 4 {
+        let r = const_try!(parse_hex_digit(hex[1]));
+        let g = const_try!(parse_hex_digit(hex[2]));
+        let b = const_try!(parse_hex_digit(hex[3]));
+        Ok(RgbColor(r * 17, g * 17, b * 17))
+    } else if hex.len() == 7 {
+        let r = const_try!(parse_hex_digit(hex[1])) * 16 + const_try!(parse_hex_digit(hex[2]));
+        let g = const_try!(parse_hex_digit(hex[3])) * 16 + const_try!(parse_hex_digit(hex[4]));
+        let b = const_try!(parse_hex_digit(hex[5])) * 16 + const_try!(parse_hex_digit(hex[6]));
+        Ok(RgbColor(r, g, b))
+    } else {
+        Err(HexColorError::InvalidLen)
+    }
+}
+
+const fn parse_hex_digit(ch: u8) -> Result<u8, HexColorError> {
+    match ch {
+        b'0'..=b'9' => Ok(ch - b'0'),
+        b'a'..=b'f' => Ok(ch - b'a' + 10),
+        b'A'..=b'F' => Ok(ch - b'A' + 10),
+        _ => Err(HexColorError::InvalidHexDigit),
+    }
+}
+
+pub fn rgb_color_to_hex(RgbColor(r, g, b): RgbColor) -> String {
+    use core::fmt::Write as _;
+
+    let mut buffer = String::new();
+    if r % 17 == 0 && g % 17 == 0 && b % 17 == 0 {
+        write!(&mut buffer, "#{:x}{:x}{:x}", r / 17, g / 17, b / 17).unwrap();
+    } else {
+        write!(&mut buffer, "#{r:02x}{g:02x}{b:02x}").unwrap();
+    }
+    buffer
+}
 
 impl Styled {
     #[doc(hidden)] // used in the `styled!` macro; logically private
@@ -374,15 +420,6 @@ impl StrCursor<'_> {
         })
     }
 
-    const fn parse_hex_digit(ch: u8) -> Result<u8, ParseErrorKind> {
-        match ch {
-            b'0'..=b'9' => Ok(ch - b'0'),
-            b'a'..=b'f' => Ok(ch - b'a' + 10),
-            b'A'..=b'F' => Ok(ch - b'A' + 10),
-            _ => Err(ParseErrorKind::InvalidHexColor),
-        }
-    }
-
     const fn parse_index(s: &[u8]) -> Result<u8, ParseErrorKind> {
         if s.len() > 3 || s[0] == b'0' {
             // We disallow colors starting from `0` (e.g., `001`) to avoid ambiguity.
@@ -429,24 +466,10 @@ impl StrCursor<'_> {
             b"white" => Some(Color::Ansi(AnsiColor::White)),
             b"white*" => Some(Color::Ansi(AnsiColor::BrightWhite)),
 
-            hex if !hex.is_empty() && hex[0] == b'#' => {
-                if hex.len() == 4 {
-                    let r = const_try!(Self::parse_hex_digit(hex[1]));
-                    let g = const_try!(Self::parse_hex_digit(hex[2]));
-                    let b = const_try!(Self::parse_hex_digit(hex[3]));
-                    Some(Color::Rgb(RgbColor(r * 17, g * 17, b * 17)))
-                } else if hex.len() == 7 {
-                    let r = const_try!(Self::parse_hex_digit(hex[1])) * 16
-                        + const_try!(Self::parse_hex_digit(hex[2]));
-                    let g = const_try!(Self::parse_hex_digit(hex[3])) * 16
-                        + const_try!(Self::parse_hex_digit(hex[4]));
-                    let b = const_try!(Self::parse_hex_digit(hex[5])) * 16
-                        + const_try!(Self::parse_hex_digit(hex[6]));
-                    Some(Color::Rgb(RgbColor(r, g, b)))
-                } else {
-                    return Err(ParseErrorKind::InvalidHexColor);
-                }
-            }
+            hex if !hex.is_empty() && hex[0] == b'#' => match parse_hex_color(hex) {
+                Ok(color) => Some(Color::Rgb(color)),
+                Err(err) => return Err(ParseErrorKind::HexColor(err)),
+            },
 
             num if !num.is_empty() && num[0].is_ascii_digit() => {
                 let index = const_try!(Self::parse_index(num));
@@ -612,12 +635,8 @@ fn write_color(color: Color) -> String {
         )
         .unwrap(),
         Color::Ansi256(Ansi256Color(idx)) => write!(&mut buffer, "{idx}").unwrap(),
-        Color::Rgb(RgbColor(r, g, b)) => {
-            if r % 17 == 0 && g % 17 == 0 && b % 17 == 0 {
-                write!(&mut buffer, "#{:x}{:x}{:x}", r / 17, g / 17, b / 17).unwrap();
-            } else {
-                write!(&mut buffer, "#{r:02x}{g:02x}{b:02x}").unwrap();
-            }
+        Color::Rgb(color) => {
+            buffer = rgb_color_to_hex(color);
         }
     }
     buffer

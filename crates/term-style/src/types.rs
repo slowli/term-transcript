@@ -23,6 +23,7 @@ pub struct StyledSpan {
 /// ANSI-styled text.
 ///
 /// FIXME: ways to create
+// FIXME: rename (StyledStr / StyledString); as_ref()
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Styled<T = &'static str, S = &'static [StyledSpan]> {
     pub(crate) text: T,
@@ -188,24 +189,55 @@ pub struct TextDiff<'a> {
     rhs: &'a str,
 }
 
+impl<'a> TextDiff<'a> {
+    pub const fn new(lhs: &'a str, rhs: &'a str) -> Self {
+        Self { lhs, rhs }
+    }
+}
+
 impl fmt::Display for TextDiff<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         use pretty_assertions::Comparison;
 
         // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
         // to switch to `fmt::Display`.
-        struct DebugStr<'a>(&'a str);
+        struct DebugStr<'a> {
+            s: &'a str,
+            padding: usize,
+        }
+
+        impl<'a> DebugStr<'a> {
+            fn new(s: &'a str, padding: usize) -> Self {
+                Self { s, padding }
+            }
+        }
 
         impl fmt::Debug for DebugStr<'_> {
             fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(formatter, "{}", self.0)
+                if self.padding == 0 {
+                    formatter.write_str(self.s)
+                } else {
+                    for line in self.s.lines() {
+                        writeln!(formatter, "{:>padding$}{line}", "", padding = self.padding)?;
+                    }
+                    Ok(())
+                }
             }
         }
+
+        let padding = if matches!(formatter.align(), Some(fmt::Alignment::Right) | None) {
+            formatter.width().map_or(0, |width| width.saturating_sub(1))
+        } else {
+            0
+        };
 
         write!(
             formatter,
             "{}",
-            Comparison::new(&DebugStr(self.lhs), &DebugStr(self.rhs))
+            Comparison::new(
+                &DebugStr::new(self.lhs, padding),
+                &DebugStr::new(self.rhs, padding)
+            )
         )
     }
 }

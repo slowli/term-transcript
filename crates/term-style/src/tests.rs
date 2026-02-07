@@ -233,12 +233,18 @@ fn invalid_color_error() {
 
     let raw = "[[#cfg]]";
     let err = raw.parse::<DynStyled>().unwrap_err();
-    assert_matches!(err.kind(), ParseErrorKind::InvalidHexColor);
+    assert_matches!(
+        err.kind(),
+        ParseErrorKind::HexColor(HexColorError::InvalidHexDigit)
+    );
     assert_eq!(err.pos(), 2..6);
 
     let raw = "[[#c0ffeg]]";
     let err = raw.parse::<DynStyled>().unwrap_err();
-    assert_matches!(err.kind(), ParseErrorKind::InvalidHexColor);
+    assert_matches!(
+        err.kind(),
+        ParseErrorKind::HexColor(HexColorError::InvalidHexDigit)
+    );
     assert_eq!(err.pos(), 2..9);
 }
 
