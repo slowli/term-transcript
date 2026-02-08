@@ -1,5 +1,8 @@
 //! Rich style parsing (incl. in compile time).
 
+// FIXME: change `red*` -> `red!` | `bright-red`
+// FIXME: change `* -> +`
+
 use core::{fmt, ops, str::FromStr};
 use std::{borrow::Cow, num::NonZeroUsize};
 
@@ -55,13 +58,6 @@ pub fn rgb_color_to_hex(RgbColor(r, g, b): RgbColor) -> String {
         write!(&mut buffer, "#{r:02x}{g:02x}{b:02x}").unwrap();
     }
     buffer
-}
-
-/// # Errors
-///
-/// Returns an error if the string doesn't represent a valid style specification.
-pub const fn parse_style(raw: &str, current_style: &Style) -> Result<Style, ParseError> {
-    StrCursor::new(raw).parse_style(current_style, false)
 }
 
 impl StyledStr<'static> {
@@ -595,9 +591,16 @@ impl FromStr for StyledString {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RichStyle<'a>(pub(crate) &'a Style);
+pub struct RichStyle<'a>(pub &'a Style);
 
 impl RichStyle<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the string doesn't represent a valid style specification.
+    pub const fn parse(raw: &str, current_style: &Style) -> Result<Style, ParseError> {
+        StrCursor::new(raw).parse_style(current_style, false)
+    }
+
     pub(crate) fn tokens(self) -> Vec<Cow<'static, str>> {
         let mut tokens = vec![];
 
@@ -763,7 +766,7 @@ mod tests {
 
     #[test]
     fn standalone_style_parsing() {
-        let style = parse_style("red on 7, bold", &Style::new()).unwrap();
+        let style = RichStyle::parse("red on 7, bold", &Style::new()).unwrap();
         assert_eq!(
             style,
             Style::new()
@@ -772,7 +775,7 @@ mod tests {
                 .bg_color(Some(AnsiColor::White.into()))
         );
 
-        let err = parse_style("red on 7]], bold", &Style::new()).unwrap_err();
+        let err = RichStyle::parse("red on 7]], bold", &Style::new()).unwrap_err();
         assert_matches!(err.kind(), ParseErrorKind::BogusDelimiter);
         assert_eq!(err.pos(), 8..9);
     }

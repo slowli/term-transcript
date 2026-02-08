@@ -327,9 +327,9 @@ fn repl_snapshot_testing(pure_svg: bool) {
     config.test(
         "repl.svg",
         [
-            "yellow intense bold green cucumber",
-            "neutral #fa4 underline #c0ffee",
-            "#9f4010 (brown) italic",
+            "yellow* bold on magenta",
+            "#fa4 underline, strikethrough on #c0ffee",
+            "#9f4010 italic",
         ],
     );
 }

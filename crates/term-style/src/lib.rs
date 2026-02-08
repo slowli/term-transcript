@@ -5,7 +5,7 @@
 pub use crate::{
     ansi_parser::AnsiError,
     errors::{HexColorError, ParseError, ParseErrorKind},
-    rich_parser::{parse_hex_color, parse_style, rgb_color_to_hex},
+    rich_parser::{RichStyle, parse_hex_color, rgb_color_to_hex},
     style_diff::StyleDiff,
     types::{
         Diff, Lines, PopChar, SpansSlice, StackStyled, Styled, StyledSpan, StyledStr, StyledString,
