@@ -53,10 +53,10 @@ fn map_spans<'s>(text: &'s str, spans: SpansSlice<'_>) -> Vec<SerdeStyledSpan<'s
         .iter()
         .map(|span| {
             let serde_span = SerdeStyledSpan {
-                text: &text[pos..pos + span.len],
+                text: &text[pos..pos + span.len.get()],
                 style: span.style.into(),
             };
-            pos += span.len;
+            pos += span.len.get();
             serde_span
         })
         .collect()

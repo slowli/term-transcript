@@ -7,18 +7,9 @@ use crate::{StyledString, styled};
 
 #[test]
 fn creating_color_diff_basics() {
-    let lhs = [StyledSpan {
-        len: 5,
-        style: Style::new(),
-    }];
+    let lhs = [StyledSpan::new(Style::new(), 5)];
     let red = Style::new().fg_color(Some(AnsiColor::Red.into()));
-    let rhs = [
-        StyledSpan {
-            len: 2,
-            style: Style::new(),
-        },
-        StyledSpan { len: 3, style: red },
-    ];
+    let rhs = [StyledSpan::new(Style::new(), 2), StyledSpan::new(red, 3)];
 
     let color_diff = StyleDiff::new(
         StyledStr {
@@ -34,7 +25,7 @@ fn creating_color_diff_basics() {
     assert_eq!(color_diff.differing_spans.len(), 1);
     let diff_span = &color_diff.differing_spans[0];
     assert_eq!(diff_span.start, 2);
-    assert_eq!(diff_span.len, 3);
+    assert_eq!(diff_span.len.get(), 3);
     assert_eq!(diff_span.lhs_color_spec, Style::default());
     assert_eq!(diff_span.rhs_color_spec, red);
 }
@@ -44,23 +35,11 @@ fn creating_color_diff_overlapping_spans() {
     let red = Style::new().fg_color(Some(AnsiColor::Red.into()));
     let blue = Style::new().fg_color(Some(AnsiColor::Blue.into()));
 
-    let lhs = [
-        StyledSpan {
-            len: 2,
-            style: Style::new(),
-        },
-        StyledSpan { len: 3, style: red },
-    ];
+    let lhs = [StyledSpan::new(Style::new(), 2), StyledSpan::new(red, 3)];
     let rhs = [
-        StyledSpan {
-            len: 1,
-            style: Style::new(),
-        },
-        StyledSpan { len: 2, style: red },
-        StyledSpan {
-            len: 2,
-            style: blue,
-        },
+        StyledSpan::new(Style::new(), 1),
+        StyledSpan::new(red, 2),
+        StyledSpan::new(blue, 2),
     ];
 
     let color_diff = StyleDiff::new(
@@ -75,14 +54,14 @@ fn creating_color_diff_overlapping_spans() {
     );
     assert_eq!(color_diff.differing_spans.len(), 2);
     assert_eq!(color_diff.differing_spans[0].start, 1);
-    assert_eq!(color_diff.differing_spans[0].len, 1);
+    assert_eq!(color_diff.differing_spans[0].len.get(), 1);
     assert_eq!(
         color_diff.differing_spans[0].lhs_color_spec,
         Style::default()
     );
     assert_eq!(color_diff.differing_spans[0].rhs_color_spec, red);
     assert_eq!(color_diff.differing_spans[1].start, 3);
-    assert_eq!(color_diff.differing_spans[1].len, 2);
+    assert_eq!(color_diff.differing_spans[1].len.get(), 2);
     assert_eq!(color_diff.differing_spans[1].lhs_color_spec, red);
     assert_eq!(color_diff.differing_spans[1].rhs_color_spec, blue);
 }
@@ -127,7 +106,7 @@ fn writing_color_diff_table() {
         lhs_spans: &[], // not used
         differing_spans: vec![DiffStyleSpan {
             start: 0,
-            len: 2,
+            len: NonZeroUsize::new(2).unwrap(),
             lhs_color_spec: Style::default(),
             rhs_color_spec: red,
         }],
@@ -139,7 +118,7 @@ fn writing_color_diff_table() {
 fn diff_span(start: usize, len: usize) -> DiffStyleSpan {
     DiffStyleSpan {
         start,
-        len,
+        len: NonZeroUsize::new(len).unwrap(),
         lhs_color_spec: Style::default(),
         rhs_color_spec: Style::default(),
     }
@@ -153,16 +132,7 @@ fn highlighting_diff_on_text() {
     );
 
     let green = Style::new().fg_color(Some(AnsiColor::Green.into()));
-    let style_spans = [
-        StyledSpan {
-            len: 2,
-            style: Style::new(),
-        },
-        StyledSpan {
-            len: 11,
-            style: green,
-        },
-    ];
+    let style_spans = [StyledSpan::new(Style::new(), 2), StyledSpan::new(green, 11)];
     let color_diff = StyleDiff {
         text: "Hello, world!",
         lhs_spans: &style_spans,
@@ -187,16 +157,7 @@ fn spans_on_multiple_lines() {
     );
 
     let green = Style::new().fg_color(Some(AnsiColor::Green.into()));
-    let color_spans = [
-        StyledSpan {
-            len: 9,
-            style: green,
-        },
-        StyledSpan {
-            len: 4,
-            style: Style::new(),
-        },
-    ];
+    let color_spans = [StyledSpan::new(green, 9), StyledSpan::new(Style::new(), 4)];
 
     let color_diff = StyleDiff {
         text: "Hello,\nworld!",
@@ -218,18 +179,9 @@ fn spans_with_multiple_sequential_line_breaks() {
 
     let green = Style::new().fg_color(Some(AnsiColor::Green.into()));
     let color_spans = [
-        StyledSpan {
-            len: 6,
-            style: green,
-        },
-        StyledSpan {
-            len: 4,
-            style: Style::default(),
-        },
-        StyledSpan {
-            len: 4,
-            style: green,
-        },
+        StyledSpan::new(green, 6),
+        StyledSpan::new(Style::new(), 4),
+        StyledSpan::new(green, 4),
     ];
 
     let color_diff = StyleDiff {
@@ -251,10 +203,7 @@ fn plaintext_highlight_simple() {
     let text = "Hello, world!";
     let color_diff = StyleDiff {
         text,
-        lhs_spans: &[StyledSpan {
-            style: Style::new(),
-            len: text.len(),
-        }],
+        lhs_spans: &[StyledSpan::new(Style::new(), text.len())],
         differing_spans: vec![
             diff_span(0, 2),
             diff_span(2, 2),
@@ -272,10 +221,7 @@ fn plaintext_highlight_with_multiple_lines() {
     let text = "Hello,\nworld!\nMore text";
     let color_diff = StyleDiff {
         text,
-        lhs_spans: &[StyledSpan {
-            len: text.len(),
-            style: Style::new(),
-        }],
+        lhs_spans: &[StyledSpan::new(Style::new(), text.len())],
         differing_spans: vec![diff_span(4, 12)],
     };
 
@@ -295,10 +241,7 @@ fn plaintext_highlight_with_skipped_lines() {
     let text = "Hello,\nworld!\nMore\ntext\nhere";
     let color_diff = StyleDiff {
         text,
-        lhs_spans: &[StyledSpan {
-            len: text.len(),
-            style: Style::new(),
-        }],
+        lhs_spans: &[StyledSpan::new(Style::new(), text.len())],
         differing_spans: vec![diff_span(4, 6), diff_span(26, 2)],
     };
 
@@ -325,7 +268,7 @@ fn highlighting_works_with_non_ascii_text() {
             let line = "  ┌─ Snippet #1:1:1";
             let spans = vec![HighlightedSpan {
                 start: 2,
-                len: 6,
+                len: NonZeroUsize::new(6).unwrap(),
                 kind: SpanHighlightKind::Main,
             }];
             let mut spans = spans.into_iter().peekable();
@@ -348,10 +291,7 @@ fn plaintext_highlight_with_non_ascii_text() {
 
     let color_diff = StyleDiff {
         text,
-        lhs_spans: &[StyledSpan {
-            len: text.len(),
-            style: Style::new(),
-        }],
+        lhs_spans: &[StyledSpan::new(Style::new(), text.len())],
         differing_spans: vec![
             diff_span(45, 6),
             diff_span(69, 3),

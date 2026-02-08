@@ -1,12 +1,14 @@
 //! `SpansSlice`.
 
+use std::num::NonZeroUsize;
+
 use crate::StyledSpan;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SpansSlice<'a> {
     inner: &'a [StyledSpan],
-    first_span_len: Option<usize>,
-    last_span_len: Option<usize>,
+    first_span_len: Option<NonZeroUsize>,
+    last_span_len: Option<NonZeroUsize>,
 }
 
 impl<'a> SpansSlice<'a> {
@@ -20,7 +22,7 @@ impl<'a> SpansSlice<'a> {
         }
     }
 
-    fn span_len(&self, span: &StyledSpan, i: usize) -> usize {
+    fn span_len(&self, span: &StyledSpan, i: usize) -> NonZeroUsize {
         let mut len_override = None;
 
         // `last_span_len` by design has higher priority compared to `first_span_len` if they both
@@ -38,19 +40,19 @@ impl<'a> SpansSlice<'a> {
     pub fn split_off(&mut self, pos: usize) -> Self {
         let mut total_len = 0;
         for (i, span) in self.inner.iter().enumerate() {
-            let effective_len = self.span_len(span, i);
+            let effective_len = self.span_len(span, i).get();
             total_len += effective_len;
             if total_len > pos {
                 let tail = Self {
                     inner: &self.inner[i..],
-                    first_span_len: Some(total_len - pos),
+                    first_span_len: NonZeroUsize::new(total_len - pos), // always `Some(_)`
                     last_span_len: None,
                 };
 
                 let last_span_consumed_len = pos - (total_len - effective_len);
                 if last_span_consumed_len > 0 {
                     self.inner = &self.inner[..=i];
-                    self.last_span_len = Some(last_span_consumed_len);
+                    self.last_span_len = NonZeroUsize::new(last_span_consumed_len); // always `Some(_)`
                 } else {
                     self.inner = &self.inner[..i];
                     self.last_span_len = None;
@@ -98,11 +100,11 @@ mod tests {
     fn spans_slice_basics() {
         let spans = &[
             StyledSpan {
-                len: 5,
+                len: NonZeroUsize::new(5).unwrap(),
                 style: Style::new(),
             },
             StyledSpan {
-                len: 3,
+                len: NonZeroUsize::new(3).unwrap(),
                 style: Style::new().bold(),
             },
         ];
@@ -111,90 +113,57 @@ mod tests {
         assert_eq!(
             spans.iter().collect::<Vec<_>>(),
             [
-                StyledSpan {
-                    len: 5,
-                    style: Style::new()
-                },
-                StyledSpan {
-                    len: 3,
-                    style: Style::new().bold()
-                },
+                StyledSpan::new(Style::new(), 5),
+                StyledSpan::new(Style::new().bold(), 3),
             ]
         );
 
         let tail = spans.split_off(6);
         assert_eq!(
             tail.iter().collect::<Vec<_>>(),
-            [StyledSpan {
-                len: 2,
-                style: Style::new().bold()
-            }]
+            [StyledSpan::new(Style::new().bold(), 2)]
         );
         assert_eq!(
             spans.iter().collect::<Vec<_>>(),
             [
-                StyledSpan {
-                    len: 5,
-                    style: Style::new()
-                },
-                StyledSpan {
-                    len: 1,
-                    style: Style::new().bold()
-                },
+                StyledSpan::new(Style::new(), 5),
+                StyledSpan::new(Style::new().bold(), 1),
             ]
         );
 
         let tail = spans.split_off(5);
         assert_eq!(
             tail.iter().collect::<Vec<_>>(),
-            [StyledSpan {
-                len: 1,
-                style: Style::new().bold()
-            }]
+            [StyledSpan::new(Style::new().bold(), 1)]
         );
         assert_eq!(
             spans.iter().collect::<Vec<_>>(),
-            [StyledSpan {
-                len: 5,
-                style: Style::new()
-            },]
+            [StyledSpan::new(Style::new(), 5)]
         );
 
         let tail = spans.split_off(3);
         assert_eq!(
             tail.iter().collect::<Vec<_>>(),
-            [StyledSpan {
-                len: 2,
-                style: Style::new()
-            }]
+            [StyledSpan::new(Style::new(), 2)]
         );
         assert_eq!(
             spans.iter().collect::<Vec<_>>(),
-            [StyledSpan {
-                len: 3,
-                style: Style::new()
-            }]
+            [StyledSpan::new(Style::new(), 3)]
         );
     }
 
     #[test]
     fn splitting_span_from_both_sides() {
-        let spans = &[StyledSpan {
-            len: 5,
-            style: Style::new(),
-        }];
+        let spans = &[StyledSpan::new(Style::new(), 5)];
         let mut spans = SpansSlice::new(spans);
         let mut tail = spans.split_off(2);
         let _ = tail.split_off(1);
 
-        assert_eq!(tail.first_span_len, Some(3));
-        assert_eq!(tail.last_span_len, Some(1));
+        assert_eq!(tail.first_span_len, NonZeroUsize::new(3));
+        assert_eq!(tail.last_span_len, NonZeroUsize::new(1));
         assert_eq!(
             tail.iter().collect::<Vec<_>>(),
-            [StyledSpan {
-                len: 1,
-                style: Style::new()
-            }]
+            [StyledSpan::new(Style::new(), 1)]
         );
     }
 }

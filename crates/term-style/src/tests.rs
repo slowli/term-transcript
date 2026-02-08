@@ -8,22 +8,16 @@ use super::*;
 const SIMPLE_INPUT: &str = "[[magenta on yellow*, bold, ul]]Hello[[]] world[[bold strike inv]]!";
 const SIMPLE_STYLED: StyledStr = styled!(SIMPLE_INPUT);
 const SIMPLE_STYLES: &[StyledSpan] = &[
-    StyledSpan {
-        style: Style::new()
+    StyledSpan::new(
+        Style::new()
             .bold()
             .underline()
             .fg_color(Some(Color::Ansi(AnsiColor::Magenta)))
             .bg_color(Some(Color::Ansi(AnsiColor::BrightYellow))),
-        len: 5,
-    },
-    StyledSpan {
-        style: Style::new(),
-        len: 6,
-    },
-    StyledSpan {
-        style: Style::new().bold().strikethrough().invert(),
-        len: 1,
-    },
+        5,
+    ),
+    StyledSpan::new(Style::new(), 6),
+    StyledSpan::new(Style::new().bold().strikethrough().invert(), 1),
 ];
 
 #[test]
@@ -96,20 +90,14 @@ fn parsing_with_unstyled_ends() {
 
     assert_eq!(STYLED.text(), "test.rs: [[DEBUG]] Hello");
     let expected_spans = [
-        StyledSpan {
-            style: Style::new(),
-            len: 10,
-        },
-        StyledSpan {
-            style: Style::new()
+        StyledSpan::new(Style::new(), 10),
+        StyledSpan::new(
+            Style::new()
                 .bold()
                 .fg_color(Some(AnsiColor::BrightGreen.into())),
-            len: 7,
-        },
-        StyledSpan {
-            style: Style::new(),
-            len: 7,
-        },
+            7,
+        ),
+        StyledSpan::new(Style::new(), 7),
     ];
     assert_eq!(STYLED.spans(), expected_spans);
 

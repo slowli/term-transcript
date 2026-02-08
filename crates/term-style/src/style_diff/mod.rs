@@ -5,6 +5,7 @@ use core::{
     fmt,
     iter::{self, Peekable},
     mem,
+    num::NonZeroUsize,
 };
 
 use anstyle::{AnsiColor, Color, Style};
@@ -29,7 +30,7 @@ impl StyledSpan {
         let mut pos = 0;
         while pos < line.len() {
             let &(span_start, span) = spans_iter.peek().expect("spans ended before lines");
-            let span_len = span.len - line_start.saturating_sub(span_start);
+            let span_len = span.len.get() - line_start.saturating_sub(span_start);
 
             let span_end = cmp::min(pos + span_len, line.len());
             write!(
@@ -51,7 +52,7 @@ impl StyledSpan {
 #[derive(Debug)]
 struct DiffStyleSpan {
     start: usize,
-    len: usize,
+    len: NonZeroUsize,
     lhs_color_spec: Style,
     rhs_color_spec: Style,
 }
@@ -115,17 +116,17 @@ impl<'a> StyleDiff<'a> {
                 });
             }
 
-            pos += common_len;
+            pos += common_len.get();
 
             match lhs_span.len.cmp(&rhs_span.len) {
                 Ordering::Less => {
-                    rhs_span.len -= lhs_span.len;
+                    rhs_span.shrink_len(lhs_span.len.get());
                     lhs_span = lhs_iter.next().unwrap();
                     // ^ `unwrap()` here and below are safe; we've checked that
                     // `lhs` and `rhs` contain same total span coverage.
                 }
                 Ordering::Greater => {
-                    lhs_span.len -= rhs_span.len;
+                    lhs_span.shrink_len(rhs_span.len.get());
                     rhs_span = rhs_iter.next().unwrap();
                 }
                 Ordering::Equal => {
@@ -161,7 +162,7 @@ impl<'a> StyleDiff<'a> {
             .iter()
             .map(move |span| {
                 let prev_start = span_start;
-                span_start += span.len;
+                span_start += span.len.get();
                 (prev_start, span)
             })
             .peekable();
@@ -205,7 +206,7 @@ impl<'a> StyleDiff<'a> {
             if span_start >= line_len {
                 break;
             }
-            let span_end = cmp::min(span.start + span.len - line_offset, line_len);
+            let span_end = cmp::min(span.start + span.len.get() - line_offset, line_len);
 
             if span_start > line_pos {
                 let spaces = " ".repeat(line[line_pos..span_start].width());
@@ -219,7 +220,7 @@ impl<'a> StyleDiff<'a> {
             write!(out, "{hl}{underline}{hl:#}")?;
 
             line_pos = span_end;
-            if span.start + span.len <= line_offset + line_len {
+            if span.start + span.len.get() <= line_offset + line_len {
                 // Span is finished on this line; can proceed to the next one.
                 spans_iter.next();
             }
@@ -262,7 +263,7 @@ impl<'a> StyleDiff<'a> {
             for (i, (lhs_line, rhs_line)) in lhs_lines.into_iter().zip(rhs_lines).enumerate() {
                 if i == 0 {
                     let start = differing_span.start;
-                    let end = start + differing_span.len;
+                    let end = start + differing_span.len.get();
                     let pos = format!("{start}..{end}");
                     write!(formatter, "{pos:>POS_WIDTH$} ")?;
                 } else {
@@ -341,7 +342,7 @@ impl SpanHighlightKind {
 #[derive(Debug, Clone, Copy)]
 struct HighlightedSpan {
     start: usize,
-    len: usize,
+    len: NonZeroUsize,
     kind: SpanHighlightKind,
 }
 
@@ -350,7 +351,7 @@ impl HighlightedSpan {
         let mut sequential_span_count = 1;
         let span_highlights = differing_spans.windows(2).map(|window| match window {
             [prev, next] => {
-                if prev.start + prev.len == next.start {
+                if prev.start + prev.len.get() == next.start {
                     sequential_span_count += 1;
                 } else {
                     sequential_span_count = 1;

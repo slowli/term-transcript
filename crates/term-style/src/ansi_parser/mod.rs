@@ -2,6 +2,7 @@
 //! a writer implementing `WriteColor`.
 
 use core::str;
+use std::num::NonZeroUsize;
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
@@ -77,15 +78,13 @@ impl AnsiParser {
     }
 
     fn write_text(&mut self, text: &str) {
-        if text.is_empty() {
-            return;
+        if let Some(len) = NonZeroUsize::new(text.len()) {
+            self.output.text.push_str(text);
+            self.output.spans.push(StyledSpan {
+                style: normalize_style(self.current_style),
+                len,
+            });
         }
-
-        self.output.text.push_str(text);
-        self.output.spans.push(StyledSpan {
-            style: normalize_style(self.current_style),
-            len: text.len(),
-        });
     }
 
     fn process(&mut self, ansi_bytes: &[u8]) -> Result<(), AnsiError> {

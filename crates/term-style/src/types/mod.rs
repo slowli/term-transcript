@@ -1,6 +1,7 @@
 //! Basic types.
 
 use core::{fmt, ops};
+use std::num::NonZeroUsize;
 
 use anstyle::Style;
 
@@ -22,7 +23,33 @@ pub struct StyledSpan {
     /// Style applied to the text.
     pub style: Style,
     /// Length of text in bytes.
-    pub len: usize,
+    pub len: NonZeroUsize,
+}
+
+impl StyledSpan {
+    /// # Panics
+    ///
+    /// Panics if `len` is zero.
+    pub const fn new(style: Style, len: usize) -> Self {
+        Self {
+            style,
+            len: NonZeroUsize::new(len).unwrap(),
+        }
+    }
+
+    #[doc(hidden)] // low-level
+    pub const fn extend_len(&mut self, add: usize) {
+        self.len = self.len.checked_add(add).expect("length overflow");
+    }
+
+    pub(crate) fn shrink_len(&mut self, sub: usize) {
+        self.len = self
+            .len
+            .get()
+            .checked_sub(sub)
+            .and_then(NonZeroUsize::new)
+            .expect("length underflow");
+    }
 }
 
 /// ANSI-styled text.
@@ -71,7 +98,7 @@ impl StyledString {
     /// Panics if `text` and `spans` have differing lengths.
     pub fn from_parts(text: String, mut spans: Vec<StyledSpan>) -> Self {
         assert_eq!(
-            spans.iter().map(|span| span.len).sum::<usize>(),
+            spans.iter().map(|span| span.len.get()).sum::<usize>(),
             text.len(),
             "Mismatch between total length of spans and text length"
         );
@@ -103,7 +130,7 @@ impl StyledString {
         let mut copied_spans = other.spans;
         if let (Some(last), Some(next)) = (self.spans.last_mut(), other.spans.first()) {
             if last.style == next.style {
-                last.len += next.len;
+                last.extend_len(next.len.get());
                 copied_spans = &other.spans[1..];
             }
         }
@@ -116,7 +143,7 @@ impl StyledString {
         for span in self.spans {
             if let Some(last_span) = shrunk_spans.last_mut() {
                 if last_span.style == span.style {
-                    last_span.len += span.len;
+                    last_span.extend_len(span.len.get());
                 } else {
                     shrunk_spans.push(span);
                 }
@@ -229,10 +256,11 @@ where
             .spans
             .last_mut()
             .expect("internal error: text is empty, but spans aren't");
-        assert!(last_span.len >= ch_len, "style span divides char");
+        assert!(last_span.len.get() >= ch_len, "style span divides char");
         let style = last_span.style;
-        last_span.len -= ch_len;
-        if last_span.len == 0 {
+        if let Some(new_len) = NonZeroUsize::new(last_span.len.get() - ch_len) {
+            last_span.len = new_len;
+        } else {
             self.spans.pop();
         }
         Some((ch, style))
@@ -248,7 +276,7 @@ where
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut pos = 0;
         for (i, span) in self.spans.iter().enumerate() {
-            let text = &self.text[pos..pos + span.len];
+            let text = &self.text[pos..pos + span.len.get()];
             if i == 0 && span.style.is_plain() {
                 // Special case: do not output an extra `[[]]` at the string start.
                 write!(formatter, "{}", EscapedText(text))?;
@@ -260,7 +288,7 @@ where
                     text = EscapedText(text)
                 )?;
             }
-            pos += span.len;
+            pos += span.len.get();
         }
         Ok(())
     }
@@ -279,9 +307,9 @@ impl fmt::Display for Ansi<'_> {
                 formatter,
                 "{style}{text}{style:#}",
                 style = span.style,
-                text = &self.text[pos..pos + span.len]
+                text = &self.text[pos..pos + span.len.get()]
             )?;
-            pos += span.len;
+            pos += span.len.get();
         }
         Ok(())
     }

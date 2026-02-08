@@ -1,6 +1,6 @@
 //! Text parsing.
 
-use std::{borrow::Cow, fmt, mem, ops, str};
+use std::{borrow::Cow, fmt, mem, num::NonZeroUsize, ops, str};
 
 use anstyle::{AnsiColor, Color, Effects, Style};
 use quick_xml::{
@@ -21,6 +21,8 @@ enum HardBreak {
 pub(super) struct TextReadingState {
     plaintext_buffer: String,
     style_spans: Vec<StyledSpan>,
+    current_style: Style,
+    spanned_text_len: usize,
     open_tags: usize,
     hard_br: Option<HardBreak>,
 }
@@ -37,8 +39,10 @@ impl fmt::Debug for TextReadingState {
 impl Default for TextReadingState {
     fn default() -> Self {
         Self {
-            style_spans: Vec::new(),
             plaintext_buffer: String::new(),
+            style_spans: Vec::new(),
+            current_style: Style::new(),
+            spanned_text_len: 0,
             open_tags: 1,
             hard_br: None,
         }
@@ -61,6 +65,7 @@ impl TextReadingState {
 
     pub(super) fn take_plaintext(&mut self) -> String {
         self.style_spans.clear();
+        self.spanned_text_len = 0;
         mem::take(&mut self.plaintext_buffer)
     }
 
@@ -136,7 +141,7 @@ impl TextReadingState {
                 if Self::is_text_span(tag_name.as_ref()) {
                     let style = Self::parse_style_from_span(&tag)?;
                     if !style.is_plain() {
-                        self.style_spans.push(StyledSpan { style, len: 0 });
+                        self.set_style(style);
                     }
                 }
             }
@@ -147,11 +152,8 @@ impl TextReadingState {
                     return Ok(None);
                 }
 
-                if Self::is_text_span(tag.name().as_ref()) {
-                    self.style_spans.push(StyledSpan {
-                        style: Style::new(),
-                        len: 0,
-                    });
+                if Self::is_text_span(tag.name().as_ref()) || self.open_tags == 0 {
+                    self.set_style(Style::new());
                 }
 
                 if self.open_tags == 0 {
@@ -174,19 +176,18 @@ impl TextReadingState {
     }
 
     fn push_text(&mut self, text: &str) {
-        if text.is_empty() {
-            return;
-        }
-
         self.plaintext_buffer.push_str(text);
-        if self.style_spans.is_empty() {
+    }
+
+    fn set_style(&mut self, style: Style) {
+        let prev_style = mem::replace(&mut self.current_style, style);
+        if let Some(len) = NonZeroUsize::new(self.plaintext_buffer.len() - self.spanned_text_len) {
             self.style_spans.push(StyledSpan {
-                style: Style::new(),
-                len: 0,
+                style: prev_style,
+                len,
             });
+            self.spanned_text_len += len.get();
         }
-        let last_span = self.style_spans.last_mut().unwrap();
-        last_span.len += text.len();
     }
 
     /// Parses a style from a `span`.
