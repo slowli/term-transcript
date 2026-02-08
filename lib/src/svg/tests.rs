@@ -2,25 +2,27 @@
 
 use std::{borrow::Cow, convert::Infallible, num::NonZeroUsize};
 
+use anstyle::RgbColor;
+use term_style::{StyledString, styled};
 use test_casing::{Product, test_casing};
 
-use super::*;
-use crate::{
-    ExitStatus, Interaction, UserInput,
-    style::{Color, Style, StyledSpan},
-    svg::options::{LineNumberingOptions, WindowOptions},
+use super::{
+    data::{SerdeStyle, SerdeStyledSpan},
+    options::{LineNumberingOptions, WindowOptions},
+    *,
 };
+use crate::{ExitStatus, Interaction, UserInput, svg::data::SerdeColor};
 
 #[test]
 fn rendering_simple_transcript() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("test --arg && true"),
-        "Hello, \u{1b}[31m\u{1b}[42m<world>\u{1b}[0m!",
+        styled!("Hello, [[red on green]]<world>[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -56,11 +58,11 @@ fn rendering_simple_transcript_to_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("test --arg && true"),
-        "Hello, \u{1b}[31m\u{1b}[42m<world>\u{1b}[0m!",
+        styled!("Hello, [[red on green]]<world>[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -97,7 +99,7 @@ fn rendering_transcript_with_opacity_options() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "\u{1b}[2mHello,\u{1b}[0m \u{1b}[5mworld\u{1b}[0m!",
+        styled!("[[dim]]Hello,[[]] [[blink]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -140,7 +142,7 @@ fn rendering_transcript_with_hidden_input() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let options = TemplateOptions {
@@ -167,7 +169,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let options = TemplateOptions {
@@ -195,10 +197,10 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
 #[test]
 fn rendering_transcript_with_empty_output_to_pure_svg() {
     let mut transcript = Transcript::new();
-    transcript.add_interaction(UserInput::command("test"), "");
+    transcript.add_interaction(UserInput::command("test"), StyledString::default());
     transcript.add_interaction(
         UserInput::command("test --arg"),
-        "Hello, \u{1b}[31m\u{1b}[42mworld\u{1b}[0m!",
+        styled!("Hello, [[red on green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -225,7 +227,7 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
 #[test]
 fn rendering_transcript_with_explicit_success() {
     let mut transcript = Transcript::new();
-    let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[]]!").into())
         .with_exit_status(ExitStatus(0));
     transcript.add_existing_interaction(interaction);
 
@@ -243,7 +245,7 @@ fn rendering_transcript_with_explicit_success() {
 #[test]
 fn rendering_transcript_with_failure() {
     let mut transcript = Transcript::new();
-    let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[]]!").into())
         .with_exit_status(ExitStatus(1));
     transcript.add_existing_interaction(interaction);
 
@@ -261,7 +263,7 @@ fn rendering_transcript_with_failure() {
 #[test]
 fn rendering_pure_svg_transcript_with_failure() {
     let mut transcript = Transcript::new();
-    let interaction = Interaction::new("test", "Hello, \u{1b}[32mworld\u{1b}[0m!")
+    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[]]!").into())
         .with_exit_status(ExitStatus(1));
     transcript.add_existing_interaction(interaction);
 
@@ -293,7 +295,7 @@ fn rendering_transcript_with_frame() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -318,7 +320,7 @@ fn rendering_pure_svg_transcript_with_frame() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -343,7 +345,7 @@ fn rendering_transcript_with_animation() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!\n".repeat(22),
+        iter::repeat_n(styled!("Hello, [[green]]world[[]]!"), 22).collect(),
     );
 
     let mut buffer = vec![];
@@ -377,7 +379,7 @@ fn scrollbar_animation_elision() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!\n".repeat(22),
+        iter::repeat_n(styled!("Hello, [[green]]world[[]]!"), 22).collect(),
     );
 
     for elision_threshold in [0.0, 0.25] {
@@ -428,7 +430,7 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!\n".repeat(22),
+        iter::repeat_n(styled!("Hello, [[green]]world[[]]!"), 22).collect(),
     );
 
     let mut buffer = vec![];
@@ -484,7 +486,7 @@ fn rendering_transcript_with_wraps() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -509,7 +511,7 @@ fn rendering_svg_transcript_with_wraps() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -541,7 +543,7 @@ fn rendering_transcript_with_breaks_and_line_numbers(#[map(ref)] continued: &Con
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -577,7 +579,7 @@ fn rendering_svg_transcript_with_breaks_and_line_numbers(
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -614,11 +616,11 @@ fn rendering_transcript_with_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another_test"),
-        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello,\n[[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -649,11 +651,11 @@ fn rendering_pure_svg_transcript_with_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another_test"),
-        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello,\n[[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -684,11 +686,11 @@ fn rendering_transcript_with_continuous_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another_test"),
-        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello,\n[[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -719,11 +721,11 @@ fn rendering_transcript_with_input_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello,\n[[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -754,15 +756,15 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello,\n[[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("third\ntest").hide(),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -798,15 +800,15 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello,\n[[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("third\ntest").hide(),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -854,11 +856,11 @@ fn rendering_pure_svg_transcript_with_input_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        "Hello,\n\u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello,\n[[green]]world[[]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -889,7 +891,7 @@ fn rendering_transcript_with_styles() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "Hello, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("Hello, [[green]]world[[]]!").into(),
     );
 
     let styles = "@font-face { font-family: 'Fira Mono'; }";
@@ -955,7 +957,7 @@ fn embedding_font(pure_svg: bool, with_line_numbers: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        "H\u{1b}[44mell\u{1b}[0mo, \u{1b}[32mworld\u{1b}[0m!",
+        styled!("H[[on blue]]ell[[]]o, [[green]]world[[]]!").into(),
     );
 
     let options = TemplateOptions {
@@ -1015,8 +1017,8 @@ fn rendering_html_span() {
     let mut handlebars = Handlebars::new();
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
-    let data = serde_json::json!(StyledSpan {
-        style: Style::default(),
+    let data = serde_json::json!(SerdeStyledSpan {
+        style: SerdeStyle::default(),
         text: "Test",
     });
     let rendered = handlebars
@@ -1024,14 +1026,14 @@ fn rendering_html_span() {
         .unwrap();
     assert_eq!(rendered, "Test");
 
-    let mut style = Style {
+    let mut style = SerdeStyle {
         bold: true,
         underline: true,
-        fg: Some(Color::Index(2)),
-        bg: Some(Color::Rgb("#cfc".parse().unwrap())),
-        ..Style::default()
+        fg: Some(SerdeColor::Index(2)),
+        bg: Some(SerdeColor::Rgb(RgbColor(0xcc, 0xff, 0xcc))),
+        ..SerdeStyle::default()
     };
-    let data = serde_json::json!(StyledSpan {
+    let data = serde_json::json!(SerdeStyledSpan {
         style,
         text: "Test",
     });
@@ -1045,7 +1047,7 @@ fn rendering_html_span() {
 
     style.bg = None;
     style.underline = false;
-    let data = serde_json::json!(StyledSpan {
+    let data = serde_json::json!(SerdeStyledSpan {
         style,
         text: "Test",
     });
@@ -1062,10 +1064,10 @@ fn rendering_inverted_html_span() {
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
 
-    let mut data = StyledSpan {
-        style: Style {
+    let mut data = SerdeStyledSpan {
+        style: SerdeStyle {
             inverted: true,
-            ..Style::default()
+            ..SerdeStyle::default()
         },
         text: "Test",
     };
@@ -1074,13 +1076,13 @@ fn rendering_inverted_html_span() {
         .unwrap();
     assert_eq!(rendered, r#"<span class="inv fg-none bg-none">Test</span>"#);
 
-    data.style.fg = Some(Color::Index(5));
+    data.style.fg = Some(SerdeColor::Index(5));
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
         .unwrap();
     assert_eq!(rendered, r#"<span class="inv fg-none bg5">Test</span>"#);
 
-    data.style.bg = Some(Color::Rgb("#c0ffee".parse().unwrap()));
+    data.style.bg = Some(SerdeColor::Rgb(RgbColor(0xc0, 0xff, 0xee)));
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>html_span}}", &data)
         .unwrap();
@@ -1097,11 +1099,11 @@ fn rendering_blinking_html_span() {
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
 
-    let data = StyledSpan {
-        style: Style {
+    let data = SerdeStyledSpan {
+        style: SerdeStyle {
             blink: true,
             inverted: true,
-            ..Style::default()
+            ..SerdeStyle::default()
         },
         text: "Test",
     };
@@ -1121,11 +1123,11 @@ fn rendering_dimmed_html_span() {
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
 
-    let data = StyledSpan {
-        style: Style {
+    let data = SerdeStyledSpan {
+        style: SerdeStyle {
             dimmed: true,
             strikethrough: true,
-            ..Style::default()
+            ..SerdeStyle::default()
         },
         text: "Test",
     };
@@ -1144,8 +1146,8 @@ fn rendering_svg_tspan() {
     let mut handlebars = Handlebars::new();
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
-    let data = serde_json::json!(StyledSpan {
-        style: Style::default(),
+    let data = serde_json::json!(SerdeStyledSpan {
+        style: SerdeStyle::default(),
         text: "Test",
     });
     let rendered = handlebars
@@ -1153,14 +1155,14 @@ fn rendering_svg_tspan() {
         .unwrap();
     assert_eq!(rendered, "");
 
-    let mut style = Style {
+    let mut style = SerdeStyle {
         bold: true,
         underline: true,
-        fg: Some(Color::Index(2)),
-        bg: Some(Color::Rgb("#cfc".parse().unwrap())),
-        ..Style::default()
+        fg: Some(SerdeColor::Index(2)),
+        bg: Some(SerdeColor::Rgb(RgbColor(0xcc, 0xff, 0xcc))),
+        ..SerdeStyle::default()
     };
-    let data = serde_json::json!(StyledSpan {
+    let data = serde_json::json!(SerdeStyledSpan {
         style,
         text: "Test",
     });
@@ -1169,10 +1171,10 @@ fn rendering_svg_tspan() {
         .unwrap();
     assert_eq!(rendered, " class=\"bold underline fg2 bg#ccffcc\"");
 
-    style.bg = Some(Color::Index(0));
+    style.bg = Some(SerdeColor::Index(0));
     style.underline = false;
     style.dimmed = true;
-    let data = serde_json::json!(StyledSpan {
+    let data = serde_json::json!(SerdeStyledSpan {
         style,
         text: "Test",
     });
@@ -1181,10 +1183,10 @@ fn rendering_svg_tspan() {
         .unwrap();
     assert_eq!(rendered, " class=\"bold dimmed fg2 bg0\"");
 
-    style.fg = Some(Color::Rgb("#c0ffee".parse().unwrap()));
+    style.fg = Some(SerdeColor::Rgb(RgbColor(0xc0, 0xff, 0xee)));
     style.bg = None;
     style.dimmed = false;
-    let data = serde_json::json!(StyledSpan {
+    let data = serde_json::json!(SerdeStyledSpan {
         style,
         text: "Test",
     });
@@ -1201,10 +1203,10 @@ fn rendering_inverted_svg_tspan() {
     register_helpers(&mut handlebars);
     handlebars.register_template("_helpers", helpers);
 
-    let mut data = StyledSpan {
-        style: Style {
+    let mut data = SerdeStyledSpan {
+        style: SerdeStyle {
             inverted: true,
-            ..Style::default()
+            ..SerdeStyle::default()
         },
         text: "Test",
     };
@@ -1213,13 +1215,13 @@ fn rendering_inverted_svg_tspan() {
         .unwrap();
     assert_eq!(rendered, r#" class="inv fg-none bg-none""#);
 
-    data.style.fg = Some(Color::Index(5));
+    data.style.fg = Some(SerdeColor::Index(5));
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
     assert_eq!(rendered, r#" class="inv fg-none bg5""#);
 
-    data.style.bg = Some(Color::Rgb("#c0ffee".parse().unwrap()));
+    data.style.bg = Some(SerdeColor::Rgb(RgbColor(0xc0, 0xff, 0xee)));
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();

@@ -5,41 +5,28 @@ use std::{
     fs::File,
     io::{self, BufReader, Write},
     path::Path,
-    str,
 };
 
 use anstream::{AutoStream, ColorChoice};
+use anstyle::{Ansi256Color, AnsiColor, Color, Style};
+use term_style::{StyleDiff, TextDiff};
 
 use super::{
     MatchKind, TestConfig, TestOutputConfig, TestStats,
-    color_diff::ColorDiff,
-    parser::Parsed,
     utils::{ChoiceWriter, IndentingWriter, PrintlnWriter},
 };
-use crate::{
-    Interaction, TermError, Transcript, UserInput,
-    style::{Color, Style, StyledSpan},
-    traits::SpawnShell,
-};
+use crate::{Interaction, Transcript, UserInput, traits::SpawnShell};
 
-const SUCCESS: Style = Style {
-    fg: Some(Color::INTENSE_GREEN),
-    ..Style::NONE
-};
-const ERROR: Style = Style {
-    fg: Some(Color::INTENSE_RED),
-    ..Style::NONE
-};
-const VERBOSE_OUTPUT: Style = Style {
-    fg: Some(Color::Index(244)), // medium gray
-    ..Style::NONE
-};
+const SUCCESS: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightGreen)));
+const ERROR: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightRed)));
+// medium gray
+const VERBOSE_OUTPUT: Style = Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(244))));
 
 #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, ret, err))]
 #[doc(hidden)] // low-level; not public API
 pub fn compare_transcripts(
     out: &mut impl Write,
-    parsed: &Transcript<Parsed>,
+    parsed: &Transcript,
     reproduced: &Transcript,
     match_kind: MatchKind,
     verbose: bool,
@@ -60,16 +47,10 @@ pub fn compare_transcripts(
         write!(out, "  [")?;
 
         // First, process text only.
-        let original_text = original.output().plaintext();
-        let mut reproduced_text = reproduced
-            .to_plaintext()
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-        // Trimming the terminal newline when capturing it may not be enough:
-        // the newline may be followed by the no-op ASCII color sequences.
-        let should_trim_newline = reproduced_text.ends_with('\n');
-        if should_trim_newline {
-            reproduced_text.pop();
-        }
+        let original_text = original.output().text();
+        let reproduced_text = reproduced.text();
+        // FIXME: Trimming the terminal newline when capturing it may not be enough:
+        //   the newline may be followed by the no-op ASCII color sequences.
 
         let mut actual_match = if original_text == reproduced_text {
             Some(MatchKind::TextOnly)
@@ -81,19 +62,7 @@ pub fn compare_transcripts(
 
         // If we do precise matching, check it as well.
         let color_diff = if match_kind == MatchKind::Precise && actual_match.is_some() {
-            let original_spans = &original.output().styled_spans;
-            let mut reproduced_spans =
-                StyledSpan::parse(reproduced.as_ref()).map_err(|err| match err {
-                    TermError::Io(err) => err,
-                    other => io::Error::new(io::ErrorKind::InvalidInput, other),
-                })?;
-            if should_trim_newline {
-                if let Some(last_span) = reproduced_spans.last_mut() {
-                    last_span.text -= 1;
-                }
-            }
-
-            let diff = ColorDiff::new(original_spans, &reproduced_spans);
+            let diff = StyleDiff::new(original.output().as_ref(), reproduced.as_ref());
             #[cfg(feature = "tracing")]
             tracing::debug!(?diff, "compared output coloring");
 
@@ -118,60 +87,19 @@ pub fn compare_transcripts(
         writeln!(out, "] Input: {}", original.input().as_ref())?;
 
         if let Some(diff) = color_diff {
-            let original_spans = &original.output().styled_spans;
-            diff.highlight_text(out, original_text, original_spans)?;
-            diff.write_as_table(out)?;
+            write!(out, "{diff:>4}{diff:#}")?;
         } else if actual_match.is_none() {
-            write_diff(out, original_text, &reproduced_text)?;
+            write!(out, "{:>4}", TextDiff::new(original_text, reproduced_text))?;
         } else if verbose {
             write!(out, "{VERBOSE_OUTPUT}")?;
             let mut out_with_indents = IndentingWriter::new(&mut *out, "    ");
-            writeln!(out_with_indents, "{}", original.output().plaintext())?;
+            writeln!(out_with_indents, "{}", original.output().text())?;
             write!(out, "{VERBOSE_OUTPUT:#}")?;
         }
     }
 
     out.flush()?; // apply terminal styling if necessary
     Ok(stats)
-}
-
-#[cfg(feature = "pretty_assertions")]
-fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
-    use pretty_assertions::Comparison;
-
-    // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
-    // to switch to `fmt::Display`.
-    struct DebugStr<'a>(&'a str);
-
-    impl fmt::Debug for DebugStr<'_> {
-        fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            // Align output with verbose term output. Since `Comparison` adds one space,
-            // we need to add 3 spaces instead of 4.
-            for line in self.0.lines() {
-                writeln!(formatter, "   {line}")?;
-            }
-            Ok(())
-        }
-    }
-
-    write!(
-        out,
-        "    {}",
-        Comparison::new(&DebugStr(original), &DebugStr(reproduced))
-    )
-}
-
-#[cfg(not(feature = "pretty_assertions"))]
-fn write_diff(out: &mut impl Write, original: &str, reproduced: &str) -> io::Result<()> {
-    writeln!(out, "  Original:")?;
-    for line in original.lines() {
-        writeln!(out, "    {line}")?;
-    }
-    writeln!(out, "  Reproduced:")?;
-    for line in reproduced.lines() {
-        writeln!(out, "    {line}")?;
-    }
-    Ok(())
 }
 
 impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
@@ -264,7 +192,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
     fn compare_and_test_transcript(
         &mut self,
         snapshot_path: &Path,
-        transcript: &Transcript<Parsed>,
+        transcript: &Transcript,
         expected_inputs: &[UserInput],
     ) {
         let actual_inputs: Vec<_> = transcript
@@ -369,7 +297,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
     ///   its output.
     /// - Panics if there are mismatches between outputs in the original and reproduced
     ///   transcripts.
-    pub fn test_transcript(&mut self, transcript: &Transcript<Parsed>) {
+    pub fn test_transcript(&mut self, transcript: &Transcript) {
         let (stats, _) = self
             .test_transcript_for_stats(transcript)
             .unwrap_or_else(|err| panic!("{err}"));
@@ -386,7 +314,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, err))]
     pub fn test_transcript_for_stats(
         &mut self,
-        transcript: &Transcript<Parsed>,
+        transcript: &Transcript,
     ) -> io::Result<(TestStats, Transcript)> {
         if self.output == TestOutputConfig::Quiet {
             self.test_transcript_inner(&mut io::sink(), transcript)
@@ -406,7 +334,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
     pub(super) fn test_transcript_inner(
         &mut self,
         out: &mut impl Write,
-        transcript: &Transcript<Parsed>,
+        transcript: &Transcript,
     ) -> io::Result<(TestStats, Transcript)> {
         let inputs = transcript
             .interactions()

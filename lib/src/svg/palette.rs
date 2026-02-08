@@ -2,9 +2,10 @@
 
 use std::{error, fmt, str::FromStr};
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use anstyle::RgbColor;
+use serde::{Deserialize, Serialize};
 
-use crate::style::RgbColor;
+use super::data::serde_color;
 
 /// Palette of [16 standard terminal colors][colors] (8 ordinary colors + 8 intense variations).
 ///
@@ -157,50 +158,29 @@ impl Palette {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct TermColors {
     /// Black color.
+    #[serde(with = "serde_color")]
     pub black: RgbColor,
     /// Red color.
+    #[serde(with = "serde_color")]
     pub red: RgbColor,
     /// Green color.
+    #[serde(with = "serde_color")]
     pub green: RgbColor,
     /// Yellow color.
+    #[serde(with = "serde_color")]
     pub yellow: RgbColor,
     /// Blue color.
+    #[serde(with = "serde_color")]
     pub blue: RgbColor,
     /// Magenta color.
+    #[serde(with = "serde_color")]
     pub magenta: RgbColor,
     /// Cyan color.
+    #[serde(with = "serde_color")]
     pub cyan: RgbColor,
     /// White color.
+    #[serde(with = "serde_color")]
     pub white: RgbColor,
-}
-
-impl Serialize for RgbColor {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&format!("{self:x}"))
-    }
-}
-
-impl<'de> Deserialize<'de> for RgbColor {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        use serde::de;
-
-        #[derive(Debug)]
-        struct ColorVisitor;
-
-        impl de::Visitor<'_> for ColorVisitor {
-            type Value = RgbColor;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("hex color, such as #fed or #a757ff")
-            }
-
-            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
-                value.parse().map_err(E::custom)
-            }
-        }
-
-        deserializer.deserialize_str(ColorVisitor)
-    }
 }
 
 /// Named [`Palette`].

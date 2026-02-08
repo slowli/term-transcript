@@ -60,13 +60,12 @@ use anstream::ColorChoice;
 
 pub use self::{
     config_impl::compare_transcripts,
-    parser::{LocatedParseError, ParseError, Parsed},
+    parser::{LocatedParseError, ParseError},
 };
 #[cfg(feature = "svg")]
 use crate::svg::Template;
 use crate::{ShellOptions, Transcript, traits::SpawnShell};
 
-mod color_diff;
 mod config_impl;
 mod parser;
 #[cfg(test)]

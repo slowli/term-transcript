@@ -275,15 +275,15 @@ mod tests {
         {
             let interaction = &transcript.interactions()[0];
             assert_eq!(interaction.input().text, "echo hello");
-            let output = interaction.output().as_ref();
-            assert_eq!(output.trim(), "hello");
+            let output = interaction.output();
+            assert_eq!(output.text().trim(), "hello");
         }
 
         let interaction = &transcript.interactions()[1];
         assert_eq!(interaction.input().text, "echo foo && echo bar >&2");
-        let output = interaction.output().as_ref();
+        let output = interaction.output();
         assert_eq!(
-            output.split_whitespace().collect::<Vec<_>>(),
+            output.text().split_whitespace().collect::<Vec<_>>(),
             ["foo", "bar"]
         );
         Ok(())
@@ -298,9 +298,9 @@ mod tests {
 
         assert_eq!(transcript.interactions().len(), 1);
         let interaction = &transcript.interactions()[0];
-        let output = interaction.output().as_ref();
+        let output = interaction.output();
         anyhow::ensure!(
-            output.trim() == "Hello\nworld",
+            output.text().trim() == "Hello\nworld",
             "Unexpected PTY output: {output}"
         );
         Ok(())

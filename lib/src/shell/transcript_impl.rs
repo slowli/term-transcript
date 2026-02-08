@@ -9,9 +9,11 @@ use std::{
     time::Duration,
 };
 
+use term_style::{AnsiError, StyledString};
+
 use super::ShellOptions;
 use crate::{
-    Captured, Interaction, Transcript, UserInput,
+    Interaction, Transcript, UserInput,
     traits::{ShellProcess, SpawnShell, SpawnedShell},
 };
 
@@ -31,6 +33,10 @@ impl Timeouts {
     fn next(&mut self) -> Duration {
         self.inner.next().unwrap() // safe by construction; the iterator is indefinite
     }
+}
+
+fn map_ansi_error(err: AnsiError) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, err)
 }
 
 impl Transcript {
@@ -270,6 +276,7 @@ impl Transcript {
             Timeouts::new(options),
             options.line_decoder.as_mut(),
         )?;
+        let output = StyledString::from_ansi(&output).map_err(map_ansi_error)?;
 
         let exit_status = if let Some(status_check) = &options.status_check {
             let command = status_check.command();
@@ -282,7 +289,9 @@ impl Transcript {
                 Timeouts::new(options),
                 options.line_decoder.as_mut(),
             )?;
-            status_check.check(&Captured::from(response))
+            let response = StyledString::from_ansi(&response).map_err(map_ansi_error)?;
+
+            status_check.check(response.as_ref())
         } else {
             None
         };
@@ -337,7 +346,9 @@ impl Transcript {
         #[cfg(feature = "tracing")]
         tracing::debug!(?output, "read command output");
 
-        self.interactions.push(Interaction::new(input, output));
+        let output = StyledString::from_ansi(&output).map_err(map_ansi_error)?;
+        let interaction = Interaction::new(input, output);
+        self.interactions.push(interaction);
         Ok(self)
     }
 }

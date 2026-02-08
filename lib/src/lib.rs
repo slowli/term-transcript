@@ -152,23 +152,21 @@
 #![doc(html_root_url = "https://docs.rs/term-transcript/0.5.0-beta.1")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError, str::Utf8Error};
+use std::{borrow::Cow, error::Error as StdError, fmt, io};
+
+use term_style::{AnsiError, StyledString};
 
 #[cfg(feature = "portable-pty")]
 pub use self::pty::{PtyCommand, PtyShell};
-pub use self::{
-    shell::{ShellOptions, StdShell},
-    term::{Captured, TermOutput},
-};
+pub use self::shell::{ShellOptions, StdShell};
 
 #[cfg(feature = "portable-pty")]
 mod pty;
 mod shell;
-mod style;
+//mod style;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub mod svg;
-mod term;
 #[cfg(feature = "test")]
 #[cfg_attr(docsrs, doc(cfg(feature = "test")))]
 pub mod test;
@@ -181,21 +179,8 @@ pub(crate) type BoxedError = Box<dyn std::error::Error + Send + Sync>;
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum TermError {
-    /// Unfinished escape sequence.
-    UnfinishedSequence,
-    /// Unrecognized escape sequence (not a CSI or OSC one). The enclosed byte
-    /// is the first byte of the sequence (excluding `0x1b`).
-    UnrecognizedSequence(u8),
-    /// Invalid final byte for an SGR escape sequence.
-    InvalidSgrFinalByte(u8),
-    /// Unfinished color spec.
-    UnfinishedColor,
-    /// Invalid type of a color spec.
-    InvalidColorType(String),
-    /// Invalid ANSI color index.
-    InvalidColorIndex(ParseIntError),
-    /// UTF-8 decoding error.
-    Utf8(Utf8Error),
+    /// Ansi escape sequence parsing error.
+    Ansi(AnsiError),
     /// IO error.
     Io(io::Error),
     /// Font embedding error.
@@ -205,27 +190,7 @@ pub enum TermError {
 impl fmt::Display for TermError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UnfinishedSequence => formatter.write_str("Unfinished ANSI escape sequence"),
-            Self::UnrecognizedSequence(byte) => {
-                write!(
-                    formatter,
-                    "Unrecognized escape sequence (first byte is {byte})"
-                )
-            }
-            Self::InvalidSgrFinalByte(byte) => {
-                write!(
-                    formatter,
-                    "Invalid final byte for an SGR escape sequence: {byte}"
-                )
-            }
-            Self::UnfinishedColor => formatter.write_str("Unfinished color spec"),
-            Self::InvalidColorType(ty) => {
-                write!(formatter, "Invalid type of a color spec: {ty}")
-            }
-            Self::InvalidColorIndex(err) => {
-                write!(formatter, "Failed parsing color index: {err}")
-            }
-            Self::Utf8(err) => write!(formatter, "UTF-8 decoding error: {err}"),
+            Self::Ansi(err) => write!(formatter, "ANSI escape sequence parsing error: {err}"),
             Self::Io(err) => write!(formatter, "I/O error: {err}"),
             Self::FontEmbedding(err) => write!(formatter, "font embedding error: {err}"),
         }
@@ -235,47 +200,32 @@ impl fmt::Display for TermError {
 impl StdError for TermError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            Self::InvalidColorIndex(err) => Some(err),
-            Self::Utf8(err) => Some(err),
+            Self::Ansi(err) => Some(err),
             Self::Io(err) => Some(err),
             _ => None,
         }
     }
 }
 
-impl From<Utf8Error> for TermError {
-    fn from(err: Utf8Error) -> Self {
-        Self::Utf8(err)
-    }
-}
-
 /// Transcript of a user interacting with the terminal.
-#[derive(Debug, Clone)]
-pub struct Transcript<Out: TermOutput = Captured> {
-    interactions: Vec<Interaction<Out>>,
+#[derive(Debug, Clone, Default)]
+pub struct Transcript {
+    interactions: Vec<Interaction>,
 }
 
-impl<Out: TermOutput> Default for Transcript<Out> {
-    fn default() -> Self {
-        Self {
-            interactions: vec![],
-        }
-    }
-}
-
-impl<Out: TermOutput> Transcript<Out> {
+impl Transcript {
     /// Creates an empty transcript.
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Returns interactions in this transcript.
-    pub fn interactions(&self) -> &[Interaction<Out>] {
+    pub fn interactions(&self) -> &[Interaction] {
         &self.interactions
     }
 
     /// Returns a mutable reference to interactions in this transcript.
-    pub fn interactions_mut(&mut self) -> &mut [Interaction<Out>] {
+    pub fn interactions_mut(&mut self) -> &mut [Interaction] {
         &mut self.interactions
     }
 }
@@ -298,7 +248,7 @@ impl Transcript {
     pub fn add_interaction(
         &mut self,
         input: impl Into<UserInput>,
-        output: impl Into<String>,
+        output: StyledString,
     ) -> &mut Self {
         self.add_existing_interaction(Interaction::new(input, output))
     }
@@ -357,18 +307,18 @@ impl ExitStatus {
 
 /// One-time interaction with the terminal.
 #[derive(Debug, Clone)]
-pub struct Interaction<Out: TermOutput = Captured> {
+pub struct Interaction {
     input: UserInput,
-    output: Out,
+    output: StyledString,
     exit_status: Option<ExitStatus>,
 }
 
 impl Interaction {
     /// Creates a new interaction.
-    pub fn new(input: impl Into<UserInput>, output: impl Into<String>) -> Self {
+    pub fn new(input: impl Into<UserInput>, output: StyledString) -> Self {
         Self {
             input: input.into(),
-            output: Captured::from(output.into()),
+            output,
             exit_status: None,
         }
     }
@@ -386,19 +336,19 @@ impl Interaction {
     }
 }
 
-impl<Out: TermOutput> Interaction<Out> {
+impl Interaction {
     /// Input provided by the user.
     pub fn input(&self) -> &UserInput {
         &self.input
     }
 
     /// Output to the terminal.
-    pub fn output(&self) -> &Out {
+    pub fn output(&self) -> &StyledString {
         &self.output
     }
 
     /// Sets the output for this interaction.
-    pub fn set_output(&mut self, output: Out) {
+    pub fn set_output(&mut self, output: StyledString) {
         self.output = output;
     }
 

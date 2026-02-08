@@ -63,13 +63,13 @@ fn reading_file(file_contents: &[u8]) {
             if text == "ls -al --color=always" && prompt.as_deref() == Some("$")
     );
 
-    let plaintext = &interaction.output.plaintext;
+    let plaintext = interaction.output.text();
     assert!(plaintext.starts_with("total 28\ndrwxr-xr-x"));
     assert!(plaintext.contains("4096 Apr 18 12:54 .\n"));
     assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
     assert!(!plaintext.contains("__"), "{plaintext}");
 
-    let color_spans = &interaction.output.styled_spans;
+    let color_spans = interaction.output.spans();
     assert_eq!(color_spans.len(), 5, "{color_spans:#?}"); // 2 colored regions + 3 surrounding areas
 }
 
@@ -110,10 +110,10 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
     assert_eq!(transcript.interactions.len(), 2);
 
     assert_eq!(transcript.interactions[0].input.text, "ls > /dev/null");
-    assert!(transcript.interactions[0].output.plaintext.is_empty());
+    assert!(transcript.interactions[0].output.text().is_empty());
 
     assert_eq!(transcript.interactions[1].input.text, "ls");
-    assert!(!transcript.interactions[1].output.plaintext.is_empty());
+    assert!(!transcript.interactions[1].output.text().is_empty());
 }
 
 #[test]
@@ -393,13 +393,11 @@ fn reading_legacy_pure_svg_with_hard_breaks() {
     assert_eq!(transcript.interactions().len(), 1);
     let output = transcript.interactions()[0].output();
     assert!(
-        output
-            .plaintext
-            .starts_with("Roboto Mono Regular\nLicense:"),
+        output.text().starts_with("Roboto Mono Regular\nLicense:"),
         "{output:#?}"
     );
-    assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
-    assert!(!output.plaintext.contains('>'), "{output:#?}");
+    assert_eq!(output.text().lines().count(), 2, "{output:#?}");
+    assert!(!output.text().contains('>'), "{output:#?}");
 }
 
 #[test]
@@ -418,12 +416,10 @@ fn reading_pure_svg_with_hard_breaks() {
     assert_eq!(transcript.interactions().len(), 1);
     let output = transcript.interactions()[0].output();
     assert!(
-        output
-            .plaintext
-            .starts_with("Roboto Mono Regular\nLicense:"),
+        output.text().starts_with("Roboto Mono Regular\nLicense:"),
         "{output:#?}"
     );
-    assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
+    assert_eq!(output.text().lines().count(), 2, "{output:#?}");
 }
 
 #[test]
@@ -439,6 +435,6 @@ fn reading_pure_svg_with_styled_hard_breaks() {
 
     let transcript = Transcript::from_svg(SVG.as_bytes()).unwrap();
     assert_eq!(transcript.interactions().len(), 1);
-    let output = transcript.interactions()[0].output().plaintext();
-    assert_eq!(output, "License: don't know lol");
+    let output = transcript.interactions()[0].output();
+    assert_eq!(output.text(), "License: don't know lol");
 }

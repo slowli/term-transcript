@@ -7,9 +7,11 @@ use std::{
     process::{Child, ChildStdin, Command},
 };
 
+use term_style::StyledStr;
+
 use super::ShellOptions;
 use crate::{
-    Captured, ExitStatus,
+    ExitStatus,
     traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
 };
 
@@ -41,14 +43,14 @@ impl ConfigureCommand for StdShell {
 }
 
 #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", ret))]
-fn check_sh_exit_code(response: &Captured) -> Option<ExitStatus> {
-    let response = response.to_plaintext().ok()?;
+fn check_sh_exit_code(response: StyledStr<'_>) -> Option<ExitStatus> {
+    let response = response.text();
     response.trim().parse().ok().map(ExitStatus)
 }
 
 #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", ret))]
-fn check_ps_exit_code(response: &Captured) -> Option<ExitStatus> {
-    let response = response.to_plaintext().ok()?;
+fn check_ps_exit_code(response: StyledStr<'_>) -> Option<ExitStatus> {
+    let response = response.text();
     match response.trim() {
         "True" => Some(ExitStatus(0)),
         "False" => Some(ExitStatus(1)),

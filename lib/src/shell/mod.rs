@@ -10,16 +10,18 @@ use std::{
     time::Duration,
 };
 
+use term_style::StyledStr;
+
 mod standard;
 mod transcript_impl;
 
 pub use self::standard::StdShell;
 use crate::{
-    Captured, ExitStatus,
+    ExitStatus,
     traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
 };
 
-type StatusCheckerFn = dyn Fn(&Captured) -> Option<ExitStatus>;
+type StatusCheckerFn = dyn Fn(StyledStr<'_>) -> Option<ExitStatus>;
 
 pub(crate) struct StatusCheck {
     command: String,
@@ -40,7 +42,7 @@ impl StatusCheck {
         &self.command
     }
 
-    pub(crate) fn check(&self, response: &Captured) -> Option<ExitStatus> {
+    pub(crate) fn check(&self, response: StyledStr<'_>) -> Option<ExitStatus> {
         (self.response_checker)(response)
     }
 }
@@ -234,7 +236,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     #[must_use]
     pub fn with_status_check<F>(mut self, command: impl Into<String>, checker: F) -> Self
     where
-        F: Fn(&Captured) -> Option<ExitStatus> + 'static,
+        F: Fn(StyledStr<'_>) -> Option<ExitStatus> + 'static,
     {
         let command = command.into();
         assert!(
@@ -340,15 +342,14 @@ mod tests {
         {
             let interaction = &transcript.interactions()[0];
             assert_eq!(interaction.input().text, "echo hello");
-            let output = interaction.output().as_ref();
-            assert_eq!(output.trim(), "hello");
+            assert_eq!(interaction.output().text().trim(), "hello");
         }
 
         let interaction = &transcript.interactions()[1];
         assert_eq!(interaction.input().text, "echo foo && echo bar >&2");
-        let output = interaction.output().as_ref();
+        let output = interaction.output();
         assert_eq!(
-            output.split_whitespace().collect::<Vec<_>>(),
+            output.text().split_whitespace().collect::<Vec<_>>(),
             ["foo", "bar"]
         );
         Ok(())
@@ -363,8 +364,8 @@ mod tests {
 
         assert_eq!(transcript.interactions().len(), 1);
         let interaction = &transcript.interactions()[0];
-        let output = interaction.output().as_ref();
-        assert_eq!(output.trim(), "hello");
+        let output = interaction.output();
+        assert_eq!(output.text().trim(), "hello");
         Ok(())
     }
 }

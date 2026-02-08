@@ -22,11 +22,7 @@ use handlebars::{Handlebars, RenderError, RenderErrorReason, Template as Handleb
 
 #[cfg(feature = "font-subset")]
 pub use self::subset::{FontFace, FontSubsetter, SubsettingError};
-use self::{
-    data::CompleteHandlebarsData,
-    helpers::register_helpers,
-    write::{LineWriter, StyledLine},
-};
+use self::{data::CompleteHandlebarsData, helpers::register_helpers};
 pub use self::{
     data::{CreatorData, HandlebarsData, SerializedInteraction},
     font::{EmbeddedFont, EmbeddedFontFace, FontEmbedder, FontMetrics},
@@ -36,32 +32,26 @@ pub use self::{
     },
     palette::{NamedPalette, NamedPaletteParseError, Palette, TermColors},
 };
-pub use crate::style::{RgbColor, RgbColorParseError};
-use crate::{Captured, TermError, Transcript, term::TermOutputParser};
+use crate::{
+    TermError, Transcript,
+    svg::{data::StyledLine, processing::split_into_lines},
+};
 
 mod data;
 mod font;
 mod helpers;
 mod options;
 mod palette;
+mod processing;
 #[cfg(feature = "font-subset")]
 mod subset;
 #[cfg(test)]
 mod tests;
-pub(crate) mod write;
 
 const COMMON_HELPERS: &str = include_str!("common.handlebars");
 const DEFAULT_TEMPLATE: &str = include_str!("default.svg.handlebars");
 const PURE_TEMPLATE: &str = include_str!("pure.svg.handlebars");
 const MAIN_TEMPLATE_NAME: &str = "main";
-
-impl Captured {
-    fn to_lines(&self, wrap_width: Option<usize>) -> Result<Vec<StyledLine>, TermError> {
-        let mut writer = LineWriter::new(wrap_width);
-        TermOutputParser::new(&mut writer).parse(self.as_ref().as_bytes())?;
-        Ok(writer.into_lines())
-    }
-}
 
 impl TemplateOptions {
     #[cfg_attr(
@@ -72,13 +62,13 @@ impl TemplateOptions {
         &'s self,
         transcript: &'s Transcript,
     ) -> Result<HandlebarsData<'s>, TermError> {
-        let rendered_outputs = self.render_outputs(transcript)?;
+        let rendered_outputs = self.render_outputs(transcript);
         let mut has_failures = false;
 
         let mut used_chars = BTreeSet::new();
         for interaction in transcript.interactions() {
-            let output = interaction.output().to_plaintext()?;
-            used_chars.extend(output.chars());
+            let output = interaction.output();
+            used_chars.extend(output.text().chars());
 
             let input = interaction.input();
             if !input.hidden {
@@ -138,11 +128,8 @@ impl TemplateOptions {
         })
     }
 
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(level = "debug", skip_all, err)
-    )]
-    fn render_outputs(&self, transcript: &Transcript) -> Result<Vec<Vec<StyledLine>>, TermError> {
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", skip_all))]
+    fn render_outputs<'a>(&self, transcript: &'a Transcript) -> Vec<Vec<StyledLine<'a>>> {
         let max_width = self.wrap.as_ref().map(|wrap_options| match wrap_options {
             WrapOptions::HardBreakAt { chars, .. } => chars.get(),
         });
@@ -150,7 +137,7 @@ impl TemplateOptions {
         transcript
             .interactions
             .iter()
-            .map(|interaction| interaction.output().to_lines(max_width))
+            .map(|interaction| split_into_lines(interaction.output().as_ref(), max_width))
             .collect()
     }
 }

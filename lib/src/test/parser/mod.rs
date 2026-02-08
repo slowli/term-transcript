@@ -16,9 +16,10 @@ use quick_xml::{
     encoding::EncodingError,
     events::{Event, attributes::Attributes},
 };
+use term_style::StyledString;
 
 use self::text::TextReadingState;
-use crate::{ExitStatus, Interaction, TermOutput, Transcript, UserInput, style::StyledSpan};
+use crate::{ExitStatus, Interaction, Transcript, UserInput};
 
 #[cfg(test)]
 mod tests;
@@ -28,63 +29,23 @@ fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
     quick_xml::Error::Encoding(EncodingError::Utf8(err))
 }
 
-/// Parsed terminal output.
-#[derive(Debug, Clone, Default)]
-pub struct Parsed {
-    pub(crate) plaintext: String,
-    pub(crate) styled_spans: Vec<StyledSpan<usize>>,
-}
-
-impl Parsed {
-    const DEFAULT: Self = Self {
-        plaintext: String::new(),
-        styled_spans: Vec::new(),
+/// Converts this parsed fragment into text for `UserInput`. This takes into account
+/// that while the first space after prompt is inserted automatically, the further whitespace
+/// may be significant.
+fn into_input_text(text: String) -> String {
+    let mut text = if let Some(stripped) = text.strip_prefix(' ') {
+        stripped.to_owned()
+    } else {
+        text
     };
 
-    /// Returns the parsed plaintext.
-    pub fn plaintext(&self) -> &str {
-        &self.plaintext
+    if text.ends_with('\n') {
+        text.pop();
     }
-
-    /// Writes the parsed text with coloring / styles applied.
-    ///
-    /// # Errors
-    ///
-    /// - Returns an I/O error should it occur when writing to `out`.
-    #[doc(hidden)]
-    pub fn write_colorized(&self, out: &mut impl io::Write) -> io::Result<()> {
-        StyledSpan::write_colorized(&self.styled_spans, out, &self.plaintext)
-    }
-
-    /// Converts this parsed fragment into text for `UserInput`. This takes into account
-    /// that while the first space after prompt is inserted automatically, the further whitespace
-    /// may be significant.
-    fn into_input_text(self) -> String {
-        let mut text = if self.plaintext.starts_with(' ') {
-            self.plaintext[1..].to_owned()
-        } else {
-            self.plaintext
-        };
-
-        if text.ends_with('\n') {
-            text.pop();
-        }
-        text
-    }
-
-    fn trim_ending_newline(&mut self) {
-        if self.plaintext.ends_with('\n') {
-            self.plaintext.pop();
-            if let Some(last_span) = self.styled_spans.last_mut() {
-                last_span.text -= 1;
-            }
-        }
-    }
+    text
 }
 
-impl TermOutput for Parsed {}
-
-impl Transcript<Parsed> {
+impl Transcript {
     /// Parses a transcript from the provided `reader`, which should point to an SVG XML tree
     /// produced by [`Template::render()`] (possibly within a larger document).
     ///
@@ -130,7 +91,7 @@ impl Transcript<Parsed> {
                 #[cfg(feature = "tracing")]
                 tracing::debug!(
                     ?interaction.input,
-                    interaction.output = ?interaction.output.plaintext,
+                    interaction.output = ?interaction.output.text(),
                     ?interaction.exit_status,
                     "parsed interaction"
                 );
@@ -318,7 +279,7 @@ impl UserInputState {
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,
-    ) -> Result<Option<Interaction<Parsed>>, ParseError> {
+    ) -> Result<Option<Interaction>, ParseError> {
         let mut is_prompt_end = false;
         if let Event::Start(tag) = &event {
             if self.can_start_prompt() && parse_classes(tag.attributes())?.as_ref() == b"prompt" {
@@ -335,14 +296,15 @@ impl UserInputState {
         if is_prompt_end {
             if let Some(parsed) = maybe_parsed {
                 // Special case: user input consists of the prompt only.
+                let (text, _) = parsed.into_parts();
                 let input = UserInput {
                     text: String::new(),
-                    prompt: Some(UserInput::intern_prompt(parsed.plaintext)),
+                    prompt: Some(UserInput::intern_prompt(text)),
                     hidden: self.is_hidden,
                 };
                 return Ok(Some(Interaction {
                     input,
-                    output: Parsed::default(),
+                    output: StyledString::default(),
                     exit_status: self.exit_status,
                 }));
             }
@@ -351,14 +313,15 @@ impl UserInputState {
         }
 
         Ok(maybe_parsed.map(|parsed| {
+            let (text, _) = parsed.into_parts();
             let input = UserInput {
-                text: parsed.into_input_text(),
+                text: into_input_text(text),
                 prompt: self.prompt.take(),
                 hidden: self.is_hidden,
             };
             Interaction {
                 input,
-                output: Parsed::default(),
+                output: StyledString::default(),
                 exit_status: self.exit_status,
             }
         }))
@@ -377,19 +340,19 @@ enum ParserState {
     /// Reading user input (`<div class="input">` contents).
     ReadingUserInput(UserInputState),
     /// Finished reading user input; searching for `<div class="output">`.
-    EncounteredUserInput(Interaction<Parsed>),
+    EncounteredUserInput(Interaction),
     /// Reading terminal output (`<div class="output">` contents).
-    ReadingTermOutput(Interaction<Parsed>, TextReadingState),
+    ReadingTermOutput(Interaction, TextReadingState),
 }
 
 impl ParserState {
-    const DUMMY_INTERACTION: Interaction<Parsed> = Interaction {
+    const DUMMY_INTERACTION: Interaction = Interaction {
         input: UserInput {
             text: String::new(),
             prompt: None,
             hidden: false,
         },
-        output: Parsed::DEFAULT,
+        output: StyledString::EMPTY,
         exit_status: None,
     };
 
@@ -403,7 +366,7 @@ impl ParserState {
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,
-    ) -> Result<Option<Interaction<Parsed>>, ParseError> {
+    ) -> Result<Option<Interaction>, ParseError> {
         match self {
             Self::Initialized => {
                 if let Event::Start(tag) = event {

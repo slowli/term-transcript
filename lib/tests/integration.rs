@@ -10,6 +10,7 @@ use std::{
 };
 
 use assert_matches::assert_matches;
+use term_style::StyledString;
 use term_transcript::{
     ShellOptions, Transcript, UserInput,
     svg::{Template, ValidTemplateOptions},
@@ -99,10 +100,7 @@ fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
     assert_tracing_for_parsing(&tracing_storage.lock());
 
     // 4. Compare output to the output in the original transcript.
-    assert_eq!(
-        interaction.output().plaintext(),
-        transcript.interactions()[0].output().to_plaintext()?
-    );
+    assert_eq!(interaction.output(), transcript.interactions()[0].output());
     Ok(())
 }
 
@@ -191,9 +189,9 @@ fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow
 
     for (interaction, &mute) in parsed.interactions().iter().zip(mute_outputs) {
         if mute {
-            assert_eq!(interaction.output().plaintext(), "");
+            assert_eq!(interaction.output().text(), "");
         } else {
-            assert_ne!(interaction.output().plaintext(), "");
+            assert_ne!(interaction.output().text(), "");
         }
     }
     Ok(())
@@ -337,7 +335,7 @@ fn cmd_shell_with_non_utf8_output() {
     let transcript = Transcript::from_inputs(&mut ShellOptions::default(), vec![input]).unwrap();
 
     assert_eq!(transcript.interactions().len(), 1);
-    let output = transcript.interactions()[0].output().as_ref();
+    let output = transcript.interactions()[0].output().text();
     assert!(output.contains("LICENSE-APACHE"));
     assert!(!output.contains('\r'));
 }
@@ -353,7 +351,7 @@ fn cmd_shell_with_utf8_output_in_pty() {
     let transcript = Transcript::from_inputs(&mut options, vec![input]).unwrap();
 
     assert_eq!(transcript.interactions().len(), 1);
-    let output = transcript.interactions()[0].output().as_ref();
+    let output = transcript.interactions()[0].output().text();
     assert!(output.contains("LICENSE-APACHE"));
     assert!(output.lines().all(|line| !line.ends_with('\r')));
 
@@ -386,9 +384,9 @@ fn non_utf8_shell_output(lossy: bool) -> anyhow::Result<()> {
 
     let result = Transcript::from_inputs(&mut options, vec![input]);
     if lossy {
-        let transcript = result.unwrap();
+        let transcript = result?;
         let output = transcript.interactions()[0].output();
-        assert!(output.to_plaintext()?.contains(char::REPLACEMENT_CHARACTER));
+        assert!(output.text().contains(char::REPLACEMENT_CHARACTER));
     } else {
         let err = result.unwrap_err();
         assert_matches!(err.kind(), io::ErrorKind::InvalidData);
@@ -432,7 +430,7 @@ fn transcript_roundtrip_for_rainbow_outputs(
 ) -> anyhow::Result<()> {
     // 1. Prepare a transcript from the predefined output.
     let mut transcript = Transcript::new();
-    transcript.add_interaction(output.name, output.content);
+    transcript.add_interaction(output.name, StyledString::from_ansi(output.content)?);
 
     // 2. Render the transcript into SVG.
     let mut svg_buffer = vec![];

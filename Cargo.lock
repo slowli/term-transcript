@@ -1176,6 +1176,7 @@ name = "term-transcript"
 version = "0.5.0-beta.1"
 dependencies = [
  "anstream",
+ "anstyle",
  "anyhow",
  "assert_matches",
  "base64",
@@ -1185,10 +1186,10 @@ dependencies = [
  "handlebars",
  "os_pipe",
  "portable-pty",
- "pretty_assertions",
  "quick-xml",
  "serde",
  "serde_json",
+ "term-style",
  "test-casing",
  "toml 0.9.11+spec-1.1.0",
  "tracing",

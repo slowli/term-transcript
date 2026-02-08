@@ -85,14 +85,6 @@ impl FromStr for RgbColor {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "svg", derive(serde::Serialize))]
-#[cfg_attr(feature = "svg", serde(untagged))]
-pub(crate) enum Color {
-    Index(u8),
-    Rgb(RgbColor),
-}
-
 impl Color {
     pub(crate) const BLACK: Self = Self::Index(0);
     pub(crate) const RED: Self = Self::Index(1);
@@ -158,37 +150,6 @@ impl Color {
             _ => unreachable!(),
         }
     }
-}
-
-/// Serializable `ColorSpec` representation.
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "svg", derive(serde::Serialize))]
-#[allow(clippy::struct_excessive_bools)] // makes serialization simpler
-pub(crate) struct Style {
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) bold: bool,
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) italic: bool,
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) underline: bool,
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) dimmed: bool,
-    /// Not supported by all terminals.
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) strikethrough: bool,
-    /// Swap background and foreground.
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) inverted: bool,
-    /// Not supported on all terminals, sometimes intentionally switched off.
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) blink: bool,
-    /// Not supported on all terminals.
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Style::is_false"))]
-    pub(crate) concealed: bool,
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) fg: Option<Color>,
-    #[cfg_attr(feature = "svg", serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) bg: Option<Color>,
 }
 
 // Use `anstyle`-compatible API:
