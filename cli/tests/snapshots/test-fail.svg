@@ -1,4 +1,4 @@
-<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.5.0-beta.1 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 0 720 560.8" width="720" height="560.8" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
@@ -22,12 +22,15 @@
         }
         .input-hidden { display: none; }
         .output { margin-bottom: 6px; }
-        .input-failure {
+        .output-sep {
+          margin: -3px -10px 2px;
+          border-top: 1px solid color-mix(in hsl, #e5e5e5 35%, #1c1c1c);
+        }
+      .input-failure {
           border-left: 2px solid #ff005b;
           border-right: 2px solid #ff005b;
           background: rgba(255, 0, 65, 0.15);
         }
-
         .bold,.prompt { font-weight: bold; }
         .italic { font-style: italic; }
         .underline:not(.dimmed, .blink), .underline:is(.dimmed, .blink) > span { text-decoration-line: underline; }
@@ -44,11 +47,10 @@
           }
         }
         .blink > span { animation: 2s steps(2, jump-none) 0s infinite blink; }
-
         .hard-br { margin-left: 8px; }
         .hard-br:before {
           content: '»';
-          color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
+          color: color-mix(in hsl, currentColor 60%, #1c1c1c);
         }
         .line { display: block; }
         .line span { display: inline-block; text-decoration-thickness: 1px; }
@@ -60,9 +62,9 @@
         .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
         .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
         .fg7 { color: #e5e5e5; } .bg7,.inv.bg-none { background: #e5e5e5; }
-        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg8 { color: #666; } .bg8 { background: #666; }
         .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
-        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg10 { color: #cf0; } .bg10 { background: #cf0; }
         .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
         .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
         .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
@@ -100,10 +102,10 @@
 </span><span class="line">&#x3D; <span class="bg0">black</span> <span class="bg1">red</span> <span class="bg2">green</span> <span class="bg3">yellow</span> <span class="bg4">blue</span> <span class="bg5">magenta</span> <span class="bg6">cyan</span> <span class="bg7">white</span> 
 </span><span class="line"><span class="fg1">&gt; </span><span class="bg8">black</span> <span class="bg9">red</span> <span class="bg10">green</span> <span class="bg11">yellow</span> <span class="bg12">blue</span> magenta <span class="bg14">cyan</span> <span class="bg15">white</span> 
 </span><span class="line"><span class="fg1">&gt; </span>                            <span class="fg7 bg1">^^^^^^^</span>
-</span><span class="line"><span class="bold">Positions       Expected style             Actual style       </span>
+</span><span class="line"><span class="bold">Positions         Left style                Right style       </span>
 </span><span class="line"><span class="bold">&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;</span>
-</span><span class="line">  499..503 <span class="underline">        underline        </span> <span class="underline fg4">    fg:blue underline    </span>
-</span><span class="line">  666..673          (none)           <span class="bg13">       bg:magenta*       </span>
+</span><span class="line">  499..503 <span class="underline">        underline        </span> <span class="underline fg4">     underline blue      </span>
+</span><span class="line">  666..673          (none)           <span class="bg13">       on magenta*       </span>
 </span><span class="line"><span class="bold">Totals:</span> passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></span></pre></div>
           </div>
         </foreignObject>

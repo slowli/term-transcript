@@ -1,8 +1,9 @@
 use anstream::StripStream;
+use styled_str::{StyledString, styled};
 use test_casing::test_casing;
 
 use super::*;
-use crate::{Captured, Interaction, Transcript, UserInput, style::StyledSpan, svg::Template};
+use crate::{Transcript, UserInput, svg::Template};
 
 #[test_casing(2, [MatchKind::TextOnly, MatchKind::Precise])]
 fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {
@@ -25,7 +26,7 @@ fn test_negative_snapshot_testing(test_config: &mut TestConfig) -> anyhow::Resul
         &mut ShellOptions::default(),
         vec![UserInput::command("echo \"Hello, world!\"")],
     )?;
-    transcript.add_interaction(UserInput::command("echo \"Sup?\""), "Nah");
+    transcript.add_interaction(UserInput::command("echo \"Sup?\""), styled!("Nah").into());
 
     let mut svg_buffer = vec![];
     Template::default().render(&transcript, &mut svg_buffer)?;
@@ -65,20 +66,17 @@ fn negative_snapshot_testing_with_verbose_output() {
 }
 
 fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (TestStats, String) {
-    let expected_capture = Captured::from(expected_capture.to_owned());
-    let parsed = Transcript {
-        interactions: vec![Interaction {
-            input: UserInput::command("test"),
-            output: Parsed {
-                plaintext: expected_capture.to_plaintext().unwrap(),
-                styled_spans: StyledSpan::parse(expected_capture.as_ref()).unwrap(),
-            },
-            exit_status: None,
-        }],
-    };
+    let mut parsed = Transcript::new();
+    parsed.add_interaction(
+        UserInput::command("test"),
+        StyledString::from_ansi(expected_capture).unwrap(),
+    );
 
     let mut reproduced = Transcript::new();
-    reproduced.add_interaction(UserInput::command("test"), actual_capture);
+    reproduced.add_interaction(
+        UserInput::command("test"),
+        StyledString::from_ansi(actual_capture).unwrap(),
+    );
 
     let mut out = StripStream::new(vec![]);
     let stats =
@@ -119,7 +117,7 @@ fn text_match_for_snapshot_testing_with_color_diff() {
     assert_eq!(stats.matches(), [Some(MatchKind::TextOnly)]);
     assert!(out.contains("[#] Input: test"), "{out}");
     assert!(
-        out.contains("    13..14         fg:yellow                  fg:blue         "),
+        out.contains("    13..14          yellow                     blue           "),
         "{out}"
     );
 }

@@ -1,73 +1,52 @@
-<!-- Created with term-transcript v0.4.0 (https://github.com/slowli/term-transcript) -->
+<!-- Created with term-transcript v0.5.0-beta.1 (https://github.com/slowli/term-transcript) -->
 <svg viewBox="0 0 720 162.8" width="720" height="162.8" xmlns="http://www.w3.org/2000/svg">
-  <switch>
-    <g requiredExtensions="http://www.w3.org/1999/xhtml">
-      <style>
-        .container {
-          padding: 0 10px;
-          color: #e5e5e5;
-          line-height: 16.8px;
-        }
-        .container pre {
-          padding: 0;
-          margin: 0;
-          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-          line-height: inherit;
-        }
-        .input {
-          margin: 0 -10px 6px;
-          color: #e5e5e5;
-          background: rgba(255, 255, 255, 0.1);
-          padding: 2px 10px;
-        }
-        .input-hidden { display: none; }
-        .output { margin-bottom: 6px; }
-        .bold,.prompt { font-weight: bold; }
-        .italic { font-style: italic; }
-        .underline { text-decoration: underline; }
-        .dimmed > span { color: color-mix(in hsl, currentColor 70%, #1c1c1c 30%); }
-        .dimmed-bg > span { background: rgb(from #1c1c1c r g b / 30%); }
-        .hard-br { margin-left: 8px; }
-        .hard-br:before {
-          content: '»';
-          color: color-mix(in hsl, currentColor 60%, #1c1c1c 40%);
-        }
-        .line { display: block; }
-        .line > span { display: inline-block; }
-        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
-        .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
-        .fg2 { color: #cee318; } .bg2 { background: #cee318; }
-        .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
-        .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
-        .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
-        .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
-        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
-        .fg8 { color: #666666; } .bg8 { background: #666666; }
-        .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
-        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
-        .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
-        .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
-        .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
-        .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
-        .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
-      </style>
-      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
-      <svg x="0" y="10" width="720" height="142.8" viewBox="0 0 720 142.8" overflow="hidden">
-        <foreignObject width="720" height="142.8">
-          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-            <div class="input"><pre><span class="prompt">$</span> yellow intense bold green cucumber</pre></div>
-            <div class="output"><pre><span class="line"><span class="fg3">yellow</span> <span class="fg11">intense</span> <span class="bold fg11">bold</span> <span class="bold fg10">green</span> <span class="bold fg10">cucumber</span></span></pre></div>
-            <div class="input"><pre><span class="prompt">$</span> neutral #fa4 underline #c0ffee</pre></div>
-            <div class="output"><pre><span class="line">neutral <span style="color: #ffaa44;">#fa4</span> <span class="underline" style="color: #ffaa44;">underline</span> <span class="underline" style="color: #c0ffee;">#c0ffee</span></span></pre></div>
-            <div class="input"><pre><span class="prompt">$</span> #9f4010 (brown) italic</pre></div>
-            <div class="output"><pre><span class="line"><span style="color: #9f4010;">#9f4010</span> <span style="color: #9f4010;">(brown)</span> <span class="italic" style="color: #9f4010;">italic</span></span></pre></div>
-          </div>
-        </foreignObject>
-      </svg>
-    </g>
-    <text x="10" y="16.8" style="font: 14px monospace; fill: #ff005b;">
-      HTML embedding not supported.
-      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
-    </text>
-  </switch>
+  <style>
+    .container {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      line-height: 16.8px;
+    }
+    text { white-space: pre; text-decoration-thickness: 1px; }
+    .input-bg { fill: #fff; fill-opacity: 0.1; }
+    .input-hidden { display: none; }
+    .output-bg { stroke-width: 0.5; }
+    .output-sep { stroke: #e5e5e5; stroke-width: 1; stroke-opacity: 0.35; }
+    .bold,.prompt { font-weight: bold; }
+    .italic { font-style: italic; }
+    .underline { text-decoration-line: underline; }
+    .strike { text-decoration-line: line-through; }
+    .underline.strike { text-decoration-line: underline line-through; }
+    .dimmed { fill-opacity: 0.7; }
+    .concealed { fill-opacity: 0 !important; }
+    @keyframes blink {
+      0% { fill-opacity: 1; stroke-opacity: 1; }
+      100% { fill-opacity: 0.7; stroke-opacity: 0.7; }
+    }
+    .blink { animation: 2s steps(2, jump-none) 0s infinite blink; }
+    .hard-br { font-weight: bold; fill-opacity: 0.6; user-select: none; }
+    .fg0,.inv.fg-none { fill: #1c1c1c; } .output-bg .fg0 { stroke: #1c1c1c; }
+    .fg1 { fill: #ff005b; } .output-bg .fg1 { stroke: #ff005b; }
+    .fg2 { fill: #cee318; } .output-bg .fg2 { stroke: #cee318; }
+    .fg3 { fill: #ffe755; } .output-bg .fg3 { stroke: #ffe755; }
+    .fg4 { fill: #048ac7; } .output-bg .fg4 { stroke: #048ac7; }
+    .fg5 { fill: #833c9f; } .output-bg .fg5 { stroke: #833c9f; }
+    .fg6 { fill: #0ac1cd; } .output-bg .fg6 { stroke: #0ac1cd; }
+    .fg7 { fill: #e5e5e5; } .output-bg .fg7 { stroke: #e5e5e5; }
+    .fg8 { fill: #666; } .output-bg .fg8 { stroke: #666; }
+    .fg9 { fill: #ff00a0; } .output-bg .fg9 { stroke: #ff00a0; }
+    .fg10 { fill: #cf0; } .output-bg .fg10 { stroke: #cf0; }
+    .fg11 { fill: #ff9f00; } .output-bg .fg11 { stroke: #ff9f00; }
+    .fg12 { fill: #48c6ff; } .output-bg .fg12 { stroke: #48c6ff; }
+    .fg13 { fill: #be67e1; } .output-bg .fg13 { stroke: #be67e1; }
+    .fg14 { fill: #63e7f0; } .output-bg .fg14 { stroke: #63e7f0; }
+    .fg15 { fill: #f3f3f3; } .output-bg .fg15 { stroke: #f3f3f3; }
+  </style>
+  <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;"/>
+    <svg x="0" y="10" width="720" height="142.8" viewBox="0 0 720 142.8">
+<g class="input-bg"><rect x="0" y="0" width="100%" height="20.8"></rect><rect x="0" y="49.6" width="100%" height="20.8"></rect><rect x="0" y="99.2" width="100%" height="20.8"></rect></g><g class="output-bg"><rect x="10" y="26.8" width="184" height="16.8" class="fg5"/><rect x="10" y="76.4" width="256" height="16.8" style="fill: #c0ffee; stroke: #c0ffee;"/></g><g class="container fg7"><g class="input"><g transform="translate(10 14.9)"><text class="prompt" textLength="8">$</text><text x="8" textLength="192"> yellow* bold on magenta</text><text>
+</text></g></g><g class="output"><g transform="translate(10 39.7)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="184" class="bold fg11 bg5">bold yellow* on magenta</text><text>
+</text></g></g><g class="input"><g transform="translate(10 64.5)"><text class="prompt" textLength="8">$</text><text x="8" textLength="328"> #fa4 underline, strikethrough on #c0ffee</text><text>
+</text></g></g><g class="output"><g transform="translate(10 89.3)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="256" class="underline strike bg#c0ffee" style="fill: #fa4;">underline strike #fa4 on #c0ffee</text><text>
+</text></g></g><g class="input"><g transform="translate(10 114.1)"><text class="prompt" textLength="8">$</text><text x="8" textLength="120"> #9f4010 italic</text><text>
+</text></g></g><g class="output"><g transform="translate(10 138.9)" clip-path="xywh(0 0 100% 16.8px)"><text x="0" textLength="112" class="italic" style="fill: #9f4010;">italic #9f4010</text><text>
+</text></g></g></g></svg>
 </svg>

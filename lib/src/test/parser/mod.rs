@@ -16,9 +16,10 @@ use quick_xml::{
     encoding::EncodingError,
     events::{Event, attributes::Attributes},
 };
+use styled_str::StyledString;
 
 use self::text::TextReadingState;
-use crate::{ExitStatus, Interaction, TermOutput, Transcript, UserInput, style::StyledSpan};
+use crate::{ExitStatus, Interaction, Transcript, UserInput};
 
 #[cfg(test)]
 mod tests;
@@ -28,63 +29,23 @@ fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
     quick_xml::Error::Encoding(EncodingError::Utf8(err))
 }
 
-/// Parsed terminal output.
-#[derive(Debug, Clone, Default)]
-pub struct Parsed {
-    pub(crate) plaintext: String,
-    pub(crate) styled_spans: Vec<StyledSpan<usize>>,
-}
-
-impl Parsed {
-    const DEFAULT: Self = Self {
-        plaintext: String::new(),
-        styled_spans: Vec::new(),
+/// Converts this parsed fragment into text for `UserInput`. This takes into account
+/// that while the first space after prompt is inserted automatically, the further whitespace
+/// may be significant.
+fn into_input_text(text: String) -> String {
+    let mut text = if let Some(stripped) = text.strip_prefix(' ') {
+        stripped.to_owned()
+    } else {
+        text
     };
 
-    /// Returns the parsed plaintext.
-    pub fn plaintext(&self) -> &str {
-        &self.plaintext
+    if text.ends_with('\n') {
+        text.pop();
     }
-
-    /// Writes the parsed text with coloring / styles applied.
-    ///
-    /// # Errors
-    ///
-    /// - Returns an I/O error should it occur when writing to `out`.
-    #[doc(hidden)]
-    pub fn write_colorized(&self, out: &mut impl io::Write) -> io::Result<()> {
-        StyledSpan::write_colorized(&self.styled_spans, out, &self.plaintext)
-    }
-
-    /// Converts this parsed fragment into text for `UserInput`. This takes into account
-    /// that while the first space after prompt is inserted automatically, the further whitespace
-    /// may be significant.
-    fn into_input_text(self) -> String {
-        let mut text = if self.plaintext.starts_with(' ') {
-            self.plaintext[1..].to_owned()
-        } else {
-            self.plaintext
-        };
-
-        if text.ends_with('\n') {
-            text.pop();
-        }
-        text
-    }
-
-    fn trim_ending_newline(&mut self) {
-        if self.plaintext.ends_with('\n') {
-            self.plaintext.pop();
-            if let Some(last_span) = self.styled_spans.last_mut() {
-                last_span.text -= 1;
-            }
-        }
-    }
+    text
 }
 
-impl TermOutput for Parsed {}
-
-impl Transcript<Parsed> {
+impl Transcript {
     /// Parses a transcript from the provided `reader`, which should point to an SVG XML tree
     /// produced by [`Template::render()`] (possibly within a larger document).
     ///
@@ -129,19 +90,19 @@ impl Transcript<Parsed> {
             if let Some(interaction) = maybe_interaction {
                 #[cfg(feature = "tracing")]
                 tracing::debug!(
-                    ?interaction.input,
-                    interaction.output = ?interaction.output.plaintext,
-                    ?interaction.exit_status,
+                    input = ?interaction.input(),
+                    output = interaction.output().text(),
+                    exit_status = ?interaction.exit_status(),
                     "parsed interaction"
                 );
-                transcript.interactions.push(interaction);
+                transcript.add_existing_interaction(interaction);
             }
         }
 
         match state {
             ParserState::EncounteredContainer => Ok(transcript),
             ParserState::EncounteredUserInput(interaction) => {
-                transcript.interactions.push(interaction);
+                transcript.add_existing_interaction(interaction.with_empty_output());
                 Ok(transcript)
             }
             #[allow(clippy::cast_possible_truncation)] // Shouldn't happen in practice
@@ -281,11 +242,38 @@ impl StdError for LocatedParseError {
 }
 
 #[derive(Debug)]
+struct InteractionInput {
+    input: UserInput,
+    exit_status: Option<ExitStatus>,
+}
+
+impl Default for InteractionInput {
+    fn default() -> Self {
+        Self {
+            input: UserInput::EMPTY,
+            exit_status: None,
+        }
+    }
+}
+
+impl InteractionInput {
+    fn with_output(self, output: StyledString) -> Interaction {
+        let mut interaction = Interaction::new(self.input, output);
+        interaction.set_exit_status(self.exit_status);
+        interaction
+    }
+
+    fn with_empty_output(self) -> Interaction {
+        self.with_output(StyledString::EMPTY)
+    }
+}
+
+#[derive(Debug)]
 struct UserInputState {
     exit_status: Option<ExitStatus>,
     is_hidden: bool,
     text: TextReadingState,
-    prompt: Option<Cow<'static, str>>,
+    prompt: Option<String>,
     prompt_open_tags: Option<usize>,
 }
 
@@ -318,7 +306,7 @@ impl UserInputState {
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,
-    ) -> Result<Option<Interaction<Parsed>>, ParseError> {
+    ) -> Result<Option<InteractionInput>, ParseError> {
         let mut is_prompt_end = false;
         if let Event::Start(tag) = &event {
             if self.can_start_prompt() && parse_classes(tag.attributes())?.as_ref() == b"prompt" {
@@ -335,30 +323,30 @@ impl UserInputState {
         if is_prompt_end {
             if let Some(parsed) = maybe_parsed {
                 // Special case: user input consists of the prompt only.
-                let input = UserInput {
-                    text: String::new(),
-                    prompt: Some(UserInput::intern_prompt(parsed.plaintext)),
-                    hidden: self.is_hidden,
-                };
-                return Ok(Some(Interaction {
+                let (text, _) = parsed.into_parts();
+                let mut input = UserInput::new(String::new()).with_prompt(Some(text));
+                if self.is_hidden {
+                    input = input.hide();
+                }
+
+                return Ok(Some(InteractionInput {
                     input,
-                    output: Parsed::default(),
                     exit_status: self.exit_status,
                 }));
             }
-            let text = mem::take(&mut self.text.plaintext_buffer);
-            self.prompt = Some(UserInput::intern_prompt(text));
+            let text = self.text.take_plaintext();
+            self.prompt = Some(text);
         }
 
         Ok(maybe_parsed.map(|parsed| {
-            let input = UserInput {
-                text: parsed.into_input_text(),
-                prompt: self.prompt.take(),
-                hidden: self.is_hidden,
-            };
-            Interaction {
+            let (text, _) = parsed.into_parts();
+            let mut input = UserInput::new(into_input_text(text)).with_prompt(self.prompt.take());
+            if self.is_hidden {
+                input = input.hide();
+            }
+
+            InteractionInput {
                 input,
-                output: Parsed::default(),
                 exit_status: self.exit_status,
             }
         }))
@@ -377,22 +365,12 @@ enum ParserState {
     /// Reading user input (`<div class="input">` contents).
     ReadingUserInput(UserInputState),
     /// Finished reading user input; searching for `<div class="output">`.
-    EncounteredUserInput(Interaction<Parsed>),
+    EncounteredUserInput(InteractionInput),
     /// Reading terminal output (`<div class="output">` contents).
-    ReadingTermOutput(Interaction<Parsed>, TextReadingState),
+    ReadingTermOutput(InteractionInput, TextReadingState),
 }
 
 impl ParserState {
-    const DUMMY_INTERACTION: Interaction<Parsed> = Interaction {
-        input: UserInput {
-            text: String::new(),
-            prompt: None,
-            hidden: false,
-        },
-        output: Parsed::DEFAULT,
-        exit_status: None,
-    };
-
     #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug"))]
     fn set_state(&mut self, new_state: Self) {
         *self = new_state;
@@ -403,7 +381,7 @@ impl ParserState {
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,
-    ) -> Result<Option<Interaction<Parsed>>, ParseError> {
+    ) -> Result<Option<Interaction>, ParseError> {
         match self {
             Self::Initialized => {
                 if let Event::Start(tag) = event {
@@ -457,13 +435,13 @@ impl ParserState {
                     let base_class = extract_base_class(&classes);
 
                     if Self::is_output_class(base_class) {
-                        let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
+                        let interaction = mem::take(interaction);
                         self.set_state(Self::ReadingTermOutput(
                             interaction,
                             TextReadingState::default(),
                         ));
                     } else if Self::is_input_class(base_class) {
-                        let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
+                        let interaction = mem::take(interaction);
                         let exit_status = parse_exit_status(tag.attributes())?;
                         let is_hidden = classes
                             .split(|byte| *byte == b' ')
@@ -472,17 +450,16 @@ impl ParserState {
                             exit_status,
                             is_hidden,
                         )));
-                        return Ok(Some(interaction));
+                        return Ok(Some(interaction.with_empty_output()));
                     }
                 }
             }
 
             Self::ReadingTermOutput(interaction, text_state) => {
                 if let Some(term_output) = text_state.process(event, position)? {
-                    let mut interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
-                    interaction.output = term_output;
+                    let interaction = mem::take(interaction);
                     self.set_state(Self::EncounteredContainer);
-                    return Ok(Some(interaction));
+                    return Ok(Some(interaction.with_output(term_output)));
                 }
             }
         }

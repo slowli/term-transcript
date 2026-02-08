@@ -13,16 +13,15 @@ path = "src/bin/repl.rs"
 [dependencies]
 anstyle.workspace = true
 anyhow.workspace = true
-
-[dependencies.term-transcript]
-path = "../../lib"
-features = ["tracing"]
+styled-str.workspace = true
 
 [dev-dependencies]
 handlebars.workspace = true
 pretty_assertions.workspace = true
 tempfile.workspace = true
 test-casing = { workspace = true, features = ["tracing"] }
+
+term-transcript.workspace = true
 
 [features]
 portable-pty = ["term-transcript/portable-pty"]

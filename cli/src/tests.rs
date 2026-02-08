@@ -340,6 +340,7 @@ fn prepare_cli(command: &str, img_path: Option<&str>) -> Option<Cli> {
 
     let command = command.trim_end();
     if !command.starts_with("term-transcript exec") {
+        #[cfg(feature = "tracing")]
         tracing::info!(?command, "skipping non-exec command");
         return None;
     }

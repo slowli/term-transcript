@@ -10,16 +10,18 @@ use std::{
     time::Duration,
 };
 
+use styled_str::StyledStr;
+
 mod standard;
 mod transcript_impl;
 
 pub use self::standard::StdShell;
 use crate::{
-    Captured, ExitStatus,
+    ExitStatus,
     traits::{ConfigureCommand, Echoing, SpawnShell, SpawnedShell},
 };
 
-type StatusCheckerFn = dyn Fn(&Captured) -> Option<ExitStatus>;
+type StatusCheckerFn = dyn Fn(StyledStr<'_>) -> Option<ExitStatus>;
 
 pub(crate) struct StatusCheck {
     command: String,
@@ -40,7 +42,7 @@ impl StatusCheck {
         &self.command
     }
 
-    pub(crate) fn check(&self, response: &Captured) -> Option<ExitStatus> {
+    pub(crate) fn check(&self, response: StyledStr<'_>) -> Option<ExitStatus> {
         (self.response_checker)(response)
     }
 }
@@ -215,13 +217,13 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// - `command` is a command that will be executed to check the exit status of the latest
     ///   executed command. E.g., in `sh`-like shells one can use `echo $?`.
     /// - `checker` is a closure that transforms the output of `command` into an `ExitStatus`.
-    ///   The output is provided as a [`Captured`] string; it usually makes sense to use
-    ///   [`Captured::to_plaintext()`] to strip it of possible escape sequences (especially
+    ///   The output is provided as a [`StyledStr`]; it usually makes sense to use
+    ///   [`StyledStr::text()`] to strip it of possible escape sequences (especially
     ///   important if captured from PTY). If the exit status is inconclusive or not applicable,
     ///   the closure should return `None`.
     ///
     /// The `command` will be executed after each [`UserInput`] is input into the shell and
-    /// the corresponding output is captured. After this, the [`Captured`]
+    /// the corresponding output is captured. After this, the [`StyledStr`]
     /// output will be supplied to the `checker` closure and its output will be recorded as
     /// [`Interaction::exit_status()`].
     ///
@@ -234,7 +236,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     #[must_use]
     pub fn with_status_check<F>(mut self, command: impl Into<String>, checker: F) -> Self
     where
-        F: Fn(&Captured) -> Option<ExitStatus> + 'static,
+        F: Fn(StyledStr<'_>) -> Option<ExitStatus> + 'static,
     {
         let command = command.into();
         assert!(
@@ -339,16 +341,15 @@ mod tests {
 
         {
             let interaction = &transcript.interactions()[0];
-            assert_eq!(interaction.input().text, "echo hello");
-            let output = interaction.output().as_ref();
-            assert_eq!(output.trim(), "hello");
+            assert_eq!(interaction.input().as_ref(), "echo hello");
+            assert_eq!(interaction.output().text().trim(), "hello");
         }
 
         let interaction = &transcript.interactions()[1];
-        assert_eq!(interaction.input().text, "echo foo && echo bar >&2");
-        let output = interaction.output().as_ref();
+        assert_eq!(interaction.input().as_ref(), "echo foo && echo bar >&2");
+        let output = interaction.output();
         assert_eq!(
-            output.split_whitespace().collect::<Vec<_>>(),
+            output.text().split_whitespace().collect::<Vec<_>>(),
             ["foo", "bar"]
         );
         Ok(())
@@ -363,8 +364,8 @@ mod tests {
 
         assert_eq!(transcript.interactions().len(), 1);
         let interaction = &transcript.interactions()[0];
-        let output = interaction.output().as_ref();
-        assert_eq!(output.trim(), "hello");
+        let output = interaction.output();
+        assert_eq!(output.text().trim(), "hello");
         Ok(())
     }
 }

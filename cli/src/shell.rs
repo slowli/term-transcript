@@ -3,9 +3,10 @@
 use std::{env, ffi::OsString, io, process::Command};
 
 use clap::Args;
+use styled_str::StyledStr;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
-use term_transcript::{Captured, ExitStatus, ShellOptions, Transcript, UserInput, traits::Echoing};
+use term_transcript::{ExitStatus, ShellOptions, Transcript, UserInput, traits::Echoing};
 
 #[cfg(feature = "portable-pty")]
 mod pty {
@@ -67,8 +68,8 @@ impl ExitCodeCheck {
         }
     }
 
-    fn check_exit_code(self, response: &Captured) -> Option<ExitStatus> {
-        let response = response.to_plaintext().ok()?;
+    fn check_exit_code(self, response: StyledStr<'_>) -> Option<ExitStatus> {
+        let response = response.text();
         match self {
             Self::Sh => response.trim().parse().ok().map(ExitStatus),
             Self::PowerShell => match response.trim() {

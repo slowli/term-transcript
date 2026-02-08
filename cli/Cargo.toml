@@ -26,6 +26,7 @@ toml.workspace = true
 tracing = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"], optional = true }
 
+styled-str.workspace = true
 term-transcript = { workspace = true, features = ["font-subset"] }
 
 [dev-dependencies]

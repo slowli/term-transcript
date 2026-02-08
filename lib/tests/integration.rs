@@ -10,6 +10,7 @@ use std::{
 };
 
 use assert_matches::assert_matches;
+use styled_str::StyledString;
 use term_transcript::{
     ShellOptions, Transcript, UserInput,
     svg::{Template, ValidTemplateOptions},
@@ -99,10 +100,7 @@ fn transcript_lifecycle(pure_svg: bool) -> anyhow::Result<()> {
     assert_tracing_for_parsing(&tracing_storage.lock());
 
     // 4. Compare output to the output in the original transcript.
-    assert_eq!(
-        interaction.output().plaintext(),
-        transcript.interactions()[0].output().to_plaintext()?
-    );
+    assert_eq!(interaction.output(), transcript.interactions()[0].output());
     Ok(())
 }
 
@@ -112,10 +110,7 @@ fn assert_tracing_for_output_capture(storage: &Storage) {
         .find(|span| span.metadata().name() == "capture_output")
         .expect("`capture_output` span not found");
     assert!(span["command"].as_debug_str().is_some());
-    assert_eq!(
-        span["input.text"].as_debug_str(),
-        Some(r#"echo "Hello, world!""#)
-    );
+    assert_eq!(span["input.text"].as_str(), Some(r#"echo "Hello, world!""#));
 
     let output_event = span
         .events()
@@ -136,14 +131,9 @@ fn assert_tracing_for_parsing(storage: &Storage) {
         .events()
         .find(|event| event.message() == Some("parsed interaction"))
         .expect("new interaction event not found");
-    assert!(
-        interaction_event["interaction.input"]
-            .is_debug(&UserInput::command(r#"echo "Hello, world!""#))
-    );
-    let output = interaction_event["interaction.output"]
-        .as_debug_str()
-        .unwrap();
-    assert!(output.starts_with("\"Hello, world!"), "{output}");
+    assert!(interaction_event["input"].is_debug(&UserInput::command(r#"echo "Hello, world!""#)));
+    let output = interaction_event["output"].as_str().unwrap();
+    assert!(output.starts_with("Hello, world!"), "{output}");
 }
 
 const MUTE_OUTPUT_CASES: [&[bool]; 6] = [
@@ -191,9 +181,9 @@ fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow
 
     for (interaction, &mute) in parsed.interactions().iter().zip(mute_outputs) {
         if mute {
-            assert_eq!(interaction.output().plaintext(), "");
+            assert_eq!(interaction.output().text(), "");
         } else {
-            assert_ne!(interaction.output().plaintext(), "");
+            assert_ne!(interaction.output().text(), "");
         }
     }
     Ok(())
@@ -337,7 +327,7 @@ fn cmd_shell_with_non_utf8_output() {
     let transcript = Transcript::from_inputs(&mut ShellOptions::default(), vec![input]).unwrap();
 
     assert_eq!(transcript.interactions().len(), 1);
-    let output = transcript.interactions()[0].output().as_ref();
+    let output = transcript.interactions()[0].output().text();
     assert!(output.contains("LICENSE-APACHE"));
     assert!(!output.contains('\r'));
 }
@@ -353,7 +343,7 @@ fn cmd_shell_with_utf8_output_in_pty() {
     let transcript = Transcript::from_inputs(&mut options, vec![input]).unwrap();
 
     assert_eq!(transcript.interactions().len(), 1);
-    let output = transcript.interactions()[0].output().as_ref();
+    let output = transcript.interactions()[0].output().text();
     assert!(output.contains("LICENSE-APACHE"));
     assert!(output.lines().all(|line| !line.ends_with('\r')));
 
@@ -386,9 +376,9 @@ fn non_utf8_shell_output(lossy: bool) -> anyhow::Result<()> {
 
     let result = Transcript::from_inputs(&mut options, vec![input]);
     if lossy {
-        let transcript = result.unwrap();
+        let transcript = result?;
         let output = transcript.interactions()[0].output();
-        assert!(output.to_plaintext()?.contains(char::REPLACEMENT_CHARACTER));
+        assert!(output.text().contains(char::REPLACEMENT_CHARACTER));
     } else {
         let err = result.unwrap_err();
         assert_matches!(err.kind(), io::ErrorKind::InvalidData);
@@ -432,7 +422,8 @@ fn transcript_roundtrip_for_rainbow_outputs(
 ) -> anyhow::Result<()> {
     // 1. Prepare a transcript from the predefined output.
     let mut transcript = Transcript::new();
-    transcript.add_interaction(output.name, output.content);
+    let output_str = StyledString::from_ansi(output.content)?;
+    transcript.add_interaction(output.name, output_str);
 
     // 2. Render the transcript into SVG.
     let mut svg_buffer = vec![];

@@ -4,14 +4,17 @@ use std::{
     io::{self, BufRead, BufReader, LineWriter, Read},
     iter,
     process::{Command, Stdio},
+    str,
     sync::mpsc,
     thread,
     time::Duration,
 };
 
+use styled_str::{AnsiError, StyledString};
+
 use super::ShellOptions;
 use crate::{
-    Captured, Interaction, Transcript, UserInput,
+    Interaction, Transcript, UserInput,
     traits::{ShellProcess, SpawnShell, SpawnedShell},
 };
 
@@ -31,6 +34,10 @@ impl Timeouts {
     fn next(&mut self) -> Duration {
         self.inner.next().unwrap() // safe by construction; the iterator is indefinite
     }
+}
+
+fn map_ansi_error(err: AnsiError) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, err)
 }
 
 impl Transcript {
@@ -101,9 +108,6 @@ impl Transcript {
             output.push('\n');
         }
 
-        if output.ends_with('\n') {
-            output.truncate(output.len() - 1);
-        }
         Ok(output)
     }
 
@@ -192,7 +196,7 @@ impl Transcript {
         for input in inputs {
             let interaction =
                 Self::record_interaction(options, input, &out_lines_recv, &mut shell, &mut stdin)?;
-            transcript.interactions.push(interaction);
+            transcript.add_existing_interaction(interaction);
         }
 
         drop(stdin); // signals to shell that we're done
@@ -257,7 +261,7 @@ impl Transcript {
         // to write to `stdin` even after the shell exits.
         shell.check_is_alive()?;
 
-        let input_lines = input.text.split('\n');
+        let input_lines = input.as_ref().split('\n');
         for input_line in input_lines {
             Self::write_line(stdin, input_line)?;
             if shell.is_echoing() {
@@ -270,6 +274,7 @@ impl Transcript {
             Timeouts::new(options),
             options.line_decoder.as_mut(),
         )?;
+        let output = StyledString::from_ansi(&output).map_err(map_ansi_error)?;
 
         let exit_status = if let Some(status_check) = &options.status_check {
             let command = status_check.command();
@@ -282,13 +287,15 @@ impl Transcript {
                 Timeouts::new(options),
                 options.line_decoder.as_mut(),
             )?;
-            status_check.check(&Captured::from(response))
+            let response = StyledString::from_ansi(&response).map_err(map_ansi_error)?;
+
+            status_check.check(response.as_ref())
         } else {
             None
         };
 
         let mut interaction = Interaction::new(input, output);
-        interaction.exit_status = exit_status;
+        interaction.set_exit_status(exit_status);
         Ok(interaction)
     }
 
@@ -303,7 +310,7 @@ impl Transcript {
     ///   stdout / stderr).
     #[cfg_attr(
         feature = "tracing",
-        tracing::instrument(skip(self, input), err, fields(input.text = %input.text))
+        tracing::instrument(skip(self, input), err, fields(input.text = input.as_ref()))
     )]
     pub fn capture_output(
         &mut self,
@@ -329,15 +336,14 @@ impl Transcript {
         pipe_reader.read_to_end(&mut output)?;
         child.wait()?;
 
-        let mut output = String::from_utf8(output)
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))?;
-        if output.ends_with('\n') {
-            output.truncate(output.len() - 1);
-        }
+        let output = str::from_utf8(&output)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
         #[cfg(feature = "tracing")]
         tracing::debug!(?output, "read command output");
 
-        self.interactions.push(Interaction::new(input, output));
+        let output = StyledString::from_ansi(output).map_err(map_ansi_error)?;
+        let interaction = Interaction::new(input, output);
+        self.add_existing_interaction(interaction);
         Ok(self)
     }
 }

@@ -34,7 +34,7 @@
 //! - Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
 //!   are supported even on Windows nowadays, this shouldn't be a significant problem.)
 //! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI]
-//!   and OSC sequences), or lead to [`TermError::UnrecognizedSequence`].
+//!   and OSC sequences), or lead to a [`TermError::Ansi`] error.
 //! - By default, the crate exposes APIs to perform capture via OS pipes.
 //!   Since the terminal is not emulated in this case, programs dependent on [`isatty`] checks
 //!   or getting term size can produce different output than if launched in an actual shell
@@ -152,335 +152,26 @@
 #![doc(html_root_url = "https://docs.rs/term-transcript/0.5.0-beta.1")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-use std::{borrow::Cow, error::Error as StdError, fmt, io, num::ParseIntError, str::Utf8Error};
-
 #[cfg(feature = "portable-pty")]
 pub use self::pty::{PtyCommand, PtyShell};
 pub use self::{
     shell::{ShellOptions, StdShell},
-    term::{Captured, TermOutput},
+    types::{ExitStatus, Interaction, TermError, Transcript, UserInput},
 };
 
 #[cfg(feature = "portable-pty")]
 mod pty;
 mod shell;
-mod style;
+//mod style;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 pub mod svg;
-mod term;
 #[cfg(feature = "test")]
 #[cfg_attr(docsrs, doc(cfg(feature = "test")))]
 pub mod test;
 pub mod traits;
+mod types;
 mod utils;
-
-pub(crate) type BoxedError = Box<dyn std::error::Error + Send + Sync>;
-
-/// Errors that can occur when processing terminal output.
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum TermError {
-    /// Unfinished escape sequence.
-    UnfinishedSequence,
-    /// Unrecognized escape sequence (not a CSI or OSC one). The enclosed byte
-    /// is the first byte of the sequence (excluding `0x1b`).
-    UnrecognizedSequence(u8),
-    /// Invalid final byte for an SGR escape sequence.
-    InvalidSgrFinalByte(u8),
-    /// Unfinished color spec.
-    UnfinishedColor,
-    /// Invalid type of a color spec.
-    InvalidColorType(String),
-    /// Invalid ANSI color index.
-    InvalidColorIndex(ParseIntError),
-    /// UTF-8 decoding error.
-    Utf8(Utf8Error),
-    /// IO error.
-    Io(io::Error),
-    /// Font embedding error.
-    FontEmbedding(BoxedError),
-}
-
-impl fmt::Display for TermError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::UnfinishedSequence => formatter.write_str("Unfinished ANSI escape sequence"),
-            Self::UnrecognizedSequence(byte) => {
-                write!(
-                    formatter,
-                    "Unrecognized escape sequence (first byte is {byte})"
-                )
-            }
-            Self::InvalidSgrFinalByte(byte) => {
-                write!(
-                    formatter,
-                    "Invalid final byte for an SGR escape sequence: {byte}"
-                )
-            }
-            Self::UnfinishedColor => formatter.write_str("Unfinished color spec"),
-            Self::InvalidColorType(ty) => {
-                write!(formatter, "Invalid type of a color spec: {ty}")
-            }
-            Self::InvalidColorIndex(err) => {
-                write!(formatter, "Failed parsing color index: {err}")
-            }
-            Self::Utf8(err) => write!(formatter, "UTF-8 decoding error: {err}"),
-            Self::Io(err) => write!(formatter, "I/O error: {err}"),
-            Self::FontEmbedding(err) => write!(formatter, "font embedding error: {err}"),
-        }
-    }
-}
-
-impl StdError for TermError {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        match self {
-            Self::InvalidColorIndex(err) => Some(err),
-            Self::Utf8(err) => Some(err),
-            Self::Io(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl From<Utf8Error> for TermError {
-    fn from(err: Utf8Error) -> Self {
-        Self::Utf8(err)
-    }
-}
-
-/// Transcript of a user interacting with the terminal.
-#[derive(Debug, Clone)]
-pub struct Transcript<Out: TermOutput = Captured> {
-    interactions: Vec<Interaction<Out>>,
-}
-
-impl<Out: TermOutput> Default for Transcript<Out> {
-    fn default() -> Self {
-        Self {
-            interactions: vec![],
-        }
-    }
-}
-
-impl<Out: TermOutput> Transcript<Out> {
-    /// Creates an empty transcript.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Returns interactions in this transcript.
-    pub fn interactions(&self) -> &[Interaction<Out>] {
-        &self.interactions
-    }
-
-    /// Returns a mutable reference to interactions in this transcript.
-    pub fn interactions_mut(&mut self) -> &mut [Interaction<Out>] {
-        &mut self.interactions
-    }
-}
-
-impl Transcript {
-    /// Manually adds a new interaction to the end of this transcript.
-    ///
-    /// This method allows capturing interactions that are difficult or impossible to capture
-    /// using more high-level methods: [`Self::from_inputs()`] or [`Self::capture_output()`].
-    /// The resulting transcript will [render](svg) just fine, but there could be issues
-    /// with [testing](crate::test) it.
-    pub fn add_existing_interaction(&mut self, interaction: Interaction) -> &mut Self {
-        self.interactions.push(interaction);
-        self
-    }
-
-    /// Manually adds a new interaction to the end of this transcript.
-    ///
-    /// This is a shortcut for calling [`Self::add_existing_interaction()`].
-    pub fn add_interaction(
-        &mut self,
-        input: impl Into<UserInput>,
-        output: impl Into<String>,
-    ) -> &mut Self {
-        self.add_existing_interaction(Interaction::new(input, output))
-    }
-}
-
-/// Portable, platform-independent version of [`ExitStatus`] from the standard library.
-///
-/// # Capturing `ExitStatus`
-///
-/// Some shells have means to check whether the input command was executed successfully.
-/// For example, in `sh`-like shells, one can compare the value of `$?` to 0, and
-/// in PowerShell to `True`. The exit status can be captured when creating a [`Transcript`]
-/// by setting a *checker* in [`ShellOptions::with_status_check()`]:
-///
-/// # Examples
-///
-/// ```
-/// # use term_transcript::{ExitStatus, ShellOptions, Transcript, UserInput};
-/// # fn test_wrapper() -> anyhow::Result<()> {
-/// let options = ShellOptions::default();
-/// let mut options = options.with_status_check("echo $?", |captured| {
-///     // Parse captured string to plain text. This transform
-///     // is especially important in transcripts captured from PTY
-///     // since they can contain a *wild* amount of escape sequences.
-///     let captured = captured.to_plaintext().ok()?;
-///     let code: i32 = captured.trim().parse().ok()?;
-///     Some(ExitStatus(code))
-/// });
-///
-/// let transcript = Transcript::from_inputs(&mut options, [
-///     UserInput::command("echo \"Hello world\""),
-///     UserInput::command("some-non-existing-command"),
-/// ])?;
-/// let status = transcript.interactions()[0].exit_status();
-/// assert!(status.unwrap().is_success());
-/// // The assertion above is equivalent to:
-/// assert_eq!(status, Some(ExitStatus(0)));
-///
-/// let status = transcript.interactions()[1].exit_status();
-/// assert!(!status.unwrap().is_success());
-/// # Ok(())
-/// # }
-/// # // We can compile test in any case, but it successfully executes only on *nix.
-/// # #[cfg(unix)] fn main() { test_wrapper().unwrap() }
-/// # #[cfg(not(unix))] fn main() { }
-/// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ExitStatus(pub i32);
-
-impl ExitStatus {
-    /// Checks if this is the successful status.
-    pub fn is_success(self) -> bool {
-        self.0 == 0
-    }
-}
-
-/// One-time interaction with the terminal.
-#[derive(Debug, Clone)]
-pub struct Interaction<Out: TermOutput = Captured> {
-    input: UserInput,
-    output: Out,
-    exit_status: Option<ExitStatus>,
-}
-
-impl Interaction {
-    /// Creates a new interaction.
-    pub fn new(input: impl Into<UserInput>, output: impl Into<String>) -> Self {
-        Self {
-            input: input.into(),
-            output: Captured::from(output.into()),
-            exit_status: None,
-        }
-    }
-
-    /// Sets an exit status for this interaction.
-    pub fn set_exit_status(&mut self, exit_status: Option<ExitStatus>) {
-        self.exit_status = exit_status;
-    }
-
-    /// Assigns an exit status to this interaction.
-    #[must_use]
-    pub fn with_exit_status(mut self, exit_status: ExitStatus) -> Self {
-        self.exit_status = Some(exit_status);
-        self
-    }
-}
-
-impl<Out: TermOutput> Interaction<Out> {
-    /// Input provided by the user.
-    pub fn input(&self) -> &UserInput {
-        &self.input
-    }
-
-    /// Output to the terminal.
-    pub fn output(&self) -> &Out {
-        &self.output
-    }
-
-    /// Sets the output for this interaction.
-    pub fn set_output(&mut self, output: Out) {
-        self.output = output;
-    }
-
-    /// Returns exit status of the interaction, if available.
-    pub fn exit_status(&self) -> Option<ExitStatus> {
-        self.exit_status
-    }
-}
-
-/// User input during interaction with a terminal.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "svg", derive(serde::Serialize))]
-pub struct UserInput {
-    text: String,
-    prompt: Option<Cow<'static, str>>,
-    hidden: bool,
-}
-
-impl UserInput {
-    #[cfg(feature = "test")]
-    pub(crate) fn intern_prompt(prompt: String) -> Cow<'static, str> {
-        match prompt.as_str() {
-            "$" => Cow::Borrowed("$"),
-            ">>>" => Cow::Borrowed(">>>"),
-            "..." => Cow::Borrowed("..."),
-            _ => Cow::Owned(prompt),
-        }
-    }
-
-    /// Creates a command input.
-    pub fn command(text: impl Into<String>) -> Self {
-        Self {
-            text: text.into(),
-            prompt: Some(Cow::Borrowed("$")),
-            hidden: false,
-        }
-    }
-
-    /// Creates a standalone / starting REPL command input with the `>>>` prompt.
-    pub fn repl(text: impl Into<String>) -> Self {
-        Self {
-            text: text.into(),
-            prompt: Some(Cow::Borrowed(">>>")),
-            hidden: false,
-        }
-    }
-
-    /// Creates a REPL command continuation input with the `...` prompt.
-    pub fn repl_continuation(text: impl Into<String>) -> Self {
-        Self {
-            text: text.into(),
-            prompt: Some(Cow::Borrowed("...")),
-            hidden: false,
-        }
-    }
-
-    /// Returns the prompt part of this input.
-    pub fn prompt(&self) -> Option<&str> {
-        self.prompt.as_deref()
-    }
-
-    /// Marks this input as hidden (one that should not be displayed in the rendered transcript).
-    #[must_use]
-    pub fn hide(mut self) -> Self {
-        self.hidden = true;
-        self
-    }
-}
-
-/// Returns the command part of the input without the prompt.
-impl AsRef<str> for UserInput {
-    fn as_ref(&self) -> &str {
-        &self.text
-    }
-}
-
-/// Calls [`Self::command()`] on the provided string reference.
-impl From<&str> for UserInput {
-    fn from(command: &str) -> Self {
-        Self::command(command)
-    }
-}
 
 #[cfg(doctest)]
 doc_comment::doctest!("../README.md");

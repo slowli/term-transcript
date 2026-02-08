@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "font-subset")]
 use super::subset::FontSubsetter;
 use super::{FontEmbedder, HandlebarsData, Palette, font::BoxedErrorEmbedder};
-use crate::{BoxedError, TermError, Transcript};
+use crate::{TermError, Transcript, types::BoxedError};
 
 /// Line numbering scope.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -64,7 +64,7 @@ pub struct LineNumberingOptions {
 ///
 /// ```
 /// # use assert_matches::assert_matches;
-/// # use term_transcript::svg::{RgbColor, TemplateOptions, WrapOptions};
+/// # use term_transcript::svg::{TemplateOptions, WrapOptions};
 /// let options_toml = r#"
 /// width = 900
 /// window_frame = true
@@ -101,7 +101,7 @@ pub struct LineNumberingOptions {
 /// );
 /// assert_eq!(
 ///     options.palette.colors.green,
-///     RgbColor(0x8f, 0x9a, 0x52)
+///     anstyle::RgbColor(0x8f, 0x9a, 0x52)
 /// );
 /// # anyhow::Ok(())
 /// ```

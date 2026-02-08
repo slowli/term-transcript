@@ -295,9 +295,10 @@ impl FontEmbedder for FontSubsetter {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, path::Path};
+    use std::{fs, iter, path::Path};
 
     use assert_matches::assert_matches;
+    use styled_str::styled;
     use test_casing::test_casing;
 
     use super::*;
@@ -335,7 +336,11 @@ mod tests {
         let mut transcript = Transcript::new();
         transcript.add_interaction(
             UserInput::command("test"),
-            "\u{1b}[44m\u{1b}[1mH\u{1b}[0mello, \u{1b}[32m\u{1b}[3mworld\u{1b}[0m! ".repeat(10),
+            iter::repeat_n(
+                styled!("[[bold on blue]]H[[]]ello, [[italic green]]world[[]]! "),
+                10,
+            )
+            .collect(),
         );
 
         let options = TemplateOptions::default().with_font_subsetting(subsetter);

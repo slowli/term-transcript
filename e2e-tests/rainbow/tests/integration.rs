@@ -156,7 +156,7 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::
     )?;
 
     let interaction = &transcript.interactions()[0];
-    let output = interaction.output().to_plaintext()?;
+    let output = interaction.output().text();
     assert!(
         output.contains("\nblack red green yellow blue magenta cyan white"),
         "{output}"
@@ -327,9 +327,9 @@ fn repl_snapshot_testing(pure_svg: bool) {
     config.test(
         "repl.svg",
         [
-            "yellow intense bold green cucumber",
-            "neutral #fa4 underline #c0ffee",
-            "#9f4010 (brown) italic",
+            "yellow* bold on magenta",
+            "#fa4 underline, strikethrough on #c0ffee",
+            "#9f4010 italic",
         ],
     );
 }
@@ -408,7 +408,7 @@ fn new_snapshot(error_type: ErrorType, pure_svg: bool) -> anyhow::Result<()> {
 
     let interactions = new_transcript.interactions();
     assert_eq!(interactions.len(), 1);
-    let output_plaintext = interactions[0].output().plaintext();
+    let output_plaintext = interactions[0].output().text();
     assert!(
         output_plaintext.contains("pink"),
         "Unexpected output: {output_plaintext}"

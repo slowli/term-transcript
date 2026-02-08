@@ -2,13 +2,139 @@
 
 use std::{collections::HashMap, fmt};
 
+use anstyle::{Ansi256Color, Color, Effects, RgbColor, Style};
 use serde::Serialize;
 
-use super::write::StyledLine;
 use crate::{
     UserInput,
     svg::{EmbeddedFont, TemplateOptions},
 };
+
+pub(super) mod serde_color {
+    use std::fmt;
+
+    use anstyle::RgbColor;
+    use serde::{Deserializer, Serialize, Serializer, de};
+    use styled_str::{parse_hex_color, rgb_color_to_hex};
+
+    #[allow(clippy::trivially_copy_pass_by_ref)] // required by serde
+    pub(crate) fn serialize<S: Serializer>(
+        color: &RgbColor,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        rgb_color_to_hex(*color).serialize(serializer)
+    }
+
+    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<RgbColor, D::Error> {
+        #[derive(Debug)]
+        struct ColorVisitor;
+
+        impl de::Visitor<'_> for ColorVisitor {
+            type Value = RgbColor;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("hex color, such as #fed or #a757ff")
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                parse_hex_color(value.as_bytes()).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_str(ColorVisitor)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(untagged)]
+pub(super) enum SerdeColor {
+    Index(u8),
+    Rgb(#[serde(with = "serde_color")] RgbColor),
+}
+
+impl From<Color> for SerdeColor {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Ansi(color) => Self::Index(color as u8),
+            Color::Ansi256(Ansi256Color(idx)) => Self::Index(idx),
+            Color::Rgb(color) => Self::Rgb(color),
+        }
+    }
+}
+
+/// Serializable `anstyle::Style` representation.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
+#[allow(clippy::struct_excessive_bools)] // makes serialization simpler
+pub(super) struct SerdeStyle {
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) bold: bool,
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) italic: bool,
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) underline: bool,
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) dimmed: bool,
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) strikethrough: bool,
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) inverted: bool,
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) blink: bool,
+    #[serde(skip_serializing_if = "SerdeStyle::is_false")]
+    pub(super) concealed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) fg: Option<SerdeColor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) bg: Option<SerdeColor>,
+}
+
+impl SerdeStyle {
+    #[allow(clippy::trivially_copy_pass_by_ref)] // required by serde
+    fn is_false(&value: &bool) -> bool {
+        !value
+    }
+}
+
+impl From<Style> for SerdeStyle {
+    fn from(style: Style) -> Self {
+        let effects = style.get_effects();
+        Self {
+            bold: effects.contains(Effects::BOLD),
+            italic: effects.contains(Effects::ITALIC),
+            underline: effects.contains(Effects::UNDERLINE),
+            dimmed: effects.contains(Effects::DIMMED),
+            strikethrough: effects.contains(Effects::STRIKETHROUGH),
+            inverted: effects.contains(Effects::INVERT),
+            blink: effects.contains(Effects::BLINK),
+            concealed: effects.contains(Effects::HIDDEN),
+            fg: style.get_fg_color().map(SerdeColor::from),
+            bg: style.get_bg_color().map(SerdeColor::from),
+        }
+    }
+}
+
+/// Serializable version of `StyledSpan`. Also, inlines text for convenience instead of using lengths.
+#[derive(Debug, Serialize)]
+pub(super) struct SerdeStyledSpan<'a> {
+    #[serde(flatten)]
+    pub(super) style: SerdeStyle,
+    pub(super) text: &'a str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum LineBreak {
+    Hard,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub(super) struct StyledLine<'a> {
+    pub(super) spans: Vec<SerdeStyledSpan<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) br: Option<LineBreak>,
+}
 
 /// Root data structure sent to the Handlebars template.
 ///
@@ -17,10 +143,12 @@ use crate::{
 /// Here's example of JSON serialization of this type:
 ///
 /// ```
+/// use styled_str::styled;
 /// # use term_transcript::{svg::{TemplateOptions, NamedPalette}, Transcript, UserInput};
+///
 /// let mut transcript = Transcript::new();
 /// let input = UserInput::command("rainbow");
-/// transcript.add_interaction(input, "Hello, \u{1b}[32mworld\u{1b}[0m!");
+/// transcript.add_interaction(input, styled!("Hello, [[green]]world[[]]!").into());
 /// let template_options = TemplateOptions {
 ///     palette: NamedPalette::Dracula.into(),
 ///     font_family: "Consolas, Menlo, monospace".to_owned(),
@@ -152,7 +280,7 @@ pub struct SerializedInteraction<'a> {
     /// User's input.
     pub input: &'a UserInput,
     /// Terminal output in the [HTML format](#html-output).
-    pub(crate) output: Vec<StyledLine>,
+    pub(super) output: Vec<StyledLine<'a>>,
     /// Exit status of the latest executed program, or `None` if it cannot be determined.
     pub exit_status: Option<i32>,
     /// Was execution unsuccessful judging by the [`ExitStatus`](crate::ExitStatus)?

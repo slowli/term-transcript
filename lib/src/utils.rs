@@ -1,14 +1,6 @@
 //! Misc utils.
 
-use std::{borrow::Cow, io, str};
-
-pub(crate) fn normalize_newlines(s: &str) -> Cow<'_, str> {
-    if s.contains("\r\n") {
-        Cow::Owned(s.replace("\r\n", "\n"))
-    } else {
-        Cow::Borrowed(s)
-    }
-}
+use std::io;
 
 #[cfg(not(windows))]
 pub(crate) fn is_recoverable_kill_error(err: &io::Error) -> bool {

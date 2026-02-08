@@ -1,0 +1,23 @@
+[package]
+name = "styled-str"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Public dependencies
+anstyle.workspace = true
+
+# Private dependencies
+compile-fmt.workspace = true
+pretty_assertions.workspace = true
+unicode-width.workspace = true
+
+[dev-dependencies]
+assert_matches.workspace = true
+
+[lints]
+workspace = true

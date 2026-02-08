@@ -1,0 +1,794 @@
+//! Rich style parsing (incl. in compile time).
+
+// FIXME: change `red*` -> `red!` | `bright-red`
+// FIXME: change `* -> +`
+
+use core::{fmt, ops, str::FromStr};
+use std::{borrow::Cow, num::NonZeroUsize};
+
+use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
+
+use crate::{
+    HexColorError, ParseError, ParseErrorKind, StackStyled, StyledSpan, StyledString,
+    types::StyledStr,
+    utils::{Stack, StackStr, StrCursor, is_same_style, normalize_style},
+};
+
+/// Parses a hexadecimal RGB color like `#c0ffee` or `#fa4`.
+///
+/// # Errors
+///
+/// Returns a parsing error if the string is invalid.
+pub const fn parse_hex_color(hex: &[u8]) -> Result<RgbColor, HexColorError> {
+    if hex.is_empty() || hex[0] != b'#' {
+        return Err(HexColorError::NoHash);
+    }
+
+    if hex.len() == 4 {
+        let r = const_try!(parse_hex_digit(hex[1]));
+        let g = const_try!(parse_hex_digit(hex[2]));
+        let b = const_try!(parse_hex_digit(hex[3]));
+        Ok(RgbColor(r * 17, g * 17, b * 17))
+    } else if hex.len() == 7 {
+        let r = const_try!(parse_hex_digit(hex[1])) * 16 + const_try!(parse_hex_digit(hex[2]));
+        let g = const_try!(parse_hex_digit(hex[3])) * 16 + const_try!(parse_hex_digit(hex[4]));
+        let b = const_try!(parse_hex_digit(hex[5])) * 16 + const_try!(parse_hex_digit(hex[6]));
+        Ok(RgbColor(r, g, b))
+    } else {
+        Err(HexColorError::InvalidLen)
+    }
+}
+
+const fn parse_hex_digit(ch: u8) -> Result<u8, HexColorError> {
+    match ch {
+        b'0'..=b'9' => Ok(ch - b'0'),
+        b'a'..=b'f' => Ok(ch - b'a' + 10),
+        b'A'..=b'F' => Ok(ch - b'A' + 10),
+        _ => Err(HexColorError::InvalidHexDigit),
+    }
+}
+
+pub fn rgb_color_to_hex(RgbColor(r, g, b): RgbColor) -> String {
+    use core::fmt::Write as _;
+
+    let mut buffer = String::new();
+    if r % 17 == 0 && g % 17 == 0 && b % 17 == 0 {
+        write!(&mut buffer, "#{:x}{:x}{:x}", r / 17, g / 17, b / 17).unwrap();
+    } else {
+        write!(&mut buffer, "#{r:02x}{g:02x}{b:02x}").unwrap();
+    }
+    buffer
+}
+
+impl StyledStr<'static> {
+    #[doc(hidden)] // used in the `styled!` macro; logically private
+    pub const fn capacities(raw: &str) -> (usize, usize) {
+        let mut cursor = StrCursor::new(raw);
+        let mut text_len = 0;
+        let mut span_count = 0;
+        let mut style_end_pos = 0;
+        while !cursor.is_eof() {
+            if cursor.gobble("[[") {
+                while !cursor.is_eof() && cursor.current_byte() == b'[' {
+                    cursor.advance_byte();
+                }
+
+                let end_pos = cursor.pos() - 2;
+                if end_pos - style_end_pos > 0 {
+                    span_count += 1;
+                    text_len += end_pos - style_end_pos;
+                }
+                while !cursor.is_eof() && !cursor.gobble("]]") {
+                    cursor.advance_byte();
+                }
+                style_end_pos = cursor.pos();
+            } else {
+                cursor.advance_byte();
+            }
+        }
+
+        if raw.len() - style_end_pos > 0 {
+            span_count += 1;
+            text_len += raw.len() - style_end_pos;
+        }
+        (text_len, span_count)
+    }
+}
+
+#[derive(Debug)]
+struct SetStyleFields(u16);
+
+impl SetStyleFields {
+    const BOLD: u16 = 1;
+    const ITALIC: u16 = 2;
+    const UNDERLINE: u16 = 4;
+    const STRIKETHROUGH: u16 = 8;
+    const BLINK: u16 = 16;
+    const INVERT: u16 = 32;
+    const HIDDEN: u16 = 64;
+    const DIMMED: u16 = 128;
+
+    const FG: u16 = 256;
+    const BG: u16 = 512;
+
+    const fn new() -> Self {
+        Self(0)
+    }
+
+    const fn from_style(style: &Style) -> Self {
+        let mut this = Self::new();
+        this.set_effects(style.get_effects());
+        if style.get_fg_color().is_some() {
+            this.set_fg();
+        }
+        if style.get_bg_color().is_some() {
+            this.set_bg();
+        }
+        this
+    }
+
+    const fn set_effects(&mut self, effects: Effects) -> bool {
+        let prev = self.0;
+
+        if effects.contains(Effects::BOLD) {
+            self.0 |= Self::BOLD;
+        }
+        if effects.contains(Effects::ITALIC) {
+            self.0 |= Self::ITALIC;
+        }
+        if effects.contains(Effects::UNDERLINE) {
+            self.0 |= Self::UNDERLINE;
+        }
+        if effects.contains(Effects::STRIKETHROUGH) {
+            self.0 |= Self::STRIKETHROUGH;
+        }
+        if effects.contains(Effects::BLINK) {
+            self.0 |= Self::BLINK;
+        }
+        if effects.contains(Effects::INVERT) {
+            self.0 |= Self::INVERT;
+        }
+        if effects.contains(Effects::HIDDEN) {
+            self.0 |= Self::HIDDEN;
+        }
+        if effects.contains(Effects::DIMMED) {
+            self.0 |= Self::DIMMED;
+        }
+
+        self.0 != prev
+    }
+
+    const fn set_fg(&mut self) -> bool {
+        let prev = self.0;
+        self.0 |= Self::FG;
+        self.0 != prev
+    }
+
+    const fn set_bg(&mut self) -> bool {
+        let prev = self.0;
+        self.0 |= Self::BG;
+        self.0 != prev
+    }
+}
+
+/// Parser for `rich` like styling, e.g. `[[bold red on white]]text[[]]`.
+// TODO: make the number of opening / closing brackets configurable?
+#[derive(Debug)]
+struct RichParser<'a> {
+    cursor: StrCursor<'a>,
+    current_style: Style,
+    style_end_pos: usize,
+}
+
+impl<'a> RichParser<'a> {
+    const fn new(raw: &'a str) -> Self {
+        Self {
+            cursor: StrCursor::new(raw),
+            current_style: Style::new(),
+            style_end_pos: 0,
+        }
+    }
+
+    const fn step(&mut self) -> Result<ops::ControlFlow<(), (StyledSpan, usize)>, ParseError> {
+        if self.cursor.is_eof() {
+            // Push the final span if necessary.
+            return Ok(self.final_step());
+        }
+
+        while !self.cursor.is_eof() {
+            if self.cursor.gobble("[[") {
+                // Gobble any additional `[`s. It's always right to interpret the rightmost sequence of `[`
+                // as the start of the style, because the style itself cannot contain `[`s.
+                while !self.cursor.is_eof() && self.cursor.current_byte() == b'[' {
+                    self.cursor.advance_byte();
+                }
+                if self.cursor.is_eof() {
+                    return Err(self.cursor.error(ParseErrorKind::UnfinishedStyle));
+                }
+
+                // Push the previous styled span
+                let end_pos = self.cursor.pos() - 2;
+                let span_and_text_start =
+                    if let Some(len) = NonZeroUsize::new(end_pos - self.style_end_pos) {
+                        let span = StyledSpan {
+                            style: self.current_style,
+                            len,
+                        };
+                        Some((span, self.style_end_pos))
+                    } else {
+                        None
+                    };
+
+                self.current_style = const_try!(self.cursor.parse_style(&self.current_style, true));
+                self.style_end_pos = self.cursor.pos();
+
+                if let Some(span_and_text_start) = span_and_text_start {
+                    return Ok(ops::ControlFlow::Continue(span_and_text_start));
+                }
+            } else {
+                self.cursor.advance_byte();
+            }
+        }
+
+        Ok(self.final_step())
+    }
+
+    const fn final_step(&mut self) -> ops::ControlFlow<(), (StyledSpan, usize)> {
+        if let Some(len) = NonZeroUsize::new(self.cursor.pos() - self.style_end_pos) {
+            let span = StyledSpan {
+                style: self.current_style,
+                len,
+            };
+            let text_start = self.style_end_pos;
+            self.style_end_pos = self.cursor.pos();
+            ops::ControlFlow::Continue((span, text_start))
+        } else {
+            ops::ControlFlow::Break(())
+        }
+    }
+}
+
+impl StrCursor<'_> {
+    /// Produces the error spanned at the next char.
+    const fn error(&self, kind: ParseErrorKind) -> ParseError {
+        let range = if self.is_eof() {
+            self.pos()..self.pos()
+        } else {
+            self.expand_to_char_boundaries(self.pos()..self.pos() + 1)
+        };
+        kind.with_pos(range)
+    }
+
+    const fn error_on_empty_token(&self, unfinished: ParseErrorKind) -> ParseError {
+        if self.is_eof() {
+            unfinished.with_pos(self.pos()..self.pos())
+        } else {
+            let next_char_pos = self.expand_to_char_boundaries(self.pos()..self.pos() + 1);
+            ParseErrorKind::BogusDelimiter.with_pos(next_char_pos)
+        }
+    }
+
+    /// The cursor is positioned just after the opening `[[`.
+    const fn parse_style(
+        &mut self,
+        current_style: &Style,
+        expect_closing_bracket: bool,
+    ) -> Result<Style, ParseError> {
+        let mut style = Style::new();
+        let mut is_initial = true;
+        let mut closing_bracket = false;
+        let mut copied_fields = None;
+        let mut set_fields = SetStyleFields::new();
+
+        while !self.is_eof() {
+            self.gobble_whitespace();
+            if !is_initial && self.gobble_punct() {
+                self.gobble_whitespace();
+            }
+
+            if expect_closing_bracket && self.gobble("]]") {
+                closing_bracket = true;
+                break;
+            }
+            if self.is_eof() {
+                break;
+            }
+
+            let token_range = self.take_token();
+            if matches!(self.range(&token_range), b"*") {
+                if is_initial {
+                    copied_fields = Some(SetStyleFields::from_style(current_style));
+                    style = *current_style;
+                } else {
+                    return Err(ParseErrorKind::NonInitialCopy.with_pos(token_range));
+                }
+            } else {
+                const_try!(self.parse_token(
+                    &mut style,
+                    token_range,
+                    &mut set_fields,
+                    copied_fields.as_mut(),
+                ));
+            }
+
+            is_initial = false;
+        }
+
+        if expect_closing_bracket && !closing_bracket {
+            Err(self.error(ParseErrorKind::UnfinishedStyle))
+        } else {
+            Ok(normalize_style(style))
+        }
+    }
+
+    const fn parse_token(
+        &mut self,
+        style: &mut Style,
+        token_range: ops::Range<usize>,
+        set_fields: &mut SetStyleFields,
+        copied_fields: Option<&mut SetStyleFields>,
+    ) -> Result<(), ParseError> {
+        let token = self.range(&token_range);
+        match token {
+            b"" => {
+                return Err(self.error_on_empty_token(ParseErrorKind::UnfinishedStyle));
+            }
+
+            b"on" => {
+                if !set_fields.set_bg() {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+
+                self.gobble_whitespace();
+                if self.is_eof() {
+                    return Err(self.error(ParseErrorKind::UnfinishedStyle));
+                }
+
+                let on_token_range = token_range;
+                let token_range = self.take_token();
+                let token = self.range(&token_range);
+                let color = match Self::parse_color(token) {
+                    Ok(Some(color)) => color,
+                    Ok(None) => {
+                        return Err(ParseErrorKind::UnfinishedBackground.with_pos(on_token_range));
+                    }
+                    Err(err) => return Err(err.with_pos(token_range)),
+                };
+                *style = style.bg_color(Some(color));
+            }
+
+            b"-color" | b"-fg" | b"!color" | b"!fg" => {
+                if !set_fields.set_fg() {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+                let Some(copied_fields) = copied_fields else {
+                    // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                    // on a bogus specifier.
+                    return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                };
+                if copied_fields.set_fg() {
+                    // The effect wasn't set in the copied style
+                    return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
+                }
+                *style = style.fg_color(None);
+            }
+            b"-on" | b"-bg" | b"!on" | b"!bg" => {
+                if !set_fields.set_bg() {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+                let Some(copied_fields) = copied_fields else {
+                    // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                    // on a bogus specifier.
+                    return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                };
+                if copied_fields.set_bg() {
+                    // The effect wasn't set in the copied style
+                    return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
+                }
+                *style = style.bg_color(None);
+            }
+            neg if neg[0] == b'-' || neg[0] == b'!' => {
+                let (_, token_without_prefix) = token.split_at(1);
+                let Some(effects) = Self::parse_effects(token_without_prefix) else {
+                    return Err(ParseErrorKind::UnsupportedEffect.with_pos(token_range));
+                };
+                let Some(copied_fields) = copied_fields else {
+                    // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                    // on a bogus specifier.
+                    return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                };
+
+                if !set_fields.set_effects(effects) {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+                if copied_fields.set_effects(effects) {
+                    // The effect wasn't set in the copied style
+                    return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
+                }
+
+                *style = style.effects(style.get_effects().remove(effects));
+            }
+
+            _ => {
+                if let Some(effects) = Self::parse_effects(token) {
+                    if !set_fields.set_effects(effects) {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+                    *style = style.effects(style.get_effects().insert(effects));
+                } else {
+                    let color = match Self::parse_color(token) {
+                        Ok(Some(color)) => color,
+                        Ok(None) => {
+                            return Err(ParseErrorKind::UnsupportedStyle.with_pos(token_range));
+                        }
+                        Err(err) => return Err(err.with_pos(token_range)),
+                    };
+                    if !set_fields.set_fg() {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+                    *style = style.fg_color(Some(color));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    const fn parse_effects(token: &[u8]) -> Option<Effects> {
+        Some(match token {
+            b"bold" | b"b" => Effects::BOLD,
+            b"italic" | b"i" => Effects::ITALIC,
+            b"underline" | b"u" | b"ul" => Effects::UNDERLINE,
+            b"strikethrough" | b"strike" | b"s" => Effects::STRIKETHROUGH,
+            b"dim" | b"dimmed" => Effects::DIMMED,
+            b"invert" | b"inverted" | b"inv" => Effects::INVERT,
+            b"blink" => Effects::BLINK,
+            b"hide" | b"hidden" | b"conceal" | b"concealed" => Effects::HIDDEN,
+            _ => return None,
+        })
+    }
+
+    const fn parse_index(s: &[u8]) -> Result<u8, ParseErrorKind> {
+        if s.len() > 3 || s[0] == b'0' {
+            // We disallow colors starting from `0` (e.g., `001`) to avoid ambiguity.
+            return Err(ParseErrorKind::InvalidIndexColor);
+        }
+
+        let mut i = 0;
+        let mut index = 0_u8;
+        while i < s.len() {
+            let digit = if s[i].is_ascii_digit() {
+                s[i] - b'0'
+            } else {
+                return Err(ParseErrorKind::InvalidIndexColor);
+            };
+            index = match index.checked_mul(10) {
+                Some(val) => val,
+                None => return Err(ParseErrorKind::InvalidIndexColor),
+            };
+            index = match index.checked_add(digit) {
+                Some(val) => val,
+                None => return Err(ParseErrorKind::InvalidIndexColor),
+            };
+            i += 1;
+        }
+        Ok(index)
+    }
+
+    const fn parse_color(token: &[u8]) -> Result<Option<Color>, ParseErrorKind> {
+        Ok(match token {
+            b"black" => Some(Color::Ansi(AnsiColor::Black)),
+            b"black*" => Some(Color::Ansi(AnsiColor::BrightBlack)),
+            b"red" => Some(Color::Ansi(AnsiColor::Red)),
+            b"red*" => Some(Color::Ansi(AnsiColor::BrightRed)),
+            b"green" => Some(Color::Ansi(AnsiColor::Green)),
+            b"green*" => Some(Color::Ansi(AnsiColor::BrightGreen)),
+            b"yellow" => Some(Color::Ansi(AnsiColor::Yellow)),
+            b"yellow*" => Some(Color::Ansi(AnsiColor::BrightYellow)),
+            b"blue" => Some(Color::Ansi(AnsiColor::Blue)),
+            b"blue*" => Some(Color::Ansi(AnsiColor::BrightBlue)),
+            b"magenta" => Some(Color::Ansi(AnsiColor::Magenta)),
+            b"magenta*" => Some(Color::Ansi(AnsiColor::BrightMagenta)),
+            b"cyan" => Some(Color::Ansi(AnsiColor::Cyan)),
+            b"cyan*" => Some(Color::Ansi(AnsiColor::BrightCyan)),
+            b"white" => Some(Color::Ansi(AnsiColor::White)),
+            b"white*" => Some(Color::Ansi(AnsiColor::BrightWhite)),
+
+            hex if !hex.is_empty() && hex[0] == b'#' => match parse_hex_color(hex) {
+                Ok(color) => Some(Color::Rgb(color)),
+                Err(err) => return Err(ParseErrorKind::HexColor(err)),
+            },
+
+            num if !num.is_empty() && num[0].is_ascii_digit() => {
+                let index = const_try!(Self::parse_index(num));
+                Some(Color::Ansi256(Ansi256Color(index)))
+            }
+
+            _ => None,
+        })
+    }
+
+    const fn gobble_whitespace(&mut self) {
+        while !self.is_eof() {
+            let ch = self.current_byte();
+            if ch.is_ascii_whitespace() {
+                self.advance_byte();
+            } else {
+                break;
+            }
+        }
+    }
+
+    const fn gobble_punct(&mut self) -> bool {
+        if !self.is_eof() && matches!(self.current_byte(), b',' | b';') {
+            self.advance_byte();
+            true
+        } else {
+            false
+        }
+    }
+
+    const fn take_token(&mut self) -> ops::Range<usize> {
+        const fn is_delimiter(ch: u8) -> bool {
+            ch.is_ascii_whitespace() || matches!(ch, b',' | b';' | b']')
+        }
+
+        let start_pos = self.pos();
+        while !self.is_eof() && !is_delimiter(self.current_byte()) {
+            self.advance_byte();
+        }
+        start_pos..self.pos()
+    }
+}
+
+impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CAP> {
+    pub(crate) const fn parse(raw: &str) -> Result<Self, ParseError> {
+        let mut parser = RichParser::new(raw);
+        let mut text = StackStr::new();
+        let mut spans = Stack::new(StyledSpan::new(Style::new(), 1));
+
+        while let ops::ControlFlow::Continue((span, text_start)) = const_try!(parser.step()) {
+            let mut span_extended = false;
+            if let Some(last_span) = spans.last_mut() {
+                if is_same_style(&last_span.style, &span.style) {
+                    last_span.extend_len(span.len.get());
+                    span_extended = true;
+                }
+            }
+
+            if !span_extended && spans.push(span).is_err() {
+                return Err(parser.cursor.error(ParseErrorKind::SpanOverflow));
+            }
+
+            let text_chunk = parser
+                .cursor
+                .range(&(text_start..text_start + span.len.get()));
+            let mut i = 0;
+            while i < text_chunk.len() {
+                if text.push(text_chunk[i]).is_err() {
+                    return Err(parser.cursor.error(ParseErrorKind::TextOverflow));
+                }
+                i += 1;
+            }
+        }
+        Ok(Self { text, spans })
+    }
+}
+
+impl FromStr for StyledString {
+    type Err = ParseError;
+
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        let mut parser = RichParser::new(raw);
+        let mut text = String::new();
+        let mut spans = Vec::new();
+
+        while let ops::ControlFlow::Continue((span, text_start)) = parser.step()? {
+            spans.push(span);
+            text.push_str(&raw[text_start..text_start + span.len.get()]);
+        }
+        Ok(Self::from_parts(text, spans))
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RichStyle<'a>(pub &'a Style);
+
+impl RichStyle<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the string doesn't represent a valid style specification.
+    pub const fn parse(raw: &str, current_style: &Style) -> Result<Style, ParseError> {
+        StrCursor::new(raw).parse_style(current_style, false)
+    }
+
+    pub(crate) fn tokens(self) -> Vec<Cow<'static, str>> {
+        let mut tokens = vec![];
+
+        let effects = self.0.get_effects();
+        if effects.contains(Effects::BOLD) {
+            tokens.push("bold".into());
+        }
+        if effects.contains(Effects::ITALIC) {
+            tokens.push("italic".into());
+        }
+        if effects.contains(Effects::DIMMED) {
+            tokens.push("dim".into());
+        }
+        if effects.contains(Effects::UNDERLINE) {
+            tokens.push("underline".into());
+        }
+        if effects.contains(Effects::STRIKETHROUGH) {
+            tokens.push("strike".into());
+        }
+        if effects.contains(Effects::INVERT) {
+            tokens.push("invert".into());
+        }
+        if effects.contains(Effects::BLINK) {
+            tokens.push("blink".into());
+        }
+        if effects.contains(Effects::HIDDEN) {
+            tokens.push("hidden".into());
+        }
+
+        if let Some(color) = self.0.get_fg_color() {
+            tokens.push(write_color(color).into());
+        }
+
+        if let Some(color) = self.0.get_bg_color() {
+            tokens.push("on".into());
+            tokens.push(write_color(color).into());
+        }
+        tokens
+    }
+}
+
+impl fmt::Display for RichStyle<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let tokens = self.tokens();
+        for (i, token) in tokens.iter().enumerate() {
+            write!(formatter, "{token}")?;
+            if i + 1 < tokens.len() {
+                formatter.write_str(" ")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+fn write_color(color: Color) -> String {
+    use core::fmt::Write as _;
+
+    let mut buffer = String::new();
+    match color {
+        Color::Ansi(color) => write!(
+            &mut buffer,
+            "{base}{bright}",
+            base = ansi_color_str(color),
+            bright = if color.is_bright() { "*" } else { "" }
+        )
+        .unwrap(),
+        Color::Ansi256(Ansi256Color(idx)) => write!(&mut buffer, "{idx}").unwrap(),
+        Color::Rgb(color) => {
+            buffer = rgb_color_to_hex(color);
+        }
+    }
+    buffer
+}
+
+fn ansi_color_str(color: AnsiColor) -> &'static str {
+    match color.bright(false) {
+        AnsiColor::Black => "black",
+        AnsiColor::Red => "red",
+        AnsiColor::Green => "green",
+        AnsiColor::Yellow => "yellow",
+        AnsiColor::Blue => "blue",
+        AnsiColor::Magenta => "magenta",
+        AnsiColor::Cyan => "cyan",
+        AnsiColor::White => "white",
+        _ => unreachable!(),
+    }
+}
+
+/// Escapes sequences of >=2 opening brackets (i.e., `[[`, `[[[` etc.) by appending `[[*]]` to each sequence
+/// (a no-op style copy).
+#[derive(Debug)]
+pub(crate) struct EscapedText<'a>(pub(crate) &'a str);
+
+impl fmt::Display for EscapedText<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut remainder = self.0;
+        while let Some(mut pos) = remainder.find("[[") {
+            // Increase `pos` until it points at a non-`[` char.
+            pos += 2;
+            while remainder.as_bytes().get(pos).copied() == Some(b'[') {
+                pos += 1;
+            }
+
+            let head;
+            (head, remainder) = remainder.split_at(pos);
+            write!(formatter, "{head}[[*]]")?;
+        }
+        write!(formatter, "{remainder}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assert_matches::assert_matches;
+
+    use super::*;
+
+    #[test]
+    fn tokenization_works() {
+        let mut cursor = StrCursor::new("bold, ul");
+        let token = cursor.take_token();
+        assert_eq!(token, 0..4);
+        assert_eq!(cursor.pos(), 4);
+
+        let mut cursor = StrCursor::new("bold");
+        let token = cursor.take_token();
+        assert_eq!(token, 0..4);
+        assert_eq!(cursor.pos(), 4);
+
+        let mut cursor = StrCursor::new("bold]]");
+        let token = cursor.take_token();
+        assert_eq!(token, 0..4);
+        assert_eq!(cursor.pos(), 4);
+    }
+
+    #[test]
+    fn parsing_style() {
+        let mut cursor = StrCursor::new("bold, ul magenta on yellow*");
+        let style = cursor.parse_style(&Style::new(), false).unwrap();
+        let expected_style = Style::new()
+            .bold()
+            .underline()
+            .fg_color(Some(AnsiColor::Magenta.into()))
+            .bg_color(Some(AnsiColor::BrightYellow.into()));
+        assert_eq!(style, expected_style);
+        assert!(cursor.is_eof(), "{cursor:?}");
+    }
+
+    #[test]
+    fn parsing_style_with_complex_colors() {
+        let mut cursor = StrCursor::new("dim i invert; blink; 42 on #c0ffee]]");
+        let style = cursor.parse_style(&Style::new(), true).unwrap();
+        let expected_style = Style::new()
+            .dimmed()
+            .blink()
+            .invert()
+            .italic()
+            .fg_color(Some(RgbColor(0, 215, 135).into()))
+            .bg_color(Some(RgbColor(0xc0, 0xff, 0xee).into()));
+        assert_eq!(style, expected_style);
+        assert!(cursor.is_eof(), "{cursor:?}");
+    }
+
+    #[test]
+    fn standalone_style_parsing() {
+        let style = RichStyle::parse("red on 7, bold", &Style::new()).unwrap();
+        assert_eq!(
+            style,
+            Style::new()
+                .bold()
+                .fg_color(Some(AnsiColor::Red.into()))
+                .bg_color(Some(AnsiColor::White.into()))
+        );
+
+        let err = RichStyle::parse("red on 7]], bold", &Style::new()).unwrap_err();
+        assert_matches!(err.kind(), ParseErrorKind::BogusDelimiter);
+        assert_eq!(err.pos(), 8..9);
+    }
+
+    #[test]
+    fn escaping_text() {
+        assert_eq!(EscapedText("test: [OK]").to_string(), "test: [OK]");
+
+        assert_eq!(EscapedText("test: [[OK]]").to_string(), "test: [[[[*]]OK]]");
+
+        assert_eq!(
+            EscapedText("[[OK]] test :[[[").to_string(),
+            "[[[[*]]OK]] test :[[[[[*]]"
+        );
+    }
+}

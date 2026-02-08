@@ -5,7 +5,7 @@ use std::{collections::BTreeSet, fmt};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Serialize, Serializer};
 
-use crate::BoxedError;
+use crate::types::BoxedError;
 
 /// Representation of a font that can be embedded into SVG via `@font-face` CSS with a data URL `src`.
 #[derive(Debug, Serialize)]

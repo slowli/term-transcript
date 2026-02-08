@@ -54,22 +54,19 @@ const PURE_SVG: &[u8] = br#"
 #[test_casing(3, [SVG, LEGACY_SVG, PURE_SVG])]
 fn reading_file(file_contents: &[u8]) {
     let transcript = Transcript::from_svg(file_contents).unwrap();
-    assert_eq!(transcript.interactions.len(), 1);
+    assert_eq!(transcript.interactions().len(), 1);
 
-    let interaction = &transcript.interactions[0];
-    assert_matches!(
-        &interaction.input,
-        UserInput { text, prompt, .. }
-            if text == "ls -al --color=always" && prompt.as_deref() == Some("$")
-    );
+    let interaction = &transcript.interactions()[0];
+    assert_eq!(interaction.input().as_ref(), "ls -al --color=always");
+    assert_eq!(interaction.input().prompt(), Some("$"));
 
-    let plaintext = &interaction.output.plaintext;
+    let plaintext = interaction.output().text();
     assert!(plaintext.starts_with("total 28\ndrwxr-xr-x"));
     assert!(plaintext.contains("4096 Apr 18 12:54 .\n"));
     assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
     assert!(!plaintext.contains("__"), "{plaintext}");
 
-    let color_spans = &interaction.output.styled_spans;
+    let color_spans = interaction.output().spans();
     assert_eq!(color_spans.len(), 5, "{color_spans:#?}"); // 2 colored regions + 3 surrounding areas
 }
 
@@ -80,7 +77,7 @@ fn reading_file_with_extra_info() {
     let mut data = Cursor::new(data.as_slice());
 
     let transcript = Transcript::from_svg(&mut data).unwrap();
-    assert_eq!(transcript.interactions.len(), 1);
+    assert_eq!(transcript.interactions().len(), 1);
 
     // Check that the parser stops after `</svg>`.
     let mut end = String::new();
@@ -107,13 +104,16 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
     "#;
 
     let transcript = Transcript::from_svg(SVG).unwrap();
-    assert_eq!(transcript.interactions.len(), 2);
+    assert_eq!(transcript.interactions().len(), 2);
 
-    assert_eq!(transcript.interactions[0].input.text, "ls > /dev/null");
-    assert!(transcript.interactions[0].output.plaintext.is_empty());
+    assert_eq!(
+        transcript.interactions()[0].input().as_ref(),
+        "ls > /dev/null"
+    );
+    assert!(transcript.interactions()[0].output().text().is_empty());
 
-    assert_eq!(transcript.interactions[1].input.text, "ls");
-    assert!(!transcript.interactions[1].output.plaintext.is_empty());
+    assert_eq!(transcript.interactions()[1].input().as_ref(), "ls");
+    assert!(!transcript.interactions()[1].output().text().is_empty());
 }
 
 #[test]
@@ -129,11 +129,11 @@ fn reading_file_with_exit_code_info() {
     "#;
 
     let transcript = Transcript::from_svg(SVG).unwrap();
-    assert_eq!(transcript.interactions.len(), 1);
+    assert_eq!(transcript.interactions().len(), 1);
 
-    let interaction = &transcript.interactions[0];
-    assert_eq!(interaction.input.text, "what");
-    assert_eq!(interaction.exit_status, Some(ExitStatus(127)));
+    let interaction = &transcript.interactions()[0];
+    assert_eq!(interaction.input().as_ref(), "what");
+    assert_eq!(interaction.exit_status(), Some(ExitStatus(127)));
 }
 
 #[test]
@@ -149,8 +149,8 @@ fn reading_file_with_hidden_input() {
     "#;
 
     let transcript = Transcript::from_svg(SVG).unwrap();
-    assert_eq!(transcript.interactions.len(), 1);
-    assert!(transcript.interactions[0].input.hidden);
+    assert_eq!(transcript.interactions().len(), 1);
+    assert!(transcript.interactions()[0].input().is_hidden());
 }
 
 #[test]
@@ -229,24 +229,24 @@ fn reading_user_input_with_manual_events() {
         let event = Event::Start(BytesStart::new("pre"));
         assert!(state.process(event, 0..1).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, None);
-        assert!(state.text.plaintext_buffer.is_empty());
+        assert!(state.text.plaintext_buffer().is_empty());
     }
     {
         let event = Event::Start(BytesStart::from_content(r#"span class="prompt""#, 4));
         assert!(state.process(event, 1..2).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, Some(2));
-        assert!(state.text.plaintext_buffer.is_empty());
+        assert!(state.text.plaintext_buffer().is_empty());
     }
     {
         let event = Event::Text(BytesText::from_escaped("$"));
         assert!(state.process(event, 2..3).unwrap().is_none());
-        assert_eq!(state.text.plaintext_buffer, "$");
+        assert_eq!(state.text.plaintext_buffer(), "$");
     }
     {
         let event = Event::End(BytesEnd::new("span"));
         assert!(state.process(event, 3..4).unwrap().is_none());
         assert_eq!(state.prompt.as_deref(), Some("$"));
-        assert!(state.text.plaintext_buffer.is_empty());
+        assert!(state.text.plaintext_buffer().is_empty());
     }
     {
         let event = Event::Text(BytesText::from_escaped(" rainbow"));
@@ -259,7 +259,7 @@ fn reading_user_input_with_manual_events() {
     let event = Event::End(BytesEnd::new("div"));
     let user_input = state.process(event, 6..7).unwrap().unwrap().input;
     assert_eq!(user_input.prompt(), Some("$"));
-    assert_eq!(user_input.text, "rainbow");
+    assert_eq!(user_input.as_ref(), "rainbow");
 }
 
 fn read_user_input(input: &[u8]) -> UserInput {
@@ -292,32 +292,32 @@ fn read_user_input(input: &[u8]) -> UserInput {
 fn reading_user_input_base_case() {
     let user_input = read_user_input(br#"<pre><span class="prompt">&gt;</span> echo foo</pre>"#);
 
-    assert_eq!(user_input.prompt.as_deref(), Some(">"));
-    assert_eq!(user_input.text, "echo foo");
+    assert_eq!(user_input.prompt(), Some(">"));
+    assert_eq!(user_input.as_ref(), "echo foo");
 }
 
 #[test]
 fn reading_user_input_without_wrapper() {
     let user_input = read_user_input(br#"<span class="prompt">&gt;</span> echo foo"#);
 
-    assert_eq!(user_input.prompt.as_deref(), Some(">"));
-    assert_eq!(user_input.text, "echo foo");
+    assert_eq!(user_input.prompt(), Some(">"));
+    assert_eq!(user_input.as_ref(), "echo foo");
 }
 
 #[test]
 fn reading_user_input_without_prompt() {
     let user_input = read_user_input(br#"<pre>echo <span class="bold">foo</span></pre>"#);
 
-    assert_eq!(user_input.prompt.as_deref(), None);
-    assert_eq!(user_input.text, "echo foo");
+    assert_eq!(user_input.prompt(), None);
+    assert_eq!(user_input.as_ref(), "echo foo");
 }
 
 #[test]
 fn reading_user_input_with_prompt_only() {
     let user_input = read_user_input(br#"<pre><span class="prompt">$</span></pre>"#);
 
-    assert_eq!(user_input.prompt.as_deref(), Some("$"));
-    assert_eq!(user_input.text, "");
+    assert_eq!(user_input.prompt(), Some("$"));
+    assert_eq!(user_input.as_ref(), "");
 }
 
 #[test]
@@ -325,8 +325,8 @@ fn reading_user_input_with_bogus_prompt_location() {
     let user_input =
         read_user_input(br#"<pre>echo foo <span class="prompt">&gt;</span> output.log</pre>"#);
 
-    assert_eq!(user_input.prompt.as_deref(), None);
-    assert_eq!(user_input.text, "echo foo > output.log");
+    assert_eq!(user_input.prompt(), None);
+    assert_eq!(user_input.as_ref(), "echo foo > output.log");
 }
 
 #[test]
@@ -336,15 +336,15 @@ fn reading_user_input_with_multiple_prompts() {
           echo foo <span class=\"prompt\">&gt;</span> output.log</pre>",
     );
 
-    assert_eq!(user_input.prompt.as_deref(), Some(">>>"));
-    assert_eq!(user_input.text, "echo foo > output.log");
+    assert_eq!(user_input.prompt(), Some(">>>"));
+    assert_eq!(user_input.as_ref(), "echo foo > output.log");
 }
 
 #[test]
 fn reading_user_input_with_leading_spaces() {
     let user_input =
         read_user_input(b"<pre><span class=\"prompt\">&gt;</span>   ls &gt; /dev/null</pre>");
-    assert_eq!(user_input.text, "  ls > /dev/null");
+    assert_eq!(user_input.as_ref(), "  ls > /dev/null");
 }
 
 #[test]
@@ -352,7 +352,7 @@ fn newline_breaks_are_normalized() {
     let mut state = TextReadingState::default();
     let text = BytesText::from_escaped("some\ntext\r\nand more text");
     state.process(Event::Text(text), 0..1).unwrap();
-    assert_eq!(state.plaintext_buffer, "some\ntext\nand more text");
+    assert_eq!(state.plaintext_buffer(), "some\ntext\nand more text");
 }
 
 #[test]
@@ -393,13 +393,11 @@ fn reading_legacy_pure_svg_with_hard_breaks() {
     assert_eq!(transcript.interactions().len(), 1);
     let output = transcript.interactions()[0].output();
     assert!(
-        output
-            .plaintext
-            .starts_with("Roboto Mono Regular\nLicense:"),
+        output.text().starts_with("Roboto Mono Regular\nLicense:"),
         "{output:#?}"
     );
-    assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
-    assert!(!output.plaintext.contains('>'), "{output:#?}");
+    assert_eq!(output.text().lines().count(), 2, "{output:#?}");
+    assert!(!output.text().contains('>'), "{output:#?}");
 }
 
 #[test]
@@ -418,12 +416,10 @@ fn reading_pure_svg_with_hard_breaks() {
     assert_eq!(transcript.interactions().len(), 1);
     let output = transcript.interactions()[0].output();
     assert!(
-        output
-            .plaintext
-            .starts_with("Roboto Mono Regular\nLicense:"),
+        output.text().starts_with("Roboto Mono Regular\nLicense:"),
         "{output:#?}"
     );
-    assert_eq!(output.plaintext.lines().count(), 2, "{output:#?}");
+    assert_eq!(output.text().lines().count(), 2, "{output:#?}");
 }
 
 #[test]
@@ -439,6 +435,6 @@ fn reading_pure_svg_with_styled_hard_breaks() {
 
     let transcript = Transcript::from_svg(SVG.as_bytes()).unwrap();
     assert_eq!(transcript.interactions().len(), 1);
-    let output = transcript.interactions()[0].output().plaintext();
-    assert_eq!(output, "License: don't know lol");
+    let output = transcript.interactions()[0].output();
+    assert_eq!(output.text(), "License: don't know lol");
 }

@@ -23,8 +23,10 @@ anyhow.workspace = true
 quick-xml = { workspace = true, optional = true }
 handlebars = { workspace = true, optional = true }
 portable-pty = { workspace = true, optional = true }
+styled-str.workspace = true
 
 # Private dependencies (not exposed in the public API).
+anstyle.workspace = true
 base64.workspace = true
 bytecount.workspace = true
 # **NB.** Must be an optional dependency; we want to use `term-transcript` in the font-subset workspace.
@@ -33,7 +35,6 @@ os_pipe.workspace = true
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }
-pretty_assertions = {workspace = true, optional = true }
 unicode-width.workspace = true
 
 [dev-dependencies]
@@ -49,7 +50,7 @@ version-sync.workspace = true
 workspace = true
 
 [features]
-default = ["pretty_assertions", "svg", "test"]
+default = ["svg", "test"]
 # Rendering terminal transcripts into SVG snapshots
 svg = ["dep:handlebars", "dep:serde", "dep:serde_json"]
 # Enables subsetting and embedding OpenType fonts into snapshots
