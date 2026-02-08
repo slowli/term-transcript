@@ -73,13 +73,13 @@ fn writing_color_spec() {
         .underline()
         .bg_color(Some(AnsiColor::BrightYellow.into()));
     let spec_string = StyleDiff::write_style(&spec);
-    assert_eq!(spec_string, ["bold underline cyan on", "yellow*"]);
+    assert_eq!(spec_string, ["bold underline cyan on", "yellow!"]);
 
     spec = spec
         .italic()
         .fg_color(Some(RgbColor(0xc0, 0xff, 0xee).into()));
     let spec_string = StyleDiff::write_style(&spec);
-    assert_eq!(spec_string, ["bold italic underline", "#c0ffee on yellow*"]);
+    assert_eq!(spec_string, ["bold italic underline", "#c0ffee on yellow!"]);
 }
 
 #[test]

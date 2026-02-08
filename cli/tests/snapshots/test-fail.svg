@@ -105,7 +105,7 @@
 </span><span class="line"><span class="bold">Positions         Left style                Right style       </span>
 </span><span class="line"><span class="bold">&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D; &#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;&#x3D;</span>
 </span><span class="line">  499..503 <span class="underline">        underline        </span> <span class="underline fg4">     underline blue      </span>
-</span><span class="line">  666..673          (none)           <span class="bg13">       on magenta*       </span>
+</span><span class="line">  666..673          (none)           <span class="bg13">       on magenta!       </span>
 </span><span class="line"><span class="bold">Totals:</span> passed: <span class="fg2">0</span>, errors: <span class="fg1">1</span>, failures: <span class="fg3">0</span></span></pre></div>
           </div>
         </foreignObject>

@@ -1,6 +1,5 @@
 //! Rich style parsing (incl. in compile time).
 
-// FIXME: change `red*` -> `red!` | `bright-red`
 // FIXME: change `* -> +`
 
 use core::{fmt, ops, str::FromStr};
@@ -172,7 +171,6 @@ impl SetStyleFields {
 }
 
 /// Parser for `rich` like styling, e.g. `[[bold red on white]]text[[]]`.
-// TODO: make the number of opening / closing brackets configurable?
 #[derive(Debug)]
 struct RichParser<'a> {
     cursor: StrCursor<'a>,
@@ -436,7 +434,7 @@ impl StrCursor<'_> {
     const fn parse_effects(token: &[u8]) -> Option<Effects> {
         Some(match token {
             b"bold" | b"b" => Effects::BOLD,
-            b"italic" | b"i" => Effects::ITALIC,
+            b"italic" | b"i" | b"it" => Effects::ITALIC,
             b"underline" | b"u" | b"ul" => Effects::UNDERLINE,
             b"strikethrough" | b"strike" | b"s" => Effects::STRIKETHROUGH,
             b"dim" | b"dimmed" => Effects::DIMMED,
@@ -477,21 +475,21 @@ impl StrCursor<'_> {
     const fn parse_color(token: &[u8]) -> Result<Option<Color>, ParseErrorKind> {
         Ok(match token {
             b"black" => Some(Color::Ansi(AnsiColor::Black)),
-            b"black*" => Some(Color::Ansi(AnsiColor::BrightBlack)),
+            b"black!" | b"bright-black" => Some(Color::Ansi(AnsiColor::BrightBlack)),
             b"red" => Some(Color::Ansi(AnsiColor::Red)),
-            b"red*" => Some(Color::Ansi(AnsiColor::BrightRed)),
+            b"red!" | b"bright-red" => Some(Color::Ansi(AnsiColor::BrightRed)),
             b"green" => Some(Color::Ansi(AnsiColor::Green)),
-            b"green*" => Some(Color::Ansi(AnsiColor::BrightGreen)),
+            b"green!" | b"bright-green" => Some(Color::Ansi(AnsiColor::BrightGreen)),
             b"yellow" => Some(Color::Ansi(AnsiColor::Yellow)),
-            b"yellow*" => Some(Color::Ansi(AnsiColor::BrightYellow)),
+            b"yellow!" | b"bright-yellow" => Some(Color::Ansi(AnsiColor::BrightYellow)),
             b"blue" => Some(Color::Ansi(AnsiColor::Blue)),
-            b"blue*" => Some(Color::Ansi(AnsiColor::BrightBlue)),
+            b"blue!" | b"bright-blue" => Some(Color::Ansi(AnsiColor::BrightBlue)),
             b"magenta" => Some(Color::Ansi(AnsiColor::Magenta)),
-            b"magenta*" => Some(Color::Ansi(AnsiColor::BrightMagenta)),
+            b"magenta!" | b"bright-magenta" => Some(Color::Ansi(AnsiColor::BrightMagenta)),
             b"cyan" => Some(Color::Ansi(AnsiColor::Cyan)),
-            b"cyan*" => Some(Color::Ansi(AnsiColor::BrightCyan)),
+            b"cyan!" | b"bright-cyan" => Some(Color::Ansi(AnsiColor::BrightCyan)),
             b"white" => Some(Color::Ansi(AnsiColor::White)),
-            b"white*" => Some(Color::Ansi(AnsiColor::BrightWhite)),
+            b"white!" | b"bright-white" => Some(Color::Ansi(AnsiColor::BrightWhite)),
 
             hex if !hex.is_empty() && hex[0] == b'#' => match parse_hex_color(hex) {
                 Ok(color) => Some(Color::Rgb(color)),
@@ -664,7 +662,7 @@ fn write_color(color: Color) -> String {
             &mut buffer,
             "{base}{bright}",
             base = ansi_color_str(color),
-            bright = if color.is_bright() { "*" } else { "" }
+            bright = if color.is_bright() { "!" } else { "" }
         )
         .unwrap(),
         Color::Ansi256(Ansi256Color(idx)) => write!(&mut buffer, "{idx}").unwrap(),
@@ -738,7 +736,7 @@ mod tests {
 
     #[test]
     fn parsing_style() {
-        let mut cursor = StrCursor::new("bold, ul magenta on yellow*");
+        let mut cursor = StrCursor::new("bold, ul magenta on yellow!");
         let style = cursor.parse_style(&Style::new(), false).unwrap();
         let expected_style = Style::new()
             .bold()

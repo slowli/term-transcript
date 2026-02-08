@@ -113,7 +113,7 @@ impl ParseError {
             "invalid styled string at ",
             self.pos.start => compile_fmt::fmt::<usize>(), "..", self.pos.end => compile_fmt::fmt::<usize>(),
             " ('", hl => compile_fmt::clip(64, "…"),
-            "'): ", self.kind.as_ascii_str() => compile_fmt::clip_ascii(40, "")
+            "'): ", self.kind.as_ascii_str() => compile_fmt::clip_ascii(42, "")
         );
     }
 }

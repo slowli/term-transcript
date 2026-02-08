@@ -36,7 +36,7 @@ fn roundtrip_with_indexed_colors() {
 
     assert_eq!(
         STYLED.to_string(),
-        "H[[magenta]]e[[on yellow*]]l[[#0087ff]]l[[on #bcbcbc]]o"
+        "H[[magenta]]e[[on yellow!]]l[[#0087ff]]l[[on #bcbcbc]]o"
     );
 }
 

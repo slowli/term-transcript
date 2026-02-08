@@ -5,7 +5,7 @@ use assert_matches::assert_matches;
 
 use super::*;
 
-const SIMPLE_INPUT: &str = "[[magenta on yellow*, bold, ul]]Hello[[]] world[[bold strike inv]]!";
+const SIMPLE_INPUT: &str = "[[magenta on yellow!, bold, ul]]Hello[[]] world[[bold strike inv]]!";
 const SIMPLE_STYLED: StyledStr = styled!(SIMPLE_INPUT);
 const SIMPLE_STYLES: &[StyledSpan] = &[
     StyledSpan::new(
@@ -34,7 +34,7 @@ fn parsing_styled_str() {
 
     assert_eq!(
         styled.to_string(),
-        "[[bold underline magenta on yellow*]]Hello[[]] world[[bold strike invert]]!"
+        "[[bold underline magenta on yellow!]]Hello[[]] world[[bold strike invert]]!"
     );
 }
 
@@ -65,13 +65,13 @@ fn diff_by_text() {
 fn diff_by_style() {
     const EXPECTED_DIFF: StyledStr = styled!(
         r"Styled strings differ by style
-[[red]]> [[bold underline magenta on yellow*]]Hello[[]] world[[bold strike invert]]![[]]
+[[red]]> [[bold underline magenta on yellow!]]Hello[[]] world[[bold strike invert]]![[]]
 [[red]]> [[white on red]]^^^^^[[]] [[white on red]]^^^^^[[black on yellow]]![[]]
 
 [[bold]]Positions         Left style                Right style       [[*]]
 ========== ========================= =========================[[]]
-      0..5 [[bold underline magenta on yellow*]]bold underline magenta on[[]]          (none)          [[*]]
-           [[bold underline magenta on yellow*]]         yellow*         [[]]                          [[*]]
+      0..5 [[bold underline magenta on yellow!]]bold underline magenta on[[]]          (none)          [[*]]
+           [[bold underline magenta on yellow!]]         yellow!         [[]]                          [[*]]
      6..11          (none)           [[bold green]]       bold green        [[]]
     11..12 [[bold strike invert]]   bold strike invert    [[]]          (none)          [[*]]
 "
@@ -85,7 +85,7 @@ fn diff_by_style() {
 
 #[test]
 fn parsing_with_unstyled_ends() {
-    const TEST_INPUT: &str = "test.rs: [[[bold green*]][DEBUG][[]]] Hello";
+    const TEST_INPUT: &str = "test.rs: [[[bold green!]][DEBUG][[]]] Hello";
     const STYLED: StyledStr = styled!(TEST_INPUT);
 
     assert_eq!(STYLED.text(), "test.rs: [[DEBUG]] Hello");
@@ -107,7 +107,7 @@ fn parsing_with_unstyled_ends() {
 
     assert_eq!(
         styled.to_string(),
-        "test.rs: [[[bold green*]][DEBUG][[]]] Hello"
+        "test.rs: [[[bold green!]][DEBUG][[]]] Hello"
     );
 }
 
@@ -276,7 +276,7 @@ fn duplicate_style_errors() {
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 4..9);
 
-    let raw = "[[on green on yellow*]]";
+    let raw = "[[on green on yellow!]]";
     let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
     assert_eq!(err.pos(), 11..13);
