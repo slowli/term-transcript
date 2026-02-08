@@ -102,7 +102,9 @@ impl Transcript {
         match state {
             ParserState::EncounteredContainer => Ok(transcript),
             ParserState::EncounteredUserInput(interaction) => {
-                transcript.interactions.push(interaction);
+                transcript
+                    .interactions
+                    .push(interaction.with_empty_output());
                 Ok(transcript)
             }
             #[allow(clippy::cast_possible_truncation)] // Shouldn't happen in practice
@@ -242,6 +244,33 @@ impl StdError for LocatedParseError {
 }
 
 #[derive(Debug)]
+struct InteractionInput {
+    input: UserInput,
+    exit_status: Option<ExitStatus>,
+}
+
+impl Default for InteractionInput {
+    fn default() -> Self {
+        Self {
+            input: UserInput::EMPTY,
+            exit_status: None,
+        }
+    }
+}
+
+impl InteractionInput {
+    fn with_output(self, output: StyledString) -> Interaction {
+        let mut interaction = Interaction::new(self.input, output);
+        interaction.set_exit_status(self.exit_status);
+        interaction
+    }
+
+    fn with_empty_output(self) -> Interaction {
+        self.with_output(StyledString::EMPTY)
+    }
+}
+
+#[derive(Debug)]
 struct UserInputState {
     exit_status: Option<ExitStatus>,
     is_hidden: bool,
@@ -279,7 +308,7 @@ impl UserInputState {
         &mut self,
         event: Event<'_>,
         position: ops::Range<usize>,
-    ) -> Result<Option<Interaction>, ParseError> {
+    ) -> Result<Option<InteractionInput>, ParseError> {
         let mut is_prompt_end = false;
         if let Event::Start(tag) = &event {
             if self.can_start_prompt() && parse_classes(tag.attributes())?.as_ref() == b"prompt" {
@@ -302,9 +331,8 @@ impl UserInputState {
                     prompt: Some(UserInput::intern_prompt(text)),
                     hidden: self.is_hidden,
                 };
-                return Ok(Some(Interaction {
+                return Ok(Some(InteractionInput {
                     input,
-                    output: StyledString::default(),
                     exit_status: self.exit_status,
                 }));
             }
@@ -319,9 +347,8 @@ impl UserInputState {
                 prompt: self.prompt.take(),
                 hidden: self.is_hidden,
             };
-            Interaction {
+            InteractionInput {
                 input,
-                output: StyledString::default(),
                 exit_status: self.exit_status,
             }
         }))
@@ -340,22 +367,12 @@ enum ParserState {
     /// Reading user input (`<div class="input">` contents).
     ReadingUserInput(UserInputState),
     /// Finished reading user input; searching for `<div class="output">`.
-    EncounteredUserInput(Interaction),
+    EncounteredUserInput(InteractionInput),
     /// Reading terminal output (`<div class="output">` contents).
-    ReadingTermOutput(Interaction, TextReadingState),
+    ReadingTermOutput(InteractionInput, TextReadingState),
 }
 
 impl ParserState {
-    const DUMMY_INTERACTION: Interaction = Interaction {
-        input: UserInput {
-            text: String::new(),
-            prompt: None,
-            hidden: false,
-        },
-        output: StyledString::EMPTY,
-        exit_status: None,
-    };
-
     #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug"))]
     fn set_state(&mut self, new_state: Self) {
         *self = new_state;
@@ -420,13 +437,13 @@ impl ParserState {
                     let base_class = extract_base_class(&classes);
 
                     if Self::is_output_class(base_class) {
-                        let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
+                        let interaction = mem::take(interaction);
                         self.set_state(Self::ReadingTermOutput(
                             interaction,
                             TextReadingState::default(),
                         ));
                     } else if Self::is_input_class(base_class) {
-                        let interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
+                        let interaction = mem::take(interaction);
                         let exit_status = parse_exit_status(tag.attributes())?;
                         let is_hidden = classes
                             .split(|byte| *byte == b' ')
@@ -435,17 +452,16 @@ impl ParserState {
                             exit_status,
                             is_hidden,
                         )));
-                        return Ok(Some(interaction));
+                        return Ok(Some(interaction.with_empty_output()));
                     }
                 }
             }
 
             Self::ReadingTermOutput(interaction, text_state) => {
                 if let Some(term_output) = text_state.process(event, position)? {
-                    let mut interaction = mem::replace(interaction, Self::DUMMY_INTERACTION);
-                    interaction.output = term_output;
+                    let interaction = mem::take(interaction);
                     self.set_state(Self::EncounteredContainer);
-                    return Ok(Some(interaction));
+                    return Ok(Some(interaction.with_output(term_output)));
                 }
             }
         }

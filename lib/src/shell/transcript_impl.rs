@@ -4,6 +4,7 @@ use std::{
     io::{self, BufRead, BufReader, LineWriter, Read},
     iter,
     process::{Command, Stdio},
+    str,
     sync::mpsc,
     thread,
     time::Duration,
@@ -107,9 +108,6 @@ impl Transcript {
             output.push('\n');
         }
 
-        if output.ends_with('\n') {
-            output.truncate(output.len() - 1);
-        }
         Ok(output)
     }
 
@@ -338,15 +336,12 @@ impl Transcript {
         pipe_reader.read_to_end(&mut output)?;
         child.wait()?;
 
-        let mut output = String::from_utf8(output)
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.utf8_error()))?;
-        if output.ends_with('\n') {
-            output.truncate(output.len() - 1);
-        }
+        let output = str::from_utf8(&output)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
         #[cfg(feature = "tracing")]
         tracing::debug!(?output, "read command output");
 
-        let output = StyledString::from_ansi(&output).map_err(map_ansi_error)?;
+        let output = StyledString::from_ansi(output).map_err(map_ansi_error)?;
         let interaction = Interaction::new(input, output);
         self.interactions.push(interaction);
         Ok(self)

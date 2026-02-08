@@ -315,7 +315,13 @@ pub struct Interaction {
 
 impl Interaction {
     /// Creates a new interaction.
-    pub fn new(input: impl Into<UserInput>, output: StyledString) -> Self {
+    ///
+    /// Any newlines at the end of the output will be trimmed.
+    pub fn new(input: impl Into<UserInput>, mut output: StyledString) -> Self {
+        while output.text().ends_with('\n') {
+            output.pop();
+        }
+
         Self {
             input: input.into(),
             output,
@@ -368,6 +374,13 @@ pub struct UserInput {
 }
 
 impl UserInput {
+    #[cfg(feature = "test")]
+    pub(crate) const EMPTY: Self = Self {
+        text: String::new(),
+        prompt: None,
+        hidden: false,
+    };
+
     #[cfg(feature = "test")]
     pub(crate) fn intern_prompt(prompt: String) -> Cow<'static, str> {
         match prompt.as_str() {
