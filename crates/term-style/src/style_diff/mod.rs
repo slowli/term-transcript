@@ -8,7 +8,7 @@ use core::{
     num::NonZeroUsize,
 };
 
-use anstyle::{AnsiColor, Color, Style};
+use anstyle::{AnsiColor, Color, Effects, Style};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{StyledSpan, rich_parser::RichStyle, types::StyledStr};
@@ -53,8 +53,55 @@ impl StyledSpan {
 struct DiffStyleSpan {
     start: usize,
     len: NonZeroUsize,
-    lhs_color_spec: Style,
-    rhs_color_spec: Style,
+    lhs_style: Style,
+    rhs_style: Style,
+}
+
+impl DiffStyleSpan {
+    /// Would this style be visible on whitespace (e.g., ' ' or '\t')?
+    fn affects_whitespace(style: &Style) -> bool {
+        let effects = style.get_effects();
+        if effects.contains(Effects::UNDERLINE)
+            || effects.contains(Effects::STRIKETHROUGH)
+            || effects.contains(Effects::INVERT)
+        {
+            return true;
+        }
+        // We've handled the case with inverted colors above, so we check the background color specifically
+        style.get_bg_color().is_some()
+    }
+
+    /// Trims whitespace at the start and end of the string; we don't care about diffs there.
+    fn new(diff_text: &str, start: usize, lhs_style: Style, rhs_style: Style) -> Option<Self> {
+        debug_assert!(!diff_text.is_empty());
+
+        let affects_whitespace =
+            Self::affects_whitespace(&lhs_style) || Self::affects_whitespace(&rhs_style);
+        let can_trim = |ch: char| {
+            if affects_whitespace {
+                // Newline chars are not affected by any styles
+                ch == '\n' || ch == '\r'
+            } else {
+                ch.is_whitespace()
+            }
+        };
+
+        let first_pos = diff_text
+            .char_indices()
+            .find_map(|(i, ch)| (!can_trim(ch)).then_some(i))?;
+        let last_pos = diff_text
+            .char_indices()
+            .rev()
+            .find_map(|(i, ch)| (!can_trim(ch)).then_some(i + ch.len_utf8()))?;
+        debug_assert!(last_pos > first_pos);
+
+        Some(Self {
+            start: start + first_pos,
+            len: NonZeroUsize::new(last_pos - first_pos)?,
+            lhs_style,
+            rhs_style,
+        })
+    }
 }
 
 const STYLE_WIDTH: usize = 25;
@@ -108,12 +155,13 @@ impl<'a> StyleDiff<'a> {
 
             // Record a diff span if the color specs differ.
             if lhs_span.style != rhs_span.style {
-                this.differing_spans.push(DiffStyleSpan {
-                    start: pos,
-                    len: common_len,
-                    lhs_color_spec: lhs_span.style,
-                    rhs_color_spec: rhs_span.style,
-                });
+                let diff_text = &this.text[pos..pos + common_len.get()];
+                this.differing_spans.extend(DiffStyleSpan::new(
+                    diff_text,
+                    pos,
+                    lhs_span.style,
+                    rhs_span.style,
+                ));
             }
 
             pos += common_len.get();
@@ -250,9 +298,9 @@ impl<'a> StyleDiff<'a> {
 
         // Write table itself.
         for differing_span in &self.differing_spans {
-            let lhs_style = &differing_span.lhs_color_spec;
+            let lhs_style = &differing_span.lhs_style;
             let mut lhs_lines = Self::write_style(lhs_style);
-            let rhs_style = &differing_span.rhs_color_spec;
+            let rhs_style = &differing_span.rhs_style;
             let mut rhs_lines = Self::write_style(rhs_style);
             if lhs_lines.len() < rhs_lines.len() {
                 lhs_lines.resize_with(rhs_lines.len(), String::new);

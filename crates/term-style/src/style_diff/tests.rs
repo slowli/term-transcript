@@ -26,8 +26,8 @@ fn creating_color_diff_basics() {
     let diff_span = &color_diff.differing_spans[0];
     assert_eq!(diff_span.start, 2);
     assert_eq!(diff_span.len.get(), 3);
-    assert_eq!(diff_span.lhs_color_spec, Style::default());
-    assert_eq!(diff_span.rhs_color_spec, red);
+    assert_eq!(diff_span.lhs_style, Style::default());
+    assert_eq!(diff_span.rhs_style, red);
 }
 
 #[test]
@@ -55,15 +55,12 @@ fn creating_color_diff_overlapping_spans() {
     assert_eq!(color_diff.differing_spans.len(), 2);
     assert_eq!(color_diff.differing_spans[0].start, 1);
     assert_eq!(color_diff.differing_spans[0].len.get(), 1);
-    assert_eq!(
-        color_diff.differing_spans[0].lhs_color_spec,
-        Style::default()
-    );
-    assert_eq!(color_diff.differing_spans[0].rhs_color_spec, red);
+    assert_eq!(color_diff.differing_spans[0].lhs_style, Style::default());
+    assert_eq!(color_diff.differing_spans[0].rhs_style, red);
     assert_eq!(color_diff.differing_spans[1].start, 3);
     assert_eq!(color_diff.differing_spans[1].len.get(), 2);
-    assert_eq!(color_diff.differing_spans[1].lhs_color_spec, red);
-    assert_eq!(color_diff.differing_spans[1].rhs_color_spec, blue);
+    assert_eq!(color_diff.differing_spans[1].lhs_style, red);
+    assert_eq!(color_diff.differing_spans[1].rhs_style, blue);
 }
 
 #[test]
@@ -107,8 +104,8 @@ fn writing_color_diff_table() {
         differing_spans: vec![DiffStyleSpan {
             start: 0,
             len: NonZeroUsize::new(2).unwrap(),
-            lhs_color_spec: Style::default(),
-            rhs_color_spec: red,
+            lhs_style: Style::default(),
+            rhs_style: red,
         }],
     };
     let out = StyledString::from_ansi(&format!("{color_diff:#}")).unwrap();
@@ -119,8 +116,8 @@ fn diff_span(start: usize, len: usize) -> DiffStyleSpan {
     DiffStyleSpan {
         start,
         len: NonZeroUsize::new(len).unwrap(),
-        lhs_color_spec: Style::default(),
-        rhs_color_spec: Style::default(),
+        lhs_style: Style::default(),
+        rhs_style: Style::default(),
     }
 }
 
@@ -312,4 +309,51 @@ fn plaintext_highlight_with_non_ascii_text() {
     >   │ ^^^ Undefined variable occurrence\n\
     >   ^\n";
     assert_eq!(output.text, expected_buffer);
+}
+
+#[test]
+fn whitespace_diff_is_ignored() {
+    let diff = StyleDiff::new(
+        styled!("[[red]]Hello, [[]]world"),
+        styled!("[[red]]Hello,[[]] world"),
+    );
+    assert!(diff.is_empty(), "{diff:#}");
+
+    let diff = StyleDiff::new(
+        styled!("[[red]]Hello,\n[[]]world"),
+        styled!("[[red]]Hello,[[]]\nworld"),
+    );
+    assert!(diff.is_empty(), "{diff:#}");
+
+    let diff = StyleDiff::new(styled!("Hell[[red]]o, [[]]world"), styled!("Hello, world"));
+    assert_eq!(diff.differing_spans.len(), 1);
+    assert_eq!(diff.differing_spans[0].len.get(), 2);
+    assert_eq!(diff.differing_spans[0].start, 4);
+
+    let diff = StyleDiff::new(styled!("Hello,[[red]] world"), styled!("Hello, world"));
+    assert_eq!(diff.differing_spans.len(), 1);
+    assert_eq!(diff.differing_spans[0].len.get(), 5);
+    assert_eq!(diff.differing_spans[0].start, 7);
+}
+
+#[test]
+fn whitespace_is_not_ignored_for_specific_styles() {
+    let diff = StyleDiff::new(
+        styled!("[[on red]]Hello, [[]]world"),
+        styled!("[[on red]]Hello,[[]] world"),
+    );
+    assert_eq!(diff.differing_spans.len(), 1);
+    assert_eq!(diff.differing_spans[0].len.get(), 1);
+    assert_eq!(diff.differing_spans[0].start, 6);
+
+    let diff = StyleDiff::new(
+        styled!("[[on red]]Hello,\n[[]]world"),
+        styled!("[[on red]]Hello,[[]]\nworld"),
+    );
+    assert!(diff.is_empty());
+
+    let diff = StyleDiff::new(styled!("Hello, [[ul]]world"), styled!("Hello,[[ul]] world"));
+    assert_eq!(diff.differing_spans.len(), 1);
+    assert_eq!(diff.differing_spans[0].len.get(), 1);
+    assert_eq!(diff.differing_spans[0].start, 6);
 }
