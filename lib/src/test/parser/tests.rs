@@ -229,24 +229,24 @@ fn reading_user_input_with_manual_events() {
         let event = Event::Start(BytesStart::new("pre"));
         assert!(state.process(event, 0..1).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, None);
-        assert!(state.text.plaintext_buffer.is_empty());
+        assert!(state.text.plaintext_buffer().is_empty());
     }
     {
         let event = Event::Start(BytesStart::from_content(r#"span class="prompt""#, 4));
         assert!(state.process(event, 1..2).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, Some(2));
-        assert!(state.text.plaintext_buffer.is_empty());
+        assert!(state.text.plaintext_buffer().is_empty());
     }
     {
         let event = Event::Text(BytesText::from_escaped("$"));
         assert!(state.process(event, 2..3).unwrap().is_none());
-        assert_eq!(state.text.plaintext_buffer, "$");
+        assert_eq!(state.text.plaintext_buffer(), "$");
     }
     {
         let event = Event::End(BytesEnd::new("span"));
         assert!(state.process(event, 3..4).unwrap().is_none());
         assert_eq!(state.prompt.as_deref(), Some("$"));
-        assert!(state.text.plaintext_buffer.is_empty());
+        assert!(state.text.plaintext_buffer().is_empty());
     }
     {
         let event = Event::Text(BytesText::from_escaped(" rainbow"));
@@ -352,7 +352,7 @@ fn newline_breaks_are_normalized() {
     let mut state = TextReadingState::default();
     let text = BytesText::from_escaped("some\ntext\r\nand more text");
     state.process(Event::Text(text), 0..1).unwrap();
-    assert_eq!(state.plaintext_buffer, "some\ntext\nand more text");
+    assert_eq!(state.plaintext_buffer(), "some\ntext\nand more text");
 }
 
 #[test]

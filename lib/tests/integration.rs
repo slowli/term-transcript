@@ -430,7 +430,11 @@ fn transcript_roundtrip_for_rainbow_outputs(
 ) -> anyhow::Result<()> {
     // 1. Prepare a transcript from the predefined output.
     let mut transcript = Transcript::new();
-    transcript.add_interaction(output.name, StyledString::from_ansi(output.content)?);
+    let mut output_str = StyledString::from_ansi(output.content)?;
+    if output_str.text().ends_with('\n') {
+        output_str.pop();
+    }
+    transcript.add_interaction(output.name, output_str);
 
     // 2. Render the transcript into SVG.
     let mut svg_buffer = vec![];

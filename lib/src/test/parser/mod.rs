@@ -308,7 +308,7 @@ impl UserInputState {
                     exit_status: self.exit_status,
                 }));
             }
-            let text = mem::take(&mut self.text.plaintext_buffer);
+            let text = self.text.take_plaintext();
             self.prompt = Some(UserInput::intern_prompt(text));
         }
 

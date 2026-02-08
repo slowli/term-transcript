@@ -49,8 +49,6 @@ pub fn compare_transcripts(
         // First, process text only.
         let original_text = original.output().text();
         let reproduced_text = reproduced.text();
-        // FIXME: Trimming the terminal newline when capturing it may not be enough:
-        //   the newline may be followed by the no-op ASCII color sequences.
 
         let mut actual_match = if original_text == reproduced_text {
             Some(MatchKind::TextOnly)

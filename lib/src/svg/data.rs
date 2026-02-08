@@ -118,6 +118,7 @@ impl From<Style> for SerdeStyle {
 /// Serializable version of `StyledSpan`. Also, inlines text for convenience instead of using lengths.
 #[derive(Debug, Serialize)]
 pub(super) struct SerdeStyledSpan<'a> {
+    #[serde(flatten)]
     pub(super) style: SerdeStyle,
     pub(super) text: &'a str,
 }

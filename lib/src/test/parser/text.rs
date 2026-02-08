@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, fmt, mem, ops, str};
 
-use anstyle::{Ansi256Color, AnsiColor, Color, Effects, Style};
+use anstyle::{AnsiColor, Color, Effects, Style};
 use quick_xml::{
     escape::{EscapeError, resolve_xml_entity},
     events::{BytesStart, Event},
@@ -19,7 +19,7 @@ enum HardBreak {
 }
 
 pub(super) struct TextReadingState {
-    pub plaintext_buffer: String,
+    plaintext_buffer: String,
     style_spans: Vec<StyledSpan>,
     open_tags: usize,
     hard_br: Option<HardBreak>,
@@ -52,6 +52,16 @@ impl TextReadingState {
 
     pub(super) fn open_tags(&self) -> usize {
         self.open_tags
+    }
+
+    #[cfg(test)]
+    pub(super) fn plaintext_buffer(&self) -> &str {
+        &self.plaintext_buffer
+    }
+
+    pub(super) fn take_plaintext(&mut self) -> String {
+        self.style_spans.clear();
+        mem::take(&mut self.plaintext_buffer)
     }
 
     fn should_ignore_text(&self) -> bool {
@@ -164,10 +174,19 @@ impl TextReadingState {
     }
 
     fn push_text(&mut self, text: &str) {
-        self.plaintext_buffer.push_str(text);
-        if let Some(last_span) = self.style_spans.last_mut() {
-            last_span.len += text.len();
+        if text.is_empty() {
+            return;
         }
+
+        self.plaintext_buffer.push_str(text);
+        if self.style_spans.is_empty() {
+            self.style_spans.push(StyledSpan {
+                style: Style::new(),
+                len: 0,
+            });
+        }
+        let last_span = self.style_spans.last_mut().unwrap();
+        last_span.len += text.len();
     }
 
     /// Parses a style from a `span`.
@@ -293,10 +312,16 @@ impl TextReadingState {
             b"5" => Color::Ansi(AnsiColor::Magenta),
             b"6" => Color::Ansi(AnsiColor::Cyan),
             b"7" => Color::Ansi(AnsiColor::White),
-            b"8" | b"9" => Color::Ansi256(Ansi256Color(class[0] - b'0')),
-            b"10" | b"11" | b"12" | b"13" | b"14" | b"15" => {
-                Color::Ansi256(Ansi256Color(10 + class[1] - b'0'))
-            }
+
+            b"8" => Color::Ansi(AnsiColor::BrightBlack),
+            b"9" => Color::Ansi(AnsiColor::BrightRed),
+            b"10" => Color::Ansi(AnsiColor::BrightGreen),
+            b"11" => Color::Ansi(AnsiColor::BrightYellow),
+            b"12" => Color::Ansi(AnsiColor::BrightBlue),
+            b"13" => Color::Ansi(AnsiColor::BrightMagenta),
+            b"14" => Color::Ansi(AnsiColor::BrightCyan),
+            b"15" => Color::Ansi(AnsiColor::BrightWhite),
+
             _ => return None,
         })
     }
@@ -320,15 +345,15 @@ mod tests {
         );
         assert_eq!(
             TextReadingState::parse_indexed_color(b"9"),
-            Some(Ansi256Color(9).into())
+            Some(AnsiColor::BrightRed.into())
         );
         assert_eq!(
             TextReadingState::parse_indexed_color(b"10"),
-            Some(Ansi256Color(10).into())
+            Some(AnsiColor::BrightGreen.into())
         );
         assert_eq!(
             TextReadingState::parse_indexed_color(b"15"),
-            Some(Ansi256Color(15).into())
+            Some(AnsiColor::BrightWhite.into())
         );
 
         assert_eq!(TextReadingState::parse_indexed_color(b""), None);
@@ -356,7 +381,7 @@ mod tests {
             Style::new()
                 .bold()
                 .invert()
-                .bg_color(Some(Ansi256Color(3).into()))
+                .bg_color(Some(AnsiColor::Yellow.into()))
         );
 
         let tag =
@@ -367,7 +392,7 @@ mod tests {
             Style::new()
                 .italic()
                 .invert()
-                .fg_color(Some(Ansi256Color(5).into()))
+                .fg_color(Some(AnsiColor::Magenta.into()))
                 .bg_color(Some(RgbColor(0xc0, 0xff, 0xee).into()))
         );
     }

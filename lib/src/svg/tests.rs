@@ -345,7 +345,7 @@ fn rendering_transcript_with_animation() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        iter::repeat_n(styled!("Hello, [[green]]world[[]]!"), 22).collect(),
+        iter::repeat_n(styled!("Hello, [[green]]world[[]]!\n"), 22).collect(),
     );
 
     let mut buffer = vec![];
@@ -379,7 +379,7 @@ fn scrollbar_animation_elision() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        iter::repeat_n(styled!("Hello, [[green]]world[[]]!"), 22).collect(),
+        iter::repeat_n(styled!("Hello, [[green]]world[[]]!\n"), 22).collect(),
     );
 
     for elision_threshold in [0.0, 0.25] {
@@ -430,7 +430,7 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        iter::repeat_n(styled!("Hello, [[green]]world[[]]!"), 22).collect(),
+        iter::repeat_n(styled!("Hello, [[green]]world[[]]!\n"), 22).collect(),
     );
 
     let mut buffer = vec![];
@@ -1042,7 +1042,7 @@ fn rendering_html_span() {
         .unwrap();
     assert_eq!(
         rendered,
-        "<span class=\"bold underline fg2\" style=\"background: #ccffcc;\">Test</span>"
+        "<span class=\"bold underline fg2\" style=\"background: #cfc;\">Test</span>"
     );
 
     style.bg = None;
@@ -1169,7 +1169,7 @@ fn rendering_svg_tspan() {
     let rendered = handlebars
         .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
         .unwrap();
-    assert_eq!(rendered, " class=\"bold underline fg2 bg#ccffcc\"");
+    assert_eq!(rendered, " class=\"bold underline fg2 bg#cfc\"");
 
     style.bg = Some(SerdeColor::Index(0));
     style.underline = false;

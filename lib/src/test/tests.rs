@@ -119,7 +119,7 @@ fn text_match_for_snapshot_testing_with_color_diff() {
     assert_eq!(stats.matches(), [Some(MatchKind::TextOnly)]);
     assert!(out.contains("[#] Input: test"), "{out}");
     assert!(
-        out.contains("    13..14         fg:yellow                  fg:blue         "),
+        out.contains("    13..14          yellow                     blue           "),
         "{out}"
     );
 }
