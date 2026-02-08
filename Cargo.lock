@@ -1213,6 +1213,7 @@ dependencies = [
  "pulldown-cmark",
  "serde_json",
  "tempfile",
+ "term-style",
  "term-transcript",
  "toml 0.9.11+spec-1.1.0",
  "tracing",
@@ -1228,6 +1229,7 @@ dependencies = [
  "handlebars",
  "pretty_assertions",
  "tempfile",
+ "term-style",
  "term-transcript",
  "test-casing",
 ]

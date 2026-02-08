@@ -13,6 +13,7 @@ use anstream::{AutoStream, ColorChoice};
 use anstyle::{AnsiColor, Color, Style};
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
+use term_style::StyledString;
 use term_transcript::{
     Transcript, UserInput,
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
@@ -118,6 +119,8 @@ impl Command {
                 if term_output.ends_with('\n') {
                     term_output.pop();
                 }
+                let term_output = StyledString::from_ansi(&term_output)
+                    .context("failed parsing ANSI styling in output")?;
 
                 transcript.add_interaction(Self::create_input(command, no_inputs), term_output);
                 #[cfg(feature = "tracing")]
@@ -290,10 +293,10 @@ impl Command {
             )?;
 
             if color == ColorChoice::Never {
-                writeln!(out, "{}", interaction.output().plaintext())?;
+                writeln!(out, "{}", interaction.output().text())?;
             } else {
-                interaction.output().write_colorized(&mut out)?;
-                if !interaction.output().plaintext().ends_with('\n') {
+                write!(out, "{}", interaction.output().ansi())?;
+                if !interaction.output().text().ends_with('\n') {
                     writeln!(out)?;
                 }
             }
