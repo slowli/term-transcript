@@ -34,7 +34,7 @@
 //! - Terminal coloring only works with ANSI escape codes. (Since ANSI escape codes
 //!   are supported even on Windows nowadays, this shouldn't be a significant problem.)
 //! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI]
-//!   and OSC sequences), or lead to [`TermError::UnrecognizedSequence`].
+//!   and OSC sequences), or lead to a [`TermError::Ansi`] error.
 //! - By default, the crate exposes APIs to perform capture via OS pipes.
 //!   Since the terminal is not emulated in this case, programs dependent on [`isatty`] checks
 //!   or getting term size can produce different output than if launched in an actual shell

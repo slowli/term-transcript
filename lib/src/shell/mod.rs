@@ -217,13 +217,13 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// - `command` is a command that will be executed to check the exit status of the latest
     ///   executed command. E.g., in `sh`-like shells one can use `echo $?`.
     /// - `checker` is a closure that transforms the output of `command` into an `ExitStatus`.
-    ///   The output is provided as a [`Captured`] string; it usually makes sense to use
-    ///   [`Captured::to_plaintext()`] to strip it of possible escape sequences (especially
+    ///   The output is provided as a [`StyledStr`]; it usually makes sense to use
+    ///   [`StyledStr::text()`] to strip it of possible escape sequences (especially
     ///   important if captured from PTY). If the exit status is inconclusive or not applicable,
     ///   the closure should return `None`.
     ///
     /// The `command` will be executed after each [`UserInput`] is input into the shell and
-    /// the corresponding output is captured. After this, the [`Captured`]
+    /// the corresponding output is captured. After this, the [`StyledStr`]
     /// output will be supplied to the `checker` closure and its output will be recorded as
     /// [`Interaction::exit_status()`].
     ///

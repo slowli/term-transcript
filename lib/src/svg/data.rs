@@ -143,10 +143,12 @@ pub(super) struct StyledLine<'a> {
 /// Here's example of JSON serialization of this type:
 ///
 /// ```
+/// use styled_str::styled;
 /// # use term_transcript::{svg::{TemplateOptions, NamedPalette}, Transcript, UserInput};
+///
 /// let mut transcript = Transcript::new();
 /// let input = UserInput::command("rainbow");
-/// transcript.add_interaction(input, "Hello, \u{1b}[32mworld\u{1b}[0m!");
+/// transcript.add_interaction(input, styled!("Hello, [[green]]world[[]]!").into());
 /// let template_options = TemplateOptions {
 ///     palette: NamedPalette::Dracula.into(),
 ///     font_family: "Consolas, Menlo, monospace".to_owned(),

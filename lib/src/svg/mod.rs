@@ -243,12 +243,13 @@ impl TemplateOptions {
 /// # Examples
 ///
 /// ```
+/// use styled_str::styled;
 /// use term_transcript::{svg::*, Transcript, UserInput};
 ///
 /// let mut transcript = Transcript::new();
 /// transcript.add_interaction(
 ///     UserInput::command("test"),
-///     "Hello, \u{1b}[32mworld\u{1b}[0m!",
+///     styled!("Hello, [[green]]world[[]]!").into(),
 /// );
 ///
 /// let template_options = TemplateOptions {

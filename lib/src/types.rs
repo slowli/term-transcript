@@ -66,7 +66,7 @@ impl Transcript {
     ///
     /// This method allows capturing interactions that are difficult or impossible to capture
     /// using more high-level methods: [`Self::from_inputs()`] or [`Self::capture_output()`].
-    /// The resulting transcript will [render](svg) just fine, but there could be issues
+    /// The resulting transcript will [render](crate::svg) just fine, but there could be issues
     /// with [testing](crate::test) it.
     pub fn add_existing_interaction(&mut self, interaction: Interaction) -> &mut Self {
         self.interactions.push(interaction);
@@ -92,7 +92,7 @@ impl Transcript {
 /// Some shells have means to check whether the input command was executed successfully.
 /// For example, in `sh`-like shells, one can compare the value of `$?` to 0, and
 /// in PowerShell to `True`. The exit status can be captured when creating a [`Transcript`]
-/// by setting a *checker* in [`ShellOptions::with_status_check()`]:
+/// by setting a *checker* in [`ShellOptions::with_status_check()`](crate::ShellOptions::with_status_check()):
 ///
 /// # Examples
 ///
@@ -101,10 +101,10 @@ impl Transcript {
 /// # fn test_wrapper() -> anyhow::Result<()> {
 /// let options = ShellOptions::default();
 /// let mut options = options.with_status_check("echo $?", |captured| {
-///     // Parse captured string to plain text. This transform
+///     // Get the plain text from the styled string. This transform
 ///     // is especially important in transcripts captured from PTY
 ///     // since they can contain a *wild* amount of escape sequences.
-///     let captured = captured.to_plaintext().ok()?;
+///     let captured = captured.text();
 ///     let code: i32 = captured.trim().parse().ok()?;
 ///     Some(ExitStatus(code))
 /// });
