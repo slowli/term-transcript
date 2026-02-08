@@ -341,12 +341,12 @@ mod tests {
 
         {
             let interaction = &transcript.interactions()[0];
-            assert_eq!(interaction.input().text, "echo hello");
+            assert_eq!(interaction.input().as_ref(), "echo hello");
             assert_eq!(interaction.output().text().trim(), "hello");
         }
 
         let interaction = &transcript.interactions()[1];
-        assert_eq!(interaction.input().text, "echo foo && echo bar >&2");
+        assert_eq!(interaction.input().as_ref(), "echo foo && echo bar >&2");
         let output = interaction.output();
         assert_eq!(
             output.text().split_whitespace().collect::<Vec<_>>(),

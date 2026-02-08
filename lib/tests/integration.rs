@@ -110,10 +110,7 @@ fn assert_tracing_for_output_capture(storage: &Storage) {
         .find(|span| span.metadata().name() == "capture_output")
         .expect("`capture_output` span not found");
     assert!(span["command"].as_debug_str().is_some());
-    assert_eq!(
-        span["input.text"].as_debug_str(),
-        Some(r#"echo "Hello, world!""#)
-    );
+    assert_eq!(span["input.text"].as_str(), Some(r#"echo "Hello, world!""#));
 
     let output_event = span
         .events()
@@ -134,14 +131,9 @@ fn assert_tracing_for_parsing(storage: &Storage) {
         .events()
         .find(|event| event.message() == Some("parsed interaction"))
         .expect("new interaction event not found");
-    assert!(
-        interaction_event["interaction.input"]
-            .is_debug(&UserInput::command(r#"echo "Hello, world!""#))
-    );
-    let output = interaction_event["interaction.output"]
-        .as_debug_str()
-        .unwrap();
-    assert!(output.starts_with("\"Hello, world!"), "{output}");
+    assert!(interaction_event["input"].is_debug(&UserInput::command(r#"echo "Hello, world!""#)));
+    let output = interaction_event["output"].as_str().unwrap();
+    assert!(output.starts_with("Hello, world!"), "{output}");
 }
 
 const MUTE_OUTPUT_CASES: [&[bool]; 6] = [

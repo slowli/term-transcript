@@ -71,9 +71,9 @@ impl TemplateOptions {
             used_chars.extend(output.text().chars());
 
             let input = interaction.input();
-            if !input.hidden {
-                let prompt = input.prompt.as_deref();
-                let input_chars = iter::once(input.text.as_str())
+            if !input.is_hidden() {
+                let prompt = input.prompt();
+                let input_chars = iter::once(input.as_ref())
                     .chain(prompt)
                     .flat_map(str::chars);
                 used_chars.extend(input_chars);
@@ -135,7 +135,7 @@ impl TemplateOptions {
         });
 
         transcript
-            .interactions
+            .interactions()
             .iter()
             .map(|interaction| split_into_lines(interaction.output().as_ref(), max_width))
             .collect()

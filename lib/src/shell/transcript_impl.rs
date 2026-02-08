@@ -196,7 +196,7 @@ impl Transcript {
         for input in inputs {
             let interaction =
                 Self::record_interaction(options, input, &out_lines_recv, &mut shell, &mut stdin)?;
-            transcript.interactions.push(interaction);
+            transcript.add_existing_interaction(interaction);
         }
 
         drop(stdin); // signals to shell that we're done
@@ -261,7 +261,7 @@ impl Transcript {
         // to write to `stdin` even after the shell exits.
         shell.check_is_alive()?;
 
-        let input_lines = input.text.split('\n');
+        let input_lines = input.as_ref().split('\n');
         for input_line in input_lines {
             Self::write_line(stdin, input_line)?;
             if shell.is_echoing() {
@@ -295,7 +295,7 @@ impl Transcript {
         };
 
         let mut interaction = Interaction::new(input, output);
-        interaction.exit_status = exit_status;
+        interaction.set_exit_status(exit_status);
         Ok(interaction)
     }
 
@@ -310,7 +310,7 @@ impl Transcript {
     ///   stdout / stderr).
     #[cfg_attr(
         feature = "tracing",
-        tracing::instrument(skip(self, input), err, fields(input.text = %input.text))
+        tracing::instrument(skip(self, input), err, fields(input.text = input.as_ref()))
     )]
     pub fn capture_output(
         &mut self,
@@ -343,7 +343,7 @@ impl Transcript {
 
         let output = StyledString::from_ansi(output).map_err(map_ansi_error)?;
         let interaction = Interaction::new(input, output);
-        self.interactions.push(interaction);
+        self.add_existing_interaction(interaction);
         Ok(self)
     }
 }

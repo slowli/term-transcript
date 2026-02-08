@@ -3,7 +3,7 @@ use term_style::{StyledString, styled};
 use test_casing::test_casing;
 
 use super::*;
-use crate::{Interaction, Transcript, UserInput, svg::Template};
+use crate::{Transcript, UserInput, svg::Template};
 
 #[test_casing(2, [MatchKind::TextOnly, MatchKind::Precise])]
 fn snapshot_testing(match_kind: MatchKind) -> anyhow::Result<()> {
@@ -66,13 +66,11 @@ fn negative_snapshot_testing_with_verbose_output() {
 }
 
 fn diff_snapshot_with_color(expected_capture: &str, actual_capture: &str) -> (TestStats, String) {
-    let parsed = Transcript {
-        interactions: vec![Interaction {
-            input: UserInput::command("test"),
-            output: StyledString::from_ansi(expected_capture).unwrap(),
-            exit_status: None,
-        }],
-    };
+    let mut parsed = Transcript::new();
+    parsed.add_interaction(
+        UserInput::command("test"),
+        StyledString::from_ansi(expected_capture).unwrap(),
+    );
 
     let mut reproduced = Transcript::new();
     reproduced.add_interaction(

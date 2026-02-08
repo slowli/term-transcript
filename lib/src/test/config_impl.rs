@@ -42,7 +42,7 @@ pub fn compare_transcripts(
     for (original, reproduced) in it {
         #[cfg(feature = "tracing")]
         let _entered =
-            tracing::debug_span!("compare_interaction", input = ?original.input).entered();
+            tracing::debug_span!("compare_interaction", input = ?original.input()).entered();
 
         write!(out, "  [")?;
 

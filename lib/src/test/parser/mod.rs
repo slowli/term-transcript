@@ -90,21 +90,19 @@ impl Transcript {
             if let Some(interaction) = maybe_interaction {
                 #[cfg(feature = "tracing")]
                 tracing::debug!(
-                    ?interaction.input,
-                    interaction.output = ?interaction.output.text(),
-                    ?interaction.exit_status,
+                    input = ?interaction.input(),
+                    output = interaction.output().text(),
+                    exit_status = ?interaction.exit_status(),
                     "parsed interaction"
                 );
-                transcript.interactions.push(interaction);
+                transcript.add_existing_interaction(interaction);
             }
         }
 
         match state {
             ParserState::EncounteredContainer => Ok(transcript),
             ParserState::EncounteredUserInput(interaction) => {
-                transcript
-                    .interactions
-                    .push(interaction.with_empty_output());
+                transcript.add_existing_interaction(interaction.with_empty_output());
                 Ok(transcript)
             }
             #[allow(clippy::cast_possible_truncation)] // Shouldn't happen in practice
@@ -275,7 +273,7 @@ struct UserInputState {
     exit_status: Option<ExitStatus>,
     is_hidden: bool,
     text: TextReadingState,
-    prompt: Option<Cow<'static, str>>,
+    prompt: Option<String>,
     prompt_open_tags: Option<usize>,
 }
 
@@ -326,27 +324,27 @@ impl UserInputState {
             if let Some(parsed) = maybe_parsed {
                 // Special case: user input consists of the prompt only.
                 let (text, _) = parsed.into_parts();
-                let input = UserInput {
-                    text: String::new(),
-                    prompt: Some(UserInput::intern_prompt(text)),
-                    hidden: self.is_hidden,
-                };
+                let mut input = UserInput::new(String::new()).with_prompt(Some(text));
+                if self.is_hidden {
+                    input = input.hide();
+                }
+
                 return Ok(Some(InteractionInput {
                     input,
                     exit_status: self.exit_status,
                 }));
             }
             let text = self.text.take_plaintext();
-            self.prompt = Some(UserInput::intern_prompt(text));
+            self.prompt = Some(text);
         }
 
         Ok(maybe_parsed.map(|parsed| {
             let (text, _) = parsed.into_parts();
-            let input = UserInput {
-                text: into_input_text(text),
-                prompt: self.prompt.take(),
-                hidden: self.is_hidden,
-            };
+            let mut input = UserInput::new(into_input_text(text)).with_prompt(self.prompt.take());
+            if self.is_hidden {
+                input = input.hide();
+            }
+
             InteractionInput {
                 input,
                 exit_status: self.exit_status,
