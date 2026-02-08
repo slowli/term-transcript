@@ -221,6 +221,7 @@ impl UserInput {
         }
     }
 
+    #[cfg(feature = "test")]
     #[must_use]
     pub(crate) fn with_prompt(mut self, prompt: Option<String>) -> Self {
         self.prompt = prompt.map(|prompt| match prompt.as_str() {

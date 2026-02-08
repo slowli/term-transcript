@@ -10,7 +10,14 @@ use quick_xml::{
 use styled_str::{StyledSpan, StyledString, parse_hex_color};
 
 use super::{ParseError, extract_base_class, map_utf8_error, parse_classes};
-use crate::utils::normalize_newlines;
+
+fn normalize_newlines(s: &str) -> Cow<'_, str> {
+    if s.contains("\r\n") {
+        Cow::Owned(s.replace("\r\n", "\n"))
+    } else {
+        Cow::Borrowed(s)
+    }
+}
 
 #[derive(Debug)]
 enum HardBreak {
