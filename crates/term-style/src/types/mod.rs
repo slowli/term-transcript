@@ -96,6 +96,20 @@ impl StyledString {
         AnsiParser::parse(ansi_bytes)
     }
 
+    /// Pushes another styled string at the end of this one.
+    pub fn push_str(&mut self, other: StyledStr<'_>) {
+        self.text.push_str(other.text);
+
+        let mut copied_spans = other.spans;
+        if let (Some(last), Some(next)) = (self.spans.last_mut(), other.spans.first()) {
+            if last.style == next.style {
+                last.len += next.len;
+                copied_spans = &other.spans[1..];
+            }
+        }
+        self.spans.extend_from_slice(copied_spans);
+    }
+
     /// Unites sequential spans with the same color spec.
     pub(crate) fn shrink(self) -> Self {
         let mut shrunk_spans = Vec::<StyledSpan>::with_capacity(self.spans.len());
@@ -162,6 +176,41 @@ where
         Ansi {
             text: &self.text,
             spans: &self.spans,
+        }
+    }
+}
+
+impl From<StyledStr<'_>> for StyledString {
+    fn from(str: StyledStr<'_>) -> Self {
+        Self {
+            text: str.text.to_owned(),
+            spans: str.spans.to_vec(),
+        }
+    }
+}
+
+impl<T, S> FromIterator<Styled<T, S>> for StyledString
+where
+    T: ops::Deref<Target = str>,
+    S: ops::Deref<Target = [StyledSpan]>,
+{
+    fn from_iter<I: IntoIterator<Item = Styled<T, S>>>(iter: I) -> Self {
+        iter.into_iter()
+            .fold(StyledString::default(), |mut acc, str| {
+                acc.push_str(str.as_ref());
+                acc
+            })
+    }
+}
+
+impl<T, S> Extend<Styled<T, S>> for StyledString
+where
+    T: ops::Deref<Target = str>,
+    S: ops::Deref<Target = [StyledSpan]>,
+{
+    fn extend<I: IntoIterator<Item = Styled<T, S>>>(&mut self, iter: I) {
+        for str in iter {
+            self.push_str(str.as_ref());
         }
     }
 }
