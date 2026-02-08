@@ -80,6 +80,12 @@ impl ParseErrorKind {
     }
 }
 
+impl fmt::Display for ParseErrorKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug)]
 pub struct ParseError {
     kind: ParseErrorKind,
@@ -104,10 +110,22 @@ impl ParseError {
         };
 
         compile_panic!(
-            "invalid regex at ",
+            "invalid styled string at ",
             self.pos.start => compile_fmt::fmt::<usize>(), "..", self.pos.end => compile_fmt::fmt::<usize>(),
             " ('", hl => compile_fmt::clip(64, "…"),
             "'): ", self.kind.as_ascii_str() => compile_fmt::clip_ascii(40, "")
         );
     }
 }
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "invalid styled string at {:?}: {}",
+            self.pos, self.kind
+        )
+    }
+}
+
+impl std::error::Error for ParseError {}

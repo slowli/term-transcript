@@ -57,6 +57,13 @@ pub fn rgb_color_to_hex(RgbColor(r, g, b): RgbColor) -> String {
     buffer
 }
 
+/// # Errors
+///
+/// Returns an error if the string doesn't represent a valid style specification.
+pub const fn parse_style(raw: &str, current_style: &Style) -> Result<Style, ParseError> {
+    StrCursor::new(raw).parse_style(current_style, false)
+}
+
 impl StyledStr<'static> {
     #[doc(hidden)] // used in the `styled!` macro; logically private
     pub const fn capacities(raw: &str) -> (usize, usize) {
@@ -215,7 +222,7 @@ impl<'a> RichParser<'a> {
                     None
                 };
 
-                self.current_style = const_try!(self.cursor.parse_style(&self.current_style));
+                self.current_style = const_try!(self.cursor.parse_style(&self.current_style, true));
                 self.style_end_pos = self.cursor.pos();
 
                 if let Some(span_and_text_start) = span_and_text_start {
@@ -265,10 +272,14 @@ impl StrCursor<'_> {
     }
 
     /// The cursor is positioned just after the opening `[[`.
-    #[allow(clippy::too_many_lines)] // FIXME: split into parts
-    const fn parse_style(&mut self, current_style: &Style) -> Result<Style, ParseError> {
+    const fn parse_style(
+        &mut self,
+        current_style: &Style,
+        expect_closing_bracket: bool,
+    ) -> Result<Style, ParseError> {
         let mut style = Style::new();
         let mut is_initial = true;
+        let mut closing_bracket = false;
         let mut copied_fields = None;
         let mut set_fields = SetStyleFields::new();
 
@@ -278,133 +289,151 @@ impl StrCursor<'_> {
                 self.gobble_whitespace();
             }
 
-            if self.gobble("]]") {
-                return Ok(normalize_style(style));
+            if expect_closing_bracket && self.gobble("]]") {
+                closing_bracket = true;
+                break;
             }
-
             if self.is_eof() {
-                return Err(self.error(ParseErrorKind::UnfinishedStyle));
+                break;
             }
 
             let token_range = self.take_token();
-            let token = self.range(&token_range);
-
-            match token {
-                b"" => {
-                    return Err(self.error_on_empty_token(ParseErrorKind::UnfinishedStyle));
+            if matches!(self.range(&token_range), b"*") {
+                if is_initial {
+                    copied_fields = Some(SetStyleFields::from_style(current_style));
+                    style = *current_style;
+                } else {
+                    return Err(ParseErrorKind::NonInitialCopy.with_pos(token_range));
                 }
-
-                b"*" => {
-                    if is_initial {
-                        copied_fields = Some(SetStyleFields::from_style(current_style));
-                        style = *current_style;
-                    } else {
-                        return Err(ParseErrorKind::NonInitialCopy.with_pos(token_range));
-                    }
-                }
-
-                b"on" => {
-                    if !set_fields.set_bg() {
-                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
-                    }
-
-                    self.gobble_whitespace();
-                    if self.is_eof() {
-                        return Err(self.error(ParseErrorKind::UnfinishedStyle));
-                    }
-
-                    let on_token_range = token_range;
-                    let token_range = self.take_token();
-                    let token = self.range(&token_range);
-                    let color = match Self::parse_color(token) {
-                        Ok(Some(color)) => color,
-                        Ok(None) => {
-                            return Err(
-                                ParseErrorKind::UnfinishedBackground.with_pos(on_token_range)
-                            );
-                        }
-                        Err(err) => return Err(err.with_pos(token_range)),
-                    };
-                    style = style.bg_color(Some(color));
-                }
-
-                b"-color" | b"-fg" | b"!color" | b"!fg" => {
-                    if !set_fields.set_fg() {
-                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
-                    }
-                    let Some(copied_fields) = &mut copied_fields else {
-                        // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
-                        // on a bogus specifier.
-                        return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
-                    };
-                    if copied_fields.set_fg() {
-                        // The effect wasn't set in the copied style
-                        return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
-                    }
-                    style = style.fg_color(None);
-                }
-                b"-on" | b"-bg" | b"!on" | b"!bg" => {
-                    if !set_fields.set_bg() {
-                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
-                    }
-                    let Some(copied_fields) = &mut copied_fields else {
-                        // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
-                        // on a bogus specifier.
-                        return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
-                    };
-                    if copied_fields.set_bg() {
-                        // The effect wasn't set in the copied style
-                        return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
-                    }
-                    style = style.bg_color(None);
-                }
-                neg if neg[0] == b'-' || neg[0] == b'!' => {
-                    let (_, token_without_prefix) = token.split_at(1);
-                    let Some(effects) = Self::parse_effects(token_without_prefix) else {
-                        return Err(ParseErrorKind::UnsupportedEffect.with_pos(token_range));
-                    };
-                    let Some(copied_fields) = &mut copied_fields else {
-                        // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
-                        // on a bogus specifier.
-                        return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
-                    };
-
-                    if !set_fields.set_effects(effects) {
-                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
-                    }
-                    if copied_fields.set_effects(effects) {
-                        // The effect wasn't set in the copied style
-                        return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
-                    }
-
-                    style = style.effects(style.get_effects().remove(effects));
-                }
-
-                _ => {
-                    if let Some(effects) = Self::parse_effects(token) {
-                        if !set_fields.set_effects(effects) {
-                            return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
-                        }
-                        style = style.effects(style.get_effects().insert(effects));
-                    } else {
-                        let color = match Self::parse_color(token) {
-                            Ok(Some(color)) => color,
-                            Ok(None) => {
-                                return Err(ParseErrorKind::UnsupportedStyle.with_pos(token_range));
-                            }
-                            Err(err) => return Err(err.with_pos(token_range)),
-                        };
-                        if !set_fields.set_fg() {
-                            return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
-                        }
-                        style = style.fg_color(Some(color));
-                    }
-                }
+            } else {
+                const_try!(self.parse_token(
+                    &mut style,
+                    token_range,
+                    &mut set_fields,
+                    copied_fields.as_mut(),
+                ));
             }
 
             is_initial = false;
         }
-        Err(self.error(ParseErrorKind::UnfinishedStyle))
+
+        if expect_closing_bracket && !closing_bracket {
+            Err(self.error(ParseErrorKind::UnfinishedStyle))
+        } else {
+            Ok(normalize_style(style))
+        }
+    }
+
+    const fn parse_token(
+        &mut self,
+        style: &mut Style,
+        token_range: ops::Range<usize>,
+        set_fields: &mut SetStyleFields,
+        copied_fields: Option<&mut SetStyleFields>,
+    ) -> Result<(), ParseError> {
+        let token = self.range(&token_range);
+        match token {
+            b"" => {
+                return Err(self.error_on_empty_token(ParseErrorKind::UnfinishedStyle));
+            }
+
+            b"on" => {
+                if !set_fields.set_bg() {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+
+                self.gobble_whitespace();
+                if self.is_eof() {
+                    return Err(self.error(ParseErrorKind::UnfinishedStyle));
+                }
+
+                let on_token_range = token_range;
+                let token_range = self.take_token();
+                let token = self.range(&token_range);
+                let color = match Self::parse_color(token) {
+                    Ok(Some(color)) => color,
+                    Ok(None) => {
+                        return Err(ParseErrorKind::UnfinishedBackground.with_pos(on_token_range));
+                    }
+                    Err(err) => return Err(err.with_pos(token_range)),
+                };
+                *style = style.bg_color(Some(color));
+            }
+
+            b"-color" | b"-fg" | b"!color" | b"!fg" => {
+                if !set_fields.set_fg() {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+                let Some(copied_fields) = copied_fields else {
+                    // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                    // on a bogus specifier.
+                    return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                };
+                if copied_fields.set_fg() {
+                    // The effect wasn't set in the copied style
+                    return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
+                }
+                *style = style.fg_color(None);
+            }
+            b"-on" | b"-bg" | b"!on" | b"!bg" => {
+                if !set_fields.set_bg() {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+                let Some(copied_fields) = copied_fields else {
+                    // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                    // on a bogus specifier.
+                    return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                };
+                if copied_fields.set_bg() {
+                    // The effect wasn't set in the copied style
+                    return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
+                }
+                *style = style.bg_color(None);
+            }
+            neg if neg[0] == b'-' || neg[0] == b'!' => {
+                let (_, token_without_prefix) = token.split_at(1);
+                let Some(effects) = Self::parse_effects(token_without_prefix) else {
+                    return Err(ParseErrorKind::UnsupportedEffect.with_pos(token_range));
+                };
+                let Some(copied_fields) = copied_fields else {
+                    // This can be checked earlier, but we'd like to return an `UnsupportedEffect` error
+                    // on a bogus specifier.
+                    return Err(ParseErrorKind::NegationWithoutCopy.with_pos(token_range));
+                };
+
+                if !set_fields.set_effects(effects) {
+                    return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                }
+                if copied_fields.set_effects(effects) {
+                    // The effect wasn't set in the copied style
+                    return Err(ParseErrorKind::RedundantNegation.with_pos(token_range));
+                }
+
+                *style = style.effects(style.get_effects().remove(effects));
+            }
+
+            _ => {
+                if let Some(effects) = Self::parse_effects(token) {
+                    if !set_fields.set_effects(effects) {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+                    *style = style.effects(style.get_effects().insert(effects));
+                } else {
+                    let color = match Self::parse_color(token) {
+                        Ok(Some(color)) => color,
+                        Ok(None) => {
+                            return Err(ParseErrorKind::UnsupportedStyle.with_pos(token_range));
+                        }
+                        Err(err) => return Err(err.with_pos(token_range)),
+                    };
+                    if !set_fields.set_fg() {
+                        return Err(ParseErrorKind::DuplicateSpecifier.with_pos(token_range));
+                    }
+                    *style = style.fg_color(Some(color));
+                }
+            }
+        }
+        Ok(())
     }
 
     const fn parse_effects(token: &[u8]) -> Option<Effects> {
@@ -682,6 +711,8 @@ impl fmt::Display for EscapedText<'_> {
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
+
     use super::*;
 
     #[test]
@@ -704,8 +735,8 @@ mod tests {
 
     #[test]
     fn parsing_style() {
-        let mut cursor = StrCursor::new("bold, ul magenta on yellow*]]");
-        let style = cursor.parse_style(&Style::new()).unwrap();
+        let mut cursor = StrCursor::new("bold, ul magenta on yellow*");
+        let style = cursor.parse_style(&Style::new(), false).unwrap();
         let expected_style = Style::new()
             .bold()
             .underline()
@@ -718,7 +749,7 @@ mod tests {
     #[test]
     fn parsing_style_with_complex_colors() {
         let mut cursor = StrCursor::new("dim i invert; blink; 42 on #c0ffee]]");
-        let style = cursor.parse_style(&Style::new()).unwrap();
+        let style = cursor.parse_style(&Style::new(), true).unwrap();
         let expected_style = Style::new()
             .dimmed()
             .blink()
@@ -728,6 +759,22 @@ mod tests {
             .bg_color(Some(RgbColor(0xc0, 0xff, 0xee).into()));
         assert_eq!(style, expected_style);
         assert!(cursor.is_eof(), "{cursor:?}");
+    }
+
+    #[test]
+    fn standalone_style_parsing() {
+        let style = parse_style("red on 7, bold", &Style::new()).unwrap();
+        assert_eq!(
+            style,
+            Style::new()
+                .bold()
+                .fg_color(Some(AnsiColor::Red.into()))
+                .bg_color(Some(AnsiColor::White.into()))
+        );
+
+        let err = parse_style("red on 7]], bold", &Style::new()).unwrap_err();
+        assert_matches!(err.kind(), ParseErrorKind::BogusDelimiter);
+        assert_eq!(err.pos(), 8..9);
     }
 
     #[test]
