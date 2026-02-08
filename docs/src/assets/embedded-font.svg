@@ -72,9 +72,9 @@
         .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
         .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
         .fg7 { color: #e5e5e5; } .bg7,.inv.bg-none { background: #e5e5e5; }
-        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg8 { color: #666; } .bg8 { background: #666; }
         .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
-        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg10 { color: #cf0; } .bg10 { background: #cf0; }
         .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
         .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
         .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }

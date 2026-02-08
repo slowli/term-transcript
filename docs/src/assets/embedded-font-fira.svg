@@ -43,9 +43,9 @@
     .fg5 { fill: #833c9f; } .output-bg .fg5 { stroke: #833c9f; }
     .fg6 { fill: #0ac1cd; } .output-bg .fg6 { stroke: #0ac1cd; }
     .fg7 { fill: #e5e5e5; } .output-bg .fg7 { stroke: #e5e5e5; }
-    .fg8 { fill: #666666; } .output-bg .fg8 { stroke: #666666; }
+    .fg8 { fill: #666; } .output-bg .fg8 { stroke: #666; }
     .fg9 { fill: #ff00a0; } .output-bg .fg9 { stroke: #ff00a0; }
-    .fg10 { fill: #ccff00; } .output-bg .fg10 { stroke: #ccff00; }
+    .fg10 { fill: #cf0; } .output-bg .fg10 { stroke: #cf0; }
     .fg11 { fill: #ff9f00; } .output-bg .fg11 { stroke: #ff9f00; }
     .fg12 { fill: #48c6ff; } .output-bg .fg12 { stroke: #48c6ff; }
     .fg13 { fill: #be67e1; } .output-bg .fg13 { stroke: #be67e1; }
