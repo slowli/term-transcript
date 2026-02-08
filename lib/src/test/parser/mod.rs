@@ -16,7 +16,7 @@ use quick_xml::{
     encoding::EncodingError,
     events::{Event, attributes::Attributes},
 };
-use term_style::StyledString;
+use styled_str::StyledString;
 
 use self::text::TextReadingState;
 use crate::{ExitStatus, Interaction, Transcript, UserInput};

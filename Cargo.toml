@@ -2,7 +2,7 @@
 members = [
   "lib",
   "cli",
-  "crates/term-style",
+  "crates/styled-str",
   "e2e-tests/rainbow"
 ]
 resolver = "2"
@@ -46,7 +46,7 @@ unicode-width = "0.2"
 version-sync = "0.9.2"
 
 # Workspace dependencies
-term-style = { version = "=0.5.0-beta.1", path = "crates/term-style" }
+styled-str = { version = "=0.5.0-beta.1", path = "crates/styled-str" }
 term-transcript = { version = "=0.5.0-beta.1", path = "lib" }
 
 [workspace.lints.rust]

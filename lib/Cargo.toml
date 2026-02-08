@@ -23,7 +23,7 @@ anyhow.workspace = true
 quick-xml = { workspace = true, optional = true }
 handlebars = { workspace = true, optional = true }
 portable-pty = { workspace = true, optional = true }
-term-style.workspace = true
+styled-str.workspace = true
 
 # Private dependencies (not exposed in the public API).
 anstyle.workspace = true

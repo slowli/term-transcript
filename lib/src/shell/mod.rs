@@ -10,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-use term_style::StyledStr;
+use styled_str::StyledStr;
 
 mod standard;
 mod transcript_impl;

@@ -3,7 +3,7 @@
 use std::{borrow::Cow, convert::Infallible, num::NonZeroUsize};
 
 use anstyle::RgbColor;
-use term_style::{StyledString, styled};
+use styled_str::{StyledString, styled};
 use test_casing::{Product, test_casing};
 
 use super::{

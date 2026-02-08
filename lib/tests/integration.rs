@@ -10,7 +10,7 @@ use std::{
 };
 
 use assert_matches::assert_matches;
-use term_style::StyledString;
+use styled_str::StyledString;
 use term_transcript::{
     ShellOptions, Transcript, UserInput,
     svg::{Template, ValidTemplateOptions},

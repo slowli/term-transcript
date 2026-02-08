@@ -3,7 +3,7 @@
 use std::{env, ffi::OsString, io, process::Command};
 
 use clap::Args;
-use term_style::StyledStr;
+use styled_str::StyledStr;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{ExitStatus, ShellOptions, Transcript, UserInput, traits::Echoing};

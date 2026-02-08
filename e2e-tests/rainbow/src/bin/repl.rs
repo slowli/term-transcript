@@ -3,7 +3,7 @@
 use std::io::{self, BufRead};
 
 use anstyle::{AnsiColor, Color, Style};
-use term_style::RichStyle;
+use styled_str::RichStyle;
 
 const ERR: Style = Style::new()
     .bold()

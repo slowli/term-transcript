@@ -13,7 +13,7 @@ use anstream::{AutoStream, ColorChoice};
 use anstyle::{AnsiColor, Color, Style};
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
-use term_style::StyledString;
+use styled_str::StyledString;
 use term_transcript::{
     Transcript, UserInput,
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},

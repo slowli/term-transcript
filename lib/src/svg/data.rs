@@ -15,7 +15,7 @@ pub(super) mod serde_color {
 
     use anstyle::RgbColor;
     use serde::{Deserializer, Serialize, Serializer, de};
-    use term_style::{parse_hex_color, rgb_color_to_hex};
+    use styled_str::{parse_hex_color, rgb_color_to_hex};
 
     #[allow(clippy::trivially_copy_pass_by_ref)] // required by serde
     pub(crate) fn serialize<S: Serializer>(

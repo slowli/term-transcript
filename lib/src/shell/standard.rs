@@ -7,7 +7,7 @@ use std::{
     process::{Child, ChildStdin, Command},
 };
 
-use term_style::StyledStr;
+use styled_str::StyledStr;
 
 use super::ShellOptions;
 use crate::{

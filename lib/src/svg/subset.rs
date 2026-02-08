@@ -298,7 +298,7 @@ mod tests {
     use std::{fs, iter, path::Path};
 
     use assert_matches::assert_matches;
-    use term_style::styled;
+    use styled_str::styled;
     use test_casing::test_casing;
 
     use super::*;

@@ -7,7 +7,7 @@ use quick_xml::{
     escape::{EscapeError, resolve_xml_entity},
     events::{BytesStart, Event},
 };
-use term_style::{StyledSpan, StyledString, parse_hex_color};
+use styled_str::{StyledSpan, StyledString, parse_hex_color};
 
 use super::{ParseError, extract_base_class, map_utf8_error, parse_classes};
 use crate::utils::normalize_newlines;

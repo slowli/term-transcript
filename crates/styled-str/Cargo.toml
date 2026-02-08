@@ -1,12 +1,11 @@
 [package]
-name = "term-style"
+name = "styled-str"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-readme = "README.md"
 
 [dependencies]
 # Public dependencies

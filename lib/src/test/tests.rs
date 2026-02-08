@@ -1,5 +1,5 @@
 use anstream::StripStream;
-use term_style::{StyledString, styled};
+use styled_str::{StyledString, styled};
 use test_casing::test_casing;
 
 use super::*;

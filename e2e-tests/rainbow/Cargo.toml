@@ -13,7 +13,7 @@ path = "src/bin/repl.rs"
 [dependencies]
 anstyle.workspace = true
 anyhow.workspace = true
-term-style.workspace = true
+styled-str.workspace = true
 
 [dev-dependencies]
 handlebars.workspace = true

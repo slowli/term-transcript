@@ -2,7 +2,7 @@
 
 use std::mem;
 
-use term_style::{SpansSlice, StyledStr};
+use styled_str::{SpansSlice, StyledStr};
 use unicode_width::UnicodeWidthChar;
 
 use super::data::{LineBreak, SerdeStyledSpan, StyledLine};

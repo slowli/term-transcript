@@ -9,7 +9,7 @@ use std::{
 
 use anstream::{AutoStream, ColorChoice};
 use anstyle::{Ansi256Color, AnsiColor, Color, Style};
-use term_style::{StyleDiff, TextDiff};
+use styled_str::{StyleDiff, TextDiff};
 
 use super::{
     MatchKind, TestConfig, TestOutputConfig, TestStats,

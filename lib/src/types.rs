@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, fmt, io};
 
-use term_style::{AnsiError, StyledString};
+use styled_str::{AnsiError, StyledString};
 
 pub(crate) type BoxedError = Box<dyn std::error::Error + Send + Sync>;
 

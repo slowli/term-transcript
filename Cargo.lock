@@ -1126,6 +1126,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
+name = "styled-str"
+version = "0.5.0-beta.1"
+dependencies = [
+ "anstyle",
+ "assert_matches",
+ "compile-fmt",
+ "pretty_assertions",
+ "unicode-width",
+]
+
+[[package]]
 name = "syn"
 version = "2.0.94"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1161,17 +1172,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "term-style"
-version = "0.5.0-beta.1"
-dependencies = [
- "anstyle",
- "assert_matches",
- "compile-fmt",
- "pretty_assertions",
- "unicode-width",
-]
-
-[[package]]
 name = "term-transcript"
 version = "0.5.0-beta.1"
 dependencies = [
@@ -1189,7 +1189,7 @@ dependencies = [
  "quick-xml",
  "serde",
  "serde_json",
- "term-style",
+ "styled-str",
  "test-casing",
  "toml 0.9.11+spec-1.1.0",
  "tracing",
@@ -1212,8 +1212,8 @@ dependencies = [
  "pretty_assertions",
  "pulldown-cmark",
  "serde_json",
+ "styled-str",
  "tempfile",
- "term-style",
  "term-transcript",
  "toml 0.9.11+spec-1.1.0",
  "tracing",
@@ -1228,8 +1228,8 @@ dependencies = [
  "anyhow",
  "handlebars",
  "pretty_assertions",
+ "styled-str",
  "tempfile",
- "term-style",
  "term-transcript",
  "test-casing",
 ]

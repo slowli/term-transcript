@@ -10,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-use term_style::{AnsiError, StyledString};
+use styled_str::{AnsiError, StyledString};
 
 use super::ShellOptions;
 use crate::{
