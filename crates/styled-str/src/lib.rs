@@ -140,10 +140,23 @@
 //!   using `rich`-like syntax.
 //! - [`parse-style`](https://docs.rs/parse-style/) allows parsing `rich`-like style specs.
 //!
+//! # Crate features
+//!
+//! ## `std`
+//!
+//! *(On by default)*
+//!
+//! Enables std-specific functionality, such as [`Error`](std::error::Error) trait implementations.
+//!
 //! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`rich`]: https://rich.readthedocs.io/en/stable/index.html
 //! [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
 //! [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
+
+// Documentation settings
+#![doc(html_root_url = "https://docs.rs/styled-str/0.5.0-beta.1")]
+// Conditional compilation
+#![cfg_attr(not(feature = "std"), no_std)]
 
 pub use crate::{
     ansi_parser::AnsiError,
@@ -165,6 +178,13 @@ mod style_diff;
 #[cfg(test)]
 mod tests;
 mod types;
+
+mod alloc {
+    #[cfg(not(feature = "std"))]
+    extern crate alloc as std;
+
+    pub(crate) use std::{borrow::Cow, format, string::String, vec::Vec};
+}
 
 /// Parses [rich syntax](crate#rich-syntax) into a [`StyledStr`] in compile time.
 ///

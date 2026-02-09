@@ -11,7 +11,12 @@ use core::{
 use anstyle::{AnsiColor, Color, Effects, Style};
 use unicode_width::UnicodeWidthStr;
 
-use crate::{StyledSpan, rich_parser::RichStyle, types::StyledStr};
+use crate::{
+    StyledSpan,
+    alloc::{String, Vec, format},
+    rich_parser::RichStyle,
+    types::StyledStr,
+};
 
 #[cfg(test)]
 mod tests;
@@ -378,7 +383,7 @@ impl<'a> StyleDiff<'a> {
             tokens.push("(none)".into());
         }
 
-        let mut lines = vec![];
+        let mut lines = Vec::new();
         let mut current_line = String::new();
         for token in tokens {
             // We can use `len()` because all text is ASCII.

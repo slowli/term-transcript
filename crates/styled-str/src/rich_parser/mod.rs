@@ -1,12 +1,12 @@
 //! Rich style parsing (incl. in compile time).
 
 use core::{fmt, num::NonZeroUsize, ops, str::FromStr};
-use std::borrow::Cow;
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 use crate::{
     HexColorError, ParseError, ParseErrorKind, StackStyled, StyledSpan, StyledString,
+    alloc::{Cow, String, Vec},
     types::StyledStr,
     utils::{Stack, StackStr, StrCursor, is_same_style, normalize_style},
 };
@@ -687,7 +687,7 @@ impl RichStyle<'_> {
     }
 
     pub(crate) fn tokens(self) -> Vec<Cow<'static, str>> {
-        let mut tokens = vec![];
+        let mut tokens = Vec::new();
 
         let effects = self.0.get_effects();
         if effects.contains(Effects::BOLD) {

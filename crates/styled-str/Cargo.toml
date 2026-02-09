@@ -28,3 +28,8 @@ version-sync.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+default = ["std"]
+# Enables std-specific functionality, such as `Error` trait implementations.
+std = []

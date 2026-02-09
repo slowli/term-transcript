@@ -1,8 +1,8 @@
 //! `SpansSlice`.
 
-use std::num::NonZeroUsize;
+use core::num::NonZeroUsize;
 
-use crate::StyledSpan;
+use crate::{StyledSpan, alloc::Vec};
 
 /// Wrapper around a slice of [`StyledSpan`]s that provides convenience manipulation methods.
 #[derive(Debug, Clone, Copy)]

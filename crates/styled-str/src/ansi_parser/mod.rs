@@ -1,13 +1,16 @@
 //! Parser for terminal output that converts it to a sequence of instructions to
 //! a writer implementing `WriteColor`.
 
-use core::str;
-use std::num::NonZeroUsize;
+use core::{num::NonZeroUsize, str};
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 pub use self::errors::AnsiError;
-use crate::{StyledSpan, StyledString, utils::normalize_style};
+use crate::{
+    StyledSpan, StyledString,
+    alloc::{String, Vec},
+    utils::normalize_style,
+};
 
 mod errors;
 #[cfg(test)]

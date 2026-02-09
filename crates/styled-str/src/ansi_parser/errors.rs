@@ -1,5 +1,7 @@
 use core::{fmt, num::ParseIntError, str::Utf8Error};
 
+use crate::alloc::String;
+
 /// Errors that can occur when processing terminal output.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -49,6 +51,7 @@ impl fmt::Display for AnsiError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for AnsiError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {

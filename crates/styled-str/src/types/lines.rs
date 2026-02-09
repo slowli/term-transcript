@@ -2,7 +2,7 @@
 
 use core::mem;
 
-use crate::{Styled, StyledSpan, StyledStr, types::SpansSlice};
+use crate::{Styled, StyledSpan, StyledStr, alloc::Vec, types::SpansSlice};
 
 /// Iterator over lines in a [`StyledStr`]. Returned by [`StyledStr::lines()`].
 #[derive(Debug)]

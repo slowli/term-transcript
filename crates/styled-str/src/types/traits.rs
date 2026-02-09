@@ -1,5 +1,7 @@
 //! General-purpose traits.
 
+use crate::alloc::String;
+
 /// Pops a char from the end of a string.
 pub trait PopChar {
     /// Performs popping.

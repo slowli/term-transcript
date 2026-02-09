@@ -1,13 +1,13 @@
 //! Basic types.
 
-use core::{fmt, ops};
-use std::num::NonZeroUsize;
+use core::{fmt, num::NonZeroUsize, ops};
 
 use anstyle::Style;
 
 pub use self::{lines::Lines, slice::SpansSlice, traits::PopChar};
 use crate::{
     AnsiError, StyleDiff,
+    alloc::{String, Vec},
     ansi_parser::AnsiParser,
     rich_parser::{EscapedText, RichStyle},
     utils::{Stack, StackStr, normalize_style},
@@ -236,7 +236,7 @@ where
 impl From<StyledStr<'_>> for StyledString {
     fn from(str: StyledStr<'_>) -> Self {
         Self {
-            text: str.text.to_owned(),
+            text: (*str.text).into(),
             spans: str.spans.to_vec(),
         }
     }
