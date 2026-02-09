@@ -1,9 +1,7 @@
 //! Rich style parsing (incl. in compile time).
 
-// FIXME: change `* -> +`
-
-use core::{fmt, ops, str::FromStr};
-use std::{borrow::Cow, num::NonZeroUsize};
+use core::{fmt, num::NonZeroUsize, ops, str::FromStr};
+use std::borrow::Cow;
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
@@ -18,6 +16,19 @@ use crate::{
 /// # Errors
 ///
 /// Returns a parsing error if the string is invalid.
+///
+/// # Examples
+///
+/// ```
+/// # use styled_str::parse_hex_color;
+/// # use anstyle::RgbColor;
+/// let color = parse_hex_color(b"#fb4")?;
+/// assert_eq!(color, RgbColor(0xff, 0xbb, 0x44));
+///
+/// let color = parse_hex_color(b"#c0ffee")?;
+/// assert_eq!(color, RgbColor(0xc0, 0xff, 0xee));
+/// # anyhow::Ok(())
+/// ```
 pub const fn parse_hex_color(hex: &[u8]) -> Result<RgbColor, HexColorError> {
     if hex.is_empty() || hex[0] != b'#' {
         return Err(HexColorError::NoHash);
@@ -47,6 +58,19 @@ const fn parse_hex_digit(ch: u8) -> Result<u8, HexColorError> {
     }
 }
 
+/// Converts an RGB color to its rich text representation, like `#fb4` or `#c0ffee`.
+///
+/// # Examples
+///
+/// ```
+/// # use styled_str::rgb_color_to_hex;
+/// # use anstyle::RgbColor;
+/// let color = RgbColor(65, 65, 255);
+/// assert_eq!(rgb_color_to_hex(color), "#4141ff");
+///
+/// let color = RgbColor(255, 0, 255);
+/// assert_eq!(rgb_color_to_hex(color), "#f0f");
+/// ```
 pub fn rgb_color_to_hex(RgbColor(r, g, b): RgbColor) -> String {
     use core::fmt::Write as _;
 
@@ -588,6 +612,23 @@ impl FromStr for StyledString {
     }
 }
 
+/// Wrapper for a [`Style`] that allows to represent it in [rich syntax](crate#rich-syntax).
+///
+/// # Examples
+///
+/// ```
+/// use anstyle::{Style, Effects, AnsiColor};
+/// use styled_str::RichStyle;
+///
+/// let style = RichStyle::parse("bold, ul red! on white", &Style::new())?;
+/// assert_eq!(style.get_effects(), Effects::BOLD | Effects::UNDERLINE);
+/// assert_eq!(style.get_fg_color(), Some(AnsiColor::BrightRed.into()));
+/// assert_eq!(style.get_bg_color(), Some(AnsiColor::White.into()));
+///
+/// let canonical_str = RichStyle(&style).to_string();
+/// assert_eq!(canonical_str, "bold underline red! on white");
+/// # anyhow::Ok(())
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct RichStyle<'a>(pub &'a Style);
 

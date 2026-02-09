@@ -6,6 +6,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
+keywords = ["ANSI", "terminal", "styling", "color"]
+categories = ["command-line-interface", "development-tools::testing"]
+description = "Tools for parsing and managing ANSI-styled strings"
 
 [dependencies]
 # Public dependencies
@@ -17,6 +21,7 @@ pretty_assertions.workspace = true
 unicode-width.workspace = true
 
 [dev-dependencies]
+anyhow.workspace = true
 assert_matches.workspace = true
 
 [lints]

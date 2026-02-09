@@ -4,6 +4,7 @@ use core::mem;
 
 use crate::{Styled, StyledSpan, StyledStr, types::SpansSlice};
 
+/// Iterator over lines in a [`StyledStr`]. Returned by [`StyledStr::lines()`].
 #[derive(Debug)]
 pub struct Lines<'a> {
     text: &'a str,

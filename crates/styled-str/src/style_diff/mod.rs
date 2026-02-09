@@ -106,6 +106,46 @@ impl DiffStyleSpan {
 
 const STYLE_WIDTH: usize = 25;
 
+/// Difference in styles between two [styled strings](StyledStr) that can be output in detailed
+/// human-readable format via [`Display`](fmt::Display).
+///
+/// The `Display` implementation supports two output formats:
+///
+/// - With the default / non-alternate format (e.g., `{}`), the diff will be output as the LHS line-by-line,
+///   highlighting differences in styles on each differing line. That is, this format is similar
+///   to [`pretty_assertions::Comparison`].
+/// - With the alternate format (`{:#}`), the diff will be output as a table of all differing spans.
+///
+/// # Examples
+///
+/// ```
+/// use styled_str::{styled, StyleDiff, StyledString};
+///
+/// let lhs = styled!("[[red on white]]Hello,[[]] [[bold green]]world!");
+/// let rhs = styled!("[[red on white!]]Hello,[[]] [[bold green]]world[[]]!");
+/// let diff = StyleDiff::new(lhs, rhs);
+/// assert!(!diff.is_empty());
+///
+/// let diff_str = StyledString::from_ansi(&format!("{diff}"))?;
+/// assert_eq!(
+///     diff_str.text(),
+///     "> Hello, world!\n\
+///      > ^^^^^^      ^\n"
+/// );
+///
+/// let diff_str = StyledString::from_ansi(&format!("{diff:#}"))?;
+/// let expected =
+///     "|Positions         Left style                Right style       |
+///      |========== ========================= =========================|
+///      |      0..6       red on white              red on white!      |
+///      |    12..13        bold green                  (none)          |";
+/// let expected: String = expected
+///     .lines()
+///     .flat_map(|line| [line.trim().trim_matches('|'), "\n"])
+///     .collect();
+/// assert_eq!(diff_str.text(), expected);
+/// # anyhow::Ok(())
+/// ```
 #[derive(Debug)]
 pub struct StyleDiff<'a> {
     text: &'a str,
@@ -125,6 +165,8 @@ impl fmt::Display for StyleDiff<'_> {
 }
 
 impl<'a> StyleDiff<'a> {
+    /// Computes style difference between two styled strings.
+    ///
     /// # Panics
     ///
     /// Panics if `lhs` and `rhs` have differing lengths.
@@ -191,6 +233,7 @@ impl<'a> StyleDiff<'a> {
         }
     }
 
+    /// Checks whether this difference is empty.
     pub fn is_empty(&self) -> bool {
         self.differing_spans.is_empty()
     }

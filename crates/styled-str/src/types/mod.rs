@@ -54,7 +54,22 @@ impl StyledSpan {
 
 /// ANSI-styled text.
 ///
-/// FIXME: ways to create
+/// A `Styled` instance consists of two parts:
+///
+/// - Original text (`T` type param; usually a `String` or a `&str`).
+/// - A sequence of [`StyledSpan`]s covering the text (`S` type param; usually a slice `&[StyledSpan]`
+///   or a `Vec<StyledSpan>`).
+///
+/// [`StyledStr`] and [`StyledString`] represent the borrowed / owned instantiations of the type, respectively.
+///
+/// - [`StyledStr`] can be parsed from [rich syntax](crate#rich-syntax) in compile time via the [`styled!`](crate::styled!) macro,
+///   or borrowed from a string using [`Styled::as_ref()`].
+///-  [`StyledString`] can be parsed from [rich syntax](crate#rich-syntax) via the [`FromStr`](core::str::FromStr) trait,
+///   from a string with ANSI escapes via [`StyledString::from_ansi()`], or manually constructed via [`StyledString::from_parts()`].
+///
+/// # Examples
+///
+/// See [crate-level docs](crate) for the examples of usage.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Styled<T, S> {
     pub(crate) text: T,
@@ -88,11 +103,15 @@ impl<'a> StyledStr<'a> {
 pub type StyledString = Styled<String, Vec<StyledSpan>>;
 
 impl StyledString {
+    /// Empty string.
     pub const EMPTY: Self = Self {
         text: String::new(),
         spans: Vec::new(),
     };
 
+    /// Creates a string from the provided text and spans. This will normalize styles and merge
+    /// sequential spans with the same style if appropriate.
+    ///
     /// # Panics
     ///
     /// Panics if `text` and `spans` have differing lengths.
@@ -109,6 +128,8 @@ impl StyledString {
         Self { text, spans }.shrink()
     }
 
+    /// Parses a string from a string with embedded ANSI escape sequences.
+    ///
     /// # Errors
     ///
     /// Returns an error if the input is not a valid ANSI escaped string.
@@ -116,6 +137,9 @@ impl StyledString {
         AnsiParser::parse(ansi_str.as_bytes())
     }
 
+    /// Parses a string from bytes with embedded ANSI escape sequences. This is similar to
+    /// [`Self::from_ansi()`], just using bytes as an input.
+    ///
     /// # Errors
     ///
     /// Returns an error if the input is not a valid ANSI escaped string.
@@ -169,11 +193,12 @@ where
         &self.text
     }
 
-    /// Returns the style spans.
+    /// Returns the style spans in this string.
     pub fn spans(&self) -> &[StyledSpan] {
         &self.spans
     }
 
+    /// Returns a borrowed version of this string.
     pub fn as_ref(&self) -> StyledStr<'_> {
         Styled {
             text: self.text(),
@@ -181,6 +206,7 @@ where
         }
     }
 
+    /// Splits this string into parts (the text and [`StyledSpan`]s).
     pub fn into_parts(self) -> (T, S) {
         (self.text, self.spans)
     }
@@ -327,6 +353,29 @@ where
     }
 }
 
+/// Text difference between two strings. ANSI-styled when printed (powered by [`pretty_assertions::Comparison`]).
+///
+/// # [`Display`](fmt::Display) representation
+///
+/// You can specify additional padding at the start of compared lines
+/// via alignment specifiers. For example, `{:>4}` will insert 4 spaces at the start of each line.
+///
+/// # Examples
+///
+/// ```
+/// use styled_str::{StyledString, TextDiff};
+///
+/// let diff = TextDiff::new("Hello, world", "Hello world!");
+/// let diff_str = StyledString::from_ansi(&format!("{diff:>4}"))?;
+/// assert_eq!(
+///     diff_str.text().trim(),
+///     "Diff < left / right > :\n\
+///      <   Hello, world\n\
+///      >   Hello world!"
+/// );
+/// assert!(!diff_str.spans().is_empty());
+/// # anyhow::Ok(())
+/// ```
 #[derive(Debug)]
 pub struct TextDiff<'a> {
     lhs: &'a str,
@@ -334,6 +383,7 @@ pub struct TextDiff<'a> {
 }
 
 impl<'a> TextDiff<'a> {
+    /// Computes difference between two strings.
     pub const fn new(lhs: &'a str, rhs: &'a str) -> Self {
         Self { lhs, rhs }
     }
@@ -386,18 +436,23 @@ impl fmt::Display for TextDiff<'_> {
     }
 }
 
+/// Generic difference between two [`Styled`] strings: either a difference in text, or in styling.
+///
+/// Produced by the [`Styled::diff()`] method.
 pub enum Diff<'a> {
+    /// There is a difference in text between the compared strings.
     Text(TextDiff<'a>),
+    /// String texts match, but there is a difference in ANSI styles.
     Style(StyleDiff<'a>),
 }
 
 impl fmt::Display for Diff<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Text(diff) => write!(formatter, "Styled strings differ by text\n{diff}"),
+            Self::Text(diff) => write!(formatter, "styled strings differ by text\n{diff}"),
             Self::Style(diff) => write!(
                 formatter,
-                "Styled strings differ by style\n{diff}\n{diff:#}"
+                "styled strings differ by style\n{diff}\n{diff:#}"
             ),
         }
     }

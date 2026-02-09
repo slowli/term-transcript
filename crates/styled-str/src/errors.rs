@@ -32,22 +32,38 @@ impl HexColorError {
     }
 }
 
+impl std::error::Error for HexColorError {}
+
+/// Kind of a [`ParseError`].
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ParseErrorKind {
+    /// Unfinished style, e.g. in `[[red`.
     UnfinishedStyle,
+    /// Unsupported token in style, e.g. `[[what]]`.
     UnsupportedStyle,
+    /// Error parsing a hexadecimal color spec, e.g. in `#c0g`.
     HexColor(HexColorError),
+    /// Invalid index color, e.g. `1234`.
     InvalidIndexColor,
-    RedefinedBackground,
+    /// `on` token without the following color.
     UnfinishedBackground,
+    /// Bogus delimiter encountered, e.g. in `[[red] on white]]`.
     BogusDelimiter,
+    /// `*` token (copying previously used style) must be the first token in the spec.
     NonInitialCopy,
+    /// Unsupported effect in a negation, e.g. `[[* -red]]`.
     UnsupportedEffect,
+    /// Negation
     NegationWithoutCopy,
+    /// Duplicate specified for the same property, like `[[bold bold]]` or `[[red green]]`.
     DuplicateSpecifier,
+    /// Redundant negation, e.g. in `[[* -bold -bold]]`.
     RedundantNegation,
+
+    #[doc(hidden)] // should not occur unless private APIs are used
     SpanOverflow,
+    #[doc(hidden)] // should not occur unless private APIs are used
     TextOverflow,
 }
 
@@ -63,7 +79,6 @@ impl ParseErrorKind {
             Self::HexColor(err) => err.as_str(),
             Self::InvalidIndexColor => "invalid indexed color",
             Self::UnfinishedBackground => "no background specified after `on` keyword",
-            Self::RedefinedBackground => "redefined background color",
             Self::BogusDelimiter => "bogus delimiter",
             Self::NonInitialCopy => "* (copy) specifier must come first",
             Self::UnsupportedEffect => "unsupported effect",
@@ -86,6 +101,7 @@ impl fmt::Display for ParseErrorKind {
     }
 }
 
+/// Errors that can occur parsing [`Styled`](crate::Styled) strings from the [rich syntax](crate#rich-syntax).
 #[derive(Debug)]
 pub struct ParseError {
     kind: ParseErrorKind,
@@ -93,10 +109,12 @@ pub struct ParseError {
 }
 
 impl ParseError {
+    /// Returns the kind of this error.
     pub const fn kind(&self) -> &ParseErrorKind {
         &self.kind
     }
 
+    /// Returns (byte) position in the source string that corresponds to this error.
     pub fn pos(&self) -> ops::Range<usize> {
         self.pos.clone()
     }

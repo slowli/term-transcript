@@ -4,6 +4,7 @@ use std::num::NonZeroUsize;
 
 use crate::StyledSpan;
 
+/// Wrapper around a slice of [`StyledSpan`]s that provides convenience manipulation methods.
 #[derive(Debug, Clone, Copy)]
 pub struct SpansSlice<'a> {
     inner: &'a [StyledSpan],
@@ -14,6 +15,7 @@ pub struct SpansSlice<'a> {
 impl<'a> SpansSlice<'a> {
     const EMPTY: Self = Self::new(&[]);
 
+    /// Wraps the provided spans.
     pub const fn new(spans: &'a [StyledSpan]) -> Self {
         Self {
             inner: spans,
@@ -36,6 +38,7 @@ impl<'a> SpansSlice<'a> {
         len_override.unwrap_or(span.len)
     }
 
+    /// Splits the spans at the specified byte position in the string.
     #[must_use]
     pub fn split_off(&mut self, pos: usize) -> Self {
         let mut total_len = 0;
@@ -66,6 +69,7 @@ impl<'a> SpansSlice<'a> {
         Self::EMPTY
     }
 
+    /// Iterates over the contained spans.
     pub fn iter(self) -> impl Iterator<Item = StyledSpan> + 'a {
         self.inner
             .iter()
@@ -77,6 +81,7 @@ impl<'a> SpansSlice<'a> {
             })
     }
 
+    /// Collects these spans to a vector.
     pub fn to_vec(self) -> Vec<StyledSpan> {
         let mut output = self.inner.to_vec();
         let span_count = output.len();
