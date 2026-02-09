@@ -72,7 +72,7 @@
 //! ```
 //! use styled_str::{styled, StyledStr};
 //!
-//! const STYLED: StyledStr = styled!("[[green! on white, bold]]Hello,[[]] world[[it]]!");
+//! const STYLED: StyledStr = styled!("[[green! on white, bold]]Hello,[[/]] world[[it]]!");
 //! assert_eq!(STYLED.text(), "Hello, world!");
 //! assert_eq!(STYLED.spans().len(), 3);
 //! ```
@@ -101,7 +101,7 @@
 //!     "\u{1b}[32mHello,\u{1b}[m world\u{1b}[1m!\u{1b}[m",
 //! )?;
 //! assert_eq!(str.text(), "Hello, world!");
-//! assert_eq!(str.to_string(), "[[green]]Hello,[[]] world[[bold]]!");
+//! assert_eq!(str.to_string(), "[[green]]Hello,[[/]] world[[bold]]!");
 //! # anyhow::Ok(())
 //! ```
 //!
@@ -116,7 +116,7 @@
 //! # use styled_str::{styled, Diff};
 //! # use assert_matches::assert_matches;
 //! let left = styled!("Hello, [[bold dim white on #fa4]]world!");
-//! let right = styled!("Hello, [[bold]]world[[]]!");
+//! let right = styled!("Hello, [[bold]]world[[/]]!");
 //! let diff = left.diff(&right).unwrap_err();
 //! assert_matches!(&diff, Diff::Style(_));
 //!
@@ -172,8 +172,8 @@ mod types;
 /// use styled_str::{styled, StyledStr};
 ///
 /// const STYLED: StyledStr = styled!(
-///     "[[bold red on white]]ERROR:[[]] [[it]]Something[[]] \
-///      [[strike]]bad[[]] happened"
+///     "[[bold red on white]]ERROR:[[/]] [[it]]Something[[/]] \
+///      [[strike]]bad[[/]] happened"
 /// );
 /// assert_eq!(STYLED.text(), "ERROR: Something bad happened");
 /// assert_eq!(STYLED.spans()[0].len.get(), "ERROR:".len());

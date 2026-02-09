@@ -54,6 +54,8 @@ pub enum ParseErrorKind {
     BogusDelimiter,
     /// `*` token (copying previously used style) must be the first token in the spec.
     NonInitialCopy,
+    /// `/` token (clearing style) must be the only token in the spec.
+    NonIsolatedClear,
     /// Unsupported effect in a negation, e.g. `[[* -red]]`.
     UnsupportedEffect,
     /// Negation
@@ -62,6 +64,8 @@ pub enum ParseErrorKind {
     DuplicateSpecifier,
     /// Redundant negation, e.g. in `[[* -bold -bold]]`.
     RedundantNegation,
+    /// ANSI escape char `\u{1b}` encountered in the text.
+    EscapeInText,
 
     #[doc(hidden)] // should not occur unless private APIs are used
     SpanOverflow,
@@ -84,10 +88,12 @@ impl ParseErrorKind {
             Self::UnfinishedBackground => "no background specified after `on` keyword",
             Self::BogusDelimiter => "bogus delimiter",
             Self::NonInitialCopy => "* (copy) specifier must come first",
+            Self::NonIsolatedClear => "/ (clear) specifier must be the only token",
             Self::UnsupportedEffect => "unsupported effect",
             Self::NegationWithoutCopy => "negation without * (copy) specifier",
             Self::DuplicateSpecifier => "duplicate specifier",
             Self::RedundantNegation => "redundant negation",
+            Self::EscapeInText => "ANSI escape char 0x1b encountered in text",
             Self::SpanOverflow => "too many spans",
             Self::TextOverflow => "too much text",
         }

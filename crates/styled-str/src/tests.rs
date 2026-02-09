@@ -5,7 +5,7 @@ use assert_matches::assert_matches;
 
 use super::*;
 
-const SIMPLE_INPUT: &str = "[[magenta on yellow!, bold, ul]]Hello[[]] world[[bold strike inv]]!";
+const SIMPLE_INPUT: &str = "[[magenta on yellow!, bold, ul]]Hello[[/]] world[[bold strike inv]]!";
 const SIMPLE_STYLED: StyledStr = styled!(SIMPLE_INPUT);
 const SIMPLE_STYLES: &[StyledSpan] = &[
     StyledSpan::new(
@@ -34,7 +34,7 @@ fn parsing_styled_str() {
 
     assert_eq!(
         styled.to_string(),
-        "[[bold underline magenta on yellow!]]Hello[[]] world[[bold strike invert]]!"
+        "[[bold underline magenta on yellow!]]Hello[[/]] world[[bold strike invert]]!"
     );
 }
 
@@ -85,7 +85,7 @@ fn diff_by_style() {
 
 #[test]
 fn parsing_with_unstyled_ends() {
-    const TEST_INPUT: &str = "test.rs: [[[bold green!]][DEBUG][[]]] Hello";
+    const TEST_INPUT: &str = "test.rs: [[[bold green!]][DEBUG][[/]]] Hello";
     const STYLED: StyledStr = styled!(TEST_INPUT);
 
     assert_eq!(STYLED.text(), "test.rs: [[DEBUG]] Hello");
@@ -107,7 +107,7 @@ fn parsing_with_unstyled_ends() {
 
     assert_eq!(
         styled.to_string(),
-        "test.rs: [[[bold green!]][DEBUG][[]]] Hello"
+        "test.rs: [[[bold green!]][DEBUG][[/]]] Hello"
     );
 }
 

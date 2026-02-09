@@ -95,3 +95,25 @@ fn escaping_text() {
         "[[[[*]]OK]] test :[[[[[*]]"
     );
 }
+
+#[test]
+fn escape_error() {
+    let err = "Hello,\u{1b}[m world".parse::<StyledString>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::EscapeInText);
+    assert_eq!(err.pos(), 6..7);
+}
+
+#[test]
+fn clear_errors() {
+    let err = "[[red /]]Hello".parse::<StyledString>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::NonIsolatedClear);
+    assert_eq!(err.pos(), 6..7);
+
+    let err = "[[red / blue]]Hello".parse::<StyledString>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::NonIsolatedClear);
+    assert_eq!(err.pos(), 6..7);
+
+    let err = "[[/ red]]Hello".parse::<StyledString>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::NonIsolatedClear);
+    assert_eq!(err.pos(), 2..3);
+}

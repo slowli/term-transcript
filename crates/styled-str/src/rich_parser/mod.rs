@@ -251,6 +251,10 @@ impl<'a> RichParser<'a> {
                     return Ok(ops::ControlFlow::Continue(span_and_text_start));
                 }
             } else {
+                let ch = self.cursor.current_byte();
+                if ch == 0x1b {
+                    return Err(self.cursor.error(ParseErrorKind::EscapeInText));
+                }
                 self.cursor.advance_byte();
             }
         }
@@ -319,6 +323,7 @@ impl StrCursor<'_> {
         let mut closing_bracket = false;
         let mut copied_fields = None;
         let mut set_fields = SetStyleFields::new();
+        let mut clear_pos = None::<ops::Range<usize>>;
 
         while !self.is_eof() {
             self.gobble_whitespace();
@@ -334,14 +339,23 @@ impl StrCursor<'_> {
                 break;
             }
 
+            if let Some(clear_pos) = clear_pos {
+                return Err(ParseErrorKind::NonIsolatedClear.with_pos(clear_pos));
+            }
+
             let token_range = self.take_token();
-            if matches!(self.range(&token_range), b"*") {
-                if is_initial {
-                    copied_fields = Some(SetStyleFields::from_style(current_style));
-                    style = *current_style;
-                } else {
+            let token = self.range(&token_range);
+            if matches!(token, b"*") {
+                if !is_initial {
                     return Err(ParseErrorKind::NonInitialCopy.with_pos(token_range));
                 }
+                copied_fields = Some(SetStyleFields::from_style(current_style));
+                style = *current_style;
+            } else if matches!(token, b"/") {
+                if !is_initial {
+                    return Err(ParseErrorKind::NonIsolatedClear.with_pos(token_range));
+                }
+                clear_pos = Some(token_range);
             } else {
                 const_try!(self.parse_token(
                     &mut style,
@@ -715,7 +729,11 @@ impl RichStyle<'_> {
 
 impl fmt::Display for RichStyle<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let tokens = self.tokens();
+        let mut tokens = self.tokens();
+        if tokens.is_empty() {
+            tokens.push("/".into());
+        }
+
         for (i, token) in tokens.iter().enumerate() {
             write!(formatter, "{token}")?;
             if i + 1 < tokens.len() {
