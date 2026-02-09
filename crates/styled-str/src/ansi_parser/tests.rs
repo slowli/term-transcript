@@ -28,7 +28,8 @@ fn term_roundtrip_with_multiple_colors() {
 
 #[test]
 fn roundtrip_with_indexed_colors() {
-    const STYLED: StyledStr = styled!("H[[5]]e[[on 11]]l[[33]]l[[on 250]]o");
+    const STYLED: StyledStr =
+        styled!("H[[color5]]e[[on color(11)]]l[[color33]]l[[on color(250)]]o");
 
     let ansi = STYLED.ansi().to_string();
     let restored = StyledString::from_ansi(&ansi).unwrap();

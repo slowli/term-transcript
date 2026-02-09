@@ -35,7 +35,7 @@ fn parsing_style() {
 
 #[test]
 fn parsing_style_with_complex_colors() {
-    let mut cursor = StrCursor::new("dim i invert; blink; 42 on #c0ffee]]");
+    let mut cursor = StrCursor::new("dim i invert; blink; color(42) on #c0ffee]]");
     let style = cursor.parse_style(&Style::new(), true).unwrap();
     let expected_style = Style::new()
         .dimmed()
@@ -46,11 +46,31 @@ fn parsing_style_with_complex_colors() {
         .bg_color(Some(RgbColor(0xc0, 0xff, 0xee).into()));
     assert_eq!(style, expected_style);
     assert!(cursor.is_eof(), "{cursor:?}");
+
+    let err = RichStyle::parse("bold color", &Style::new()).unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::UnfinishedColor);
+    assert_eq!(err.pos(), 5..10);
+
+    let err = RichStyle::parse("bold color on red", &Style::new()).unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::UnfinishedColor);
+    assert_eq!(err.pos(), 5..10);
+
+    let err = RichStyle::parse("bold color( on red", &Style::new()).unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::UnfinishedColor);
+    assert_eq!(err.pos(), 5..11);
+
+    let err = RichStyle::parse("bold color() on red", &Style::new()).unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
+    assert_eq!(err.pos(), 5..12);
+
+    let err = RichStyle::parse("bold color(x) on red", &Style::new()).unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
+    assert_eq!(err.pos(), 5..13);
 }
 
 #[test]
 fn standalone_style_parsing() {
-    let style = RichStyle::parse("red on 7, bold", &Style::new()).unwrap();
+    let style = RichStyle::parse("red on color7, bold", &Style::new()).unwrap();
     assert_eq!(
         style,
         Style::new()
@@ -59,9 +79,9 @@ fn standalone_style_parsing() {
             .bg_color(Some(AnsiColor::White.into()))
     );
 
-    let err = RichStyle::parse("red on 7]], bold", &Style::new()).unwrap_err();
+    let err = RichStyle::parse("red on color7]], bold", &Style::new()).unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::BogusDelimiter);
-    assert_eq!(err.pos(), 8..9);
+    assert_eq!(err.pos(), 13..14);
 }
 
 #[test]

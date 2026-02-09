@@ -199,25 +199,30 @@ fn unsupported_token_error() {
 
 #[test]
 fn invalid_color_error() {
-    let raw = "[[1000]]";
+    let raw = "[[color(1000)]]";
     let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
-    assert_eq!(err.pos(), 2..6);
+    assert_eq!(err.pos(), 2..13);
 
-    let raw = "[[256]]";
+    let raw = "[[color256]]";
     let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
-    assert_eq!(err.pos(), 2..5);
+    assert_eq!(err.pos(), 2..10);
 
-    let raw = "[[001]]";
+    let raw = "[[color(001)]]";
     let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
-    assert_eq!(err.pos(), 2..5);
+    assert_eq!(err.pos(), 2..12);
 
-    let raw = "[[-1]]";
+    let raw = "[[color(-1)]]";
     let err = raw.parse::<StyledString>().unwrap_err();
-    assert_matches!(err.kind(), ParseErrorKind::UnsupportedEffect);
-    assert_eq!(err.pos(), 2..4);
+    assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
+    assert_eq!(err.pos(), 2..11);
+
+    let raw = "[[color(#ff)]]";
+    let err = raw.parse::<StyledString>().unwrap_err();
+    assert_matches!(err.kind(), ParseErrorKind::InvalidIndexColor);
+    assert_eq!(err.pos(), 2..12);
 
     let raw = "[[#cfg]]";
     let err = raw.parse::<StyledString>().unwrap_err();
@@ -271,10 +276,10 @@ fn negation_errors() {
 
 #[test]
 fn duplicate_style_errors() {
-    let raw = "[[3 green]]";
+    let raw = "[[color(3) green]]";
     let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::DuplicateSpecifier);
-    assert_eq!(err.pos(), 4..9);
+    assert_eq!(err.pos(), 11..16);
 
     let raw = "[[on green on yellow!]]";
     let err = raw.parse::<StyledString>().unwrap_err();

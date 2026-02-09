@@ -273,6 +273,21 @@ impl<'a> RichParser<'a> {
     }
 }
 
+const fn strip_prefix<'s>(haystack: &'s [u8], prefix: &[u8]) -> Option<&'s [u8]> {
+    if haystack.len() < prefix.len() {
+        return None;
+    }
+    let mut i = 0;
+    while i < prefix.len() {
+        if haystack[i] != prefix[i] {
+            return None;
+        }
+        i += 1;
+    }
+    let (_, suffix) = haystack.split_at(prefix.len());
+    Some(suffix)
+}
+
 impl StrCursor<'_> {
     /// Produces the error spanned at the next char.
     const fn error(&self, kind: ParseErrorKind) -> ParseError {
@@ -473,7 +488,7 @@ impl StrCursor<'_> {
     }
 
     const fn parse_index(s: &[u8]) -> Result<u8, ParseErrorKind> {
-        if s.len() > 3 || s[0] == b'0' {
+        if s.is_empty() || s.len() > 3 || s[0] == b'0' {
             // We disallow colors starting from `0` (e.g., `001`) to avoid ambiguity.
             return Err(ParseErrorKind::InvalidIndexColor);
         }
@@ -523,12 +538,26 @@ impl StrCursor<'_> {
                 Err(err) => return Err(ParseErrorKind::HexColor(err)),
             },
 
-            num if !num.is_empty() && num[0].is_ascii_digit() => {
-                let index = const_try!(Self::parse_index(num));
+            _ => {
+                let Some(mut color_idx) = strip_prefix(token, b"color") else {
+                    return Ok(None);
+                };
+                if color_idx.is_empty() {
+                    return Err(ParseErrorKind::UnfinishedColor);
+                }
+
+                // Trim `()` from tokens like `color(124)`.
+                if color_idx[0] == b'(' {
+                    if !matches!(color_idx.last(), Some(b')')) {
+                        return Err(ParseErrorKind::UnfinishedColor);
+                    }
+                    (_, color_idx) = color_idx.split_at(1);
+                    (color_idx, _) = color_idx.split_at(color_idx.len() - 1);
+                }
+
+                let index = const_try!(Self::parse_index(color_idx));
                 Some(Color::Ansi256(Ansi256Color(index)))
             }
-
-            _ => None,
         })
     }
 
@@ -709,7 +738,7 @@ fn write_color(color: Color) -> String {
             bright = if color.is_bright() { "!" } else { "" }
         )
         .unwrap(),
-        Color::Ansi256(Ansi256Color(idx)) => write!(&mut buffer, "{idx}").unwrap(),
+        Color::Ansi256(Ansi256Color(idx)) => write!(&mut buffer, "color{idx}").unwrap(),
         Color::Rgb(color) => {
             buffer = rgb_color_to_hex(color);
         }

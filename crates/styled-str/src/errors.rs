@@ -44,6 +44,8 @@ pub enum ParseErrorKind {
     UnsupportedStyle,
     /// Error parsing a hexadecimal color spec, e.g. in `#c0g`.
     HexColor(HexColorError),
+    /// Unfinished color specification, e.g. `color(`.
+    UnfinishedColor,
     /// Invalid index color, e.g. `1234`.
     InvalidIndexColor,
     /// `on` token without the following color.
@@ -77,6 +79,7 @@ impl ParseErrorKind {
             Self::UnfinishedStyle => "unfinished style definition",
             Self::UnsupportedStyle => "unsupported style specifier",
             Self::HexColor(err) => err.as_str(),
+            Self::UnfinishedColor => "unfinished color spec",
             Self::InvalidIndexColor => "invalid indexed color",
             Self::UnfinishedBackground => "no background specified after `on` keyword",
             Self::BogusDelimiter => "bogus delimiter",

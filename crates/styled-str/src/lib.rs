@@ -63,7 +63,8 @@
 //!
 //! - One of the 8 base terminal colors (`black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`)
 //! - One of the 8 bright terminal colors signaled via `!` suffix or `bright-` prefix (e.g., `blue!` or `bright-blue`).
-//! - One of [256 indexed ANSI colors](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit)
+//! - One of [256 indexed ANSI colors](https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit) specified
+//!   as `color$idx` or `color($idx)`, e.g. `color23` or `color(254)`.
 //! - A 24-bit RGB color written in CSS-like hex format, e.g. `#fa4` or `#c0ffee`.
 //!
 //! ## Syntax examples
