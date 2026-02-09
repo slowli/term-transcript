@@ -121,8 +121,8 @@ const STYLE_WIDTH: usize = 25;
 /// ```
 /// use styled_str::{styled, StyleDiff, StyledString};
 ///
-/// let lhs = styled!("[[red on white]]Hello,[[]] [[bold green]]world!");
-/// let rhs = styled!("[[red on white!]]Hello,[[]] [[bold green]]world[[]]!");
+/// let lhs = styled!("[[red on white]]Hello,[[/]] [[bold green]]world!");
+/// let rhs = styled!("[[red on white!]]Hello,[[/]] [[bold green]]world[[/]]!");
 /// let diff = StyleDiff::new(lhs, rhs);
 /// assert!(!diff.is_empty());
 ///

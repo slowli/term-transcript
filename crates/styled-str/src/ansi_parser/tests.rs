@@ -3,7 +3,7 @@ use crate::{styled, types::StyledStr};
 
 #[test]
 fn term_roundtrip_simple() {
-    const STYLED: StyledStr = styled!("Hello, [[bold green]]world[[]]!");
+    const STYLED: StyledStr = styled!("Hello, [[bold green]]world[[/]]!");
 
     let ansi = STYLED.ansi().to_string();
     let restored = StyledString::from_ansi(&ansi).unwrap();

@@ -249,7 +249,7 @@ impl TemplateOptions {
 /// let mut transcript = Transcript::new();
 /// transcript.add_interaction(
 ///     UserInput::command("test"),
-///     styled!("Hello, [[green]]world[[]]!").into(),
+///     styled!("Hello, [[green]]world[[/]]!").into(),
 /// );
 ///
 /// let template_options = TemplateOptions {

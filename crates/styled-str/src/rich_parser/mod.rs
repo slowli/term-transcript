@@ -197,7 +197,7 @@ impl SetStyleFields {
     }
 }
 
-/// Parser for `rich` like styling, e.g. `[[bold red on white]]text[[]]`.
+/// Parser for `rich` like styling, e.g. `[[bold red on white]]text[[/]]`.
 #[derive(Debug)]
 struct RichParser<'a> {
     cursor: StrCursor<'a>,

@@ -148,7 +148,7 @@ pub(super) struct StyledLine<'a> {
 ///
 /// let mut transcript = Transcript::new();
 /// let input = UserInput::command("rainbow");
-/// transcript.add_interaction(input, styled!("Hello, [[green]]world[[]]!").into());
+/// transcript.add_interaction(input, styled!("Hello, [[green]]world[[/]]!").into());
 /// let template_options = TemplateOptions {
 ///     palette: NamedPalette::Dracula.into(),
 ///     font_family: "Consolas, Menlo, monospace".to_owned(),

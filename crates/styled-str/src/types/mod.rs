@@ -304,7 +304,7 @@ where
         for (i, span) in self.spans.iter().enumerate() {
             let text = &self.text[pos..pos + span.len.get()];
             if i == 0 && span.style.is_plain() {
-                // Special case: do not output an extra `[[]]` at the string start.
+                // Special case: do not output an extra `[[/]]` at the string start.
                 write!(formatter, "{}", EscapedText(text))?;
             } else {
                 write!(

@@ -18,11 +18,11 @@ fn rendering_simple_transcript() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("test --arg && true"),
-        styled!("Hello, [[red on green]]<world>[[]]!").into(),
+        styled!("Hello, [[red on green]]<world>[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -58,11 +58,11 @@ fn rendering_simple_transcript_to_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("test --arg && true"),
-        styled!("Hello, [[red on green]]<world>[[]]!").into(),
+        styled!("Hello, [[red on green]]<world>[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -99,7 +99,7 @@ fn rendering_transcript_with_opacity_options() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("[[dim]]Hello,[[]] [[blink]]world[[]]!").into(),
+        styled!("[[dim]]Hello,[[/]] [[blink]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -142,7 +142,7 @@ fn rendering_transcript_with_hidden_input() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let options = TemplateOptions {
@@ -169,7 +169,7 @@ fn rendering_transcript_with_hidden_input_to_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let options = TemplateOptions {
@@ -200,7 +200,7 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
     transcript.add_interaction(UserInput::command("test"), StyledString::default());
     transcript.add_interaction(
         UserInput::command("test --arg"),
-        styled!("Hello, [[red on green]]world[[]]!").into(),
+        styled!("Hello, [[red on green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -227,7 +227,7 @@ fn rendering_transcript_with_empty_output_to_pure_svg() {
 #[test]
 fn rendering_transcript_with_explicit_success() {
     let mut transcript = Transcript::new();
-    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[]]!").into())
+    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[/]]!").into())
         .with_exit_status(ExitStatus(0));
     transcript.add_existing_interaction(interaction);
 
@@ -245,7 +245,7 @@ fn rendering_transcript_with_explicit_success() {
 #[test]
 fn rendering_transcript_with_failure() {
     let mut transcript = Transcript::new();
-    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[]]!").into())
+    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[/]]!").into())
         .with_exit_status(ExitStatus(1));
     transcript.add_existing_interaction(interaction);
 
@@ -263,7 +263,7 @@ fn rendering_transcript_with_failure() {
 #[test]
 fn rendering_pure_svg_transcript_with_failure() {
     let mut transcript = Transcript::new();
-    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[]]!").into())
+    let interaction = Interaction::new("test", styled!("Hello, [[green]]world[[/]]!").into())
         .with_exit_status(ExitStatus(1));
     transcript.add_existing_interaction(interaction);
 
@@ -295,7 +295,7 @@ fn rendering_transcript_with_frame() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -320,7 +320,7 @@ fn rendering_pure_svg_transcript_with_frame() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -345,7 +345,7 @@ fn rendering_transcript_with_animation() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        iter::repeat_n(styled!("Hello, [[green]]world[[]]!\n"), 22).collect(),
+        iter::repeat_n(styled!("Hello, [[green]]world[[/]]!\n"), 22).collect(),
     );
 
     let mut buffer = vec![];
@@ -379,7 +379,7 @@ fn scrollbar_animation_elision() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        iter::repeat_n(styled!("Hello, [[green]]world[[]]!\n"), 22).collect(),
+        iter::repeat_n(styled!("Hello, [[green]]world[[/]]!\n"), 22).collect(),
     );
 
     for elision_threshold in [0.0, 0.25] {
@@ -430,7 +430,7 @@ fn rendering_pure_svg_transcript_with_animation(line_numbers: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        iter::repeat_n(styled!("Hello, [[green]]world[[]]!\n"), 22).collect(),
+        iter::repeat_n(styled!("Hello, [[green]]world[[/]]!\n"), 22).collect(),
     );
 
     let mut buffer = vec![];
@@ -486,7 +486,7 @@ fn rendering_transcript_with_wraps() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -511,7 +511,7 @@ fn rendering_svg_transcript_with_wraps() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -543,7 +543,7 @@ fn rendering_transcript_with_breaks_and_line_numbers(#[map(ref)] continued: &Con
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -579,7 +579,7 @@ fn rendering_svg_transcript_with_breaks_and_line_numbers(
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -616,11 +616,11 @@ fn rendering_transcript_with_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another_test"),
-        styled!("Hello,\n[[green]]world[[]]!").into(),
+        styled!("Hello,\n[[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -651,11 +651,11 @@ fn rendering_pure_svg_transcript_with_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another_test"),
-        styled!("Hello,\n[[green]]world[[]]!").into(),
+        styled!("Hello,\n[[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -686,11 +686,11 @@ fn rendering_transcript_with_continuous_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another_test"),
-        styled!("Hello,\n[[green]]world[[]]!").into(),
+        styled!("Hello,\n[[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -721,11 +721,11 @@ fn rendering_transcript_with_input_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        styled!("Hello,\n[[green]]world[[]]!").into(),
+        styled!("Hello,\n[[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -756,15 +756,15 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        styled!("Hello,\n[[green]]world[[]]!").into(),
+        styled!("Hello,\n[[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("third\ntest").hide(),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -800,15 +800,15 @@ fn rendering_transcript_with_input_line_numbers_and_hidden_input_in_pure_svg() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test").hide(),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        styled!("Hello,\n[[green]]world[[]]!").into(),
+        styled!("Hello,\n[[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("third\ntest").hide(),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -856,11 +856,11 @@ fn rendering_pure_svg_transcript_with_input_line_numbers() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
     transcript.add_interaction(
         UserInput::command("another\ntest"),
-        styled!("Hello,\n[[green]]world[[]]!").into(),
+        styled!("Hello,\n[[green]]world[[/]]!").into(),
     );
 
     let mut buffer = vec![];
@@ -891,7 +891,7 @@ fn rendering_transcript_with_styles() {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("Hello, [[green]]world[[]]!").into(),
+        styled!("Hello, [[green]]world[[/]]!").into(),
     );
 
     let styles = "@font-face { font-family: 'Fira Mono'; }";
@@ -957,7 +957,7 @@ fn embedding_font(pure_svg: bool, with_line_numbers: bool) {
     let mut transcript = Transcript::new();
     transcript.add_interaction(
         UserInput::command("test"),
-        styled!("H[[on blue]]ell[[]]o, [[green]]world[[]]!").into(),
+        styled!("H[[on blue]]ell[[/]]o, [[green]]world[[/]]!").into(),
     );
 
     let options = TemplateOptions {

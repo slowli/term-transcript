@@ -86,9 +86,9 @@ fn writing_color_spec() {
 fn writing_color_diff_table() {
     const EXPECTED: StyledStr = styled!(
         r"[[bold]]Positions         Left style                Right style       [[*]]
-========== ========================= =========================[[]]
-      0..2          (none)           [[bold strike blink red on white]]bold strike blink red on [[]]
-                                     [[bold strike blink red on white]]          white          [[]]
+========== ========================= =========================[[/]]
+      0..2          (none)           [[bold strike blink red on white]]bold strike blink red on [[/]]
+                                     [[bold strike blink red on white]]          white          [[/]]
 "
     );
 
@@ -124,8 +124,8 @@ fn diff_span(start: usize, len: usize) -> DiffStyleSpan {
 #[test]
 fn highlighting_diff_on_text() {
     const EXPECTED: StyledStr = styled!(
-        "[[red]]> [[]]He[[green]]llo, world![[]]\n\
-         [[red]]> [[white on red]]^^[[black on yellow]]!![[white on red]]^[[]]     [[white on red]]^[[]]\n"
+        "[[red]]> [[/]]He[[green]]llo, world![[/]]\n\
+         [[red]]> [[white on red]]^^[[black on yellow]]!![[white on red]]^[[/]]     [[white on red]]^[[/]]\n"
     );
 
     let green = Style::new().fg_color(Some(AnsiColor::Green.into()));
@@ -148,9 +148,9 @@ fn highlighting_diff_on_text() {
 #[test]
 fn spans_on_multiple_lines() {
     const EXPECTED: StyledStr = styled!(
-        "= [[green]]Hello,[[]]\n\
-         [[red]]> [[green]]wo[[]]rld!\n\
-         [[red]]> [[]]  [[white on red]]^^^[[]]\n"
+        "= [[green]]Hello,[[/]]\n\
+         [[red]]> [[green]]wo[[/]]rld!\n\
+         [[red]]> [[/]]  [[white on red]]^^^[[/]]\n"
     );
 
     let green = Style::new().fg_color(Some(AnsiColor::Green.into()));
@@ -168,10 +168,10 @@ fn spans_on_multiple_lines() {
 #[test]
 fn spans_with_multiple_sequential_line_breaks() {
     const EXPECTED: StyledStr = styled!(
-        "= [[green]]Hello,[[]]\n\
+        "= [[green]]Hello,[[/]]\n\
          = \n\
-         [[red]]> [[]]wo[[green]]rld![[]]\n\
-         [[red]]> [[]]  [[white on red]]^^^[[]]\n"
+         [[red]]> [[/]]wo[[green]]rld![[/]]\n\
+         [[red]]> [[/]]  [[white on red]]^^^[[/]]\n"
     );
 
     let green = Style::new().fg_color(Some(AnsiColor::Green.into()));
@@ -193,8 +193,8 @@ fn spans_with_multiple_sequential_line_breaks() {
 #[test]
 fn plaintext_highlight_simple() {
     const EXPECTED: StyledStr = styled!(
-        "[[red]]> [[]]Hello, world!\n\
-         [[red]]> [[white on red]]^^[[black on yellow]]!![[white on red]]^[[]]     [[white on red]]^[[]]\n"
+        "[[red]]> [[/]]Hello, world!\n\
+         [[red]]> [[white on red]]^^[[black on yellow]]!![[white on red]]^[[/]]     [[white on red]]^[[/]]\n"
     );
 
     let text = "Hello, world!";
@@ -275,7 +275,7 @@ fn highlighting_works_with_non_ascii_text() {
     }
 
     let output = StyledString::from_ansi(&Test.to_string()).unwrap();
-    assert_eq!(output, styled!("  [[white on red]]^^[[]]\n"));
+    assert_eq!(output, styled!("  [[white on red]]^^[[/]]\n"));
 }
 
 #[test]
@@ -314,18 +314,18 @@ fn plaintext_highlight_with_non_ascii_text() {
 #[test]
 fn whitespace_diff_is_ignored() {
     let diff = StyleDiff::new(
-        styled!("[[red]]Hello, [[]]world"),
-        styled!("[[red]]Hello,[[]] world"),
+        styled!("[[red]]Hello, [[/]]world"),
+        styled!("[[red]]Hello,[[/]] world"),
     );
     assert!(diff.is_empty(), "{diff:#}");
 
     let diff = StyleDiff::new(
-        styled!("[[red]]Hello,\n[[]]world"),
-        styled!("[[red]]Hello,[[]]\nworld"),
+        styled!("[[red]]Hello,\n[[/]]world"),
+        styled!("[[red]]Hello,[[/]]\nworld"),
     );
     assert!(diff.is_empty(), "{diff:#}");
 
-    let diff = StyleDiff::new(styled!("Hell[[red]]o, [[]]world"), styled!("Hello, world"));
+    let diff = StyleDiff::new(styled!("Hell[[red]]o, [[/]]world"), styled!("Hello, world"));
     assert_eq!(diff.differing_spans.len(), 1);
     assert_eq!(diff.differing_spans[0].len.get(), 2);
     assert_eq!(diff.differing_spans[0].start, 4);
@@ -339,16 +339,16 @@ fn whitespace_diff_is_ignored() {
 #[test]
 fn whitespace_is_not_ignored_for_specific_styles() {
     let diff = StyleDiff::new(
-        styled!("[[on red]]Hello, [[]]world"),
-        styled!("[[on red]]Hello,[[]] world"),
+        styled!("[[on red]]Hello, [[/]]world"),
+        styled!("[[on red]]Hello,[[/]] world"),
     );
     assert_eq!(diff.differing_spans.len(), 1);
     assert_eq!(diff.differing_spans[0].len.get(), 1);
     assert_eq!(diff.differing_spans[0].start, 6);
 
     let diff = StyleDiff::new(
-        styled!("[[on red]]Hello,\n[[]]world"),
-        styled!("[[on red]]Hello,[[]]\nworld"),
+        styled!("[[on red]]Hello,\n[[/]]world"),
+        styled!("[[on red]]Hello,[[/]]\nworld"),
     );
     assert!(diff.is_empty());
 

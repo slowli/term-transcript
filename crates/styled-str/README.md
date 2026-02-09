@@ -35,8 +35,8 @@ Basic usage:
 use styled_str::{styled, StyledStr};
 
 const STYLED: StyledStr = styled!(
-    "[[bold white! on green!]]INFO:[[]] [[dim it]]12:00:01[[]] \
-     [[ul #fb4]]Something[[]] happened"
+    "[[bold white! on green!]]INFO:[[/]] [[dim it]]12:00:01[[/]] \
+     [[ul #fb4]]Something[[/]] happened"
 );
 
 // Get the unstyled text behind the string

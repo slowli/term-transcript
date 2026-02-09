@@ -41,6 +41,8 @@
 //!   This also allows to *subtract* effects by specifying them with a `-` or `!` in front, like `-bold` or `!italic`.
 //!   Similarly, `-color` / `!color` (or `-fg` / `!fg`) switches off the foreground color, and
 //!   `-on`, `!on`, `-bg`, or `!bg` switches off the background color.
+//! - A directive may be empty: `[[]]`. As a special case, `[[/]]` (i.e., a single `/` token) is equivalent
+//!   to an empty directive.
 //!
 //! ## Effects
 //!

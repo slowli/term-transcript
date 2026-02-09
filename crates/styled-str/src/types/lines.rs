@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn styles_bordering_on_newlines() {
-        let str = styled!("[[red on white]]Test\n[[]]Hello,[[bold green]]\nworld[[* -bold]]!\n");
+        let str = styled!("[[red on white]]Test\n[[/]]Hello,[[bold green]]\nworld[[* -bold]]!\n");
         let expected_lines = [
             styled!("[[red on white]]Test"),
             styled!("Hello,"),
