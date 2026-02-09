@@ -24,6 +24,7 @@ unicode-width.workspace = true
 anyhow.workspace = true
 assert_matches.workspace = true
 doc-comment.workspace = true
+proptest.workspace = true
 version-sync.workspace = true
 
 [lints]

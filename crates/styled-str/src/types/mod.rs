@@ -116,11 +116,24 @@ impl StyledString {
     ///
     /// Panics if `text` and `spans` have differing lengths.
     pub fn from_parts(text: String, mut spans: Vec<StyledSpan>) -> Self {
+        assert!(
+            text.bytes().all(|ch| ch != 0x1b),
+            "Text contains 0x1b escape char"
+        );
         assert_eq!(
             spans.iter().map(|span| span.len.get()).sum::<usize>(),
             text.len(),
             "Mismatch between total length of spans and text length"
         );
+
+        let mut pos = 0;
+        for (i, span) in spans.iter().enumerate() {
+            assert!(
+                text.is_char_boundary(pos),
+                "span #{i} does not start at char boundary"
+            );
+            pos += span.len.get();
+        }
 
         for span in &mut spans {
             span.style = normalize_style(span.style);
