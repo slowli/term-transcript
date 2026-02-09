@@ -23,6 +23,8 @@ unicode-width.workspace = true
 [dev-dependencies]
 anyhow.workspace = true
 assert_matches.workspace = true
+doc-comment.workspace = true
+version-sync.workspace = true
 
 [lints]
 workspace = true

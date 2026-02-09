@@ -48,6 +48,8 @@ assert_eq!(STYLED.spans().len(), 6);
 println!("{}", STYLED.ansi());
 ```
 
+See the crate docs for more examples of usage.
+
 ## Limitations
 
 - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI] sequences),

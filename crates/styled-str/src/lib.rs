@@ -184,3 +184,6 @@ macro_rules! styled {
         const { $crate::StackStyled::<{ __CAPACITIES.0 }, { __CAPACITIES.1 }>::new($raw) }.as_ref()
     }};
 }
+
+#[cfg(doctest)]
+doc_comment::doctest!("../README.md");

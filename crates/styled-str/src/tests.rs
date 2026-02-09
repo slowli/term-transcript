@@ -49,7 +49,7 @@ fn parsing_styled_in_compile_time() {
 #[test]
 fn diff_by_text() {
     const EXPECTED_DIFF: StyledStr = styled!(
-        "Styled strings differ by text\n\
+        "styled strings differ by text\n\
         [[bold]]Diff[[]] [[red]]< left[[]] / [[green]]right >[[]] :\n\
         [[red]]<Hello world![[]]\n\
         [[green]]>Hello[[bold green on #005f00]],[[green]] world![[]]\n"
@@ -64,7 +64,7 @@ fn diff_by_text() {
 #[test]
 fn diff_by_style() {
     const EXPECTED_DIFF: StyledStr = styled!(
-        r"Styled strings differ by style
+        r"styled strings differ by style
 [[red]]> [[bold underline magenta on yellow!]]Hello[[]] world[[bold strike invert]]![[]]
 [[red]]> [[white on red]]^^^^^[[]] [[white on red]]^^^^^[[black on yellow]]![[]]
 

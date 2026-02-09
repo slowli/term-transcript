@@ -1133,8 +1133,10 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "compile-fmt",
+ "doc-comment",
  "pretty_assertions",
  "unicode-width",
+ "version-sync",
 ]
 
 [[package]]
