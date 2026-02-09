@@ -1,14 +1,17 @@
 //! Tools for parsing and managing ANSI-styled strings.
 //!
-//! # Use cases
+//! This library allows to:
 //!
-//! - Hassle-free snapshot testing for styled strings, without the need to compare literal strings with ANSI escapes
-//!   (brittle and not human-readable), and with [rich diff info](#comparing-styled-strings).
-//! - [Parsing ANSI-styled strings](#parsing-ansi-escapes).
-//! - Creating styled strings from [human-readable format](#rich-format), including in compile time.
+//! - [Parse ANSI-styled strings](#parsing-ansi-escapes).
+//! - Create styled strings from [human-readable format](#rich-format), including in compile time.
+//! - Compare styled strings with [rich diff info](#comparing-styled-strings).
+//! - Manipulate styled strings, e.g. split them into lines, split off parts etc.
 //!
-//! As an example, the [`term-transcript`](https://docs.rs/term-transcript/) crate uses the library
-//! for all mentioned reasons.
+//! One of guiding use cases for the library is hassle-free snapshot testing for styled strings,
+//! without the need to compare literal strings with ANSI escapes (which is brittle and not human-readable),
+//! and outputting more informative diff info than a simple `assert_eq!` would.
+//!
+//! For the example of real-world usage, see the [`term-transcript`](https://docs.rs/term-transcript/) crate.
 //!
 //! # `Styled` type
 //!
@@ -120,6 +123,11 @@
 //! println!("{diff}");
 //! ```
 //!
+//! # Limitations
+//!
+//! - ANSI escape sequences other than [SGR] ones are either dropped (in case of [CSI] sequences),
+//!   or lead to [an error](AnsiError).
+//!
 //! # Alternatives and similar tools
 //!
 //! - This crate builds on the [`anstyle`] library, using its styling data model. `anstyle` together
@@ -131,6 +139,8 @@
 //!
 //! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`rich`]: https://rich.readthedocs.io/en/stable/index.html
+//! [SGR]: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR
+//! [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 
 pub use crate::{
     ansi_parser::AnsiError,
