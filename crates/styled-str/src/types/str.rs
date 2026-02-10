@@ -85,7 +85,6 @@ impl<'a> StyledStr<'a> {
     /// # Panics
     ///
     /// Panics in the same situations as [`crate::types::str::split_at()`].
-    #[allow(clippy::incompatible_msrv)] // FIXME
     pub const fn split_at(self, mid: usize) -> (Self, Self) {
         let (start_text, end_text) = self.text.split_at(mid);
         let (start_spans, end_spans) = self.spans.split_at(mid);
@@ -109,10 +108,7 @@ impl<'a> StyledStr<'a> {
 
     const fn map_span(text: &'a str, span: StyledSpan) -> SpanStr<'a> {
         SpanStr {
-            text: unsafe {
-                // SAFETY: span ranges always address valid char ranges in `text` by construction
-                utils::const_slice_unchecked(text, span.start..span.end())
-            },
+            text: utils::const_slice_unchecked(text, span.start..span.end()),
             style: span.style,
         }
     }

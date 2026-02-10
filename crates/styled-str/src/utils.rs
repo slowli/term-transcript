@@ -113,10 +113,6 @@ const fn is_same_color(lhs: Color, rhs: Color) -> bool {
 const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;
 const UTF8_CONTINUATION_MARKER: u8 = 0b1000_0000;
 
-const fn is_char_boundary(byte: u8) -> bool {
-    byte & UTF8_CONTINUATION_MASK != UTF8_CONTINUATION_MARKER
-}
-
 const fn ceil_char_boundary(bytes: &[u8], mut pos: usize) -> usize {
     assert!(pos <= bytes.len());
 
@@ -314,19 +310,8 @@ impl<'a> StrCursor<'a> {
 }
 
 /// Slices a string in compile time.
-///
-/// # Safety
-///
-/// The caller is responsible to ensure that `range` is in bounds and does not split chars.
-pub(crate) const unsafe fn const_slice_unchecked(s: &str, range: ops::Range<usize>) -> &str {
-    debug_assert!(range.end >= range.start);
-    debug_assert!(range.end <= s.len());
-
-    let s_bytes = s.as_bytes();
-    debug_assert!(is_char_boundary(s_bytes[range.start]));
-    debug_assert!(is_char_boundary(s_bytes[range.end]));
-
-    let (_, tail) = s_bytes.split_at(range.start);
+pub(crate) const fn const_slice_unchecked(s: &str, range: ops::Range<usize>) -> &str {
+    let (_, tail) = s.split_at(range.start);
     let (head, _) = tail.split_at(range.end - range.start);
-    unsafe { str::from_utf8_unchecked(head) }
+    head
 }
