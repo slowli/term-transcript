@@ -46,7 +46,7 @@ fn parsing_styled_str() {
 
     let styled: StyledString = SIMPLE_INPUT.parse().unwrap();
     assert_eq!(styled.text, "Hello world!");
-    assert_eq!(styled.spans, SIMPLE_STYLES);
+    assert_eq!(styled.spans.0, SIMPLE_STYLES);
 
     assert_eq!(
         styled.to_string(),
@@ -57,7 +57,7 @@ fn parsing_styled_str() {
 #[test]
 fn parsing_styled_in_compile_time() {
     assert_eq!(SIMPLE_STYLED.text(), "Hello world!");
-    assert_eq!(SIMPLE_STYLED.spans(), SIMPLE_STYLES);
+    assert_eq!(SIMPLE_STYLED.spans.as_full_slice(), SIMPLE_STYLES);
 
     SIMPLE_STYLED.diff(&SIMPLE_STYLED).unwrap();
 }
@@ -125,7 +125,7 @@ fn parsing_with_style_copy() {
         STYLED.to_string(),
         "[[green]]Hello[[bold italic green]],[[italic green]] world[[italic on red]]!"
     );
-    assert_eq!(STYLED.spans().len(), 4);
+    assert_eq!(STYLED.spans.as_full_slice().len(), 4);
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn parsing_with_no_op_style_copy() {
     );
 
     assert_eq!(STYLED.text(), "[[Brackets!]]");
-    assert_eq!(STYLED.spans().len(), 1);
+    assert_eq!(STYLED.spans.as_full_slice().len(), 1);
     assert_eq!(STYLED.to_string(), "[[[[*]]Brackets!]]");
 }
 

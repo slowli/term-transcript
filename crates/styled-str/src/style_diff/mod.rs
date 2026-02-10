@@ -22,15 +22,6 @@ use crate::{
 mod tests;
 
 impl StyledSpan {
-    fn shrink_len(&mut self, sub: usize) {
-        self.len = self
-            .len
-            .get()
-            .checked_sub(sub)
-            .and_then(NonZeroUsize::new)
-            .expect("length underflow");
-    }
-
     /// Writes a single plaintext `line` to `out` using styles from `spans_iter`.
     fn write_line<I>(
         formatter: &mut fmt::Formatter<'_>,
@@ -194,11 +185,11 @@ impl<'a> StyleDiff<'a> {
             differing_spans: Vec::new(),
         };
         let mut pos = 0;
-        let mut lhs_iter = lhs.spans.iter().copied();
+        let mut lhs_iter = lhs.spans.iter();
         let Some(mut lhs_span) = lhs_iter.next() else {
             return this;
         };
-        let mut rhs_iter = rhs.spans.iter().copied();
+        let mut rhs_iter = rhs.spans.iter();
         let Some(mut rhs_span) = rhs_iter.next() else {
             return this;
         };
@@ -257,7 +248,7 @@ impl<'a> StyleDiff<'a> {
         let mut highlights = highlights.iter().copied().peekable();
         let mut line_start = 0;
 
-        let mut color_spans = self.lhs.spans.iter().copied().peekable();
+        let mut color_spans = self.lhs.spans.iter().peekable();
 
         for line in self.lhs.text.split('\n') {
             let line_contains_spans = highlights

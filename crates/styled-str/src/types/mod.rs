@@ -4,23 +4,25 @@ use core::{fmt, mem, num::NonZeroUsize, ops};
 
 use anstyle::Style;
 
-pub use self::traits::PopChar;
+pub use self::{
+    slice::{AsSpansSlice, SpansSlice, SpansVec},
+    traits::PopChar,
+};
 use crate::{
     AnsiError, StyleDiff,
-    alloc::{String, Vec},
+    alloc::String,
     ansi_parser::AnsiParser,
     rich_parser::{EscapedText, RichStyle},
     utils::{Stack, StackStr, normalize_style},
 };
 
 //mod lines;
-//mod slice;
+mod slice;
 mod traits;
 
 /// Continuous span of styled text.
-// FIXME: make private
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct StyledSpan {
+pub(crate) struct StyledSpan {
     /// Style applied to the text.
     pub(crate) style: Style,
     /// Starting position of the span in text.
@@ -42,6 +44,15 @@ impl StyledSpan {
 
     pub(crate) const fn extend_len(&mut self, add: usize) {
         self.len = self.len.checked_add(add).expect("length overflow");
+    }
+
+    pub(crate) fn shrink_len(&mut self, sub: usize) {
+        self.len = self
+            .len
+            .get()
+            .checked_sub(sub)
+            .and_then(NonZeroUsize::new)
+            .expect("length underflow");
     }
 }
 
@@ -78,7 +89,7 @@ impl StyledStringBuilder {
     /// Pushes a style at the end of this string.
     pub fn push_style(&mut self, style: Style) {
         let style = normalize_style(style);
-        let spanned_text_len = self.inner.spans.last().map_or(0, StyledSpan::end);
+        let spanned_text_len = self.inner.spans.0.last().map_or(0, StyledSpan::end);
         let prev_style = mem::replace(&mut self.current_style, style);
         if let Some(len) = NonZeroUsize::new(self.inner.text.len() - spanned_text_len) {
             self.push_span(StyledSpan {
@@ -90,13 +101,13 @@ impl StyledStringBuilder {
     }
 
     fn push_span(&mut self, span: StyledSpan) {
-        if let Some(last_span) = self.inner.spans.last_mut() {
+        if let Some(last_span) = self.inner.spans.0.last_mut() {
             if last_span.style == span.style {
                 last_span.extend_len(span.len.get());
                 return;
             }
         }
-        self.inner.spans.push(span);
+        self.inner.spans.0.push(span);
     }
 
     /// Finalizes the [`StyledString`].
@@ -132,7 +143,7 @@ pub struct Styled<T, S> {
 }
 
 /// Borrowed version of [`Styled`].
-pub type StyledStr<'a> = Styled<&'a str, &'a [StyledSpan]>;
+pub type StyledStr<'a> = Styled<&'a str, SpansSlice<'a>>;
 
 impl<'a> StyledStr<'a> {
     fn diff_inner(self, other: Self) -> Result<(), Diff<'a>> {
@@ -148,6 +159,25 @@ impl<'a> StyledStr<'a> {
         }
     }
 
+    /// Splits this string into two at the specified position.
+    ///
+    /// # Panics
+    ///
+    /// Panics in the same situations as [`str::split_at()`].
+    pub fn split_at(self, mid: usize) -> (Self, Self) {
+        let (start_text, end_text) = self.text.split_at(mid);
+        let (start_spans, end_spans) = self.spans.split_at(mid);
+        let start = Self {
+            text: start_text,
+            spans: start_spans,
+        };
+        let end = Self {
+            text: end_text,
+            spans: end_spans,
+        };
+        (start, end)
+    }
+
     /// Splits this text by lines.
     pub fn lines(self) {
         todo!()
@@ -155,13 +185,13 @@ impl<'a> StyledStr<'a> {
 }
 
 /// Dynamic (i.e., non-compile time) variation of [`Styled`].
-pub type StyledString = Styled<String, Vec<StyledSpan>>;
+pub type StyledString = Styled<String, SpansVec>;
 
 impl StyledString {
     /// Empty string.
     pub const EMPTY: Self = Self {
         text: String::new(),
-        spans: Vec::new(),
+        spans: SpansVec::EMPTY,
     };
 
     /// Creates a builder for
@@ -192,8 +222,8 @@ impl StyledString {
     pub fn push_str(&mut self, other: StyledStr<'_>) {
         self.text.push_str(other.text);
 
-        let mut copied_spans = other.spans.iter().copied();
-        if let (Some(last), Some(next)) = (self.spans.last_mut(), other.spans.first()) {
+        let mut copied_spans = other.spans.iter();
+        if let (Some(last), Some(next)) = (self.spans.0.last_mut(), other.spans.get(0)) {
             if last.style == next.style {
                 last.extend_len(next.len.get());
                 copied_spans.next(); // skip copying the first span
@@ -201,8 +231,8 @@ impl StyledString {
         }
 
         // We need to offset the newly added spans, so that their start positions are correct.
-        let offset = self.spans.last().map_or(0, StyledSpan::end);
-        self.spans.extend(copied_spans.map(|mut span| {
+        let offset = self.spans.0.last().map_or(0, StyledSpan::end);
+        self.spans.0.extend(copied_spans.map(|mut span| {
             span.start += offset;
             span
         }));
@@ -212,23 +242,18 @@ impl StyledString {
 impl<T, S> Styled<T, S>
 where
     T: ops::Deref<Target = str>,
-    S: ops::Deref<Target = [StyledSpan]>,
+    S: AsSpansSlice,
 {
     /// Returns the unstyled text.
     pub fn text(&self) -> &str {
         &self.text
     }
 
-    /// Returns the style spans in this string.
-    pub fn spans(&self) -> &[StyledSpan] {
-        &self.spans
-    }
-
     /// Returns a borrowed version of this string.
     pub fn as_ref(&self) -> StyledStr<'_> {
         Styled {
             text: self.text(),
-            spans: self.spans(),
+            spans: self.spans.as_slice(),
         }
     }
 
@@ -245,7 +270,7 @@ where
     pub fn diff<'s, Tr, Sr>(&'s self, other: &'s Styled<Tr, Sr>) -> Result<(), Diff<'s>>
     where
         Tr: ops::Deref<Target = str>,
-        Sr: ops::Deref<Target = [StyledSpan]>,
+        Sr: AsSpansSlice,
     {
         self.as_ref().diff_inner(other.as_ref())
     }
@@ -254,7 +279,7 @@ where
     pub fn ansi(&self) -> impl fmt::Display + '_ {
         Ansi {
             text: &self.text,
-            spans: &self.spans,
+            spans: self.spans.as_slice(),
         }
     }
 }
@@ -263,7 +288,7 @@ impl From<StyledStr<'_>> for StyledString {
     fn from(str: StyledStr<'_>) -> Self {
         Self {
             text: (*str.text).into(),
-            spans: str.spans.to_vec(),
+            spans: SpansVec(str.spans.iter().collect()),
         }
     }
 }
@@ -271,7 +296,7 @@ impl From<StyledStr<'_>> for StyledString {
 impl<T, S> FromIterator<Styled<T, S>> for StyledString
 where
     T: ops::Deref<Target = str>,
-    S: ops::Deref<Target = [StyledSpan]>,
+    S: AsSpansSlice,
 {
     fn from_iter<I: IntoIterator<Item = Styled<T, S>>>(iter: I) -> Self {
         iter.into_iter()
@@ -285,7 +310,7 @@ where
 impl<T, S> Extend<Styled<T, S>> for StyledString
 where
     T: ops::Deref<Target = str>,
-    S: ops::Deref<Target = [StyledSpan]>,
+    S: AsSpansSlice,
 {
     fn extend<I: IntoIterator<Item = Styled<T, S>>>(&mut self, iter: I) {
         for str in iter {
@@ -294,7 +319,8 @@ where
     }
 }
 
-impl<T> Styled<T, Vec<StyledSpan>>
+// FIXME: This may be generalized to span slices
+impl<T> Styled<T, SpansVec>
 where
     T: ops::Deref<Target = str> + PopChar,
 {
@@ -306,6 +332,7 @@ where
 
         let last_span = self
             .spans
+            .0
             .last_mut()
             .expect("internal error: text is empty, but spans aren't");
         assert!(last_span.len.get() >= ch_len, "style span divides char");
@@ -313,7 +340,7 @@ where
         if let Some(new_len) = NonZeroUsize::new(last_span.len.get() - ch_len) {
             last_span.len = new_len;
         } else {
-            self.spans.pop();
+            self.spans.0.pop();
         }
         Some((ch, style))
     }
@@ -323,12 +350,11 @@ where
 impl<T, S> fmt::Display for Styled<T, S>
 where
     T: ops::Deref<Target = str>,
-    S: ops::Deref<Target = [StyledSpan]>,
+    S: AsSpansSlice,
 {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut pos = 0;
-        for (i, span) in self.spans.iter().enumerate() {
-            let text = &self.text[pos..pos + span.len.get()];
+        for (i, span) in self.spans.as_slice().iter().enumerate() {
+            let text = &self.text[span.start..span.end()];
             if i == 0 && span.style.is_plain() {
                 // Special case: do not output an extra `[[/]]` at the string start.
                 write!(formatter, "{}", EscapedText(text))?;
@@ -340,7 +366,6 @@ where
                     text = EscapedText(text)
                 )?;
             }
-            pos += span.len.get();
         }
         Ok(())
     }
@@ -348,12 +373,12 @@ where
 
 struct Ansi<'a> {
     text: &'a str,
-    spans: &'a [StyledSpan],
+    spans: SpansSlice<'a>,
 }
 
 impl fmt::Display for Ansi<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for span in self.spans {
+        for span in self.spans.iter() {
             write!(
                 formatter,
                 "{style}{text}{style:#}",
@@ -368,12 +393,12 @@ impl fmt::Display for Ansi<'_> {
 impl<Tl, Sl, Tr, Sr> PartialEq<Styled<Tr, Sr>> for Styled<Tl, Sl>
 where
     Tl: ops::Deref<Target = str>,
-    Sl: ops::Deref<Target = [StyledSpan]>,
+    Sl: AsSpansSlice,
     Tr: ops::Deref<Target = str>,
-    Sr: ops::Deref<Target = [StyledSpan]>,
+    Sr: AsSpansSlice,
 {
     fn eq(&self, other: &Styled<Tr, Sr>) -> bool {
-        *self.text == *other.text && *self.spans == *other.spans
+        *self.text == *other.text && self.spans.as_slice() == other.spans.as_slice()
     }
 }
 
@@ -514,7 +539,7 @@ impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CA
     pub const fn as_ref(&'static self) -> StyledStr<'static> {
         Styled {
             text: self.text.as_str(),
-            spans: self.spans.as_slice(),
+            spans: SpansSlice::new(self.spans.as_slice()),
         }
     }
 }

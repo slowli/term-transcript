@@ -1,155 +1,126 @@
-//! `SpansSlice`.
+use super::StyledSpan;
 
-use core::num::NonZeroUsize;
+/// Internal trait for types that can be cheaply converted to a [`SpansSlice`].
+pub trait AsSpansSlice: Clone + Default {
+    /// Performs the conversion.
+    fn as_slice(&self) -> SpansSlice<'_>;
+}
 
-use crate::{StyledSpan, alloc::Vec};
+/// Owned container for styled spans.
+#[derive(Debug, Clone, Default)]
+pub struct SpansVec(pub(crate) Vec<StyledSpan>);
 
+impl SpansVec {
+    pub(crate) const EMPTY: Self = Self(Vec::new());
+}
+
+impl AsSpansSlice for SpansVec {
+    fn as_slice(&self) -> SpansSlice<'_> {
+        SpansSlice::new(&self.0)
+    }
+}
+
+/// Borrowed slice of styled spans.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SpansSlice<'a> {
+    inner: &'a [StyledSpan],
+    /// Byte positions in the sliced plaintext. It would be more idiomatic to use `ops::Range<usize>`,
+    /// but it doesn't implement `Copy`.
+    text_start: usize,
+    text_end: usize,
+}
 
 impl<'a> SpansSlice<'a> {
-    const EMPTY: Self = Self::new(&[]);
-
-    /// Wraps the provided spans.
-    pub const fn new(spans: &'a [StyledSpan]) -> Self {
+    pub(crate) const fn new(inner: &'a [StyledSpan]) -> Self {
         Self {
-            inner: spans,
-            first_span_len: None,
-            last_span_len: None,
+            inner,
+            text_start: 0,
+            text_end: if let Some(last_span) = inner.last() {
+                last_span.end()
+            } else {
+                0
+            },
         }
     }
 
-
-
-    /// Splits the spans at the specified byte position in the string.
-    #[must_use]
-    pub fn split_off(&mut self, pos: usize) -> Self {
-        let mut total_len = 0;
-        for (i, span) in self.inner.iter().enumerate() {
-            let effective_len = self.span_len(span, i).get();
-            total_len += effective_len;
-            if total_len > pos {
-                let tail = Self {
-                    inner: &self.inner[i..],
-                    first_span_len: NonZeroUsize::new(total_len - pos), // always `Some(_)`
-                    last_span_len: None,
-                };
-
-                let last_span_consumed_len = pos - (total_len - effective_len);
-                if last_span_consumed_len > 0 {
-                    self.inner = &self.inner[..=i];
-                    self.last_span_len = NonZeroUsize::new(last_span_consumed_len); // always `Some(_)`
-                } else {
-                    self.inner = &self.inner[..i];
-                    self.last_span_len = None;
-                }
-
-                return tail;
-            }
+    fn transform_span(&self, span: &mut StyledSpan, i: usize) {
+        if i == 0 {
+            span.shrink_len(self.text_start - span.start);
         }
-
-        // If we're here, `pos` is greater or equal the total span length. Then, `split_off()` is a no-op.
-        Self::EMPTY
+        if i + 1 == self.inner.len() {
+            span.shrink_len(span.end() - self.text_end);
+        }
+        span.start = span.start.saturating_sub(self.text_start);
     }
 
-    /// Iterates over the contained spans.
-    pub fn iter(self) -> impl Iterator<Item = StyledSpan> + 'a {
+    pub(crate) fn get(&self, index: usize) -> Option<StyledSpan> {
+        let mut span = *self.inner.get(index)?;
+        self.transform_span(&mut span, index);
+        Some(span)
+    }
+
+    pub(crate) fn iter(
+        self,
+    ) -> impl ExactSizeIterator<Item = StyledSpan> + DoubleEndedIterator + 'a {
         self.inner
             .iter()
             .copied()
             .enumerate()
             .map(move |(i, mut span)| {
-                span.len = self.span_len(&span, i);
+                self.transform_span(&mut span, i);
                 span
             })
     }
 
-    /// Collects these spans to a vector.
-    pub fn to_vec(self) -> Vec<StyledSpan> {
-        let mut output = self.inner.to_vec();
-        let span_count = output.len();
-        if let Some(first) = output.first_mut() {
-            first.len = self.span_len(first, 0);
-        }
-        if let Some(last) = output.last_mut() {
-            last.len = self.span_len(last, span_count - 1);
-        }
-        output
+    #[cfg(test)]
+    pub(crate) fn as_full_slice(self) -> &'a [StyledSpan] {
+        assert_eq!(
+            self.text_start,
+            self.inner.first().map_or(0, StyledSpan::end)
+        );
+        assert_eq!(self.text_end, self.inner.last().map_or(0, StyledSpan::end));
+        self.inner
+    }
+
+    pub(crate) fn split_at(&self, mid: usize) -> (Self, Self) {
+        assert!(
+            mid <= self.text_end - self.text_start,
+            "`mid` is out of bounds"
+        );
+
+        let mid_in_original_text = self.text_start + mid;
+        let span_idx = self
+            .inner
+            .binary_search_by_key(&mid_in_original_text, StyledSpan::end);
+        let (start_spans, end_spans) = match span_idx {
+            // `mid` is at the span boundary
+            Ok(idx) => self.inner.split_at(idx),
+            // `mid` is not at the boundary, so span #idx should be included in both slices
+            Err(idx) => (&self.inner[..=idx], &self.inner[idx..]),
+        };
+
+        let start = Self {
+            inner: start_spans,
+            text_start: self.text_start,
+            text_end: mid,
+        };
+        let end = Self {
+            inner: end_spans,
+            text_start: mid,
+            text_end: self.text_end,
+        };
+        (start, end)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use anstyle::Style;
-
-    use super::*;
-
-    #[test]
-    fn spans_slice_basics() {
-        let spans = &[
-            StyledSpan {
-                len: NonZeroUsize::new(5).unwrap(),
-                style: Style::new(),
-            },
-            StyledSpan {
-                len: NonZeroUsize::new(3).unwrap(),
-                style: Style::new().bold(),
-            },
-        ];
-        let mut spans = SpansSlice::new(spans);
-
-        assert_eq!(
-            spans.iter().collect::<Vec<_>>(),
-            [
-                StyledSpan::new(Style::new(), 5),
-                StyledSpan::new(Style::new().bold(), 3),
-            ]
-        );
-
-        let tail = spans.split_off(6);
-        assert_eq!(
-            tail.iter().collect::<Vec<_>>(),
-            [StyledSpan::new(Style::new().bold(), 2)]
-        );
-        assert_eq!(
-            spans.iter().collect::<Vec<_>>(),
-            [
-                StyledSpan::new(Style::new(), 5),
-                StyledSpan::new(Style::new().bold(), 1),
-            ]
-        );
-
-        let tail = spans.split_off(5);
-        assert_eq!(
-            tail.iter().collect::<Vec<_>>(),
-            [StyledSpan::new(Style::new().bold(), 1)]
-        );
-        assert_eq!(
-            spans.iter().collect::<Vec<_>>(),
-            [StyledSpan::new(Style::new(), 5)]
-        );
-
-        let tail = spans.split_off(3);
-        assert_eq!(
-            tail.iter().collect::<Vec<_>>(),
-            [StyledSpan::new(Style::new(), 2)]
-        );
-        assert_eq!(
-            spans.iter().collect::<Vec<_>>(),
-            [StyledSpan::new(Style::new(), 3)]
-        );
+impl PartialEq for SpansSlice<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.len() == other.inner.len() && self.iter().eq(other.iter())
     }
+}
 
-    #[test]
-    fn splitting_span_from_both_sides() {
-        let spans = &[StyledSpan::new(Style::new(), 5)];
-        let mut spans = SpansSlice::new(spans);
-        let mut tail = spans.split_off(2);
-        let _ = tail.split_off(1);
-
-        assert_eq!(tail.first_span_len, NonZeroUsize::new(3));
-        assert_eq!(tail.last_span_len, NonZeroUsize::new(1));
-        assert_eq!(
-            tail.iter().collect::<Vec<_>>(),
-            [StyledSpan::new(Style::new(), 1)]
-        );
+impl AsSpansSlice for SpansSlice<'_> {
+    fn as_slice(&self) -> SpansSlice<'_> {
+        *self
     }
 }
