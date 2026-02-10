@@ -7,6 +7,7 @@ use anstyle::Style;
 use super::{slice::SpansSlice, spans::StyledSpan};
 use crate::{
     Diff, Lines, RichStyle, SpanStr, StyleDiff, StyledString, TextDiff, rich_parser::EscapedText,
+    utils,
 };
 
 /// ANSI-styled text.
@@ -49,12 +50,11 @@ impl<'a> StyledStr<'a> {
     /// assert!(styled!("Hello").is_plain());
     /// assert!(!styled!("[[green]]Hello").is_plain());
     /// ```
-    // TODO: can be made const fn
-    pub fn is_plain(&self) -> bool {
+    pub const fn is_plain(&self) -> bool {
         if self.spans.len() > 1 {
             return false;
         }
-        self.spans.get(0).is_none_or(|span| span.style.is_plain())
+        matches!(self.spans.get(0), Some(span) if span.style.is_plain())
     }
 
     /// Returns the unstyled text.
@@ -85,7 +85,8 @@ impl<'a> StyledStr<'a> {
     /// # Panics
     ///
     /// Panics in the same situations as [`crate::types::str::split_at()`].
-    pub fn split_at(self, mid: usize) -> (Self, Self) {
+    #[allow(clippy::incompatible_msrv)] // FIXME
+    pub const fn split_at(self, mid: usize) -> (Self, Self) {
         let (start_text, end_text) = self.text.split_at(mid);
         let (start_spans, end_spans) = self.spans.split_at(mid);
         let start = Self {
@@ -106,9 +107,12 @@ impl<'a> StyledStr<'a> {
             .map(|span| Self::map_span(self.text, span))
     }
 
-    fn map_span(text: &'a str, span: StyledSpan) -> SpanStr<'a> {
+    const fn map_span(text: &'a str, span: StyledSpan) -> SpanStr<'a> {
         SpanStr {
-            text: &text[span.start..span.end()],
+            text: unsafe {
+                // SAFETY: span ranges always address valid char ranges in `text` by construction
+                utils::const_slice_unchecked(text, span.start..span.end())
+            },
             style: span.style,
         }
     }
@@ -130,9 +134,10 @@ impl<'a> StyledStr<'a> {
     /// let span = styled.span(2).unwrap();
     /// assert_eq!(span.text, "(2 min ago)");
     /// ```
-    // TODO: can be made const fn
-    pub fn span(&self, span_idx: usize) -> Option<SpanStr<'a>> {
-        let span = self.spans.get(span_idx)?;
+    pub const fn span(&self, span_idx: usize) -> Option<SpanStr<'a>> {
+        let Some(span) = self.spans.get(span_idx) else {
+            return None;
+        };
         Some(Self::map_span(self.text, span))
     }
 
@@ -150,12 +155,13 @@ impl<'a> StyledStr<'a> {
     /// assert_eq!(span.text, "(2 min ago)");
     /// assert_eq!(span.style.get_effects(), Effects::ITALIC | Effects::DIMMED);
     /// ```
-    // TODO: can be made const fn
-    pub fn span_at(&self, text_pos: usize) -> Option<SpanStr<'a>> {
+    pub const fn span_at(&self, text_pos: usize) -> Option<SpanStr<'a>> {
         if text_pos >= self.text.len() {
             return None;
         }
-        let span = self.spans.get_by_text_pos(text_pos)?;
+        let Some(span) = self.spans.get_by_text_pos(text_pos) else {
+            return None;
+        };
         Some(Self::map_span(self.text, span))
     }
 

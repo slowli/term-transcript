@@ -36,6 +36,37 @@ const SIMPLE_STYLES: &[StyledSpan] = {
     ]
 };
 
+const fn const_eq(lhs: &str, rhs: &str) -> bool {
+    if lhs.len() != rhs.len() {
+        return false;
+    }
+
+    let (lhs, rhs) = (lhs.as_bytes(), rhs.as_bytes());
+    let mut pos = 0;
+    while pos < lhs.len() {
+        if lhs[pos] != rhs[pos] {
+            return false;
+        }
+        pos += 1;
+    }
+    true
+}
+
+// Check that access methods work in compile time.
+const SIMPLE_STYLED_PARTS: (StyledStr, StyledStr) = {
+    assert!(const_eq(SIMPLE_STYLED.text(), "Hello world!"));
+
+    let first_span = SIMPLE_STYLED.span(0).unwrap();
+    assert!(!first_span.style.is_plain());
+    assert!(const_eq(first_span.text, "Hello"));
+
+    let second_span = SIMPLE_STYLED.span_at(7).unwrap();
+    assert!(const_eq(second_span.text, " world"));
+    assert!(second_span.style.is_plain());
+
+    SIMPLE_STYLED.split_at(4)
+};
+
 #[test]
 fn parsing_styled_str() {
     assert_eq!(StyledStr::capacities(SIMPLE_INPUT), (12, 3));
@@ -58,6 +89,14 @@ fn parsing_styled_str() {
 fn parsing_styled_in_compile_time() {
     assert_eq!(SIMPLE_STYLED.text(), "Hello world!");
     assert_eq!(SIMPLE_STYLED.spans.as_full_slice(), SIMPLE_STYLES);
+    assert_eq!(
+        SIMPLE_STYLED_PARTS.0.to_string(),
+        "[[bold underline magenta on yellow!]]Hell"
+    );
+    assert_eq!(
+        SIMPLE_STYLED_PARTS.1.to_string(),
+        "[[bold underline magenta on yellow!]]o[[/]] world[[bold strike invert]]!"
+    );
 
     SIMPLE_STYLED.diff(SIMPLE_STYLED).unwrap();
 }

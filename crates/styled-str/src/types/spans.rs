@@ -31,13 +31,9 @@ impl StyledSpan {
         self.len = self.len.checked_add(add).expect("length overflow");
     }
 
-    pub(crate) fn shrink_len(&mut self, sub: usize) {
-        self.len = self
-            .len
-            .get()
-            .checked_sub(sub)
-            .and_then(NonZeroUsize::new)
-            .expect("length underflow");
+    pub(crate) const fn shrink_len(&mut self, sub: usize) {
+        let new_len = self.len.get().checked_sub(sub).expect("length underflow");
+        self.len = NonZeroUsize::new(new_len).expect("length underflow");
     }
 }
 
