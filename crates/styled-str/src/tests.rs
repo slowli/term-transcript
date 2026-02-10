@@ -105,11 +105,19 @@ fn parsing_with_unstyled_ends() {
     const STYLED: StyledStr = styled!(TEST_INPUT);
 
     assert_eq!(STYLED.text(), "test.rs: [[DEBUG]] Hello");
-    // FIXME: assert on spans
+    let green = Style::new()
+        .bold()
+        .fg_color(Some(AnsiColor::BrightGreen.into()));
+    let expected_spans = [
+        SpanStr::new("test.rs: [", Style::new()),
+        SpanStr::new("[DEBUG]", green),
+        SpanStr::new("] Hello", Style::new()),
+    ];
+    assert_eq!(STYLED.spans().collect::<Vec<_>>(), expected_spans);
 
     let styled: StyledString = TEST_INPUT.parse().unwrap();
     assert_eq!(styled.text, "test.rs: [[DEBUG]] Hello");
-    // FIXME: assert on spans
+    assert_eq!(styled.as_ref().spans().collect::<Vec<_>>(), expected_spans);
 
     assert_eq!(
         styled.to_string(),
@@ -324,4 +332,59 @@ fn redundant_negation_errors() {
     let err = raw.parse::<StyledString>().unwrap_err();
     assert_matches!(err.kind(), ParseErrorKind::RedundantNegation);
     assert_eq!(err.pos(), 22..25);
+}
+
+#[test]
+fn splitting_styled_string() {
+    let styled = styled!("Hello, [[it green]]world[[/]]!");
+    let (start, end) = styled.split_at(4);
+    assert_eq!(start, styled!("Hell"));
+    assert_eq!(end, styled!("o, [[it green]]world[[/]]!"));
+
+    let (_, end) = end.split_at(3);
+    assert_eq!(end, styled!("[[it green]]world[[/]]!"));
+
+    let (start, end) = end.split_at(5);
+    assert_eq!(start, styled!("[[it green]]world"));
+    assert_eq!(end, styled!("!"));
+}
+
+#[test]
+fn no_op_splitting() {
+    let styled = styled!("Hello, [[it green]]world[[/]]!");
+    let (start, end) = styled.split_at(0);
+    assert_eq!(end, styled);
+    assert!(start.is_empty());
+    assert_eq!(start, styled!(""));
+
+    let (start, end) = styled.split_at(styled.text().len());
+    assert_eq!(start, styled);
+    assert!(end.is_empty());
+    assert_eq!(end, styled!(""));
+}
+
+#[test]
+fn string_builder_basics() {
+    let mut builder = StyledString::builder();
+    builder.push_str(StyledStr::default());
+    builder.push_text("\n");
+    builder.push_str(StyledStr::default());
+    builder.push_text("\n");
+    builder.push_str(styled!("[[green]]Hello"));
+    assert_eq!(builder.build(), styled!("\n\n[[green]]Hello"));
+}
+
+#[test]
+fn lines_iterator() {
+    let styled = styled!("\n\n[[green]]Hello");
+    let lines: Vec<_> = styled.lines().collect();
+
+    assert_eq!(
+        lines,
+        [
+            StyledStr::default(),
+            StyledStr::default(),
+            styled!("[[green]]Hello")
+        ]
+    );
 }

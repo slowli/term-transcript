@@ -1,10 +1,10 @@
 //! Property testing for styled strings.
 
-use std::{num::NonZeroUsize, ops};
+use std::{fmt::Write as _, num::NonZeroUsize, ops};
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 use proptest::{num, prelude::*};
-use styled_str::StyledString;
+use styled_str::{StyledStr, StyledString};
 
 fn effects() -> impl Strategy<Value = Effects> {
     proptest::bits::u8::between(0, 6).prop_map(|val| {
@@ -155,6 +155,20 @@ fn styled_string(
         })
 }
 
+fn assert_spans_iterator(styled: StyledStr<'_>) -> Result<(), TestCaseError> {
+    let mut prev_style = None;
+    let mut text = String::new();
+    for span_str in styled.spans() {
+        if let Some(prev_style) = prev_style {
+            prop_assert_ne!(prev_style, span_str.style);
+        }
+        prev_style = Some(span_str.style);
+        text += span_str.text;
+    }
+    prop_assert_eq!(text, styled.text());
+    Ok(())
+}
+
 const VISIBLE_ASCII: &str = r"[\n\t\x20-\x7e]{1,32}";
 const ANY_CHARS: &str = r"[^\x1b\r]{1,32}";
 
@@ -189,16 +203,11 @@ proptest! {
 
     #[test]
     fn styles_are_optimized(styled in styled_string(r"[\n\t\x20-\x7e]{32}", 2..=5)) {
-        for window in styled.spans().windows(2) {
-            let [_prev, _next] = window else {
-                unreachable!();
-            };
-            // FIXME: prop_assert_ne!(prev.style, next.style);
-        }
+        assert_spans_iterator(styled.as_ref())?;
     }
 
     #[test]
-    fn splitting_styled_string(
+    fn concatenating_styled_strings(
         start in styled_string(r"[^\x1b\r]{32}", 1..=5),
         end in styled_string(r"[^\x1b\r]{32}", 1..=5),
     ) {
@@ -212,5 +221,41 @@ proptest! {
         let concat_ansi = format!("{}{}", start.ansi(), end.ansi());
         let concat_ansi = StyledString::from_ansi(&concat_ansi)?;
         prop_assert_eq!(concat_ansi, concat);
+    }
+
+    #[test]
+    fn splitting_styled_string(
+        (pos, styled) in styled_string(r"[\x20-\x7e]{32}", 1..=5).prop_flat_map(|string| {
+            (0..=string.text().len(), Just(string))
+        })
+    ) {
+        let (start, end) = styled.as_ref().split_at(pos);
+        prop_assert_eq!(styled.text().len(), start.text().len() + end.text().len());
+        prop_assert!(styled.text().starts_with(start.text()));
+        prop_assert!(styled.text().ends_with(end.text()));
+
+        assert_spans_iterator(start)?;
+        assert_spans_iterator(end)?;
+    }
+
+    #[test]
+    fn lines_in_styled_string(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+        let mut builder = StyledString::builder();
+        let mut ansi_str = String::new();
+        for line in styled.as_ref().lines() {
+            builder.push_str(line);
+            builder.push_text("\n");
+            writeln!(&mut ansi_str, "{}", line.ansi()).unwrap();
+        }
+
+        let mut recovered = builder.build();
+        if !styled.text().ends_with('\n') {
+            prop_assert_eq!(ansi_str.pop(), Some('\n'));
+            prop_assert_eq!(recovered.pop().map(|(ch, _)| ch), Some('\n'));
+        }
+        let recovered_ansi = StyledString::from_ansi(&ansi_str)?;
+        // The recovered string may differ in newline styling, but this must not matter when creating a diff
+        recovered_ansi.diff(&styled)?;
+        recovered.diff(&styled)?;
     }
 }

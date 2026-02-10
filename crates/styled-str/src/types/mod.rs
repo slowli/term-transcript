@@ -3,8 +3,10 @@
 use core::{fmt, mem, num::NonZeroUsize, ops};
 
 use anstyle::Style;
+use compile_fmt::compile_panic;
 
 pub use self::{
+    lines::Lines,
     slice::{AsSpansSlice, SpansSlice, SpansVec},
     traits::PopChar,
 };
@@ -16,7 +18,7 @@ use crate::{
     utils::{Stack, StackStr, normalize_style},
 };
 
-//mod lines;
+mod lines;
 mod slice;
 mod traits;
 
@@ -110,11 +112,53 @@ impl StyledStringBuilder {
         self.inner.spans.0.push(span);
     }
 
+    /// Pushes a styled string at the end of this string.
+    pub fn push_str(&mut self, s: StyledStr<'_>) {
+        // Flush the current style so that `self.inner` is well-formed, which `StyledString::push_str()` relies upon.
+        self.push_style(self.current_style);
+        self.inner.push_str(s);
+
+        if let Some(last_span) = self.inner.spans.0.last() {
+            self.current_style = last_span.style;
+        }
+    }
+
     /// Finalizes the [`StyledString`].
     pub fn build(mut self) -> StyledString {
         // Push the last style span covering the non-spanned text
         self.push_style(Style::new());
         self.inner
+    }
+}
+
+/// Text with a uniform [`Style`] attached to it. Returned by the [`StyledStr::spans()`] iterator.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpanStr<'a> {
+    /// Unstyled text.
+    pub text: &'a str,
+    /// Style applied to the text.
+    pub style: Style,
+}
+
+impl<'a> SpanStr<'a> {
+    /// Creates a string spanned with the specified style.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `text` contains `\x1b` escapes.
+    pub const fn new(text: &'a str, style: Style) -> Self {
+        let text_bytes = text.as_bytes();
+        let mut pos = 0;
+        while pos < text_bytes.len() {
+            if text_bytes[pos] == 0x1b {
+                compile_panic!(
+                    "text contains \\x1b escape, first at position ",
+                    pos => compile_fmt::fmt::<usize>()
+                );
+            }
+            pos += 1;
+        }
+        Self { text, style }
     }
 }
 
@@ -178,9 +222,17 @@ impl<'a> StyledStr<'a> {
         (start, end)
     }
 
+    /// Iterates over spans contained in this string.
+    pub fn spans(&self) -> impl ExactSizeIterator<Item = SpanStr<'a>> + DoubleEndedIterator + 'a {
+        self.spans.iter().map(|span| SpanStr {
+            text: &self.text[span.start..span.end()],
+            style: span.style,
+        })
+    }
+
     /// Splits this text by lines.
-    pub fn lines(self) {
-        todo!()
+    pub fn lines(self) -> Lines<'a> {
+        Lines::new(self)
     }
 }
 
@@ -220,8 +272,6 @@ impl StyledString {
 
     /// Pushes another styled string at the end of this one.
     pub fn push_str(&mut self, other: StyledStr<'_>) {
-        self.text.push_str(other.text);
-
         let mut copied_spans = other.spans.iter();
         if let (Some(last), Some(next)) = (self.spans.0.last_mut(), other.spans.get(0)) {
             if last.style == next.style {
@@ -231,11 +281,13 @@ impl StyledString {
         }
 
         // We need to offset the newly added spans, so that their start positions are correct.
-        let offset = self.spans.0.last().map_or(0, StyledSpan::end);
+        let offset = self.text.len();
         self.spans.0.extend(copied_spans.map(|mut span| {
             span.start += offset;
             span
         }));
+
+        self.text.push_str(other.text);
     }
 }
 
@@ -247,6 +299,11 @@ where
     /// Returns the unstyled text.
     pub fn text(&self) -> &str {
         &self.text
+    }
+
+    /// Checks whether this string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty()
     }
 
     /// Returns a borrowed version of this string.
@@ -319,29 +376,15 @@ where
     }
 }
 
-// FIXME: This may be generalized to span slices
-impl<T> Styled<T, SpansVec>
+impl<T, S> Styled<T, S>
 where
     T: ops::Deref<Target = str> + PopChar,
+    S: AsSpansSlice,
 {
     /// Pops a single char from the end of the string.
-    #[allow(clippy::missing_panics_doc)] // internal errors; should never be triggered
     pub fn pop(&mut self) -> Option<(char, Style)> {
         let ch = self.text.pop_char()?;
-        let ch_len = ch.len_utf8();
-
-        let last_span = self
-            .spans
-            .0
-            .last_mut()
-            .expect("internal error: text is empty, but spans aren't");
-        assert!(last_span.len.get() >= ch_len, "style span divides char");
-        let style = last_span.style;
-        if let Some(new_len) = NonZeroUsize::new(last_span.len.get() - ch_len) {
-            last_span.len = new_len;
-        } else {
-            self.spans.0.pop();
-        }
+        let style = self.spans.pop_char(ch.len_utf8());
         Some((ch, style))
     }
 }
@@ -513,6 +556,9 @@ impl fmt::Debug for Diff<'_> {
         fmt::Display::fmt(self, formatter)
     }
 }
+
+#[cfg(feature = "std")]
+impl std::error::Error for Diff<'_> {}
 
 /// Stack-allocated version of [`Styled`] for use in compile-time parsing of rich styling strings.
 #[doc(hidden)]

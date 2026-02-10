@@ -1,9 +1,16 @@
+use std::num::NonZeroUsize;
+
+use anstyle::Style;
+
 use super::StyledSpan;
 
 /// Internal trait for types that can be cheaply converted to a [`SpansSlice`].
 pub trait AsSpansSlice: Clone + Default {
     /// Performs the conversion.
     fn as_slice(&self) -> SpansSlice<'_>;
+
+    #[doc(hidden)] // implementation detail
+    fn pop_char(&mut self, char_len: usize) -> Style;
 }
 
 /// Owned container for styled spans.
@@ -17,6 +24,21 @@ impl SpansVec {
 impl AsSpansSlice for SpansVec {
     fn as_slice(&self) -> SpansSlice<'_> {
         SpansSlice::new(&self.0)
+    }
+
+    fn pop_char(&mut self, char_len: usize) -> Style {
+        let last_span = self
+            .0
+            .last_mut()
+            .expect("called `pop_char()` with empty spans");
+        assert!(last_span.len.get() >= char_len, "style span divides char");
+        let style = last_span.style;
+        if let Some(new_len) = NonZeroUsize::new(last_span.len.get() - char_len) {
+            last_span.len = new_len;
+        } else {
+            self.0.pop();
+        }
+        style
     }
 }
 
@@ -44,11 +66,12 @@ impl<'a> SpansSlice<'a> {
     }
 
     fn transform_span(&self, span: &mut StyledSpan, i: usize) {
+        if i + 1 == self.inner.len() {
+            // Must be done first because `span.end()` is affected by `shrink_len()`.
+            span.shrink_len(span.end() - self.text_end);
+        }
         if i == 0 {
             span.shrink_len(self.text_start - span.start);
-        }
-        if i + 1 == self.inner.len() {
-            span.shrink_len(span.end() - self.text_end);
         }
         span.start = span.start.saturating_sub(self.text_start);
     }
@@ -72,11 +95,12 @@ impl<'a> SpansSlice<'a> {
             })
     }
 
+    /// Returns the underlying slice, but only if the text boundaries correspond to the slices.
     #[cfg(test)]
     pub(crate) fn as_full_slice(self) -> &'a [StyledSpan] {
         assert_eq!(
             self.text_start,
-            self.inner.first().map_or(0, StyledSpan::end)
+            self.inner.first().map_or(0, |span| span.start)
         );
         assert_eq!(self.text_end, self.inner.last().map_or(0, StyledSpan::end));
         self.inner
@@ -89,24 +113,28 @@ impl<'a> SpansSlice<'a> {
         );
 
         let mid_in_original_text = self.text_start + mid;
-        let span_idx = self
-            .inner
-            .binary_search_by_key(&mid_in_original_text, StyledSpan::end);
-        let (start_spans, end_spans) = match span_idx {
-            // `mid` is at the span boundary
-            Ok(idx) => self.inner.split_at(idx),
-            // `mid` is not at the boundary, so span #idx should be included in both slices
-            Err(idx) => (&self.inner[..=idx], &self.inner[idx..]),
+        let (start_spans, end_spans) = if mid_in_original_text == 0 {
+            (&[] as &[_], self.inner)
+        } else {
+            let span_idx = self
+                .inner
+                .binary_search_by_key(&mid_in_original_text, StyledSpan::end);
+            match span_idx {
+                // `mid` is at the span boundary
+                Ok(idx) => self.inner.split_at(idx + 1),
+                // `mid` is not at the boundary, so span #idx should be included in both slices
+                Err(idx) => (&self.inner[..=idx], &self.inner[idx..]),
+            }
         };
 
         let start = Self {
             inner: start_spans,
             text_start: self.text_start,
-            text_end: mid,
+            text_end: mid_in_original_text,
         };
         let end = Self {
             inner: end_spans,
-            text_start: mid,
+            text_start: mid_in_original_text,
             text_end: self.text_end,
         };
         (start, end)
@@ -122,5 +150,19 @@ impl PartialEq for SpansSlice<'_> {
 impl AsSpansSlice for SpansSlice<'_> {
     fn as_slice(&self) -> SpansSlice<'_> {
         *self
+    }
+
+    fn pop_char(&mut self, char_len: usize) -> Style {
+        self.text_end -= char_len;
+        assert!(
+            self.text_end >= self.text_start,
+            "called `pop_char()` with empty spans"
+        );
+        // `unwrap()` is safe due to the check above
+        let last_span = self.inner.last().unwrap();
+        if last_span.start >= self.text_end || self.text_start == self.text_end {
+            self.inner = &self.inner[..self.inner.len() - 1];
+        }
+        last_span.style
     }
 }
