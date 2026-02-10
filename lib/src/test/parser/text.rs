@@ -65,7 +65,7 @@ impl TextReadingState {
     }
 
     pub(super) fn take_plaintext(&mut self) -> String {
-        mem::take(&mut self.builder).build().into_parts().0
+        mem::take(&mut self.builder).build().into_text()
     }
 
     fn should_ignore_text(&self) -> bool {

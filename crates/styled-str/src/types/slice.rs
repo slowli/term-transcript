@@ -13,7 +13,7 @@ pub trait AsSpansSlice: Clone + Default {
     fn pop_char(&mut self, char_len: usize) -> Style;
 }
 
-/// Owned container for styled spans.
+/// Owned container for styled spans used by [`StyledString`](crate::StyledString).
 #[derive(Debug, Clone, Default)]
 pub struct SpansVec(pub(crate) Vec<StyledSpan>);
 
@@ -42,7 +42,13 @@ impl AsSpansSlice for SpansVec {
     }
 }
 
-/// Borrowed slice of styled spans.
+/// Borrowed slice of styled spans used by [`StyledStr`](crate::StyledStr).
+///
+/// # Implementation notes
+///
+/// A separate type is used as opposed to a slice `&[_]` both to achieve better encapsulation,
+/// and because we want to not copy span locations when slicing styled strings (including in a middle
+/// of a span). The latter requires maintaining info *in addition* to span locations.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SpansSlice<'a> {
     inner: &'a [StyledSpan],
@@ -76,10 +82,23 @@ impl<'a> SpansSlice<'a> {
         span.start = span.start.saturating_sub(self.text_start);
     }
 
+    pub(crate) fn len(&self) -> usize {
+        self.inner.len()
+    }
+
     pub(crate) fn get(&self, index: usize) -> Option<StyledSpan> {
         let mut span = *self.inner.get(index)?;
         self.transform_span(&mut span, index);
         Some(span)
+    }
+
+    pub(crate) fn get_by_text_pos(&self, text_pos: usize) -> Option<StyledSpan> {
+        let pos_in_original_text = text_pos + self.text_start;
+        let idx = self
+            .inner
+            .binary_search_by_key(&pos_in_original_text, |span| span.start);
+        let idx = idx.unwrap_or_else(|idx| idx - 1);
+        self.get(idx)
     }
 
     pub(crate) fn iter(
@@ -114,6 +133,8 @@ impl<'a> SpansSlice<'a> {
 
         let mid_in_original_text = self.text_start + mid;
         let (start_spans, end_spans) = if mid_in_original_text == 0 {
+            // Special case; the general logic would always return at least the first item from `self.inner`
+            // in `start_spans`.
             (&[] as &[_], self.inner)
         } else {
             let span_idx = self

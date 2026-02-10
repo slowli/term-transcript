@@ -198,7 +198,7 @@ mod alloc {
 ///      [[strike]]bad[[/]] happened"
 /// );
 /// assert_eq!(STYLED.text(), "ERROR: Something bad happened");
-/// assert_eq!(STYLED.spans()[0].len.get(), "ERROR:".len());
+/// assert_eq!(STYLED.span(0).unwrap().text, "ERROR:");
 /// ```
 #[macro_export]
 macro_rules! styled {

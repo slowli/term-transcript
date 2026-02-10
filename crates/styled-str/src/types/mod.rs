@@ -160,6 +160,15 @@ impl<'a> SpanStr<'a> {
         }
         Self { text, style }
     }
+
+    /// Creates a string with the default style.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `text` contains `\x1b` escapes.
+    pub const fn plain(text: &'a str) -> Self {
+        Self::new(text, Style::new())
+    }
 }
 
 /// ANSI-styled text.
@@ -224,10 +233,62 @@ impl<'a> StyledStr<'a> {
 
     /// Iterates over spans contained in this string.
     pub fn spans(&self) -> impl ExactSizeIterator<Item = SpanStr<'a>> + DoubleEndedIterator + 'a {
-        self.spans.iter().map(|span| SpanStr {
-            text: &self.text[span.start..span.end()],
+        self.spans
+            .iter()
+            .map(|span| Self::map_span(self.text, span))
+    }
+
+    fn map_span(text: &'a str, span: StyledSpan) -> SpanStr<'a> {
+        SpanStr {
+            text: &text[span.start..span.end()],
             style: span.style,
-        })
+        }
+    }
+
+    /// Returns a span by the *span* index.
+    ///
+    /// Use [`Self::span_at()`] if you need to locate the span covering the specified position in the text.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// # use anstyle::AnsiColor;
+    /// let styled = styled!("[[bold blue!]]INFO[[/]] [[dim it]](2 min ago)[[/]] Important");
+    /// let span = styled.span(0).unwrap();
+    /// assert_eq!(span.text, "INFO");
+    /// assert_eq!(span.style.get_fg_color(), Some(AnsiColor::BrightBlue.into()));
+    ///
+    /// let span = styled.span(2).unwrap();
+    /// assert_eq!(span.text, "(2 min ago)");
+    /// ```
+    // TODO: can be made const fn
+    pub fn span(&self, span_idx: usize) -> Option<SpanStr<'a>> {
+        let span = self.spans.get(span_idx)?;
+        Some(Self::map_span(self.text, span))
+    }
+
+    /// Looks up a span covering the specified position in the unstyled text.
+    ///
+    /// Use [`Self::span()`] if you need to locate the span by its index.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// # use anstyle::Effects;
+    /// let styled = styled!("[[bold blue!]]INFO[[/]] [[dim it]](2 min ago)[[/]] Important");
+    /// let span = styled.span_at(7).unwrap();
+    /// assert_eq!(span.text, "(2 min ago)");
+    /// assert_eq!(span.style.get_effects(), Effects::ITALIC | Effects::DIMMED);
+    /// ```
+    // TODO: can be made const fn
+    pub fn span_at(&self, text_pos: usize) -> Option<SpanStr<'a>> {
+        if text_pos >= self.text.len() {
+            return None;
+        }
+        let span = self.spans.get_by_text_pos(text_pos)?;
+        Some(Self::map_span(self.text, span))
     }
 
     /// Splits this text by lines.
@@ -306,6 +367,24 @@ where
         self.text.is_empty()
     }
 
+    /// Checks whether this string is plain (doesn't include non-default styled spans).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::{StyledStr, styled};
+    /// assert!(StyledStr::default().is_plain());
+    /// assert!(styled!("Hello").is_plain());
+    /// assert!(!styled!("[[green]]Hello").is_plain());
+    /// ```
+    pub fn is_plain(&self) -> bool {
+        let spans = self.spans.as_slice();
+        if spans.len() > 1 {
+            return false;
+        }
+        spans.get(0).is_none_or(|span| span.style.is_plain())
+    }
+
     /// Returns a borrowed version of this string.
     pub fn as_ref(&self) -> StyledStr<'_> {
         Styled {
@@ -314,9 +393,9 @@ where
         }
     }
 
-    /// Splits this string into parts (the text and [`StyledSpan`]s).
-    pub fn into_parts(self) -> (T, S) {
-        (self.text, self.spans)
+    /// Returns the unstyled text behind this string.
+    pub fn into_text(self) -> T {
+        self.text
     }
 
     /// Diffs this against the `other` styled string.
@@ -465,7 +544,7 @@ where
 ///      <   Hello, world\n\
 ///      >   Hello world!"
 /// );
-/// assert!(!diff_str.spans().is_empty());
+/// assert!(!diff_str.is_plain());
 /// # anyhow::Ok(())
 /// ```
 #[derive(Debug)]

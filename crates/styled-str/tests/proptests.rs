@@ -258,4 +258,21 @@ proptest! {
         recovered_ansi.diff(&styled)?;
         recovered.diff(&styled)?;
     }
+
+    #[test]
+    fn looking_up_spans(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+        let styled = styled.as_ref();
+        let mut spans_iter = styled.spans().peekable();
+        let mut span_start = 0;
+        for pos in 0..styled.text().len() {
+            let expected = spans_iter.peek().unwrap();
+            let span = styled.span_at(pos).unwrap();
+            assert_eq!(span, *expected);
+
+            if span_start + expected.text.len() == pos + 1 {
+                spans_iter.next();
+                span_start = pos + 1;
+            }
+        }
+    }
 }

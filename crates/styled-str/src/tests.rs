@@ -388,3 +388,33 @@ fn lines_iterator() {
         ]
     );
 }
+
+#[test]
+fn getting_spans() {
+    let styled = styled!("[[green]]Hello, [[inverted]]world[[/]]!");
+    let span = styled.span(0).unwrap();
+    assert_eq!(span.text, "Hello, ");
+    assert_eq!(span.style, AnsiColor::Green.on_default());
+
+    let span = styled.span(1).unwrap();
+    assert_eq!(span.text, "world");
+    assert_eq!(span.style, Style::new().invert());
+
+    let span = styled.span(2).unwrap();
+    assert_eq!(span.text, "!");
+    assert_eq!(span.style, Style::new());
+
+    assert_eq!(styled.span(3), None);
+
+    let span = styled.span_at(0).unwrap();
+    assert_eq!(span, SpanStr::new("Hello, ", AnsiColor::Green.on_default()));
+    let span = styled.span_at(3).unwrap();
+    assert_eq!(span, SpanStr::new("Hello, ", AnsiColor::Green.on_default()));
+    let span = styled.span_at(7).unwrap();
+    assert_eq!(span, SpanStr::new("world", Style::new().invert()));
+    assert_eq!(
+        styled.span_at(styled.text().len() - 1).unwrap(),
+        SpanStr::plain("!")
+    );
+    assert_eq!(styled.span_at(styled.text().len()), None);
+}
