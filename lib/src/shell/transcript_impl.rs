@@ -289,7 +289,7 @@ impl Transcript {
             )?;
             let response = StyledString::from_ansi(&response).map_err(map_ansi_error)?;
 
-            status_check.check(response.as_ref())
+            status_check.check(response.as_str())
         } else {
             None
         };

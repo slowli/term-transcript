@@ -12,7 +12,7 @@ pub(super) fn split_into_lines(
     let max_width = max_width.unwrap_or(usize::MAX);
     str.lines()
         .flat_map(|mut line| {
-            let text = line.into_text();
+            let text = line.text();
             let mut line_start = 0;
             let mut split_lines = Vec::with_capacity(1);
             let mut current_width = 0;

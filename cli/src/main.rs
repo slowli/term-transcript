@@ -291,7 +291,7 @@ impl Command {
             if color == ColorChoice::Never {
                 writeln!(out, "{}", interaction.output().text())?;
             } else {
-                write!(out, "{}", interaction.output().ansi())?;
+                write!(out, "{}", interaction.output().as_str().ansi())?;
                 if !interaction.output().text().ends_with('\n') {
                     writeln!(out)?;
                 }

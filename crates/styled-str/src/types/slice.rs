@@ -1,46 +1,6 @@
-use std::num::NonZeroUsize;
-
 use anstyle::Style;
 
-use super::StyledSpan;
-
-/// Internal trait for types that can be cheaply converted to a [`SpansSlice`].
-pub trait AsSpansSlice: Clone + Default {
-    /// Performs the conversion.
-    fn as_slice(&self) -> SpansSlice<'_>;
-
-    #[doc(hidden)] // implementation detail
-    fn pop_char(&mut self, char_len: usize) -> Style;
-}
-
-/// Owned container for styled spans used by [`StyledString`](crate::StyledString).
-#[derive(Debug, Clone, Default)]
-pub struct SpansVec(pub(crate) Vec<StyledSpan>);
-
-impl SpansVec {
-    pub(crate) const EMPTY: Self = Self(Vec::new());
-}
-
-impl AsSpansSlice for SpansVec {
-    fn as_slice(&self) -> SpansSlice<'_> {
-        SpansSlice::new(&self.0)
-    }
-
-    fn pop_char(&mut self, char_len: usize) -> Style {
-        let last_span = self
-            .0
-            .last_mut()
-            .expect("called `pop_char()` with empty spans");
-        assert!(last_span.len.get() >= char_len, "style span divides char");
-        let style = last_span.style;
-        if let Some(new_len) = NonZeroUsize::new(last_span.len.get() - char_len) {
-            last_span.len = new_len;
-        } else {
-            self.0.pop();
-        }
-        style
-    }
-}
+use super::spans::StyledSpan;
 
 /// Borrowed slice of styled spans used by [`StyledStr`](crate::StyledStr).
 ///
@@ -50,7 +10,7 @@ impl AsSpansSlice for SpansVec {
 /// and because we want to not copy span locations when slicing styled strings (including in a middle
 /// of a span). The latter requires maintaining info *in addition* to span locations.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct SpansSlice<'a> {
+pub(crate) struct SpansSlice<'a> {
     inner: &'a [StyledSpan],
     /// Byte positions in the sliced plaintext. It would be more idiomatic to use `ops::Range<usize>`,
     /// but it doesn't implement `Copy`.
@@ -160,20 +120,8 @@ impl<'a> SpansSlice<'a> {
         };
         (start, end)
     }
-}
 
-impl PartialEq for SpansSlice<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner.len() == other.inner.len() && self.iter().eq(other.iter())
-    }
-}
-
-impl AsSpansSlice for SpansSlice<'_> {
-    fn as_slice(&self) -> SpansSlice<'_> {
-        *self
-    }
-
-    fn pop_char(&mut self, char_len: usize) -> Style {
+    pub(crate) fn pop_char(&mut self, char_len: usize) -> Style {
         self.text_end -= char_len;
         assert!(
             self.text_end >= self.text_start,
@@ -185,5 +133,11 @@ impl AsSpansSlice for SpansSlice<'_> {
             self.inner = &self.inner[..self.inner.len() - 1];
         }
         last_span.style
+    }
+}
+
+impl PartialEq for SpansSlice<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.len() == other.inner.len() && self.iter().eq(other.iter())
     }
 }

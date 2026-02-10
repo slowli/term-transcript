@@ -182,7 +182,7 @@ proptest! {
 
     #[test]
     fn styled_ascii_string_roundtrip_via_ansi(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
-        let ansi_str = styled.ansi().to_string();
+        let ansi_str = styled.as_str().ansi().to_string();
         let parsed: StyledString = StyledString::from_ansi(&ansi_str)?;
         prop_assert_eq!(styled, parsed);
     }
@@ -196,14 +196,14 @@ proptest! {
 
     #[test]
     fn styled_string_roundtrip_via_ansi(styled in styled_string(ANY_CHARS, 1..=5)) {
-        let ansi_str = styled.ansi().to_string();
+        let ansi_str = styled.as_str().ansi().to_string();
         let parsed: StyledString = StyledString::from_ansi(&ansi_str)?;
         prop_assert_eq!(styled, parsed);
     }
 
     #[test]
     fn styles_are_optimized(styled in styled_string(r"[\n\t\x20-\x7e]{32}", 2..=5)) {
-        assert_spans_iterator(styled.as_ref())?;
+        assert_spans_iterator(styled.as_str())?;
     }
 
     #[test]
@@ -212,13 +212,13 @@ proptest! {
         end in styled_string(r"[^\x1b\r]{32}", 1..=5),
     ) {
         let mut concat = start.clone();
-        concat.push_str(end.as_ref());
+        concat.push_str(end.as_str());
 
         prop_assert_eq!(concat.text().len(), start.text().len() + end.text().len());
         prop_assert!(concat.text().starts_with(start.text()));
         prop_assert!(concat.text().ends_with(end.text()));
 
-        let concat_ansi = format!("{}{}", start.ansi(), end.ansi());
+        let concat_ansi = format!("{}{}", start.as_str().ansi(), end.as_str().ansi());
         let concat_ansi = StyledString::from_ansi(&concat_ansi)?;
         prop_assert_eq!(concat_ansi, concat);
     }
@@ -229,7 +229,7 @@ proptest! {
             (0..=string.text().len(), Just(string))
         })
     ) {
-        let (start, end) = styled.as_ref().split_at(pos);
+        let (start, end) = styled.as_str().split_at(pos);
         prop_assert_eq!(styled.text().len(), start.text().len() + end.text().len());
         prop_assert!(styled.text().starts_with(start.text()));
         prop_assert!(styled.text().ends_with(end.text()));
@@ -242,7 +242,7 @@ proptest! {
     fn lines_in_styled_string(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
         let mut builder = StyledString::builder();
         let mut ansi_str = String::new();
-        for line in styled.as_ref().lines() {
+        for line in styled.as_str().lines() {
             builder.push_str(line);
             builder.push_text("\n");
             writeln!(&mut ansi_str, "{}", line.ansi()).unwrap();
@@ -255,13 +255,13 @@ proptest! {
         }
         let recovered_ansi = StyledString::from_ansi(&ansi_str)?;
         // The recovered string may differ in newline styling, but this must not matter when creating a diff
-        recovered_ansi.diff(&styled)?;
-        recovered.diff(&styled)?;
+        recovered_ansi.as_str().diff(styled.as_str())?;
+        recovered.as_str().diff(styled.as_str())?;
     }
 
     #[test]
     fn looking_up_spans(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
-        let styled = styled.as_ref();
+        let styled = styled.as_str();
         let mut spans_iter = styled.spans().peekable();
         let mut span_start = 0;
         for pos in 0..styled.text().len() {

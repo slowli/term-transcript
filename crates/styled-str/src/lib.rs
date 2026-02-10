@@ -119,7 +119,7 @@
 //! # use assert_matches::assert_matches;
 //! let left = styled!("Hello, [[bold dim white on #fa4]]world!");
 //! let right = styled!("Hello, [[bold]]world[[/]]!");
-//! let diff = left.diff(&right).unwrap_err();
+//! let diff = left.diff(right).unwrap_err();
 //! assert_matches!(&diff, Diff::Style(_));
 //!
 //! // Will output detailed human-readable info about the diff.
@@ -157,6 +157,7 @@
 #![doc(html_root_url = "https://docs.rs/styled-str/0.5.0-beta.1")]
 // Conditional compilation
 #![cfg_attr(not(feature = "std"), no_std)]
+extern crate core;
 
 pub use crate::{
     ansi_parser::AnsiError,
@@ -164,8 +165,7 @@ pub use crate::{
     rich_parser::{RichStyle, parse_hex_color, rgb_color_to_hex},
     style_diff::StyleDiff,
     types::{
-        AsSpansSlice, Diff, Lines, PopChar, SpanStr, SpansSlice, SpansVec, StackStyled, Styled,
-        StyledStr, StyledString, StyledStringBuilder, TextDiff,
+        Diff, Lines, SpanStr, StackStyled, StyledStr, StyledString, StyledStringBuilder, TextDiff,
     },
 };
 

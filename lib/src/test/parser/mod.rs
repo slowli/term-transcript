@@ -264,7 +264,7 @@ impl InteractionInput {
     }
 
     fn with_empty_output(self) -> Interaction {
-        self.with_output(StyledString::EMPTY)
+        self.with_output(StyledString::default())
     }
 }
 

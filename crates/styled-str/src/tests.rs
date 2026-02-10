@@ -38,7 +38,7 @@ const SIMPLE_STYLES: &[StyledSpan] = {
 
 #[test]
 fn parsing_styled_str() {
-    assert_eq!(Styled::capacities(SIMPLE_INPUT), (12, 3));
+    assert_eq!(StyledStr::capacities(SIMPLE_INPUT), (12, 3));
 
     let styled = StackStyled::<12, 3>::parse(SIMPLE_INPUT).unwrap();
     assert_eq!(styled.text.as_str(), "Hello world!");
@@ -46,7 +46,7 @@ fn parsing_styled_str() {
 
     let styled: StyledString = SIMPLE_INPUT.parse().unwrap();
     assert_eq!(styled.text, "Hello world!");
-    assert_eq!(styled.spans.0, SIMPLE_STYLES);
+    assert_eq!(styled.spans, SIMPLE_STYLES);
 
     assert_eq!(
         styled.to_string(),
@@ -59,7 +59,7 @@ fn parsing_styled_in_compile_time() {
     assert_eq!(SIMPLE_STYLED.text(), "Hello world!");
     assert_eq!(SIMPLE_STYLED.spans.as_full_slice(), SIMPLE_STYLES);
 
-    SIMPLE_STYLED.diff(&SIMPLE_STYLED).unwrap();
+    SIMPLE_STYLED.diff(SIMPLE_STYLED).unwrap();
 }
 
 #[test]
@@ -72,7 +72,7 @@ fn diff_by_text() {
     );
 
     let other_style = styled!("Hello, [[bold green]]world[[/]]!");
-    let diff = SIMPLE_STYLED.diff(&other_style).unwrap_err();
+    let diff = SIMPLE_STYLED.diff(other_style).unwrap_err();
     let output = StyledString::from_ansi(&diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED_DIFF);
 }
@@ -94,7 +94,7 @@ fn diff_by_style() {
     );
 
     let other_style = styled!("Hello [[bold green]]world[[/]]!");
-    let diff = SIMPLE_STYLED.diff(&other_style).unwrap_err();
+    let diff = SIMPLE_STYLED.diff(other_style).unwrap_err();
     let output = StyledString::from_ansi(&diff.to_string()).unwrap();
     assert_eq!(output, EXPECTED_DIFF);
 }
@@ -117,7 +117,7 @@ fn parsing_with_unstyled_ends() {
 
     let styled: StyledString = TEST_INPUT.parse().unwrap();
     assert_eq!(styled.text, "test.rs: [[DEBUG]] Hello");
-    assert_eq!(styled.as_ref().spans().collect::<Vec<_>>(), expected_spans);
+    assert_eq!(styled.as_str().spans().collect::<Vec<_>>(), expected_spans);
 
     assert_eq!(
         styled.to_string(),

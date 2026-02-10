@@ -66,7 +66,7 @@ fn reading_file(file_contents: &[u8]) {
     assert!(!plaintext.contains(r#"<span class="fg4">.</span>"#));
     assert!(!plaintext.contains("__"), "{plaintext}");
 
-    let color_spans = interaction.output().as_ref().spans();
+    let color_spans = interaction.output().as_str().spans();
     assert_eq!(
         color_spans.len(),
         5,
