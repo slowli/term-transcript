@@ -164,8 +164,7 @@ pub use crate::{
     rich_parser::{RichStyle, parse_hex_color, rgb_color_to_hex},
     style_diff::StyleDiff,
     types::{
-        Diff, Lines, PopChar, SpansSlice, StackStyled, Styled, StyledSpan, StyledStr, StyledString,
-        TextDiff,
+        Diff, PopChar, StackStyled, Styled, StyledStr, StyledString, StyledStringBuilder, TextDiff,
     },
 };
 

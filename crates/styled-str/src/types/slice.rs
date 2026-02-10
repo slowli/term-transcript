@@ -4,13 +4,6 @@ use core::num::NonZeroUsize;
 
 use crate::{StyledSpan, alloc::Vec};
 
-/// Wrapper around a slice of [`StyledSpan`]s that provides convenience manipulation methods.
-#[derive(Debug, Clone, Copy)]
-pub struct SpansSlice<'a> {
-    inner: &'a [StyledSpan],
-    first_span_len: Option<NonZeroUsize>,
-    last_span_len: Option<NonZeroUsize>,
-}
 
 impl<'a> SpansSlice<'a> {
     const EMPTY: Self = Self::new(&[]);
@@ -24,19 +17,7 @@ impl<'a> SpansSlice<'a> {
         }
     }
 
-    fn span_len(&self, span: &StyledSpan, i: usize) -> NonZeroUsize {
-        let mut len_override = None;
 
-        // `last_span_len` by design has higher priority compared to `first_span_len` if they both
-        // concern the same span.
-        if i + 1 == self.inner.len() {
-            len_override = self.last_span_len;
-        }
-        if i == 0 {
-            len_override = len_override.or(self.first_span_len);
-        }
-        len_override.unwrap_or(span.len)
-    }
 
     /// Splits the spans at the specified byte position in the string.
     #[must_use]

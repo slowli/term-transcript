@@ -1,10 +1,10 @@
 //! Basic types.
 
-use core::{fmt, num::NonZeroUsize, ops};
+use core::{fmt, mem, num::NonZeroUsize, ops};
 
 use anstyle::Style;
 
-pub use self::{lines::Lines, slice::SpansSlice, traits::PopChar};
+pub use self::traits::PopChar;
 use crate::{
     AnsiError, StyleDiff,
     alloc::{String, Vec},
@@ -13,42 +13,97 @@ use crate::{
     utils::{Stack, StackStr, normalize_style},
 };
 
-mod lines;
-mod slice;
+//mod lines;
+//mod slice;
 mod traits;
 
 /// Continuous span of styled text.
+// FIXME: make private
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StyledSpan {
     /// Style applied to the text.
-    pub style: Style,
+    pub(crate) style: Style,
+    /// Starting position of the span in text.
+    pub(crate) start: usize,
     /// Length of text in bytes.
-    pub len: NonZeroUsize,
+    pub(crate) len: NonZeroUsize,
 }
 
 impl StyledSpan {
+    pub(crate) const DUMMY: Self = Self {
+        style: Style::new(),
+        start: 0,
+        len: NonZeroUsize::new(1).unwrap(),
+    };
+
+    pub(crate) const fn end(&self) -> usize {
+        self.start + self.len.get()
+    }
+
+    pub(crate) const fn extend_len(&mut self, add: usize) {
+        self.len = self.len.checked_add(add).expect("length overflow");
+    }
+}
+
+/// Builder for [`StyledString`]s.
+#[derive(Debug, Default)]
+pub struct StyledStringBuilder {
+    inner: StyledString,
+    current_style: Style,
+}
+
+impl StyledStringBuilder {
+    /// Returns the current string text.
+    pub fn text(&self) -> &str {
+        self.inner.text()
+    }
+
+    /// Pushes unstyled text at the end of the string.
+    ///
     /// # Panics
     ///
-    /// Panics if `len` is zero.
-    pub const fn new(style: Style, len: usize) -> Self {
-        Self {
-            style,
-            len: NonZeroUsize::new(len).unwrap(),
+    /// Panics if `text` contains an ANSI escape char (`\x1b`).
+    pub fn push_text(&mut self, text: &str) {
+        assert!(
+            text.bytes().all(|ch| ch != 0x1b),
+            "Text contains 0x1b escape char"
+        );
+        self.inner.text.push_str(text);
+    }
+
+    pub(crate) fn current_style(&self) -> &Style {
+        &self.current_style
+    }
+
+    /// Pushes a style at the end of this string.
+    pub fn push_style(&mut self, style: Style) {
+        let style = normalize_style(style);
+        let spanned_text_len = self.inner.spans.last().map_or(0, StyledSpan::end);
+        let prev_style = mem::replace(&mut self.current_style, style);
+        if let Some(len) = NonZeroUsize::new(self.inner.text.len() - spanned_text_len) {
+            self.push_span(StyledSpan {
+                style: prev_style,
+                start: spanned_text_len,
+                len,
+            });
         }
     }
 
-    #[doc(hidden)] // low-level
-    pub const fn extend_len(&mut self, add: usize) {
-        self.len = self.len.checked_add(add).expect("length overflow");
+    fn push_span(&mut self, span: StyledSpan) {
+        if let Some(last_span) = self.inner.spans.last_mut() {
+            if last_span.style == span.style {
+                last_span.extend_len(span.len.get());
+                return;
+            }
+        }
+        self.inner.spans.push(span);
     }
 
-    pub(crate) fn shrink_len(&mut self, sub: usize) {
-        self.len = self
-            .len
-            .get()
-            .checked_sub(sub)
-            .and_then(NonZeroUsize::new)
-            .expect("length underflow");
+    /// Finalizes the [`StyledString`].
+    pub fn build(mut self) -> StyledString {
+        // Push the last style span covering the non-spanned text
+        self.push_style(Style::new());
+        self.inner
     }
 }
 
@@ -94,8 +149,8 @@ impl<'a> StyledStr<'a> {
     }
 
     /// Splits this text by lines.
-    pub fn lines(self) -> Lines<'a> {
-        Lines::new(self)
+    pub fn lines(self) {
+        todo!()
     }
 }
 
@@ -109,36 +164,9 @@ impl StyledString {
         spans: Vec::new(),
     };
 
-    /// Creates a string from the provided text and spans. This will normalize styles and merge
-    /// sequential spans with the same style if appropriate.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `text` and `spans` have differing lengths.
-    pub fn from_parts(text: String, mut spans: Vec<StyledSpan>) -> Self {
-        assert!(
-            text.bytes().all(|ch| ch != 0x1b),
-            "Text contains 0x1b escape char"
-        );
-        assert_eq!(
-            spans.iter().map(|span| span.len.get()).sum::<usize>(),
-            text.len(),
-            "Mismatch between total length of spans and text length"
-        );
-
-        let mut pos = 0;
-        for (i, span) in spans.iter().enumerate() {
-            assert!(
-                text.is_char_boundary(pos),
-                "span #{i} does not start at char boundary"
-            );
-            pos += span.len.get();
-        }
-
-        for span in &mut spans {
-            span.style = normalize_style(span.style);
-        }
-        Self { text, spans }.shrink()
+    /// Creates a builder for
+    pub fn builder() -> StyledStringBuilder {
+        StyledStringBuilder::default()
     }
 
     /// Parses a string from a string with embedded ANSI escape sequences.
@@ -164,35 +192,20 @@ impl StyledString {
     pub fn push_str(&mut self, other: StyledStr<'_>) {
         self.text.push_str(other.text);
 
-        let mut copied_spans = other.spans;
+        let mut copied_spans = other.spans.iter().copied();
         if let (Some(last), Some(next)) = (self.spans.last_mut(), other.spans.first()) {
             if last.style == next.style {
                 last.extend_len(next.len.get());
-                copied_spans = &other.spans[1..];
-            }
-        }
-        self.spans.extend_from_slice(copied_spans);
-    }
-
-    /// Unites sequential spans with the same color spec.
-    pub(crate) fn shrink(self) -> Self {
-        let mut shrunk_spans = Vec::<StyledSpan>::with_capacity(self.spans.len());
-        for span in self.spans {
-            if let Some(last_span) = shrunk_spans.last_mut() {
-                if last_span.style == span.style {
-                    last_span.extend_len(span.len.get());
-                } else {
-                    shrunk_spans.push(span);
-                }
-            } else {
-                shrunk_spans.push(span);
+                copied_spans.next(); // skip copying the first span
             }
         }
 
-        Self {
-            text: self.text,
-            spans: shrunk_spans,
-        }
+        // We need to offset the newly added spans, so that their start positions are correct.
+        let offset = self.spans.last().map_or(0, StyledSpan::end);
+        self.spans.extend(copied_spans.map(|mut span| {
+            span.start += offset;
+            span
+        }));
     }
 }
 
@@ -340,15 +353,13 @@ struct Ansi<'a> {
 
 impl fmt::Display for Ansi<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut pos = 0;
         for span in self.spans {
             write!(
                 formatter,
                 "{style}{text}{style:#}",
                 style = span.style,
-                text = &self.text[pos..pos + span.len.get()]
+                text = &self.text[span.start..span.end()]
             )?;
-            pos += span.len.get();
         }
         Ok(())
     }

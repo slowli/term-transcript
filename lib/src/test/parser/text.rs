@@ -1,13 +1,13 @@
 //! Text parsing.
 
-use std::{borrow::Cow, fmt, mem, num::NonZeroUsize, ops, str};
+use std::{borrow::Cow, fmt, mem, ops, str};
 
 use anstyle::{AnsiColor, Color, Effects, Style};
 use quick_xml::{
     escape::{EscapeError, resolve_xml_entity},
     events::{BytesStart, Event},
 };
-use styled_str::{StyledSpan, StyledString, parse_hex_color};
+use styled_str::{StyledString, StyledStringBuilder, parse_hex_color};
 
 use super::{ParseError, extract_base_class, map_utf8_error, parse_classes};
 
@@ -26,10 +26,7 @@ enum HardBreak {
 }
 
 pub(super) struct TextReadingState {
-    plaintext_buffer: String,
-    style_spans: Vec<StyledSpan>,
-    current_style: Style,
-    spanned_text_len: usize,
+    builder: StyledStringBuilder,
     open_tags: usize,
     hard_br: Option<HardBreak>,
 }
@@ -38,7 +35,7 @@ impl fmt::Debug for TextReadingState {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("TextReadingState")
-            .field("plaintext_buffer", &self.plaintext_buffer)
+            .field("builder", &self.builder)
             .finish_non_exhaustive()
     }
 }
@@ -46,10 +43,7 @@ impl fmt::Debug for TextReadingState {
 impl Default for TextReadingState {
     fn default() -> Self {
         Self {
-            plaintext_buffer: String::new(),
-            style_spans: Vec::new(),
-            current_style: Style::new(),
-            spanned_text_len: 0,
+            builder: StyledStringBuilder::default(),
             open_tags: 1,
             hard_br: None,
         }
@@ -58,7 +52,7 @@ impl Default for TextReadingState {
 
 impl TextReadingState {
     pub(super) fn is_empty(&self) -> bool {
-        self.plaintext_buffer.is_empty()
+        self.builder.text().is_empty()
     }
 
     pub(super) fn open_tags(&self) -> usize {
@@ -67,13 +61,11 @@ impl TextReadingState {
 
     #[cfg(test)]
     pub(super) fn plaintext_buffer(&self) -> &str {
-        &self.plaintext_buffer
+        self.builder.text()
     }
 
     pub(super) fn take_plaintext(&mut self) -> String {
-        self.style_spans.clear();
-        self.spanned_text_len = 0;
-        mem::take(&mut self.plaintext_buffer)
+        mem::take(&mut self.builder).build().into_parts().0
     }
 
     fn should_ignore_text(&self) -> bool {
@@ -110,7 +102,7 @@ impl TextReadingState {
                 } else {
                     &unescaped_str
                 };
-                self.push_text(unescaped_str);
+                self.builder.push_text(unescaped_str);
             }
             Event::GeneralRef(reference) => {
                 if self.should_ignore_text() {
@@ -128,7 +120,7 @@ impl TextReadingState {
                         quick_xml::Error::from(err)
                     })?
                 };
-                self.push_text(decoded);
+                self.builder.push_text(decoded);
             }
             Event::Start(tag) => {
                 self.open_tags += 1;
@@ -148,7 +140,7 @@ impl TextReadingState {
                 if Self::is_text_span(tag_name.as_ref()) {
                     let style = Self::parse_style_from_span(&tag)?;
                     if !style.is_plain() {
-                        self.set_style(style);
+                        self.builder.push_style(style);
                     }
                 }
             }
@@ -160,13 +152,11 @@ impl TextReadingState {
                 }
 
                 if Self::is_text_span(tag.name().as_ref()) || self.open_tags == 0 {
-                    self.set_style(Style::new());
+                    self.builder.push_style(Style::new());
                 }
 
                 if self.open_tags == 0 {
-                    let plaintext = mem::take(&mut self.plaintext_buffer);
-                    let styled_spans = mem::take(&mut self.style_spans);
-                    let mut parsed = StyledString::from_parts(plaintext, styled_spans);
+                    let mut parsed = mem::take(&mut self.builder).build();
                     if parsed.text().ends_with('\n') {
                         parsed.pop();
                     }
@@ -180,21 +170,6 @@ impl TextReadingState {
 
     fn is_text_span(tag: &[u8]) -> bool {
         matches!(tag, b"span" | b"tspan" | b"text")
-    }
-
-    fn push_text(&mut self, text: &str) {
-        self.plaintext_buffer.push_str(text);
-    }
-
-    fn set_style(&mut self, style: Style) {
-        let prev_style = mem::replace(&mut self.current_style, style);
-        if let Some(len) = NonZeroUsize::new(self.plaintext_buffer.len() - self.spanned_text_len) {
-            self.style_spans.push(StyledSpan {
-                style: prev_style,
-                len,
-            });
-            self.spanned_text_len += len.get();
-        }
     }
 
     /// Parses a style from a `span`.

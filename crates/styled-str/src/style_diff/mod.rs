@@ -12,30 +12,39 @@ use anstyle::{AnsiColor, Color, Effects, Style};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    StyledSpan,
+    StyledStr,
     alloc::{String, Vec, format},
     rich_parser::RichStyle,
-    types::StyledStr,
+    types::StyledSpan,
 };
 
 #[cfg(test)]
 mod tests;
 
 impl StyledSpan {
+    fn shrink_len(&mut self, sub: usize) {
+        self.len = self
+            .len
+            .get()
+            .checked_sub(sub)
+            .and_then(NonZeroUsize::new)
+            .expect("length underflow");
+    }
+
     /// Writes a single plaintext `line` to `out` using styles from `spans_iter`.
-    fn write_line<'a, I>(
+    fn write_line<I>(
         formatter: &mut fmt::Formatter<'_>,
         spans_iter: &mut Peekable<I>,
         line_start: usize,
         line: &str,
     ) -> fmt::Result
     where
-        I: Iterator<Item = (usize, &'a Self)>,
+        I: Iterator<Item = Self>,
     {
         let mut pos = 0;
         while pos < line.len() {
-            let &(span_start, span) = spans_iter.peek().expect("spans ended before lines");
-            let span_len = span.len.get() - line_start.saturating_sub(span_start);
+            let span = spans_iter.peek().expect("spans ended before lines");
+            let span_len = span.len.get() - line_start.saturating_sub(span.start);
 
             let span_end = cmp::min(pos + span_len, line.len());
             write!(
@@ -153,12 +162,10 @@ const STYLE_WIDTH: usize = 25;
 /// ```
 #[derive(Debug)]
 pub struct StyleDiff<'a> {
-    text: &'a str,
-    lhs_spans: &'a [StyledSpan],
+    lhs: StyledStr<'a>,
     differing_spans: Vec<DiffStyleSpan>,
 }
 
-// FIXME: document
 impl fmt::Display for StyleDiff<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         if formatter.alternate() {
@@ -183,8 +190,7 @@ impl<'a> StyleDiff<'a> {
         );
 
         let mut this = Self {
-            text: lhs.text,
-            lhs_spans: lhs.spans,
+            lhs,
             differing_spans: Vec::new(),
         };
         let mut pos = 0;
@@ -202,7 +208,7 @@ impl<'a> StyleDiff<'a> {
 
             // Record a diff span if the color specs differ.
             if lhs_span.style != rhs_span.style {
-                let diff_text = &this.text[pos..pos + common_len.get()];
+                let diff_text = &this.lhs.text[pos..pos + common_len.get()];
                 this.differing_spans.extend(DiffStyleSpan::new(
                     diff_text,
                     pos,
@@ -251,19 +257,9 @@ impl<'a> StyleDiff<'a> {
         let mut highlights = highlights.iter().copied().peekable();
         let mut line_start = 0;
 
-        // Spans together with their starting index
-        let mut span_start = 0;
-        let mut color_spans = self
-            .lhs_spans
-            .iter()
-            .map(move |span| {
-                let prev_start = span_start;
-                span_start += span.len.get();
-                (prev_start, span)
-            })
-            .peekable();
+        let mut color_spans = self.lhs.spans.iter().copied().peekable();
 
-        for line in self.text.split('\n') {
+        for line in self.lhs.text.split('\n') {
             let line_contains_spans = highlights
                 .peek()
                 .is_some_and(|span| span.start <= line_start + line.len());

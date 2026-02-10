@@ -5,9 +5,9 @@ use core::{fmt, num::NonZeroUsize, ops, str::FromStr};
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 use crate::{
-    HexColorError, ParseError, ParseErrorKind, StackStyled, StyledSpan, StyledString,
+    HexColorError, ParseError, ParseErrorKind, StackStyled, StyledString,
     alloc::{Cow, String, Vec},
-    types::StyledStr,
+    types::{StyledSpan, StyledStr},
     utils::{Stack, StackStr, StrCursor, is_same_style, normalize_style},
 };
 
@@ -214,7 +214,7 @@ impl<'a> RichParser<'a> {
         }
     }
 
-    const fn step(&mut self) -> Result<ops::ControlFlow<(), (StyledSpan, usize)>, ParseError> {
+    const fn step(&mut self) -> Result<ops::ControlFlow<(), StyledSpan>, ParseError> {
         if self.cursor.is_eof() {
             // Push the final span if necessary.
             return Ok(self.final_step());
@@ -233,22 +233,21 @@ impl<'a> RichParser<'a> {
 
                 // Push the previous styled span
                 let end_pos = self.cursor.pos() - 2;
-                let span_and_text_start =
-                    if let Some(len) = NonZeroUsize::new(end_pos - self.style_end_pos) {
-                        let span = StyledSpan {
-                            style: self.current_style,
-                            len,
-                        };
-                        Some((span, self.style_end_pos))
-                    } else {
-                        None
-                    };
+                let span = if let Some(len) = NonZeroUsize::new(end_pos - self.style_end_pos) {
+                    Some(StyledSpan {
+                        style: self.current_style,
+                        start: self.style_end_pos,
+                        len,
+                    })
+                } else {
+                    None
+                };
 
                 self.current_style = const_try!(self.cursor.parse_style(&self.current_style, true));
                 self.style_end_pos = self.cursor.pos();
 
-                if let Some(span_and_text_start) = span_and_text_start {
-                    return Ok(ops::ControlFlow::Continue(span_and_text_start));
+                if let Some(span) = span {
+                    return Ok(ops::ControlFlow::Continue(span));
                 }
             } else {
                 let ch = self.cursor.current_byte();
@@ -262,15 +261,15 @@ impl<'a> RichParser<'a> {
         Ok(self.final_step())
     }
 
-    const fn final_step(&mut self) -> ops::ControlFlow<(), (StyledSpan, usize)> {
+    const fn final_step(&mut self) -> ops::ControlFlow<(), StyledSpan> {
         if let Some(len) = NonZeroUsize::new(self.cursor.pos() - self.style_end_pos) {
             let span = StyledSpan {
                 style: self.current_style,
+                start: self.style_end_pos,
                 len,
             };
-            let text_start = self.style_end_pos;
             self.style_end_pos = self.cursor.pos();
-            ops::ControlFlow::Continue((span, text_start))
+            ops::ControlFlow::Continue(span)
         } else {
             ops::ControlFlow::Break(())
         }
@@ -612,24 +611,30 @@ impl<const TEXT_CAP: usize, const SPAN_CAP: usize> StackStyled<TEXT_CAP, SPAN_CA
     pub(crate) const fn parse(raw: &str) -> Result<Self, ParseError> {
         let mut parser = RichParser::new(raw);
         let mut text = StackStr::new();
-        let mut spans = Stack::new(StyledSpan::new(Style::new(), 1));
+        let mut spans = Stack::new(StyledSpan::DUMMY);
 
-        while let ops::ControlFlow::Continue((span, text_start)) = const_try!(parser.step()) {
+        while let ops::ControlFlow::Continue(mut span) = const_try!(parser.step()) {
             let mut span_extended = false;
-            if let Some(last_span) = spans.last_mut() {
+            let plaintext_start = if let Some(last_span) = spans.last_mut() {
                 if is_same_style(&last_span.style, &span.style) {
                     last_span.extend_len(span.len.get());
                     span_extended = true;
                 }
-            }
+                last_span.end()
+            } else {
+                0
+            };
+
+            let text_range = span.start..span.end();
+            // `span.start` refers to the position in the original rich-syntax string, so now we need
+            // to shift it so that it refers to the plain text.
+            span.start = plaintext_start;
 
             if !span_extended && spans.push(span).is_err() {
                 return Err(parser.cursor.error(ParseErrorKind::SpanOverflow));
             }
 
-            let text_chunk = parser
-                .cursor
-                .range(&(text_start..text_start + span.len.get()));
+            let text_chunk = parser.cursor.range(&text_range);
             let mut i = 0;
             while i < text_chunk.len() {
                 if text.push(text_chunk[i]).is_err() {
@@ -647,14 +652,13 @@ impl FromStr for StyledString {
 
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         let mut parser = RichParser::new(raw);
-        let mut text = String::new();
-        let mut spans = Vec::new();
+        let mut builder = Self::builder();
 
-        while let ops::ControlFlow::Continue((span, text_start)) = parser.step()? {
-            spans.push(span);
-            text.push_str(&raw[text_start..text_start + span.len.get()]);
+        while let ops::ControlFlow::Continue(span) = parser.step()? {
+            builder.push_style(span.style);
+            builder.push_text(&raw[span.start..span.end()]);
         }
-        Ok(Self::from_parts(text, spans))
+        Ok(builder.build())
     }
 }
 
