@@ -5,7 +5,12 @@ use core::{fmt, mem, num::NonZeroUsize, ops};
 use anstyle::Style;
 
 use super::{StyledStr, slice::SpansSlice, spans::StyledSpan};
-use crate::{AnsiError, ansi_parser::AnsiParser, utils::normalize_style};
+use crate::{
+    AnsiError,
+    alloc::{String, Vec},
+    ansi_parser::AnsiParser,
+    utils::normalize_style,
+};
 
 /// Builder for [`StyledString`]s.
 ///

@@ -32,7 +32,9 @@ handlebars = "6.4.0"
 humantime = "2.3.0"
 os_pipe = "1.2.3"
 portable-pty = "0.8.1" # FIXME: portable-pty 0.9 is seemingly broken on Windows
-pretty_assertions = "1.4.1"
+# Usually, it's a good practice to enable features in the crate manifests, but `pretty_assertions`
+# won't build without `alloc` (or `std`) enabled.
+pretty_assertions = { version = "1.4.1", default-features = false, features = ["alloc"] }
 pulldown-cmark = "0.9.6"
 quick-xml = "0.39.0"
 serde = { version = "1.0", features = ["derive"] }

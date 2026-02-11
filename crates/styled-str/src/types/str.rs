@@ -1,7 +1,6 @@
 //! `StyledStr`.
 
 use core::{fmt, ops};
-use std::fmt::Write;
 
 use anstyle::Style;
 
@@ -333,9 +332,9 @@ where
 
 impl fmt::Debug for StyledStr<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_char('"')?;
+        formatter.write_str("\"")?;
         self.format(formatter, true)?;
-        formatter.write_char('"')
+        formatter.write_str("\"")
     }
 }
 
