@@ -111,7 +111,7 @@ impl fmt::Display for ParseErrorKind {
     }
 }
 
-/// Errors that can occur parsing [`Styled`](crate::Styled) strings from the [rich syntax](crate#rich-syntax).
+/// Errors that can occur parsing [`StyledString`](crate::StyledString)s from the [rich syntax](crate#rich-syntax).
 #[derive(Debug)]
 pub struct ParseError {
     kind: ParseErrorKind,

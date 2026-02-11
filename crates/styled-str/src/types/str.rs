@@ -10,20 +10,16 @@ use crate::{
     utils,
 };
 
-/// ANSI-styled text.
+/// Borrowed ANSI-styled string.
 ///
-/// A `Styled` instance consists of two parts:
+/// A `StyledStr` instance consists of two parts:
 ///
-/// - Original text (a `String` or a `&str`).
-/// - A sequence of styled spans covering the text (`S` type param; usually a slice `&[StyledSpan]`
-///   or a `Vec<StyledSpan>`).
+/// - Original text (a `&str`).
+/// - A sequence of styled spans covering the text.
 ///
-/// [`StyledStr`] and [`StyledString`] represent the borrowed / owned instantiations of the type, respectively.
-///
-/// - [`StyledStr`] can be parsed from [rich syntax](crate#rich-syntax) in compile time via the [`styled!`](crate::styled!) macro,
-///   or borrowed from a string using [`Styled::as_ref()`].
-///-  [`StyledString`] can be parsed from [rich syntax](crate#rich-syntax) via the [`FromStr`](core::str::FromStr) trait,
-///   from a string with ANSI escapes via [`StyledString::from_ansi()`], or manually constructed via [`StyledString::from_parts()`].
+/// `StyledStr` represents the borrowed string variant in contrast to [`StyledString`], which is owned.
+/// A `StyledStr` can be parsed from [rich syntax](crate#rich-syntax) in compile time via the [`styled!`](crate::styled!) macro,
+/// or borrowed from a string using [`StyledString::as_str()`].
 ///
 /// # Examples
 ///
@@ -54,7 +50,10 @@ impl<'a> StyledStr<'a> {
         if self.spans.len() > 1 {
             return false;
         }
-        matches!(self.spans.get(0), Some(span) if span.style.is_plain())
+        match self.spans.get(0) {
+            None => true,
+            Some(span) => span.style.is_plain(),
+        }
     }
 
     /// Returns the unstyled text.
@@ -84,7 +83,17 @@ impl<'a> StyledStr<'a> {
     ///
     /// # Panics
     ///
-    /// Panics in the same situations as [`crate::types::str::split_at()`].
+    /// Panics in the same situations as [`str::split_at()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// let styled = styled!("[[green]]Hello, [[it]]world[[/]]!");
+    /// let (start, end) = styled.split_at(5);
+    /// assert_eq!(start, styled!("[[green]]Hello"));
+    /// assert_eq!(end, styled!("[[green]], [[it]]world[[/]]!"));
+    /// ```
     pub const fn split_at(self, mid: usize) -> (Self, Self) {
         let (start_text, end_text) = self.text.split_at(mid);
         let (start_spans, end_spans) = self.spans.split_at(mid);
@@ -100,6 +109,25 @@ impl<'a> StyledStr<'a> {
     }
 
     /// Iterates over spans contained in this string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::{styled, SpanStr};
+    /// # use anstyle::AnsiColor;
+    /// let styled = styled!("[[green]]Hello, [[* bold]]world");
+    /// let mut spans = styled.spans();
+    /// assert_eq!(spans.len(), 2);
+    ///
+    /// assert_eq!(
+    ///     spans.next().unwrap(),
+    ///     SpanStr::new("Hello, ", AnsiColor::Green.on_default())
+    /// );
+    /// assert_eq!(
+    ///     spans.next().unwrap(),
+    ///     SpanStr::new("world", AnsiColor::Green.on_default().bold())
+    /// );
+    /// ```
     pub fn spans(&self) -> impl ExactSizeIterator<Item = SpanStr<'a>> + DoubleEndedIterator + 'a {
         self.spans
             .iter()
@@ -162,16 +190,57 @@ impl<'a> StyledStr<'a> {
     }
 
     /// Splits this text by lines.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// let styled = styled!("[[bold green!]]Hello,\n  :[[* -color]]world\n");
+    /// let lines: Vec<_> = styled.lines().collect();
+    /// assert_eq!(lines, [
+    ///     styled!("[[bold green!]]Hello,"),
+    ///     styled!("[[bold green!]]  :[[bold]]world"),
+    /// ]);
+    /// ```
     pub fn lines(self) -> Lines<'a> {
         Lines::new(self)
     }
 
     /// Returns a string with embedded ANSI escapes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::{styled, StyledString};
+    /// let styled = styled!("[[bold blue!]]INFO[[/]] [[dim it]](2 min ago)[[/]] Important");
+    /// let ansi_str = styled.ansi().to_string();
+    /// assert!(ansi_str.contains('\u{1b}'));
+    ///
+    /// // The ANSI string can be parsed back via `from_ansi()`.
+    /// let restored = StyledString::from_ansi(&ansi_str)?;
+    /// assert_eq!(restored, styled);
+    /// # anyhow::Ok(())
+    /// ```
     pub fn ansi(&self) -> impl fmt::Display + '_ {
         Ansi(*self)
     }
 
     /// Pops a single char from the end of the string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// # use anstyle::Style;
+    /// let mut styled = styled!("[[bold green!]]Hello[[it]]!❤");
+    /// let (ch, style) = styled.pop().unwrap();
+    /// assert_eq!(ch, '❤');
+    /// assert_eq!(style, Style::new().italic());
+    /// assert_eq!(styled, styled!("[[bold green!]]Hello[[it]]!"));
+    ///
+    /// styled.pop().unwrap();
+    /// assert_eq!(styled, styled!("[[bold green!]]Hello"));
+    /// ```
     pub fn pop(&mut self) -> Option<(char, Style)> {
         let ch = self.text.chars().next_back()?;
         self.text = &self.text[..self.text.len() - ch.len_utf8()];

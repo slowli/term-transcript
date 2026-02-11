@@ -8,7 +8,32 @@ use super::{StyledStr, slice::SpansSlice, spans::StyledSpan};
 use crate::{AnsiError, ansi_parser::AnsiParser, utils::normalize_style};
 
 /// Builder for [`StyledString`]s.
-#[derive(Debug, Default)]
+///
+/// A builder can be initialized from scratch via [`StyledString::builder()`] or [`Default`].
+/// Alternatively, it can be initialized from an existing [`StyledString`].
+/// A builder can be extended by pushing [text](Self::push_text()), [styles](Self::push_style())
+/// or [`StyledStr`]ings into it.
+///
+/// # Examples
+///
+/// ```
+/// # use styled_str::{styled, StyledString};
+/// # use anstyle::{AnsiColor, Style};
+/// let mut builder = StyledString::builder();
+/// builder.push_style(AnsiColor::BrightGreen.on(AnsiColor::White).bold());
+/// builder.push_text("Hello");
+/// builder.push_text(",");
+/// builder.push_style(Style::new());
+/// builder.push_text(" world");
+/// builder.push_str(styled!("[[it, dim]]!"));
+///
+/// let s = builder.build();
+/// assert_eq!(
+///     s.to_string(),
+///     "[[bold green! on white]]Hello,[[/]] world[[italic dim]]!"
+/// );
+/// ```
+#[derive(Debug, Clone, Default)]
 pub struct StyledStringBuilder {
     inner: StyledString,
     current_style: Style,
@@ -80,7 +105,28 @@ impl StyledStringBuilder {
     }
 }
 
+impl From<StyledString> for StyledStringBuilder {
+    fn from(string: StyledString) -> Self {
+        let current_style = string
+            .spans
+            .last()
+            .map_or_else(Style::new, |span| span.style);
+        Self {
+            inner: string,
+            current_style,
+        }
+    }
+}
+
 /// Heap-allocated styled string.
+///
+/// `StyledString` represents the owned string variant in contrast to [`StyledStr`], which is borrowed.
+/// Since [conversion](Self::as_str()) to a `StyledStr` is cheap, some immutable methods are accessible via [`StyledStr`]
+/// only (e.g., [iterating over style spans](StyledStr::spans()) or [splitting a string](StyledStr::split_at())).
+/// This allows to define these methods as `const fn`s and/or to propagate the borrowed data lifetime correctly.
+///
+/// A `StyledString` can be parsed from [rich syntax](crate#rich-syntax) via the [`FromStr`](core::str::FromStr) trait,
+/// from a string with ANSI escapes via [`StyledString::from_ansi()`], or manually constructed via [`StyledStringBuilder`].
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct StyledString<T = String> {
     pub(crate) text: T,
@@ -121,6 +167,17 @@ impl StyledString {
     /// # Errors
     ///
     /// Returns an error if the input is not a valid ANSI escaped string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::{styled, StyledString};
+    /// let str = StyledString::from_ansi(
+    ///     "\u{1b}[1;32mHello,\u{1b}[m world\u{1b}[3m!\u{1b}[m",
+    /// )?;
+    /// assert_eq!(str, styled!("[[bold green]]Hello,[[/]] world[[it]]!"));
+    /// # anyhow::Ok(())
+    /// ```
     pub fn from_ansi(ansi_str: &str) -> Result<Self, AnsiError> {
         AnsiParser::parse(ansi_str.as_bytes())
     }
@@ -136,6 +193,20 @@ impl StyledString {
     }
 
     /// Pushes another styled string at the end of this one.
+    ///
+    /// Use [`StyledStringBuilder`] for more complex string manipulations.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::{styled, StyledString};
+    /// let mut styled: StyledString = styled!("[[bold green!]]Hello").into();
+    /// styled.push_str(styled!("[[it]]!❤"));
+    /// assert_eq!(
+    ///     styled,
+    ///     styled!("[[bold green!]]Hello[[it]]!❤")
+    /// );
+    /// ```
     pub fn push_str(&mut self, other: StyledStr<'_>) {
         let mut copied_spans = other.spans.iter();
         if let (Some(last), Some(next)) = (self.spans.last_mut(), other.spans.get(0)) {
@@ -156,6 +227,21 @@ impl StyledString {
     }
 
     /// Pops a single char from the end of the string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::{styled, StyledString};
+    /// # use anstyle::Style;
+    /// let mut styled: StyledString = styled!("[[bold green!]]Hello[[it]]!❤").into();
+    /// let (ch, style) = styled.pop().unwrap();
+    /// assert_eq!(ch, '❤');
+    /// assert_eq!(style, Style::new().italic());
+    /// assert_eq!(styled, styled!("[[bold green!]]Hello[[it]]!"));
+    ///
+    /// styled.pop().unwrap();
+    /// assert_eq!(styled, styled!("[[bold green!]]Hello"));
+    /// ```
     #[allow(clippy::missing_panics_doc)] // internal checks; should never be triggered
     pub fn pop(&mut self) -> Option<(char, Style)> {
         let ch = self.text.pop()?;

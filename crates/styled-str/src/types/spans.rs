@@ -37,14 +37,13 @@ impl StyledSpan {
     }
 }
 
-/// Text with a uniform [`Style`] attached to it. Returned by the [`StyledStr::spans()`] iterator.
+/// Text with a uniform [`Style`] attached to it. Returned by the [`StyledStr::spans()`](crate::StyledStr::spans()) iterator.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SpanStr<'a> {
     /// Unstyled text.
     pub text: &'a str,
     /// Style applied to the text.
     pub style: Style,
-    // TODO: add start position?
 }
 
 impl<'a> SpanStr<'a> {

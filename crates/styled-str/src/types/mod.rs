@@ -104,9 +104,9 @@ impl fmt::Display for TextDiff<'_> {
     }
 }
 
-/// Generic difference between two [`Styled`] strings: either a difference in text, or in styling.
+/// Generic difference between two [`StyledStr`]s: either a difference in text, or in styling.
 ///
-/// Produced by the [`Styled::diff()`] method.
+/// Produced by the [`StyledStr::diff()`] method.
 pub enum Diff<'a> {
     /// There is a difference in text between the compared strings.
     Text(TextDiff<'a>),

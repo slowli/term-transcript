@@ -13,12 +13,11 @@
 //!
 //! For the example of real-world usage, see the [`term-transcript`](https://docs.rs/term-transcript/) crate.
 //!
-//! # `Styled` type
+//! # Styled strings
 //!
-//! The core type exposed by this crate is [`Styled`]. This is a generic container for text + styling
-//! signaled via [ANSI escape codes].
-//! Its two main instantiations are borrowed [`StyledStr`] (analog to `&str`) and owned
-//! [`StyledString`] (analog to `String`). Styling is represented as a sequence of [`StyledSpan`]s
+//! The core types exposed by this crate are [`StyledStr`] and [`StyledString`]. Both are a container for text + styling
+//! signaled via [ANSI escape codes]. `StyledStr` is borrowed (analog to `&str`), while `StyledString`
+//! is owned (analog to `String`). Styling is represented as a sequence of spans ([`SpanStr`] type)
 //! that cover the text in its entirety. Styles reuse the model from [`anstyle`]; i.e., a style
 //! is just a [`Style`](anstyle::Style).
 //!
@@ -98,7 +97,7 @@
 //! from ANSI escapes (e.g., captured from a terminal).
 //!
 //! ```
-//! # use styled_str::{styled, AnsiError, StyledString};
+//! # use styled_str::{styled, StyledString};
 //! let str = StyledString::from_ansi(
 //!     "\u{1b}[32mHello,\u{1b}[m world\u{1b}[1m!\u{1b}[m",
 //! )?;
@@ -109,7 +108,7 @@
 //!
 //! ## Comparing styled strings
 //!
-//! [`Styled::diff()`] allows comparing two styled strings both in terms of text and styles.
+//! [`StyledStr::diff()`] allows comparing two styled strings both in terms of text and styles.
 //! [`TextDiff`] and [`StyleDiff`] provide more fine-grained control over comparison logic.
 //! These types can be [`Display`](core::fmt::Display)ed / [`Debug`](core::fmt::Debug)ged
 //! in order to provide rich human-readable info about differences (e.g., in the test code).
