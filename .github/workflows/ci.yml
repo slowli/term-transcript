@@ -10,7 +10,7 @@ on:
 
 env:
   # Minimum supported Rust version.
-  msrv: 1.85.0
+  msrv: 1.86.0
   # Nightly Rust necessary for building docs.
   nightly: nightly-2025-11-02
   # `mdbook` version used
@@ -91,8 +91,10 @@ jobs:
         if: matrix.all_checks
       - name: Clippy
         run: cargo clippy --workspace --all-features --all-targets -- -D warnings
+      - name: Clippy styled-str (no features)
+        run: cargo clippy -p styled-str --no-default-features --lib -- -D warnings
       - name: Clippy (no features)
-        run: cargo clippy -p term-transcript --no-default-features --lib
+        run: cargo clippy -p term-transcript --no-default-features --lib -- -D warnings
       - name: Clippy (features = svg)
         run: cargo clippy -p term-transcript --no-default-features --features svg --lib -- -D warnings
       - name: Clippy (features = test)
@@ -114,6 +116,11 @@ jobs:
           TT_IMG_SKIP: pwsh
       - name: Run doc tests
         run: cargo test --workspace --all-features --doc
+      - name: Run proptests (styled-str)
+        run: cargo test --release -p styled-str --test proptests
+        env:
+          PROPTEST_CASES: 100000
+        if: matrix.all_checks
 
       - name: Test CLI tracing
         shell: bash
@@ -134,6 +141,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.nightly }}
+          targets: thumbv7m-none-eabi
       - name: Install mdbook
         run: |
           mkdir -p .bin
@@ -148,6 +156,9 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-nightly-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-nightly
+
+      - name: Build styled-str (no-std)
+        run: cargo build --target thumbv7m-none-eabi -p styled-str --lib --no-default-features -Z avoid-dev-deps
 
       - name: Build the Book
         working-directory: ./docs
