@@ -247,6 +247,14 @@ impl<'a> StyledStr<'a> {
         let style = self.spans.pop_char(ch.len_utf8());
         Some((ch, style))
     }
+
+    /// Converts this string to the owned variant.
+    ///
+    /// Note that this shadows [`ToOwned::to_owned()`], but this shouldn't be an issue since `StyledStr`
+    /// implements [`Copy`].
+    pub fn to_owned(self) -> StyledString {
+        self.into()
+    }
 }
 
 impl<'a, T> From<StyledStr<'a>> for StyledString<T>

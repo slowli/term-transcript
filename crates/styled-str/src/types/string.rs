@@ -200,8 +200,11 @@ impl StyledString {
     ///
     /// ```
     /// # use styled_str::{styled, StyledString};
-    /// let mut styled: StyledString = styled!("[[bold green!]]Hello").into();
-    /// styled.push_str(styled!("[[it]]!❤"));
+    /// let mut styled = styled!("[[bold green!]]Hello").to_owned();
+    /// styled.push_str(styled!("[[it]]!"));
+    /// // `push_str()` is also available via `+=` operator:
+    /// styled += styled!("[[it]]❤");
+    ///
     /// assert_eq!(
     ///     styled,
     ///     styled!("[[bold green!]]Hello[[it]]!❤")
@@ -233,7 +236,7 @@ impl StyledString {
     /// ```
     /// # use styled_str::{styled, StyledString};
     /// # use anstyle::Style;
-    /// let mut styled: StyledString = styled!("[[bold green!]]Hello[[it]]!❤").into();
+    /// let mut styled = styled!("[[bold green!]]Hello[[it]]!❤").to_owned();
     /// let (ch, style) = styled.pop().unwrap();
     /// assert_eq!(ch, '❤');
     /// assert_eq!(style, Style::new().italic());
@@ -257,6 +260,12 @@ impl StyledString {
             self.spans.pop();
         }
         Some((ch, style))
+    }
+}
+
+impl ops::AddAssign<StyledStr<'_>> for StyledString {
+    fn add_assign(&mut self, rhs: StyledStr<'_>) {
+        self.push_str(rhs);
     }
 }
 
