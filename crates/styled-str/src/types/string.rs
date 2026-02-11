@@ -127,7 +127,7 @@ impl From<StyledString> for StyledStringBuilder {
 ///
 /// A `StyledString` can be parsed from [rich syntax](crate#rich-syntax) via the [`FromStr`](core::str::FromStr) trait,
 /// from a string with ANSI escapes via [`StyledString::from_ansi()`], or manually constructed via [`StyledStringBuilder`].
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub struct StyledString<T = String> {
     pub(crate) text: T,
     pub(crate) spans: Vec<StyledSpan>,
@@ -266,6 +266,15 @@ impl StyledString {
 impl ops::AddAssign<StyledStr<'_>> for StyledString {
     fn add_assign(&mut self, rhs: StyledStr<'_>) {
         self.push_str(rhs);
+    }
+}
+
+impl<T> fmt::Debug for StyledString<T>
+where
+    T: ops::Deref<Target = str>,
+{
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.as_str(), formatter)
     }
 }
 

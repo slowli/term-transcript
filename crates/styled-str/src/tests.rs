@@ -476,3 +476,10 @@ fn slicing_string() {
     assert_eq!(styled.get(7..).unwrap(), styled!("[[inverted]]world[[/]]!"));
     assert_eq!(styled.get(10..).unwrap(), styled!("[[inverted]]ld[[/]]!"));
 }
+
+#[test]
+fn debugging_strings() {
+    let styled = styled!("[[red on color(15)]]Hello,\n\"world[[it]]!\"");
+    let debug = format!("{styled:?}");
+    assert_eq!(debug, r#""[[red on white!]]Hello,\n\"world[[italic]]!\"""#);
+}

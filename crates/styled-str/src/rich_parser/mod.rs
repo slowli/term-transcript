@@ -785,11 +785,24 @@ fn ansi_color_str(color: AnsiColor) -> &'static str {
 /// Escapes sequences of >=2 opening brackets (i.e., `[[`, `[[[` etc.) by appending `[[*]]` to each sequence
 /// (a no-op style copy).
 #[derive(Debug)]
-pub(crate) struct EscapedText<'a>(pub(crate) &'a str);
+pub(crate) struct EscapedText<'a> {
+    inner: &'a str,
+    /// Whether to escape chars in the printed text.
+    escape_chars: bool,
+}
+
+impl<'a> EscapedText<'a> {
+    pub(crate) fn new(inner: &'a str, escape_chars: bool) -> Self {
+        Self {
+            inner,
+            escape_chars,
+        }
+    }
+}
 
 impl fmt::Display for EscapedText<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut remainder = self.0;
+        let mut remainder = self.inner;
         while let Some(mut pos) = remainder.find("[[") {
             // Increase `pos` until it points at a non-`[` char.
             pos += 2;
@@ -799,8 +812,29 @@ impl fmt::Display for EscapedText<'_> {
 
             let head;
             (head, remainder) = remainder.split_at(pos);
-            write!(formatter, "{head}[[*]]")?;
+            let escaped;
+            write!(
+                formatter,
+                "{}[[*]]",
+                if self.escape_chars {
+                    escaped = head.escape_debug();
+                    &escaped as &dyn fmt::Display
+                } else {
+                    &head
+                }
+            )?;
         }
-        write!(formatter, "{remainder}")
+
+        let escaped;
+        write!(
+            formatter,
+            "{}",
+            if self.escape_chars {
+                escaped = remainder.escape_debug();
+                &escaped as &dyn fmt::Display
+            } else {
+                &remainder
+            }
+        )
     }
 }

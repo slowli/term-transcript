@@ -86,12 +86,22 @@ fn standalone_style_parsing() {
 
 #[test]
 fn escaping_text() {
-    assert_eq!(EscapedText("test: [OK]").to_string(), "test: [OK]");
-
-    assert_eq!(EscapedText("test: [[OK]]").to_string(), "test: [[[[*]]OK]]");
+    assert_eq!(
+        EscapedText::new("test: [OK]", false).to_string(),
+        "test: [OK]"
+    );
 
     assert_eq!(
-        EscapedText("[[OK]] test :[[[").to_string(),
+        EscapedText::new("test: [[OK]]", false).to_string(),
+        "test: [[[[*]]OK]]"
+    );
+    assert_eq!(
+        EscapedText::new("test\t\n[[OK]]", true).to_string(),
+        r"test\t\n[[[[*]]OK]]"
+    );
+
+    assert_eq!(
+        EscapedText::new("[[OK]] test :[[[", false).to_string(),
         "[[[[*]]OK]] test :[[[[[*]]"
     );
 }

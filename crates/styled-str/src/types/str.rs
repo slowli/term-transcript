@@ -1,6 +1,7 @@
 //! `StyledStr`.
 
 use core::{fmt, ops};
+use std::fmt::Write;
 
 use anstyle::Style;
 
@@ -24,7 +25,7 @@ use crate::{
 /// # Examples
 ///
 /// See [crate-level docs](crate) for the examples of usage.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub struct StyledStr<'a> {
     pub(crate) text: &'a str,
     pub(crate) spans: SpansSlice<'a>,
@@ -280,6 +281,24 @@ impl<'a> StyledStr<'a> {
     pub fn to_owned(self) -> StyledString {
         self.into()
     }
+
+    fn format(&self, formatter: &mut fmt::Formatter<'_>, escape_chars: bool) -> fmt::Result {
+        for (i, span) in self.spans.iter().enumerate() {
+            let text = &self.text[span.start..span.end()];
+            if i == 0 && span.style.is_plain() {
+                // Special case: do not output an extra `[[/]]` at the string start.
+                write!(formatter, "{}", EscapedText::new(text, escape_chars))?;
+            } else {
+                write!(
+                    formatter,
+                    "[[{style}]]{text}",
+                    style = RichStyle(&span.style),
+                    text = EscapedText::new(text, escape_chars)
+                )?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<'a, T> From<StyledStr<'a>> for StyledString<T>
@@ -291,23 +310,6 @@ where
             text: str.text.into(),
             spans: str.spans.iter().collect(),
         }
-    }
-}
-
-#[derive(Debug)]
-struct Ansi<'a>(StyledStr<'a>);
-
-impl fmt::Display for Ansi<'_> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for span in self.0.spans.iter() {
-            write!(
-                formatter,
-                "{style}{text}{style:#}",
-                style = span.style,
-                text = &self.0.text[span.start..span.end()]
-            )?;
-        }
-        Ok(())
     }
 }
 
@@ -329,22 +331,33 @@ where
     }
 }
 
+impl fmt::Debug for StyledStr<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_char('"')?;
+        self.format(formatter, true)?;
+        formatter.write_char('"')
+    }
+}
+
 /// Outputs a string with rich syntax.
 impl fmt::Display for StyledStr<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (i, span) in self.spans.iter().enumerate() {
-            let text = &self.text[span.start..span.end()];
-            if i == 0 && span.style.is_plain() {
-                // Special case: do not output an extra `[[/]]` at the string start.
-                write!(formatter, "{}", EscapedText(text))?;
-            } else {
-                write!(
-                    formatter,
-                    "[[{style}]]{text}",
-                    style = RichStyle(&span.style),
-                    text = EscapedText(text)
-                )?;
-            }
+        self.format(formatter, false)
+    }
+}
+
+#[derive(Debug)]
+struct Ansi<'a>(StyledStr<'a>);
+
+impl fmt::Display for Ansi<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for span in self.0.spans.iter() {
+            write!(
+                formatter,
+                "{style}{text}{style:#}",
+                style = span.style,
+                text = &self.0.text[span.start..span.end()]
+            )?;
         }
         Ok(())
     }
