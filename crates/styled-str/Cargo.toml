@@ -33,4 +33,6 @@ workspace = true
 [features]
 default = ["std"]
 # Enables std-specific functionality, such as `Error` trait implementations.
+# Note that disabling this feature for now doesn't make this crate no-std compatible.
+# TODO: try to fix; caused by a `pretty_assertions` dependency (`diff`)
 std = []

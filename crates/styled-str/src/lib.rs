@@ -146,6 +146,7 @@
 //! *(On by default)*
 //!
 //! Enables std-specific functionality, such as [`Error`](std::error::Error) trait implementations.
+//! Note that disabling this feature for now doesn't make this crate no-std compatible.
 //!
 //! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`rich`]: https://rich.readthedocs.io/en/stable/index.html

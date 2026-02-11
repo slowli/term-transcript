@@ -157,9 +157,6 @@ jobs:
           key: ${{ runner.os }}-cargo-nightly-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-nightly
 
-      - name: Build styled-str (no-std)
-        run: cargo build --target thumbv7m-none-eabi -p styled-str --lib --no-default-features -Z avoid-dev-deps
-
       - name: Build the Book
         working-directory: ./docs
         run: mdbook build
