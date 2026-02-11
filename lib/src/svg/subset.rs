@@ -337,7 +337,7 @@ mod tests {
         transcript.add_interaction(
             UserInput::command("test"),
             iter::repeat_n(
-                styled!("[[bold on blue]]H[[]]ello, [[italic green]]world[[]]! "),
+                styled!("[[bold on blue]]H[[/]]ello, [[italic green]]world[[/]]! "),
                 10,
             )
             .collect(),

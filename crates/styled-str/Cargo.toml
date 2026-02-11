@@ -6,6 +6,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
+keywords = ["ANSI", "terminal", "styling", "color"]
+categories = ["command-line-interface", "development-tools::testing"]
+description = "Tools for parsing and managing ANSI-styled strings"
 
 [dependencies]
 # Public dependencies
@@ -17,7 +21,18 @@ pretty_assertions.workspace = true
 unicode-width.workspace = true
 
 [dev-dependencies]
+anyhow.workspace = true
 assert_matches.workspace = true
+doc-comment.workspace = true
+proptest.workspace = true
+version-sync.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+default = ["std"]
+# Enables std-specific functionality, such as `Error` trait implementations.
+# Note that disabling this feature for now doesn't make this crate no-std compatible.
+# TODO: try to fix; caused by a `pretty_assertions` dependency (`diff`)
+std = []

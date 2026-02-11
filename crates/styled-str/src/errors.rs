@@ -32,22 +32,45 @@ impl HexColorError {
     }
 }
 
+#[cfg(feature = "std")]
+impl std::error::Error for HexColorError {}
+
+/// Kind of a [`ParseError`].
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ParseErrorKind {
+    /// Unfinished style, e.g. in `[[red`.
     UnfinishedStyle,
+    /// Unsupported token in style, e.g. `[[what]]`.
     UnsupportedStyle,
+    /// Error parsing a hexadecimal color spec, e.g. in `#c0g`.
     HexColor(HexColorError),
+    /// Unfinished color specification, e.g. `color(`.
+    UnfinishedColor,
+    /// Invalid index color, e.g. `1234`.
     InvalidIndexColor,
-    RedefinedBackground,
+    /// `on` token without the following color.
     UnfinishedBackground,
+    /// Bogus delimiter encountered, e.g. in `[[red] on white]]`.
     BogusDelimiter,
+    /// `*` token (copying previously used style) must be the first token in the spec.
     NonInitialCopy,
+    /// `/` token (clearing style) must be the only token in the spec.
+    NonIsolatedClear,
+    /// Unsupported effect in a negation, e.g. `[[* -red]]`.
     UnsupportedEffect,
+    /// Negation
     NegationWithoutCopy,
+    /// Duplicate specified for the same property, like `[[bold bold]]` or `[[red green]]`.
     DuplicateSpecifier,
+    /// Redundant negation, e.g. in `[[* -bold -bold]]`.
     RedundantNegation,
+    /// ANSI escape char `\u{1b}` encountered in the text.
+    EscapeInText,
+
+    #[doc(hidden)] // should not occur unless private APIs are used
     SpanOverflow,
+    #[doc(hidden)] // should not occur unless private APIs are used
     TextOverflow,
 }
 
@@ -61,15 +84,17 @@ impl ParseErrorKind {
             Self::UnfinishedStyle => "unfinished style definition",
             Self::UnsupportedStyle => "unsupported style specifier",
             Self::HexColor(err) => err.as_str(),
+            Self::UnfinishedColor => "unfinished color spec",
             Self::InvalidIndexColor => "invalid indexed color",
             Self::UnfinishedBackground => "no background specified after `on` keyword",
-            Self::RedefinedBackground => "redefined background color",
             Self::BogusDelimiter => "bogus delimiter",
             Self::NonInitialCopy => "* (copy) specifier must come first",
+            Self::NonIsolatedClear => "/ (clear) specifier must be the only token",
             Self::UnsupportedEffect => "unsupported effect",
             Self::NegationWithoutCopy => "negation without * (copy) specifier",
             Self::DuplicateSpecifier => "duplicate specifier",
             Self::RedundantNegation => "redundant negation",
+            Self::EscapeInText => "ANSI escape char 0x1b encountered in text",
             Self::SpanOverflow => "too many spans",
             Self::TextOverflow => "too much text",
         }
@@ -86,6 +111,7 @@ impl fmt::Display for ParseErrorKind {
     }
 }
 
+/// Errors that can occur parsing [`StyledString`](crate::StyledString)s from the [rich syntax](crate#rich-syntax).
 #[derive(Debug)]
 pub struct ParseError {
     kind: ParseErrorKind,
@@ -93,10 +119,12 @@ pub struct ParseError {
 }
 
 impl ParseError {
+    /// Returns the kind of this error.
     pub const fn kind(&self) -> &ParseErrorKind {
         &self.kind
     }
 
+    /// Returns (byte) position in the source string that corresponds to this error.
     pub fn pos(&self) -> ops::Range<usize> {
         self.pos.clone()
     }
@@ -113,7 +141,7 @@ impl ParseError {
             "invalid styled string at ",
             self.pos.start => compile_fmt::fmt::<usize>(), "..", self.pos.end => compile_fmt::fmt::<usize>(),
             " ('", hl => compile_fmt::clip(64, "…"),
-            "'): ", self.kind.as_ascii_str() => compile_fmt::clip_ascii(40, "")
+            "'): ", self.kind.as_ascii_str() => compile_fmt::clip_ascii(42, "")
         );
     }
 }
@@ -128,4 +156,5 @@ impl fmt::Display for ParseError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for ParseError {}

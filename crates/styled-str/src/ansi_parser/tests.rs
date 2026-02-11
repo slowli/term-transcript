@@ -3,7 +3,7 @@ use crate::{styled, types::StyledStr};
 
 #[test]
 fn term_roundtrip_simple() {
-    const STYLED: StyledStr = styled!("Hello, [[bold green]]world[[]]!");
+    const STYLED: StyledStr = styled!("Hello, [[bold green]]world[[/]]!");
 
     let ansi = STYLED.ansi().to_string();
     let restored = StyledString::from_ansi(&ansi).unwrap();
@@ -28,7 +28,8 @@ fn term_roundtrip_with_multiple_colors() {
 
 #[test]
 fn roundtrip_with_indexed_colors() {
-    const STYLED: StyledStr = styled!("H[[5]]e[[on 11]]l[[33]]l[[on 250]]o");
+    const STYLED: StyledStr =
+        styled!("H[[color5]]e[[on color(11)]]l[[color33]]l[[on color(250)]]o");
 
     let ansi = STYLED.ansi().to_string();
     let restored = StyledString::from_ansi(&ansi).unwrap();
@@ -36,7 +37,7 @@ fn roundtrip_with_indexed_colors() {
 
     assert_eq!(
         STYLED.to_string(),
-        "H[[magenta]]e[[on yellow*]]l[[#0087ff]]l[[on #bcbcbc]]o"
+        "H[[magenta]]e[[on yellow!]]l[[#0087ff]]l[[on #bcbcbc]]o"
     );
 }
 
@@ -83,37 +84,55 @@ fn implicit_reset_sequence() {
     let term_output = "\u{1b}[34mblue\u{1b}[m";
     let parsed = StyledString::from_ansi(term_output).unwrap();
 
-    assert_eq!(parsed.ansi().to_string(), "\u{1b}[34mblue\u{1b}[0m");
+    assert_eq!(
+        parsed.as_str().ansi().to_string(),
+        "\u{1b}[34mblue\u{1b}[0m"
+    );
 }
 
 #[test]
 fn intense_color() {
     let term_output = "\u{1b}[94mblue\u{1b}[m";
     let parsed = StyledString::from_ansi(term_output).unwrap();
-    assert_eq!(parsed.ansi().to_string(), "\u{1b}[94mblue\u{1b}[0m");
+    assert_eq!(
+        parsed.as_str().ansi().to_string(),
+        "\u{1b}[94mblue\u{1b}[0m"
+    );
 
     let term_output = "\u{1b}[38;5;12mblue\u{1b}[m";
     let parsed = StyledString::from_ansi(term_output).unwrap();
-    assert_eq!(parsed.ansi().to_string(), "\u{1b}[94mblue\u{1b}[0m");
+    assert_eq!(
+        parsed.as_str().ansi().to_string(),
+        "\u{1b}[94mblue\u{1b}[0m"
+    );
 }
 
 #[test]
 fn carriage_return_at_end_of_line() {
     let term_output = "\u{1b}[32mgreen\u{1b}[m\r";
     let parsed = StyledString::from_ansi(term_output).unwrap();
-    assert_eq!(parsed.ansi().to_string(), "\u{1b}[32mgreen\u{1b}[0m");
+    assert_eq!(
+        parsed.as_str().ansi().to_string(),
+        "\u{1b}[32mgreen\u{1b}[0m"
+    );
 }
 
 #[test]
 fn carriage_return_at_end_of_line_with_style_afterwards() {
     let term_output = "\u{1b}[32mgreen\u{1b}[m!\r\u{1b}[m";
     let parsed = StyledString::from_ansi(term_output).unwrap();
-    assert_eq!(parsed.ansi().to_string(), "\u{1b}[32mgreen\u{1b}[0m!");
+    assert_eq!(
+        parsed.as_str().ansi().to_string(),
+        "\u{1b}[32mgreen\u{1b}[0m!"
+    );
 }
 
 #[test]
 fn carriage_return_at_middle_of_line() {
     let term_output = "\u{1b}[32mgreen\u{1b}[m\r\u{1b}[34mblue\u{1b}[m";
     let parsed = StyledString::from_ansi(term_output).unwrap();
-    assert_eq!(parsed.ansi().to_string(), "\u{1b}[34mblue\u{1b}[0m");
+    assert_eq!(
+        parsed.as_str().ansi().to_string(),
+        "\u{1b}[34mblue\u{1b}[0m"
+    );
 }

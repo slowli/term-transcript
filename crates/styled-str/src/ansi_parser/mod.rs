@@ -2,12 +2,14 @@
 //! a writer implementing `WriteColor`.
 
 use core::str;
-use std::num::NonZeroUsize;
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 pub use self::errors::AnsiError;
-use crate::{StyledSpan, StyledString, utils::normalize_style};
+use crate::{
+    StyledString, StyledStringBuilder,
+    alloc::{String, Vec},
+};
 
 mod errors;
 #[cfg(test)]
@@ -21,8 +23,7 @@ const ANSI_OCS: u8 = b']';
 /// Parses terminal output.
 #[derive(Debug, Default)]
 pub(crate) struct AnsiParser {
-    output: StyledString,
-    current_style: Style,
+    output: StyledStringBuilder,
 }
 
 impl AnsiParser {
@@ -78,13 +79,7 @@ impl AnsiParser {
     }
 
     fn write_text(&mut self, text: &str) {
-        if let Some(len) = NonZeroUsize::new(text.len()) {
-            self.output.text.push_str(text);
-            self.output.spans.push(StyledSpan {
-                style: normalize_style(self.current_style),
-                len,
-            });
-        }
+        self.output.push_text(text);
     }
 
     fn process(&mut self, ansi_bytes: &[u8]) -> Result<(), AnsiError> {
@@ -115,18 +110,16 @@ impl AnsiParser {
     }
 
     fn into_styled(self) -> StyledString {
-        self.output.shrink()
+        self.output.build()
     }
 
     fn parse_line(&mut self, term_output: &[u8]) -> Result<(), AnsiError> {
-        let mut dirty_color_spec = false;
-
         let mut i = 0;
         let mut written_end = 0;
         while i < term_output.len() {
             if term_output[i] == ANSI_ESC {
                 // Push the preceding "ordinary" bytes into the writer.
-                self.write_ordinary_text(&term_output[written_end..i], &mut dirty_color_spec)?;
+                self.write_ordinary_text(&term_output[written_end..i])?;
 
                 i += 1;
                 let next_byte = term_output
@@ -136,9 +129,9 @@ impl AnsiParser {
                 if next_byte == ANSI_CSI {
                     i += 1;
                     let csi = Csi::parse(&term_output[i..])?;
-                    let prev_color_spec = self.current_style;
-                    csi.update_color_spec(&mut self.current_style)?;
-                    dirty_color_spec = dirty_color_spec || prev_color_spec != self.current_style;
+                    let mut new_style = *self.output.current_style();
+                    csi.update_color_spec(&mut new_style)?;
+                    self.output.push_style(new_style);
                     i += csi.len;
                 } else if next_byte == ANSI_OCS {
                     Self::skip_ocs(term_output, &mut i)?;
@@ -147,7 +140,7 @@ impl AnsiParser {
                 }
                 written_end = i; // skip the escape sequence
             } else if term_output[i] == b'\r' {
-                self.write_ordinary_text(&term_output[written_end..i], &mut dirty_color_spec)?;
+                self.write_ordinary_text(&term_output[written_end..i])?;
                 i += 1;
                 written_end = i; // skip writing '\r'
             } else {
@@ -162,19 +155,10 @@ impl AnsiParser {
         Ok(())
     }
 
-    fn write_ordinary_text(
-        &mut self,
-        text: &[u8],
-        dirty_color_spec: &mut bool,
-    ) -> Result<(), AnsiError> {
-        if text.is_empty() {
-            Ok(())
-        } else {
-            let text = str::from_utf8(text)?;
-            *dirty_color_spec = false;
-            self.write_text(text);
-            Ok(())
-        }
+    fn write_ordinary_text(&mut self, text: &[u8]) -> Result<(), AnsiError> {
+        let text = str::from_utf8(text)?;
+        self.write_text(text);
+        Ok(())
     }
 }
 

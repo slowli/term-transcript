@@ -1,45 +1,33 @@
 //! `Lines` iterator.
 
-use core::mem;
+use crate::StyledStr;
 
-use crate::{Styled, StyledSpan, StyledStr, types::SpansSlice};
-
+/// Iterator over lines in a [`StyledStr`]. Returned by [`StyledStr::lines()`].
 #[derive(Debug)]
 pub struct Lines<'a> {
-    text: &'a str,
-    spans: SpansSlice<'a>,
+    remainder: StyledStr<'a>,
 }
 
 impl<'a> Lines<'a> {
     pub(super) fn new(str: StyledStr<'a>) -> Self {
-        Self {
-            text: str.text,
-            spans: SpansSlice::new(str.spans),
-        }
-    }
-
-    fn take_spans(&mut self, text_len: usize) -> Vec<StyledSpan> {
-        assert!(text_len > 0);
-        let tail = self.spans.split_off(text_len);
-        mem::replace(&mut self.spans, tail).to_vec()
+        Self { remainder: str }
     }
 }
 
 impl<'a> Iterator for Lines<'a> {
-    type Item = Styled<&'a str, Vec<StyledSpan>>;
+    type Item = StyledStr<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.text.is_empty() {
+        if self.remainder.is_empty() {
             return None;
         }
 
-        // Find the next '\n' occurrence in `str`
-        let next_pos = self.text.find('\n').map_or(self.text.len(), |pos| pos + 1);
-        let (line, tail) = self.text.split_at(next_pos);
-        self.text = tail;
-        let spans = self.take_spans(line.len());
+        // Find the next '\n' occurrence in the text
+        let text = self.remainder.text();
+        let next_pos = text.find('\n').map_or(text.len(), |pos| pos + 1);
+        let (mut line, remainder) = self.remainder.split_at(next_pos);
+        self.remainder = remainder;
 
-        let mut line = Styled { text: line, spans };
         // Pop the ending `\n` and `\r`, same as `lines()` iterator for `str` does.
         if line.text.ends_with('\n') {
             line.pop();
@@ -84,7 +72,7 @@ mod tests {
 
     #[test]
     fn styles_bordering_on_newlines() {
-        let str = styled!("[[red on white]]Test\n[[]]Hello,[[bold green]]\nworld[[* -bold]]!\n");
+        let str = styled!("[[red on white]]Test\n[[/]]Hello,[[bold green]]\nworld[[* -bold]]!\n");
         let expected_lines = [
             styled!("[[red on white]]Test"),
             styled!("Hello,"),

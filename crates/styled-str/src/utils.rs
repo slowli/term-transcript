@@ -308,3 +308,10 @@ impl<'a> StrCursor<'a> {
         start..end
     }
 }
+
+/// Slices a string in compile time.
+pub(crate) const fn const_slice_unchecked(s: &str, range: ops::Range<usize>) -> &str {
+    let (_, tail) = s.split_at(range.start);
+    let (head, _) = tail.split_at(range.end - range.start);
+    head
+}

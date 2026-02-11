@@ -60,7 +60,7 @@ pub fn compare_transcripts(
 
         // If we do precise matching, check it as well.
         let color_diff = if match_kind == MatchKind::Precise && actual_match.is_some() {
-            let diff = StyleDiff::new(original.output().as_ref(), reproduced.as_ref());
+            let diff = StyleDiff::new(original.output().as_str(), reproduced.as_str());
             #[cfg(feature = "tracing")]
             tracing::debug!(?diff, "compared output coloring");
 

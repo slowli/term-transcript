@@ -11,26 +11,31 @@ use core::{
 use anstyle::{AnsiColor, Color, Effects, Style};
 use unicode_width::UnicodeWidthStr;
 
-use crate::{StyledSpan, rich_parser::RichStyle, types::StyledStr};
+use crate::{
+    StyledStr,
+    alloc::{String, Vec, format},
+    rich_parser::RichStyle,
+    types::StyledSpan,
+};
 
 #[cfg(test)]
 mod tests;
 
 impl StyledSpan {
     /// Writes a single plaintext `line` to `out` using styles from `spans_iter`.
-    fn write_line<'a, I>(
+    fn write_line<I>(
         formatter: &mut fmt::Formatter<'_>,
         spans_iter: &mut Peekable<I>,
         line_start: usize,
         line: &str,
     ) -> fmt::Result
     where
-        I: Iterator<Item = (usize, &'a Self)>,
+        I: Iterator<Item = Self>,
     {
         let mut pos = 0;
         while pos < line.len() {
-            let &(span_start, span) = spans_iter.peek().expect("spans ended before lines");
-            let span_len = span.len.get() - line_start.saturating_sub(span_start);
+            let span = spans_iter.peek().expect("spans ended before lines");
+            let span_len = span.len.get() - line_start.saturating_sub(span.start);
 
             let span_end = cmp::min(pos + span_len, line.len());
             write!(
@@ -106,14 +111,52 @@ impl DiffStyleSpan {
 
 const STYLE_WIDTH: usize = 25;
 
+/// Difference in styles between two [styled strings](StyledStr) that can be output in detailed
+/// human-readable format via [`Display`](fmt::Display).
+///
+/// The `Display` implementation supports two output formats:
+///
+/// - With the default / non-alternate format (e.g., `{}`), the diff will be output as the LHS line-by-line,
+///   highlighting differences in styles on each differing line. That is, this format is similar
+///   to [`pretty_assertions::Comparison`].
+/// - With the alternate format (`{:#}`), the diff will be output as a table of all differing spans.
+///
+/// # Examples
+///
+/// ```
+/// use styled_str::{styled, StyleDiff, StyledString};
+///
+/// let lhs = styled!("[[red on white]]Hello,[[/]] [[bold green]]world!");
+/// let rhs = styled!("[[red on white!]]Hello,[[/]] [[bold green]]world[[/]]!");
+/// let diff = StyleDiff::new(lhs, rhs);
+/// assert!(!diff.is_empty());
+///
+/// let diff_str = StyledString::from_ansi(&format!("{diff}"))?;
+/// assert_eq!(
+///     diff_str.text(),
+///     "> Hello, world!\n\
+///      > ^^^^^^      ^\n"
+/// );
+///
+/// let diff_str = StyledString::from_ansi(&format!("{diff:#}"))?;
+/// let expected =
+///     "|Positions         Left style                Right style       |
+///      |========== ========================= =========================|
+///      |      0..6       red on white              red on white!      |
+///      |    12..13        bold green                  (none)          |";
+/// let expected: String = expected
+///     .lines()
+///     .flat_map(|line| [line.trim().trim_matches('|'), "\n"])
+///     .collect();
+/// assert_eq!(diff_str.text(), expected);
+/// # anyhow::Ok(())
+/// ```
 #[derive(Debug)]
 pub struct StyleDiff<'a> {
-    text: &'a str,
-    lhs_spans: &'a [StyledSpan],
+    lhs: StyledStr<'a>,
     differing_spans: Vec<DiffStyleSpan>,
 }
 
-// FIXME: document
 impl fmt::Display for StyleDiff<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         if formatter.alternate() {
@@ -125,6 +168,8 @@ impl fmt::Display for StyleDiff<'_> {
 }
 
 impl<'a> StyleDiff<'a> {
+    /// Computes style difference between two styled strings.
+    ///
     /// # Panics
     ///
     /// Panics if `lhs` and `rhs` have differing lengths.
@@ -136,16 +181,15 @@ impl<'a> StyleDiff<'a> {
         );
 
         let mut this = Self {
-            text: lhs.text,
-            lhs_spans: lhs.spans,
+            lhs,
             differing_spans: Vec::new(),
         };
         let mut pos = 0;
-        let mut lhs_iter = lhs.spans.iter().copied();
+        let mut lhs_iter = lhs.spans.iter();
         let Some(mut lhs_span) = lhs_iter.next() else {
             return this;
         };
-        let mut rhs_iter = rhs.spans.iter().copied();
+        let mut rhs_iter = rhs.spans.iter();
         let Some(mut rhs_span) = rhs_iter.next() else {
             return this;
         };
@@ -155,7 +199,7 @@ impl<'a> StyleDiff<'a> {
 
             // Record a diff span if the color specs differ.
             if lhs_span.style != rhs_span.style {
-                let diff_text = &this.text[pos..pos + common_len.get()];
+                let diff_text = &this.lhs.text[pos..pos + common_len.get()];
                 this.differing_spans.extend(DiffStyleSpan::new(
                     diff_text,
                     pos,
@@ -191,6 +235,7 @@ impl<'a> StyleDiff<'a> {
         }
     }
 
+    /// Checks whether this difference is empty.
     pub fn is_empty(&self) -> bool {
         self.differing_spans.is_empty()
     }
@@ -203,19 +248,9 @@ impl<'a> StyleDiff<'a> {
         let mut highlights = highlights.iter().copied().peekable();
         let mut line_start = 0;
 
-        // Spans together with their starting index
-        let mut span_start = 0;
-        let mut color_spans = self
-            .lhs_spans
-            .iter()
-            .map(move |span| {
-                let prev_start = span_start;
-                span_start += span.len.get();
-                (prev_start, span)
-            })
-            .peekable();
+        let mut color_spans = self.lhs.spans.iter().peekable();
 
-        for line in self.text.split('\n') {
+        for line in self.lhs.text.split('\n') {
             let line_contains_spans = highlights
                 .peek()
                 .is_some_and(|span| span.start <= line_start + line.len());
@@ -335,7 +370,7 @@ impl<'a> StyleDiff<'a> {
             tokens.push("(none)".into());
         }
 
-        let mut lines = vec![];
+        let mut lines = Vec::new();
         let mut current_line = String::new();
         for token in tokens {
             // We can use `len()` because all text is ASCII.

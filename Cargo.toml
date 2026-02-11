@@ -11,15 +11,16 @@ resolver = "2"
 version = "0.5.0-beta.1"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.86"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/slowli/term-transcript"
 
 [workspace.dependencies]
 # External dependencies
 anstream = "0.6.21"
-anstyle = "1.0.13"
+anstyle = { version = "1.0.13", default-features = false }
 anyhow = "1.0.100"
+proptest = "1.10.0"
 assert_matches = "1.5.0"
 base64 = "0.22.1"
 bytecount = "0.6.9"
@@ -31,7 +32,9 @@ handlebars = "6.4.0"
 humantime = "2.3.0"
 os_pipe = "1.2.3"
 portable-pty = "0.8.1" # FIXME: portable-pty 0.9 is seemingly broken on Windows
-pretty_assertions = "1.4.1"
+# Usually, it's a good practice to enable features in the crate manifests, but `pretty_assertions`
+# won't build without `alloc` (or `std`) enabled.
+pretty_assertions = { version = "1.4.1", default-features = false, features = ["alloc"] }
 pulldown-cmark = "0.9.6"
 quick-xml = "0.39.0"
 serde = { version = "1.0", features = ["derive"] }

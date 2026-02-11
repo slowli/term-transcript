@@ -264,7 +264,7 @@ impl InteractionInput {
     }
 
     fn with_empty_output(self) -> Interaction {
-        self.with_output(StyledString::EMPTY)
+        self.with_output(StyledString::default())
     }
 }
 
@@ -323,7 +323,7 @@ impl UserInputState {
         if is_prompt_end {
             if let Some(parsed) = maybe_parsed {
                 // Special case: user input consists of the prompt only.
-                let (text, _) = parsed.into_parts();
+                let text = parsed.into_text();
                 let mut input = UserInput::new(String::new()).with_prompt(Some(text));
                 if self.is_hidden {
                     input = input.hide();
@@ -339,7 +339,7 @@ impl UserInputState {
         }
 
         Ok(maybe_parsed.map(|parsed| {
-            let (text, _) = parsed.into_parts();
+            let text = parsed.into_text();
             let mut input = UserInput::new(into_input_text(text)).with_prompt(self.prompt.take());
             if self.is_hidden {
                 input = input.hide();

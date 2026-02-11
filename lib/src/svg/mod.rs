@@ -137,7 +137,7 @@ impl TemplateOptions {
         transcript
             .interactions()
             .iter()
-            .map(|interaction| split_into_lines(interaction.output().as_ref(), max_width))
+            .map(|interaction| split_into_lines(interaction.output().as_str(), max_width))
             .collect()
     }
 }
@@ -249,7 +249,7 @@ impl TemplateOptions {
 /// let mut transcript = Transcript::new();
 /// transcript.add_interaction(
 ///     UserInput::command("test"),
-///     styled!("Hello, [[green]]world[[]]!").into(),
+///     styled!("Hello, [[green]]world[[/]]!").into(),
 /// );
 ///
 /// let template_options = TemplateOptions {
