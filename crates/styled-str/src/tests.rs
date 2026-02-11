@@ -457,3 +457,22 @@ fn getting_spans() {
     );
     assert_eq!(styled.span_at(styled.text().len()), None);
 }
+
+#[test]
+fn slicing_string() {
+    let styled = styled!("[[green]]Hello, [[inverted]]world[[/]]!");
+    assert_eq!(styled.get(..).unwrap(), styled);
+    assert_eq!(styled.get(..2).unwrap(), styled!("[[green]]He"));
+    assert_eq!(styled.get(1..2).unwrap(), styled!("[[green]]e"));
+    assert_eq!(styled.get(3..=6).unwrap(), styled!("[[green]]lo, "));
+    assert_eq!(
+        styled.get(..8).unwrap(),
+        styled!("[[green]]Hello, [[inverted]]w")
+    );
+    assert_eq!(
+        styled.get(1..=7).unwrap(),
+        styled!("[[green]]ello, [[inverted]]w")
+    );
+    assert_eq!(styled.get(7..).unwrap(), styled!("[[inverted]]world[[/]]!"));
+    assert_eq!(styled.get(10..).unwrap(), styled!("[[inverted]]ld[[/]]!"));
+}

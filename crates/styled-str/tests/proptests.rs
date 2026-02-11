@@ -169,6 +169,24 @@ fn assert_spans_iterator(styled: StyledStr<'_>) -> Result<(), TestCaseError> {
     Ok(())
 }
 
+fn test_string_slice(styled: StyledStr<'_>, range: ops::Range<usize>) -> Result<(), TestCaseError> {
+    let slice = styled.get(range.clone());
+    let text_slice = styled.text().get(range.clone());
+    if let Some(text_slice) = text_slice {
+        prop_assert!(slice.is_some());
+        let slice = slice.unwrap();
+        prop_assert_eq!(slice.text(), text_slice);
+
+        let before = styled.get(..range.start).unwrap();
+        let after = styled.get(range.end..).unwrap();
+        let concat: StyledString = [before, slice, after].into_iter().collect();
+        prop_assert_eq!(concat, styled);
+    } else {
+        prop_assert!(slice.is_none());
+    }
+    Ok(())
+}
+
 const VISIBLE_ASCII: &str = r"[\n\t\x20-\x7e]{1,32}";
 const ANY_CHARS: &str = r"[^\x1b\r]{1,32}";
 
@@ -274,5 +292,15 @@ proptest! {
                 span_start = pos + 1;
             }
         }
+    }
+
+    #[test]
+    fn slicing_string(
+        (styled, start, end) in styled_string(VISIBLE_ASCII, 1..=5).prop_flat_map(|string| {
+            let text_len = string.text().len();
+            (Just(string), 0..=text_len, 0..=text_len)
+        })
+    ) {
+        test_string_slice(styled.as_str(), start..end)?;
     }
 }

@@ -79,6 +79,31 @@ impl<'a> StyledStr<'a> {
         }
     }
 
+    /// Returns a slice of this string. This works similarly to [`str::get()`] and returns `None`
+    /// under the same conditions.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// let styled = styled!("[[green]]Hello, [[it]]world[[/]]!");
+    /// let slice = styled.get(3..=8).unwrap();
+    /// assert_eq!(slice, styled!("[[green]]lo, [[it]]wo"));
+    ///
+    /// let slice = styled.get(10..).unwrap();
+    /// assert_eq!(slice, styled!("[[it]]ld[[/]]!"));
+    /// ```
+    pub fn get(&self, range: impl ops::RangeBounds<usize>) -> Option<Self> {
+        let range = (
+            range.start_bound().map(|&val| val),
+            range.end_bound().map(|&val| val),
+        );
+        Some(Self {
+            text: self.text.get(range)?,
+            spans: self.spans.get_by_text_range(range),
+        })
+    }
+
     /// Splits this string into two at the specified position.
     ///
     /// # Panics

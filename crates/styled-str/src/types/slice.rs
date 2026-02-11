@@ -1,3 +1,5 @@
+use core::ops;
+
 use anstyle::Style;
 
 use super::spans::StyledSpan;
@@ -49,6 +51,8 @@ pub(crate) struct SpansSlice<'a> {
 }
 
 impl<'a> SpansSlice<'a> {
+    const EMPTY: Self = Self::new(&[]);
+
     pub(crate) const fn new(inner: &'a [StyledSpan]) -> Self {
         Self {
             inner,
@@ -118,6 +122,40 @@ impl<'a> SpansSlice<'a> {
         );
         assert_eq!(self.text_end, self.inner.last().map_or(0, StyledSpan::end));
         self.inner
+    }
+
+    /// The range is assumed to be valid w.r.t. the text.
+    pub(crate) fn get_by_text_range(
+        self,
+        (start, end): (ops::Bound<usize>, ops::Bound<usize>),
+    ) -> Self {
+        let start = match start {
+            ops::Bound::Unbounded => 0,
+            ops::Bound::Excluded(pos) => pos + 1,
+            ops::Bound::Included(pos) => pos,
+        };
+        let start = start + self.text_start;
+
+        let end = match end {
+            ops::Bound::Unbounded => self.text_end,
+            ops::Bound::Excluded(pos) => self.text_start + pos,
+            ops::Bound::Included(pos) => self.text_start + pos + 1,
+        };
+        if start >= end {
+            return Self::EMPTY;
+        }
+
+        let start_idx = binary_search_spans(self.inner, start, Bound::Start);
+        let start_idx = start_idx.unwrap_or_else(|idx| idx - 1);
+        let end_idx = binary_search_spans(&self.inner[start_idx..], end, Bound::End);
+        // We need to add 1 because the end index is exclusive, and `start_idx` because the index
+        // is returned for a subslice.
+        let end_idx = end_idx.unwrap_or_else(|idx| idx) + 1 + start_idx;
+        Self {
+            inner: &self.inner[start_idx..end_idx],
+            text_start: start,
+            text_end: end,
+        }
     }
 
     pub(crate) const fn split_at(&self, mid: usize) -> (Self, Self) {
