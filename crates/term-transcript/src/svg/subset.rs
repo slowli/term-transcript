@@ -309,7 +309,7 @@ mod tests {
 
     fn read_font(path: &str) -> FontFace {
         // Relative to the crate dir
-        const FONTS_DIR: &str = "../docs/src/assets/fonts";
+        const FONTS_DIR: &str = "../../docs/src/assets/fonts";
 
         let bytes = fs::read(Path::new(FONTS_DIR).join(path)).unwrap();
         FontFace::new(bytes.into()).unwrap()

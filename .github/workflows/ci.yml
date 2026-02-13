@@ -224,7 +224,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: cli/Dockerfile
+          file: crates/term-transcript-cli/Dockerfile
           load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

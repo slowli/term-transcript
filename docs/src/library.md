@@ -14,7 +14,7 @@ See [the library docs](crates/term_transcript) for detailed description of its A
 The code snippet below executes a single `echo` command in the default shell
 (`sh` for *NIX, `cmd` for Windows), and captures the rendered transcript to stdout.
 
-{{#include ../../lib/README.md:example}}
+{{#include ../../crates/term-transcript/README.md:example}}
 
 ## Use in CLI tests
 
@@ -31,7 +31,7 @@ For example, snapshots may be located in the `examples` directory of the crate,
 or in a `tests` subdirectory.
 
 ```rust,ignore
-{{#include ../../cli/tests/e2e.rs:snapshots_path}}
+{{#include ../../crates/term-transcript-cli/tests/e2e.rs:snapshots_path}}
 ```
 
 ### Configure shell
@@ -40,7 +40,7 @@ This configures the used shell (e.g., `sh` or `bash`), the working directory, `P
 Usually can be shared among all tests.
 
 ```rust,ignore
-{{#include ../../cli/tests/e2e.rs:config}}
+{{#include ../../crates/term-transcript-cli/tests/e2e.rs:config}}
 ```
 
 ### Configure template(s)
@@ -50,7 +50,7 @@ Zero or more template options determining how the captured snapshots are display
 [line numbering](examples/line-numbering.md) etc.
 
 ```rust,ignore
-{{#include ../../cli/tests/e2e.rs:template}}
+{{#include ../../crates/term-transcript-cli/tests/e2e.rs:template}}
 ```
 
 ### Define tests
@@ -59,5 +59,5 @@ Finally, use the definitions above for tests. Each test will provide inputs supp
 and will compare the captured output to one recorded in the snapshot.
 
 ```rust,ignore
-{{#include ../../cli/tests/e2e.rs:simple_test}}
+{{#include ../../crates/term-transcript-cli/tests/e2e.rs:simple_test}}
 ```

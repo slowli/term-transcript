@@ -2,7 +2,7 @@
 # See the CLI crate readme for the usage instructions.
 
 FROM clux/muslrust:stable AS builder
-ADD .. ./
+ADD ../.. ./
 ARG FEATURES=portable-pty,tracing
 RUN --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
   --mount=type=cache,id=artifacts,target=/volume/target \

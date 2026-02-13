@@ -14,7 +14,7 @@ echo "Packaging term-transcript $VERSION for $TARGET..."
 
 CLI_DIR=$(dirname "$0")
 RELEASE_DIR="$CLI_DIR/release"
-ROOT_DIR="$CLI_DIR/.."
+ROOT_DIR="$CLI_DIR/../.."
 EXECUTABLE="$ROOT_DIR/target/$TARGET/executable/term-transcript"
 
 if [[ "$OS" == 'windows-latest' ]]; then

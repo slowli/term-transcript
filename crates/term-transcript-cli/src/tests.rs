@@ -28,16 +28,16 @@ use crate::{Cli, Command, shell::ShellArgs};
 
 /// Directory with SVG snapshots.
 fn assets_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/src/assets")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/src/assets")
 }
 
 /// Directory with Markdown files linking to SVG snapshots.
 fn markdown_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/src/examples")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/src/examples")
 }
 
 fn rainbow_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e-tests/rainbow/bin")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../e2e-tests/rainbow/bin")
 }
 
 #[derive(Debug, PartialEq)]
