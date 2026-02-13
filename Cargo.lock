@@ -930,10 +930,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57206b407293d2bcd3af849ce869d52068623f19e1b5ff8e8778e3309439682b"
 dependencies = [
  "bitflags 2.10.0",
- "getopts",
  "memchr",
  "unicase",
 ]
+
+[[package]]
+name = "pulldown-cmark"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e8bbe1a966bd2f362681a44f6edce3c2310ac21e4d5067a6e7ec396297a6ea0"
+dependencies = [
+ "bitflags 2.10.0",
+ "getopts",
+ "memchr",
+ "pulldown-cmark-escape",
+ "unicase",
+]
+
+[[package]]
+name = "pulldown-cmark-escape"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
 
 [[package]]
 name = "quick-error"
@@ -1322,7 +1340,7 @@ dependencies = [
  "handlebars",
  "humantime",
  "pretty_assertions",
- "pulldown-cmark",
+ "pulldown-cmark 0.13.0",
  "serde_json",
  "styled-str",
  "tempfile",
@@ -1682,7 +1700,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "835169da0173ea373ddf5987632aac1f918967fbbe58195e304342282efa6089"
 dependencies = [
  "proc-macro2",
- "pulldown-cmark",
+ "pulldown-cmark 0.9.6",
  "regex",
  "semver",
  "syn",
