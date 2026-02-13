@@ -74,7 +74,7 @@ jobs:
             --locked
       - name: Package archive
         id: package
-        run: ./cli/package.sh ${REF#refs/*/}
+        run: ./crates/term-transcript-cli/package.sh ${REF#refs/*/}
         env:
           OS: ${{ matrix.os }}
           TARGET: ${{ matrix.target }}
