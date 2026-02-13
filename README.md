@@ -20,7 +20,7 @@ Such tests can be embedded into a readme file.
 
 ## Usage
 
-`term-transcript` comes in two flavors: a [Rust library](lib), and a [CLI app](crates/term-transcript-cli).
+`term-transcript` comes in two flavors: a [Rust library](crates/term-transcript), and a [CLI app](crates/term-transcript-cli).
 The CLI app has slightly less functionality, but does not require Rust knowledge.
 See [the Book](https://slowli.github.io/term-transcript/) for usage guidelines.
 
