@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "lib",
-  "cli",
+  "crates/term-transcript-cli",
   "crates/styled-str",
   "e2e-tests/rainbow"
 ]
