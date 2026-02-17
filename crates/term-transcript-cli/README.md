@@ -65,7 +65,7 @@ shall be dual licensed as above, without any additional terms or conditions.
 
 [`term-transcript`]: https://crates.io/crates/term-transcript
 [fmt-subscriber]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/index.html
-[rainbow-script-link]: ../e2e-tests/rainbow/bin/rainbow
+[rainbow-script-link]: ../../e2e-tests/rainbow/bin/rainbow
 [test-snapshot-link]: tests/snapshots/test.svg
 [test-color-snapshot-link]: tests/snapshots/test-fail.svg
 [test-link]: tests/e2e.rs

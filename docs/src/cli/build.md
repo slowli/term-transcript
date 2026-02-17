@@ -14,12 +14,12 @@ term-transcript --help
 
 This requires a Rust toolchain locally installed.
 
-### Minimum supported Rust version
+## Minimum supported Rust version
 
 The crate supports the latest stable Rust version. It may support previous stable Rust versions,
 but this is not guaranteed.
 
-### Crate feature: `portable-pty`
+## Crate feature: `portable-pty`
 
 Specify `--features portable-pty` in the installation command
 to enable the pseudo-terminal (PTY) support (note that PTY capturing still needs
@@ -29,7 +29,7 @@ which means that programs dependent on [`isatty`] checks
 or getting term size can produce different output than if launched in an actual shell
 (no coloring, no line wrapping etc.).
 
-### Crate feature: `tracing`
+## Crate feature: `tracing`
 
 Specify `--features tracing` in the installation command to enable tracing
 of the main performed operations. This could be useful for debugging purposes.
