@@ -513,3 +513,29 @@ fn ends_with_basics() {
     assert!(!styled.ends_with(styled!("[[inverted]], world[[/]]!")));
     assert!(styled.ends_with(styled!("[[green]]o, [[inverted]]world[[/]]!")));
 }
+
+#[test]
+fn find_basics() {
+    let styled = styled!("[[green]]Hello, [[inverted]]world[[/]]!");
+    assert_eq!(styled.find(StyledStr::default()), Some(0));
+    assert_eq!(styled.find(styled!("H")), None);
+    assert_eq!(styled.find(styled!("[[red]]H")), None);
+
+    // Single span in needle
+    assert_eq!(styled.find(styled!("[[green]]l")), Some(2));
+    assert_eq!(styled.find(styled!("[[green]], ")), Some(5));
+    assert_eq!(styled.find(styled!("[[invert]]w")), Some(7));
+    assert_eq!(styled.find(styled!("[[inverted]]world!")), None);
+
+    // Multiple spans in needle
+    assert_eq!(styled.find(styled!("[[green]], [[invert]]w")), Some(5));
+    assert_eq!(styled.find(styled!("[[inverted]]world[[/]]!")), Some(7));
+    assert_eq!(styled.find(styled!("[[inverted]]world[[bold]]!")), None);
+}
+
+#[test]
+fn find_proptest_regression() {
+    let haystack = styled!("ллллл[[bold]]ллллaaлaaлaaaлллaллaaлл[[/]]a[[bold]]aaл");
+    let needle = styled!("[[bold]]лa[[/]]a");
+    assert_eq!(haystack.find(needle), None);
+}
