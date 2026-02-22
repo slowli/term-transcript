@@ -303,4 +303,28 @@ proptest! {
     ) {
         test_string_slice(styled.as_str(), start..end)?;
     }
+
+    #[test]
+    fn starts_with_positive(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+        let styled = styled.as_str();
+        for end in 0..=styled.text().len() {
+            let prefix = styled.get(..end).unwrap();
+            prop_assert!(styled.starts_with(prefix), "end={end}");
+            if end < styled.text().len() {
+                prop_assert!(!prefix.starts_with(styled), "end={end}");
+            }
+        }
+    }
+
+    #[test]
+    fn ends_with_positive(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+        let styled = styled.as_str();
+        for start in 0..=styled.text().len() {
+            let suffix = styled.get(start..).unwrap();
+            prop_assert!(styled.ends_with(suffix), "start={start}");
+            if start > 0 {
+                prop_assert!(!suffix.ends_with(styled), "start={start}");
+            }
+        }
+    }
 }

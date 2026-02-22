@@ -133,6 +133,16 @@ impl<'a> StyledStr<'a> {
         (start, end)
     }
 
+    /// Checks whether this string starts with a `needle`, matching both its text and styling.
+    pub fn starts_with(&self, needle: StyledStr<'_>) -> bool {
+        self.text.starts_with(needle.text) && self.spans.start_with(&needle.spans)
+    }
+
+    /// Checks whether this string ends with a `needle`, matching both its text and styling.
+    pub fn ends_with(&self, needle: StyledStr<'_>) -> bool {
+        self.text.ends_with(needle.text) && self.spans.end_with(&needle.spans)
+    }
+
     /// Iterates over spans contained in this string.
     ///
     /// # Examples

@@ -483,3 +483,33 @@ fn debugging_strings() {
     let debug = format!("{styled:?}");
     assert_eq!(debug, r#""[[red on white!]]Hello,\n\"world[[italic]]!\"""#);
 }
+
+#[test]
+fn starts_with_basics() {
+    let styled = styled!("[[green]]Hello, [[inverted]]world[[/]]!");
+    assert!(styled.starts_with(StyledStr::default()));
+    assert!(styled.starts_with(styled));
+
+    assert!(styled.starts_with(styled!("[[green]]Hell")));
+    assert!(!styled.starts_with(styled!("Hell")));
+    assert!(!styled.starts_with(styled!("[[red]]H")));
+    assert!(styled.starts_with(styled!("[[green]]Hello, ")));
+    assert!(styled.starts_with(styled!("[[green]]Hello, [[inverted]]w")));
+    assert!(!styled.starts_with(styled!("[[green]]Hello, w")));
+    assert!(styled.starts_with(styled!("[[green]]Hello, [[inverted]]world")));
+}
+
+#[test]
+fn ends_with_basics() {
+    let styled = styled!("[[green]]Hello, [[inverted]]world[[/]]!");
+    assert!(styled.ends_with(StyledStr::default()));
+    assert!(styled.ends_with(styled));
+
+    assert!(styled.ends_with(styled!("!")));
+    assert!(!styled.ends_with(styled!("d!")));
+    assert!(!styled.ends_with(styled!("[[invert]]!")));
+    assert!(styled.ends_with(styled!("[[invert]]d[[/]]!")));
+    assert!(styled.ends_with(styled!("[[inverted]]world[[/]]!")));
+    assert!(!styled.ends_with(styled!("[[inverted]], world[[/]]!")));
+    assert!(styled.ends_with(styled!("[[green]]o, [[inverted]]world[[/]]!")));
+}
