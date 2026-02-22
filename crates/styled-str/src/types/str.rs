@@ -134,11 +134,31 @@ impl<'a> StyledStr<'a> {
     }
 
     /// Checks whether this string starts with a `needle`, matching both its text and styling.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// let styled = styled!("[[green]]Hello, [[* bold]]world");
+    /// assert!(styled.starts_with(styled!("[[green]]Hello")));
+    /// // Styling is taken into account
+    /// assert!(!styled.starts_with(styled!("Hello")));
+    /// ```
     pub fn starts_with(&self, needle: StyledStr<'_>) -> bool {
         self.text.starts_with(needle.text) && self.spans.start_with(&needle.spans)
     }
 
     /// Checks whether this string ends with a `needle`, matching both its text and styling.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// let styled = styled!("[[green]]Hello, [[* bold]]world");
+    /// assert!(styled.ends_with(styled!("[[green bold]]ld")));
+    /// // Styling is taken into account
+    /// assert!(!styled.ends_with(styled!("world")));
+    /// ```
     pub fn ends_with(&self, needle: StyledStr<'_>) -> bool {
         self.text.ends_with(needle.text) && self.spans.end_with(&needle.spans)
     }
