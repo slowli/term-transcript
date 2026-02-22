@@ -1,12 +1,12 @@
 //! Property testing for styled strings.
 
-use std::{fmt::Write as _, num::NonZeroUsize, ops};
+use std::{cell::Cell, fmt::Write as _, num::NonZeroUsize, ops};
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 use proptest::{num, prelude::*};
 use styled_str::{StyledStr, StyledString};
 
-fn effects() -> impl Strategy<Value = Effects> {
+fn effects() -> impl Strategy<Value = Effects> + Clone {
     proptest::bits::u8::between(0, 6).prop_map(|val| {
         let mut this = Effects::new();
         if val & 1 != 0 {
@@ -55,7 +55,7 @@ fn ansi_color() -> impl Strategy<Value = AnsiColor> {
     ]
 }
 
-fn color() -> impl Strategy<Value = Color> {
+fn color() -> impl Strategy<Value = Color> + Clone {
     prop_oneof![
         ansi_color().prop_map(Color::Ansi),
         num::u8::ANY.prop_map(|idx| Ansi256Color(idx).into()),
@@ -64,7 +64,7 @@ fn color() -> impl Strategy<Value = Color> {
     ]
 }
 
-fn style() -> impl Strategy<Value = Style> {
+fn any_style() -> impl Strategy<Value = Style> + Clone {
     let effects_and_color = (
         effects(),
         proptest::option::of(color()),
@@ -72,6 +72,10 @@ fn style() -> impl Strategy<Value = Style> {
     );
     effects_and_color
         .prop_map(|(effects, fg, bg)| Style::new().effects(effects).fg_color(fg).bg_color(bg))
+}
+
+fn limited_style() -> impl Strategy<Value = Style> + Clone {
+    prop_oneof![Just(Style::new()), Just(Style::new().bold()),]
 }
 
 const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;
@@ -96,6 +100,7 @@ struct StyleAndLen {
 
 fn span_lengths(
     text: String,
+    style: impl Strategy<Value = Style> + Clone + 'static,
     span_count: ops::RangeInclusive<usize>,
 ) -> impl Strategy<Value = Vec<StyleAndLen>> {
     assert!(!span_count.is_empty());
@@ -122,9 +127,9 @@ fn span_lengths(
     });
 
     lengths
-        .prop_flat_map(|lengths| {
+        .prop_flat_map(move |lengths| {
             (
-                proptest::collection::vec(style(), lengths.len()),
+                proptest::collection::vec(style.clone(), lengths.len()),
                 Just(lengths),
             )
         })
@@ -139,20 +144,26 @@ fn span_lengths(
 
 fn styled_string(
     text: impl Strategy<Value = String>,
+    style: impl Strategy<Value = Style> + Clone + 'static,
     span_count: ops::RangeInclusive<usize>,
 ) -> impl Strategy<Value = StyledString> {
-    text.prop_flat_map(move |text| (span_lengths(text.clone(), span_count.clone()), Just(text)))
-        .prop_map(|(spans, text)| {
-            let mut builder = StyledString::builder();
-            let mut pos = 0;
-            for span in spans {
-                builder.push_style(span.style);
-                let end_pos = pos + span.len.get();
-                builder.push_text(&text[pos..end_pos]);
-                pos = end_pos;
-            }
-            builder.build()
-        })
+    text.prop_flat_map(move |text| {
+        (
+            span_lengths(text.clone(), style.clone(), span_count.clone()),
+            Just(text),
+        )
+    })
+    .prop_map(|(spans, text)| {
+        let mut builder = StyledString::builder();
+        let mut pos = 0;
+        for span in spans {
+            builder.push_style(span.style);
+            let end_pos = pos + span.len.get();
+            builder.push_text(&text[pos..end_pos]);
+            pos = end_pos;
+        }
+        builder.build()
+    })
 }
 
 fn assert_spans_iterator(styled: StyledStr<'_>) -> Result<(), TestCaseError> {
@@ -177,6 +188,13 @@ fn test_string_slice(styled: StyledStr<'_>, range: ops::Range<usize>) -> Result<
         let slice = slice.unwrap();
         prop_assert_eq!(slice.text(), text_slice);
 
+        let pos = styled.find(slice).unwrap();
+        prop_assert!(pos <= range.start);
+        if pos < range.start {
+            let found_slice = styled.get(pos..pos + slice.text().len()).unwrap();
+            prop_assert_eq!(found_slice, slice);
+        }
+
         let before = styled.get(..range.start).unwrap();
         let after = styled.get(range.end..).unwrap();
         let concat: StyledString = [before, slice, after].into_iter().collect();
@@ -192,42 +210,42 @@ const ANY_CHARS: &str = r"[^\x1b\r]{1,32}";
 
 proptest! {
     #[test]
-    fn styled_ascii_string_roundtrip(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+    fn styled_ascii_string_roundtrip(styled in styled_string(VISIBLE_ASCII, any_style(), 1..=5)) {
         let rich_str = styled.to_string();
         let parsed: StyledString = rich_str.parse()?;
         prop_assert_eq!(styled, parsed);
     }
 
     #[test]
-    fn styled_ascii_string_roundtrip_via_ansi(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+    fn styled_ascii_string_roundtrip_via_ansi(styled in styled_string(VISIBLE_ASCII, any_style(), 1..=5)) {
         let ansi_str = styled.as_str().ansi().to_string();
         let parsed: StyledString = StyledString::from_ansi(&ansi_str)?;
         prop_assert_eq!(styled, parsed);
     }
 
     #[test]
-    fn styled_string_roundtrip(styled in styled_string(ANY_CHARS, 1..=5)) {
+    fn styled_string_roundtrip(styled in styled_string(ANY_CHARS, any_style(), 1..=5)) {
         let rich_str = styled.to_string();
         let parsed: StyledString = rich_str.parse()?;
         prop_assert_eq!(styled, parsed);
     }
 
     #[test]
-    fn styled_string_roundtrip_via_ansi(styled in styled_string(ANY_CHARS, 1..=5)) {
+    fn styled_string_roundtrip_via_ansi(styled in styled_string(ANY_CHARS, any_style(), 1..=5)) {
         let ansi_str = styled.as_str().ansi().to_string();
         let parsed: StyledString = StyledString::from_ansi(&ansi_str)?;
         prop_assert_eq!(styled, parsed);
     }
 
     #[test]
-    fn styles_are_optimized(styled in styled_string(r"[\n\t\x20-\x7e]{32}", 2..=5)) {
+    fn styles_are_optimized(styled in styled_string(r"[\n\t\x20-\x7e]{32}", any_style(), 2..=5)) {
         assert_spans_iterator(styled.as_str())?;
     }
 
     #[test]
     fn concatenating_styled_strings(
-        start in styled_string(r"[^\x1b\r]{32}", 1..=5),
-        end in styled_string(r"[^\x1b\r]{32}", 1..=5),
+        start in styled_string(r"[^\x1b\r]{32}", any_style(), 1..=5),
+        end in styled_string(r"[^\x1b\r]{32}", any_style(), 1..=5),
     ) {
         let mut concat = start.clone();
         concat.push_str(end.as_str());
@@ -243,7 +261,7 @@ proptest! {
 
     #[test]
     fn splitting_styled_string(
-        (pos, styled) in styled_string(r"[\x20-\x7e]{32}", 1..=5).prop_flat_map(|string| {
+        (pos, styled) in styled_string(r"[\x20-\x7e]{32}", any_style(), 1..=5).prop_flat_map(|string| {
             (0..=string.text().len(), Just(string))
         })
     ) {
@@ -257,7 +275,7 @@ proptest! {
     }
 
     #[test]
-    fn lines_in_styled_string(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+    fn lines_in_styled_string(styled in styled_string(VISIBLE_ASCII, any_style(), 1..=5)) {
         let mut builder = StyledString::builder();
         let mut ansi_str = String::new();
         for line in styled.as_str().lines() {
@@ -278,7 +296,7 @@ proptest! {
     }
 
     #[test]
-    fn looking_up_spans(styled in styled_string(VISIBLE_ASCII, 1..=5)) {
+    fn looking_up_spans(styled in styled_string(VISIBLE_ASCII, any_style(), 1..=5)) {
         let styled = styled.as_str();
         let mut spans_iter = styled.spans().peekable();
         let mut span_start = 0;
@@ -296,11 +314,169 @@ proptest! {
 
     #[test]
     fn slicing_string(
-        (styled, start, end) in styled_string(VISIBLE_ASCII, 1..=5).prop_flat_map(|string| {
+        (styled, start, end) in styled_string(VISIBLE_ASCII, any_style(), 1..=5).prop_flat_map(|string| {
             let text_len = string.text().len();
             (Just(string), 0..=text_len, 0..=text_len)
         })
     ) {
         test_string_slice(styled.as_str(), start..end)?;
     }
+
+    #[test]
+    fn starts_with_positive(styled in styled_string(VISIBLE_ASCII, any_style(), 1..=5)) {
+        let styled = styled.as_str();
+        for end in 0..=styled.text().len() {
+            let prefix = styled.get(..end).unwrap();
+            prop_assert!(styled.starts_with(prefix), "end={end}");
+            if end < styled.text().len() {
+                prop_assert!(!prefix.starts_with(styled), "end={end}");
+            }
+        }
+    }
+
+    #[test]
+    fn ends_with_positive(styled in styled_string(VISIBLE_ASCII, any_style(), 1..=5)) {
+        let styled = styled.as_str();
+        for start in 0..=styled.text().len() {
+            let suffix = styled.get(start..).unwrap();
+            prop_assert!(styled.ends_with(suffix), "start={start}");
+            if start > 0 {
+                prop_assert!(!suffix.ends_with(styled), "start={start}");
+            }
+        }
+    }
+}
+
+fn test_starts_with_random(
+    haystack: StyledStr<'_>,
+    needle: StyledStr<'_>,
+) -> Result<bool, TestCaseError> {
+    if haystack.starts_with(needle) {
+        prop_assert!(haystack.text().starts_with(needle.text()));
+        let end = needle.text().len();
+        prop_assert_eq!(haystack.get(..end).unwrap(), needle);
+
+        for (pos, _) in haystack.text().char_indices().rev() {
+            if pos < end {
+                break;
+            }
+            let haystack_prefix = haystack.get(..pos).unwrap();
+            prop_assert!(haystack_prefix.starts_with(needle));
+        }
+        Ok(true)
+    } else {
+        prop_assert!(
+            haystack
+                .get(..needle.text().len())
+                .is_none_or(|prefix| prefix != needle)
+        );
+        Ok(false)
+    }
+}
+
+#[test]
+fn starts_with_random() {
+    let positive_count = Cell::new(0);
+
+    proptest!(|(
+        // Restrict the alphabet so that there's a non-zero chance to hit the positive case
+        haystack in styled_string("[aл]{32}", limited_style(), 1..=5),
+        needle in styled_string("[aл]{3}", limited_style(), 1..=3),
+    )| {
+        if test_starts_with_random(haystack.as_str(), needle.as_str())? {
+            positive_count.update(|count| count + 1);
+        }
+    });
+
+    println!("Positive count: {}", positive_count.get());
+}
+
+fn test_ends_with_random(
+    haystack: StyledStr<'_>,
+    needle: StyledStr<'_>,
+) -> Result<bool, TestCaseError> {
+    let possible_start = haystack.text().len().checked_sub(needle.text().len());
+    if haystack.ends_with(needle) {
+        prop_assert!(haystack.text().ends_with(needle.text()));
+        let start = possible_start.unwrap();
+        prop_assert_eq!(haystack.get(start..).unwrap(), needle);
+
+        for (pos, _) in haystack.text().char_indices() {
+            if pos > start {
+                break;
+            }
+            let haystack_suffix = haystack.get(pos..).unwrap();
+            prop_assert!(haystack_suffix.ends_with(needle));
+        }
+        Ok(true)
+    } else if let Some(possible_start) = possible_start {
+        prop_assert!(
+            haystack
+                .get(possible_start..)
+                .is_none_or(|prefix| prefix != needle)
+        );
+        Ok(false)
+    } else {
+        Ok(false)
+    }
+}
+
+#[test]
+fn ends_with_random() {
+    let positive_count = Cell::new(0);
+
+    proptest!(|(
+        // Restrict the alphabet so that there's a non-zero chance to hit the positive case
+        haystack in styled_string("[aл]{32}", limited_style(), 1..=5),
+        needle in styled_string("[aл]{3}", limited_style(), 1..=3),
+    )| {
+        if test_ends_with_random(haystack.as_str(), needle.as_str())? {
+            positive_count.update(|count| count + 1);
+        }
+    });
+
+    println!("Positive count: {}", positive_count.get());
+}
+
+fn test_find_random(haystack: StyledStr<'_>, needle: StyledStr<'_>) -> Result<bool, TestCaseError> {
+    if let Some(pos) = haystack.find(needle) {
+        prop_assert_eq!(
+            haystack.get(pos..pos + needle.text().len()).unwrap(),
+            needle
+        );
+
+        for prev_pos in 0..pos {
+            if let Some(substr) = haystack.get(prev_pos..prev_pos + needle.text().len()) {
+                prop_assert_ne!(substr, needle);
+            }
+            if let Some(suffix) = haystack.get(prev_pos..) {
+                prop_assert_eq!(suffix.find(needle), Some(pos - prev_pos));
+            }
+        }
+        Ok(true)
+    } else {
+        for pos in 0..haystack.text().len() {
+            if let Some(substr) = haystack.get(pos..pos + needle.text().len()) {
+                prop_assert_ne!(substr, needle);
+            }
+        }
+        Ok(false)
+    }
+}
+
+#[test]
+fn find_random() {
+    let positive_count = Cell::new(0);
+
+    proptest!(|(
+        // Restrict the alphabet so that there's a non-zero chance to hit the positive case
+        haystack in styled_string("[aл]{32}", limited_style(), 1..=5),
+        needle in styled_string("[aл]{3}", limited_style(), 1..=3),
+    )| {
+        if test_find_random(haystack.as_str(), needle.as_str())? {
+            positive_count.update(|count| count + 1);
+        }
+    });
+
+    println!("Positive count: {}", positive_count.get());
 }

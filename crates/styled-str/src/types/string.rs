@@ -28,9 +28,10 @@ use crate::{
 /// builder.push_style(AnsiColor::BrightGreen.on(AnsiColor::White).bold());
 /// builder.push_text("Hello");
 /// builder.push_text(",");
-/// builder.push_style(Style::new());
+/// // It's possible to use `+=` as syntactic sugar for `push_str()` / `push_style()`.
+/// builder += Style::new();
 /// builder.push_text(" world");
-/// builder.push_str(styled!("[[it, dim]]!"));
+/// builder += styled!("[[it, dim]]!");
 ///
 /// let s = builder.build();
 /// assert_eq!(
@@ -122,6 +123,20 @@ impl From<StyledString> for StyledStringBuilder {
         }
     }
 }
+
+impl ops::AddAssign<Style> for StyledStringBuilder {
+    fn add_assign(&mut self, rhs: Style) {
+        self.push_style(rhs);
+    }
+}
+
+impl ops::AddAssign<StyledStr<'_>> for StyledStringBuilder {
+    fn add_assign(&mut self, rhs: StyledStr<'_>) {
+        self.push_str(rhs);
+    }
+}
+
+// We don't implement `AddAssign<&str>` for `StyledStringBuilder` to avoid ambiguity what the string represents.
 
 /// Heap-allocated styled string.
 ///

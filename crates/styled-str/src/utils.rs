@@ -113,7 +113,7 @@ const fn is_same_color(lhs: Color, rhs: Color) -> bool {
 const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;
 const UTF8_CONTINUATION_MARKER: u8 = 0b1000_0000;
 
-const fn ceil_char_boundary(bytes: &[u8], mut pos: usize) -> usize {
+pub(crate) const fn ceil_char_boundary(bytes: &[u8], mut pos: usize) -> usize {
     assert!(pos <= bytes.len());
 
     while pos < bytes.len() && bytes[pos] & UTF8_CONTINUATION_MASK == UTF8_CONTINUATION_MARKER {

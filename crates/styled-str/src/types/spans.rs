@@ -35,6 +35,10 @@ impl StyledSpan {
         let new_len = self.len.get().checked_sub(sub).expect("length underflow");
         self.len = NonZeroUsize::new(new_len).expect("length underflow");
     }
+
+    pub(crate) fn can_contain(&self, needle: &Self) -> bool {
+        self.style == needle.style && self.len >= needle.len
+    }
 }
 
 /// Text with a uniform [`Style`] attached to it. Returned by the [`StyledStr::spans()`](crate::StyledStr::spans()) iterator.

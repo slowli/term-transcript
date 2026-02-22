@@ -158,6 +158,40 @@ impl<'a> SpansSlice<'a> {
         }
     }
 
+    pub(crate) fn start_with(&self, needle: &SpansSlice<'_>) -> bool {
+        let needle_len = needle.len();
+        if needle_len > self.len() {
+            return false;
+        }
+
+        needle
+            .iter()
+            .zip(self.iter())
+            .enumerate()
+            .all(|(i, (needle_span, this_span))| {
+                this_span.style == needle_span.style && {
+                    let cmp = this_span.len.cmp(&needle_span.len);
+                    cmp.is_eq() || (i + 1 == needle_len && cmp.is_gt())
+                }
+            })
+    }
+
+    pub(crate) fn end_with(&self, needle: &SpansSlice<'_>) -> bool {
+        let needle_len = needle.len();
+        if needle_len > self.len() {
+            return false;
+        }
+
+        needle.iter().rev().zip(self.iter().rev()).enumerate().all(
+            |(i, (needle_span, this_span))| {
+                this_span.style == needle_span.style && {
+                    let cmp = this_span.len.cmp(&needle_span.len);
+                    cmp.is_eq() || (i + 1 == needle_len && cmp.is_gt())
+                }
+            },
+        )
+    }
+
     pub(crate) const fn split_at(&self, mid: usize) -> (Self, Self) {
         assert!(
             mid <= self.text_end - self.text_start,

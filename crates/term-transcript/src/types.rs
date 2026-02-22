@@ -185,7 +185,10 @@ impl Interaction {
     }
 
     /// Sets the output for this interaction.
-    pub fn set_output(&mut self, output: StyledString) {
+    pub fn set_output(&mut self, mut output: StyledString) {
+        while output.text().ends_with('\n') {
+            output.pop();
+        }
         self.output = output;
     }
 
