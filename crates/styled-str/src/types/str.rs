@@ -163,6 +163,84 @@ impl<'a> StyledStr<'a> {
         self.text.ends_with(needle.text) && self.spans.end_with(&needle.spans)
     }
 
+    /// Checks whether `needle` is contained in this string, matching both by text and styling.
+    pub fn contains(&self, needle: StyledStr<'_>) -> bool {
+        self.find(needle).is_some()
+    }
+
+    /// Finds the first byte position of `needle` in this string from the string start, matching both by text and styling.
+    #[allow(clippy::missing_panics_doc)] // Internal check that should never be triggered
+    pub fn find(&self, needle: StyledStr<'_>) -> Option<usize> {
+        let Some(first_needle_span) = needle.spans.iter().next() else {
+            // `needle` is empty
+            return Some(0);
+        };
+        let needle_has_multiple_spans = needle.spans.len() > 1;
+
+        let mut text_matched_on_prev_iteration = false;
+        let mut start_pos = 0;
+        loop {
+            // First, find a candidate by styling by considering the starting span.
+            // This is efficient if the styled string doesn't contain many styles.
+            let spans_suffix = self
+                .spans
+                .get_by_text_range((ops::Bound::Included(start_pos), ops::Bound::Unbounded));
+            let offset_by_spans = spans_suffix.iter().find_map(|span| {
+                span.can_contain(&first_needle_span).then(|| {
+                    let mut offset = span.start;
+                    if needle_has_multiple_spans {
+                        // Need to align the span end.
+                        offset += span.len.get() - first_needle_span.len.get();
+                    }
+                    offset
+                })
+            });
+            let Some(offset_by_spans) = offset_by_spans else {
+                // No matching style spans
+                return None;
+            };
+            start_pos += offset_by_spans;
+            // We cannot guarantee that `start_pos` is at the char boundary, and the code below demands it.
+            start_pos = utils::ceil_char_boundary(self.text.as_bytes(), start_pos);
+
+            let offset_by_text = if offset_by_spans == 0 && text_matched_on_prev_iteration {
+                // Can reuse the text match found on the previous iteration
+                0
+            } else {
+                let Some(offset_by_text) = self.text[start_pos..].find(needle.text) else {
+                    // No text mentions
+                    return None;
+                };
+                offset_by_text
+            };
+            start_pos += offset_by_text;
+
+            if offset_by_text == 0 {
+                // The text match *may* correspond to the style match; check the spans slice completely.
+                let range = (
+                    ops::Bound::Included(start_pos),
+                    ops::Bound::Excluded(start_pos + needle.text.len()),
+                );
+                let spans_slice = self.spans.get_by_text_range(range);
+                if spans_slice == needle.spans {
+                    return Some(start_pos);
+                }
+
+                // We guarantee that the first style span matches, so this case can only happen if the needle
+                // contains multiple spans. Because the first and second span styles differ, we can advance
+                // the search position by first + second span lengths (i.e., at least 2).
+                assert!(needle_has_multiple_spans);
+                let second_span_len = needle.spans.get(1).unwrap().len;
+                let offset = first_needle_span.len.get() + second_span_len.get();
+                start_pos += offset;
+                start_pos = utils::ceil_char_boundary(self.text.as_bytes(), start_pos);
+            }
+            // Otherwise, the text match is somewhere after the found style match, so we refine the style match
+            // on the next loop iteration.
+            text_matched_on_prev_iteration = offset_by_text != 0;
+        }
+    }
+
     /// Iterates over spans contained in this string.
     ///
     /// # Examples
