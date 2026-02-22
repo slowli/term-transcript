@@ -164,11 +164,32 @@ impl<'a> StyledStr<'a> {
     }
 
     /// Checks whether `needle` is contained in this string, matching both by text and styling.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// let styled = styled!("[[green]]Hello, [[* bold]]world");
+    /// assert!(styled.contains(styled!("[[green]]lo, [[* bold]]w")));
+    /// assert!(!styled.contains(styled!("lo")));
+    /// ```
     pub fn contains(&self, needle: StyledStr<'_>) -> bool {
         self.find(needle).is_some()
     }
 
     /// Finds the first byte position of `needle` in this string from the string start, matching both by text and styling.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styled_str::styled;
+    /// let styled = styled!("[[green]]Hello, [[* bold]]world");
+    /// assert_eq!(
+    ///     styled.find(styled!("[[green]]lo, [[* bold]]w")),
+    ///     Some(3)
+    /// );
+    /// assert_eq!(styled.find(styled!("lo")), None);
+    /// ```
     #[allow(clippy::missing_panics_doc)] // Internal check that should never be triggered
     pub fn find(&self, needle: StyledStr<'_>) -> Option<usize> {
         let Some(first_needle_span) = needle.spans.iter().next() else {
