@@ -294,15 +294,14 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         }
     }
 
-    /// Adds paths to cargo binaries (including examples) to the `PATH` env variable
-    /// for the shell described by these options.
-    /// This allows to call them by the corresponding filename, without specifying a path
+    /// Adds paths to a cargo binary to the `PATH` env variable for the shell described by these options.
+    /// This allows to call the binary by the corresponding filename, without specifying a path
     /// or doing complex preparations (e.g., calling `cargo install`).
     ///
     /// # Limitations
     ///
     /// - The caller must be a unit or integration test; the method will work improperly otherwise.
-    /// - Does not work in Rust 1.91, 1.92, 1.93 with a non-default `build-dir`.
+    /// - Does not work in Rust 1.91, 1.92, 1.93 with a non-default `build.build-dir`.
     #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", skip(self)))]
     #[must_use]
     #[allow(clippy::missing_panics_doc)] // should never be triggered
@@ -334,7 +333,7 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
 
     /// Adds a specified path to the `PATH` env variable for the shell described by these options.
     /// This method can be called multiple times to add multiple paths and is composable
-    /// with [`Self::with_cargo_path()`].
+    /// with [`Self::with_cargo_path_for()`].
     #[must_use]
     pub fn with_additional_path(mut self, path: impl Into<PathBuf>) -> Self {
         let path = path.into();

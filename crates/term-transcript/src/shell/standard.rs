@@ -94,7 +94,7 @@ impl ShellOptions<StdShell> {
     /// Creates an alias for the binary at `path_to_bin`, which should be an absolute path.
     /// This allows to call the binary using this alias without complex preparations (such as
     /// installing it globally via `cargo install`), and is more flexible than
-    /// [`Self::with_cargo_path()`].
+    /// [`Self::with_cargo_path_for()`].
     ///
     /// In integration tests, you may use [`env!("CARGO_BIN_EXE_<name>")`] to get a path
     /// to binary targets.
