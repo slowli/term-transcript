@@ -263,6 +263,37 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
         path
     }
 
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", ret))]
+    fn legacy_cargo_path(binary_name: &str) -> Option<PathBuf> {
+        let target_path = Self::target_path();
+        let binary_path = target_path.join(format!("{binary_name}{}", env::consts::EXE_SUFFIX));
+        let exists = binary_path.try_exists();
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!(?binary_path, ?exists, "checked binary path");
+        exists.ok()?.then_some(binary_path)
+    }
+
+    fn panic_on_missing_cargo_path(binary_name: &str) -> ! {
+        let binaries: Vec<_> = env::vars_os()
+            .filter_map(|(name, _)| {
+                let name = name.into_string().ok()?;
+                Some(name.strip_prefix("CARGO_BIN_EXE_")?.to_owned())
+            })
+            .collect();
+        if binaries.is_empty() {
+            panic!(
+                "`CARGO_BIN_EXE_{binary_name}` env variable is unset, and {binary_name} is not in the default cargo target dir.\n\
+                help: If this is run in a unit test, move it to an integration test to gain access to `CARGO_BIN_EXE_` vars (requires Rust 1.94+)"
+            );
+        } else {
+            panic!(
+                "`{binary_name}` does not look like a valid cargo binary in the workspace.\n\
+                help: Available binaries: {binaries:?}"
+            );
+        }
+    }
+
     /// Adds paths to cargo binaries (including examples) to the `PATH` env variable
     /// for the shell described by these options.
     /// This allows to call them by the corresponding filename, without specifying a path
@@ -271,11 +302,33 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
     /// # Limitations
     ///
     /// - The caller must be a unit or integration test; the method will work improperly otherwise.
+    /// - Does not work in Rust 1.91, 1.92, 1.93 with a non-default `build-dir`.
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", skip(self)))]
     #[must_use]
-    pub fn with_cargo_path(mut self) -> Self {
-        let target_path = Self::target_path();
-        self.path_additions.push(target_path.join("examples"));
-        self.path_additions.push(target_path);
+    #[allow(clippy::missing_panics_doc)] // should never be triggered
+    pub fn with_cargo_path_for(mut self, binary_name: &str) -> Self {
+        let env_var_name = format!("CARGO_BIN_EXE_{binary_name}");
+        let binary_path = env::var_os(&env_var_name).map(PathBuf::from);
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!(?binary_path, "got Rust 1.94+ path to binary");
+
+        let binary_path = binary_path
+            .or_else(|| Self::legacy_cargo_path(binary_name))
+            .unwrap_or_else(|| Self::panic_on_missing_cargo_path(binary_name));
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!(?binary_path, "got path to binary");
+
+        let parent_path = binary_path
+            .parent()
+            .expect("invalid binary path")
+            .to_owned();
+        // The check is inefficient, but we shouldn't have many additional paths.
+        if !self.path_additions.contains(&parent_path) {
+            self.path_additions.push(parent_path);
+        }
+
         self
     }
 
