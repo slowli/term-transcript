@@ -9,6 +9,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 - Bump minimum supported Rust version to 1.86.
 
+### Fixed
+
+- Rework `ShellOptions::with_cargo_path()` to work with custom target directories.
+
 ## 0.5.0-beta.1 - 2026-02-04
 
 ### Added
@@ -104,7 +108,7 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
   As an example, this can be used to import fonts using `@import` or `@font-face`.
 - Add a fallback error message to the default template if HTML-in-SVG embedding
   is not supported.
-- Add [FAQ](../FAQ.md) with some tips and troubleshooting advice.
+- Add a FAQ with some tips and troubleshooting advice.
 - Allow hiding `UserInput`s during transcript rendering by calling the `hide()` method.
   Hidden inputs are supported by the default and pure SVG templates.
 

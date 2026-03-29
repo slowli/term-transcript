@@ -13,7 +13,8 @@
 //!
 //! // Test configuration that can be shared across tests.
 //! fn config() -> TestConfig {
-//!     let shell_options = ShellOptions::default().with_cargo_path();
+//!     let shell_options = ShellOptions::default()
+//!         .with_cargo_path_for("my-command");
 //!     TestConfig::new(shell_options)
 //!         .with_match_kind(MatchKind::Precise)
 //!         .with_output(TestOutputConfig::Verbose)

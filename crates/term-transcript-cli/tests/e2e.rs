@@ -34,7 +34,7 @@ fn test_config() -> (TestConfig<StdShell>, TempDir) {
         // Switch off logging if `RUST_LOG` is set in the surrounding env
         .with_env("RUST_LOG", "off")
         .with_current_dir(temp_dir.path())
-        .with_cargo_path()
+        .with_cargo_path_for("term-transcript")
         .with_additional_path(rainbow_dir)
         .with_io_timeout(Duration::from_secs(2));
     let config = TestConfig::new(shell_options).with_match_kind(MatchKind::Precise);
@@ -58,7 +58,8 @@ fn scrolled_template() -> Template {
 fn help_example() {
     use term_transcript::PtyCommand;
 
-    let shell_options = ShellOptions::new(PtyCommand::default()).with_cargo_path();
+    let shell_options =
+        ShellOptions::new(PtyCommand::default()).with_cargo_path_for("term-transcript");
     TestConfig::new(shell_options).test(svg_snapshot("help"), ["term-transcript --help"]);
 }
 

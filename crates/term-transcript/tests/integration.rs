@@ -162,9 +162,7 @@ fn transcript_with_empty_output(mute_outputs: &[bool], pure_svg: bool) -> anyhow
         }
     });
 
-    let mut shell_options = ShellOptions::default()
-        .with_cargo_path()
-        .with_io_timeout(Duration::from_millis(200));
+    let mut shell_options = ShellOptions::default().with_io_timeout(Duration::from_millis(200));
     let transcript = Transcript::from_inputs(&mut shell_options, inputs)?;
     assert_tracing_for_transcript_from_inputs(&tracing_storage.lock());
 
