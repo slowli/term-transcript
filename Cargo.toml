@@ -36,7 +36,7 @@ portable-pty = "0.8.1" # FIXME: portable-pty 0.9 is seemingly broken on Windows
 # won't build without `alloc` (or `std`) enabled.
 pretty_assertions = { version = "1.4.1", default-features = false, features = ["alloc"] }
 pulldown-cmark = "0.9.6"
-quick-xml = "0.39.2"
+quick-xml = "0.40.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tempfile = "3.27.0"
