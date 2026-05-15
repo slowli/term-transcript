@@ -27,6 +27,8 @@
 //! }
 //! ```
 //!
+//! ## Lower-level testing
+//!
 //! Use [`TestConfig::test_transcript()`] for more complex scenarios or increased control:
 //!
 //! ```
@@ -51,6 +53,23 @@
 //! TestConfig::new(ShellOptions::default()).test_transcript(&transcript);
 //! # Ok(())
 //! # }
+//! ```
+//!
+//! ## Testing with custom capture logic
+//!
+//! Use [`TestConfig::test_captured()`] if you need to customize snapshot capture logic.
+//!
+//! ```no_run
+//! use term_transcript::{test::TestConfig, Transcript, UserInput};
+//!
+//! #[test]
+//! fn captured_snapshot() {
+//!     let mut captured = Transcript::default();
+//!     let test_output = "result: [[bold green!]]OK[[/]]".parse().unwrap();
+//!     captured.add_interaction(UserInput::command("test").hide(), test_output);
+//!     TestConfig::new(())
+//!         .test_captured("tests/__snapshots__/test.svg", captured);
+//! }
 //! ```
 
 use std::{borrow::Cow, fmt, io, process::Command};
@@ -151,7 +170,16 @@ impl UpdateMode {
     }
 }
 
-/// FIXME
+/// Command executed during snapshot testing in [`TestConfig`] to reproduce a snapshot.
+///
+/// Two provided implementations are:
+///
+/// - [`ShellOptions`], which reproduces snapshots based on [`UserInput`]s and the provided shell.
+///   Used in [`TestConfig::test()`] and related lower-level methods.
+/// - `()`, which requires a captured [`Transcript`], i.e., delegates reproduction to the user code.
+///   Used in [`TestConfig::test_captured()`].
+///
+/// The contents of this trait are implementation details.
 pub trait TestCommand {
     #[doc(hidden)] // implementation detail
     type Inputs: fmt::Debug;

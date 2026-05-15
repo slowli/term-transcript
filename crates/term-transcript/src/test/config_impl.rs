@@ -273,7 +273,10 @@ impl<Cmd: TestCommand, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
 }
 
 impl<F: FnMut(&mut Transcript)> TestConfig<(), F> {
-    /// FIXME
+    /// Tests a snapshot at the specified path against the provided captured snapshot.
+    ///
+    /// This method is similar to [`TestConfig::test()`], but it allows to fully customize to how the snapshot
+    /// is reproduced for the test.
     pub fn test_captured(&mut self, snapshot_path: impl AsRef<Path>, captured: Transcript) {
         self.test_inner(snapshot_path.as_ref(), captured);
     }
