@@ -15,7 +15,7 @@ use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
 use styled_str::StyledString;
 use term_transcript::{
-    Transcript, UserInput,
+    ShellOptions, Transcript, UserInput,
     test::{MatchKind, TestConfig, TestOutputConfig, TestStats},
     traits::SpawnShell,
 };
@@ -203,7 +203,7 @@ impl Command {
 
     fn process_file<Cmd: SpawnShell + fmt::Debug>(
         svg_path: &Path,
-        test_config: &mut TestConfig<Cmd>,
+        test_config: &mut TestConfig<ShellOptions<Cmd>>,
     ) -> anyhow::Result<TestStats> {
         let svg = BufReader::new(File::open(svg_path)?);
         let transcript = Transcript::from_svg(svg)?;

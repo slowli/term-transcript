@@ -53,7 +53,7 @@
 //! # }
 //! ```
 
-use std::process::Command;
+use std::{borrow::Cow, fmt, io, process::Command};
 #[cfg(feature = "svg")]
 use std::{env, ffi::OsStr};
 
@@ -65,7 +65,7 @@ pub use self::{
 };
 #[cfg(feature = "svg")]
 use crate::svg::Template;
-use crate::{ShellOptions, Transcript, traits::SpawnShell};
+use crate::{ShellOptions, Transcript, UserInput, traits::SpawnShell};
 
 mod config_impl;
 mod parser;
@@ -151,14 +151,54 @@ impl UpdateMode {
     }
 }
 
+/// FIXME
+pub trait TestCommand {
+    #[doc(hidden)] // implementation detail
+    type Inputs: fmt::Debug;
+
+    #[doc(hidden)] // implementation detail
+    fn extract_inputs(inputs: &Self::Inputs) -> Cow<'_, [UserInput]>;
+
+    #[doc(hidden)] // implementation detail
+    fn reproduce(&mut self, inputs: Self::Inputs) -> io::Result<Transcript>;
+}
+
+impl<Cmd: SpawnShell> TestCommand for ShellOptions<Cmd> {
+    type Inputs = Vec<UserInput>;
+
+    fn extract_inputs(inputs: &Self::Inputs) -> Cow<'_, [UserInput]> {
+        Cow::Borrowed(inputs)
+    }
+
+    fn reproduce(&mut self, inputs: Self::Inputs) -> io::Result<Transcript> {
+        Transcript::from_inputs(self, inputs)
+    }
+}
+
+impl TestCommand for () {
+    type Inputs = Transcript;
+
+    fn extract_inputs(inputs: &Self::Inputs) -> Cow<'_, [UserInput]> {
+        let inputs = inputs
+            .interactions()
+            .iter()
+            .map(|interaction| interaction.input().clone());
+        Cow::Owned(inputs.collect())
+    }
+
+    fn reproduce(&mut self, inputs: Self::Inputs) -> io::Result<Transcript> {
+        Ok(inputs)
+    }
+}
+
 /// Testing configuration.
 ///
 /// # Examples
 ///
 /// See the [module docs](crate::test) for the examples of usage.
 #[derive(Debug)]
-pub struct TestConfig<Cmd = Command, F = fn(&mut Transcript)> {
-    shell_options: ShellOptions<Cmd>,
+pub struct TestConfig<Cmd = ShellOptions<Command>, F = fn(&mut Transcript)> {
+    command: Cmd,
     match_kind: MatchKind,
     output: TestOutputConfig,
     color_choice: ColorChoice,
@@ -169,16 +209,16 @@ pub struct TestConfig<Cmd = Command, F = fn(&mut Transcript)> {
     transform: F,
 }
 
-impl<Cmd: SpawnShell> TestConfig<Cmd> {
+impl<Cmd: TestCommand> TestConfig<Cmd> {
     /// Creates a new config.
     ///
     /// # Panics
     ///
     /// - Panics if the `svg` crate feature is enabled and the `TERM_TRANSCRIPT_UPDATE` variable
     ///   is set to an incorrect value. See [`UpdateMode::from_env()`] for more details.
-    pub fn new(shell_options: ShellOptions<Cmd>) -> Self {
+    pub fn new(command: Cmd) -> Self {
         Self {
-            shell_options,
+            command,
             match_kind: MatchKind::TextOnly,
             output: TestOutputConfig::Normal,
             color_choice: ColorChoice::Auto,
@@ -198,7 +238,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
         F: FnMut(&mut Transcript),
     {
         TestConfig {
-            shell_options: self.shell_options,
+            command: self.command,
             match_kind: self.match_kind,
             output: self.output,
             color_choice: self.color_choice,
@@ -211,7 +251,7 @@ impl<Cmd: SpawnShell> TestConfig<Cmd> {
     }
 }
 
-impl<Cmd: SpawnShell, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
+impl<Cmd: TestCommand, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
     /// Sets the matching kind applied.
     #[must_use]
     pub fn with_match_kind(mut self, kind: MatchKind) -> Self {

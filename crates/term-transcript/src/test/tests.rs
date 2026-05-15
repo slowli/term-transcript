@@ -32,8 +32,13 @@ fn test_negative_snapshot_testing(test_config: &mut TestConfig) -> anyhow::Resul
     Template::default().render(&transcript, &mut svg_buffer)?;
 
     let parsed = Transcript::from_svg(svg_buffer.as_slice())?;
+    let inputs = parsed
+        .interactions()
+        .iter()
+        .map(|interaction| interaction.input().clone())
+        .collect();
     let mut out = StripStream::new(vec![]);
-    let (stats, _) = test_config.test_transcript_inner(&mut out, &parsed)?;
+    let (stats, _) = test_config.test_transcript_inner(&mut out, &parsed, inputs)?;
     assert_eq!(stats.errors(MatchKind::TextOnly), 1);
     String::from_utf8(out.into_inner()).map_err(Into::into)
 }
