@@ -204,9 +204,7 @@ fn snapshot_testing_with_captured_input(pure_svg: bool) {
     let output = fs::read_to_string(rainbow_dir().join("rainbow.out")).unwrap();
     let interaction = Interaction::new("rainbow", StyledString::from_ansi(&output).unwrap())
         .with_exit_status(ExitStatus(0));
-    let mut transcript = Transcript::default();
-    transcript.add_existing_interaction(interaction);
-    config.test_captured(main_snapshot_path(), transcript);
+    config.test_captured(main_snapshot_path(), Transcript::from_iter([interaction]));
 }
 
 #[cfg(feature = "portable-pty")]
