@@ -1,6 +1,3 @@
-{{! Load common helpers }}
-{{>_helpers~}}
-
 {{! Renders `class` and/or `style` attributes for a background SVG span }}
 {{~#*inline "svg_bg_tspan_attrs"}}
   {{~#scope bg=bg classes="" styles=""}}
@@ -317,7 +314,7 @@
   {{~/scope~}}
 {{~/inline~}}
 
-{{! Main logic }}
+{{~#*inline "main"~}}
 {{#scope
   content_height=0
   scroll_animation=null
@@ -392,3 +389,6 @@
   {{~/if~}}
 {{>root (splat_vars this)~}} {{! <-- All rendering happens here }}
 {{/scope}}
+{{~/inline~}}
+
+{{~>_common~}}
