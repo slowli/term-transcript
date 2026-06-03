@@ -192,19 +192,19 @@ jobs:
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
 
       - name: Log in to Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Identify Buildx container
         run: |
           CONTAINER_ID=$(docker ps --filter=ancestor=moby/buildkit:buildx-stable-1 --format='{{ .ID }}')
@@ -221,7 +221,7 @@ jobs:
           docker buildx du # Check the restored cache
 
       - name: Build image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: crates/term-transcript-cli/Dockerfile
