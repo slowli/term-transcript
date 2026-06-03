@@ -1011,6 +1011,12 @@ fn embedding_font(pure_svg: bool, with_line_numbers: bool) {
     }
 }
 
+const HTML_SPAN_TEMPLATE: &str = r#"
+    {{~#>_helpers~}}
+      {{~#*inline "main"~}}{{>html_span}}{{~/inline~}}
+    {{~/_helpers~}}
+"#;
+
 #[test]
 fn rendering_html_span() {
     let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
@@ -1022,7 +1028,7 @@ fn rendering_html_span() {
         text: "Test",
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, "Test");
 
@@ -1038,7 +1044,7 @@ fn rendering_html_span() {
         text: "Test",
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(
         rendered,
@@ -1052,7 +1058,7 @@ fn rendering_html_span() {
         text: "Test",
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, "<span class=\"bold fg2\">Test</span>");
 }
@@ -1072,19 +1078,19 @@ fn rendering_inverted_html_span() {
         text: "Test",
     };
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, r#"<span class="inv fg-none bg-none">Test</span>"#);
 
     data.style.fg = Some(SerdeColor::Index(5));
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, r#"<span class="inv fg-none bg5">Test</span>"#);
 
     data.style.bg = Some(SerdeColor::Rgb(RgbColor(0xc0, 0xff, 0xee)));
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(
         rendered,
@@ -1108,7 +1114,7 @@ fn rendering_blinking_html_span() {
         text: "Test",
     };
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(
         rendered,
@@ -1132,13 +1138,21 @@ fn rendering_dimmed_html_span() {
         text: "Test",
     };
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>html_span}}", &data)
+        .render_template(HTML_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(
         rendered,
         r#"<span class="strike dimmed"><span>Test</span></span>"#
     );
 }
+
+const SVG_SPAN_TEMPLATE: &str = r#"
+    {{~#>_helpers~}}
+      {{~#*inline "main"~}}
+        {{>svg_tspan_attrs}}
+      {{~/inline~}}
+    {{~/_helpers~}}
+"#;
 
 #[test]
 fn rendering_svg_tspan() {
@@ -1151,7 +1165,7 @@ fn rendering_svg_tspan() {
         text: "Test",
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .render_template(SVG_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, "");
 
@@ -1167,7 +1181,7 @@ fn rendering_svg_tspan() {
         text: "Test",
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .render_template(SVG_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, " class=\"bold underline fg2 bg#cfc\"");
 
@@ -1179,7 +1193,7 @@ fn rendering_svg_tspan() {
         text: "Test",
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .render_template(SVG_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, " class=\"bold dimmed fg2 bg0\"");
 
@@ -1191,7 +1205,7 @@ fn rendering_svg_tspan() {
         text: "Test",
     });
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .render_template(SVG_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, " class=\"bold\" style=\"fill: #c0ffee;\"");
 }
@@ -1211,19 +1225,19 @@ fn rendering_inverted_svg_tspan() {
         text: "Test",
     };
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .render_template(SVG_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, r#" class="inv fg-none bg-none""#);
 
     data.style.fg = Some(SerdeColor::Index(5));
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .render_template(SVG_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, r#" class="inv fg-none bg5""#);
 
     data.style.bg = Some(SerdeColor::Rgb(RgbColor(0xc0, 0xff, 0xee)));
     let rendered = handlebars
-        .render_template("{{>_helpers}}\n{{>svg_tspan_attrs}}", &data)
+        .render_template(SVG_SPAN_TEMPLATE, &data)
         .unwrap();
     assert_eq!(rendered, r#" class="inv bg5" style="fill: #c0ffee;""#);
 }

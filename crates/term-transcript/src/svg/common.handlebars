@@ -243,3 +243,9 @@
     {{~round (mul line_height const.FONT_SIZE) digits=1~}}
   {{~/if~}}
 {{/inline~}}
+
+{{!
+  Include main rendering logic. We need this roundabout construction in order for common inlines to be available
+  to the format-specific rendering logic.
+}}
+{{~>main~}}

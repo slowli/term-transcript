@@ -327,7 +327,7 @@ impl Template {
         register_helpers(&mut handlebars);
         handlebars.register_template(MAIN_TEMPLATE_NAME, template);
         let helpers = HandlebarsTemplate::compile(COMMON_HELPERS).unwrap();
-        handlebars.register_template("_helpers", helpers);
+        handlebars.register_template("_common", helpers);
         Self {
             options: options.into_inner(),
             handlebars,

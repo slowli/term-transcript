@@ -124,6 +124,10 @@ fn snapshot_with_custom_template() -> anyhow::Result<()> {
     Template::custom(template, template_options.validated()?).render(&transcript, &mut buffer)?;
     let buffer = String::from_utf8(buffer)?;
     assert!(buffer.starts_with("<!DOCTYPE html>"), "{buffer}");
+    assert!(
+        buffer.ends_with('\n') && !buffer.ends_with("\n\n"),
+        "{buffer}<<EOF>>"
+    );
     Ok(())
 }
 
