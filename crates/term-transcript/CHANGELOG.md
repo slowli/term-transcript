@@ -5,6 +5,10 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Add ability to test captured CLI transcripts.
+
 ### Changed
 
 - Bump minimum supported Rust version to 1.86.
