@@ -25,7 +25,7 @@ fn svg_snapshot(name: &str) -> PathBuf {
 // ANCHOR: config
 // Executes commands in a temporary dir, with paths to the `term-transcript` binary and
 // the `rainbow` script added to PATH.
-fn test_config() -> (TestConfig<StdShell>, TempDir) {
+fn test_config() -> (TestConfig<ShellOptions<StdShell>>, TempDir) {
     let temp_dir = tempdir().expect("cannot create temporary directory");
     let rainbow_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../e2e-tests/rainbow/bin");
 

@@ -9,11 +9,12 @@ use std::{
 };
 
 use handlebars::Template as HandlebarsTemplate;
+use styled_str::StyledString;
 use tempfile::tempdir;
 #[cfg(feature = "portable-pty")]
 use term_transcript::PtyCommand;
 use term_transcript::{
-    ExitStatus, ShellOptions, Transcript, UserInput,
+    ExitStatus, Interaction, ShellOptions, Transcript, UserInput,
     svg::{NamedPalette, Template, TemplateOptions, ValidTemplateOptions},
     test::{MatchKind, TestConfig, TestOutputConfig, UpdateMode, compare_transcripts},
 };
@@ -61,7 +62,7 @@ fn aliased_snapshot_path() -> &'static Path {
 fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
     let mut shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
     let mut transcript =
-        Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+        Transcript::from_inputs(&mut shell_options, [UserInput::command("rainbow")])?;
     // Patch the exit status for cross-platform compatibility.
     transcript.interactions_mut()[0].set_exit_status(Some(ExitStatus(0)));
 
@@ -112,8 +113,7 @@ fn main_snapshot_can_be_rendered(pure_svg: bool) -> anyhow::Result<()> {
 #[test]
 fn snapshot_with_custom_template() -> anyhow::Result<()> {
     let mut shell_options = ShellOptions::default().with_additional_path(rainbow_dir());
-    let transcript =
-        Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+    let transcript = Transcript::from_inputs(&mut shell_options, [UserInput::command("rainbow")])?;
     let template = read_custom_template()?;
 
     let template_options = TemplateOptions {
@@ -137,8 +137,7 @@ fn snapshot_with_custom_template() -> anyhow::Result<()> {
 fn main_snapshot_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::Result<()> {
     let mut shell_options =
         ShellOptions::new(PtyCommand::default()).with_additional_path(rainbow_dir());
-    let transcript =
-        Transcript::from_inputs(&mut shell_options, vec![UserInput::command("rainbow")])?;
+    let transcript = Transcript::from_inputs(&mut shell_options, [UserInput::command("rainbow")])?;
     let template = if pure_svg {
         Template::pure_svg(ValidTemplateOptions::default())
     } else {
@@ -156,7 +155,7 @@ fn snapshot_with_long_lines_can_be_rendered_from_pty(pure_svg: bool) -> anyhow::
         ShellOptions::new(PtyCommand::default()).with_additional_path(rainbow_dir());
     let transcript = Transcript::from_inputs(
         &mut shell_options,
-        vec![UserInput::command("rainbow --long-lines")],
+        [UserInput::command("rainbow --long-lines")],
     )?;
 
     let interaction = &transcript.interactions()[0];
@@ -192,6 +191,20 @@ fn snapshot_testing(pure_svg: bool) {
         config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
     }
     config.test(main_snapshot_path(), ["rainbow"]);
+}
+
+#[test_casing(2, [false, true])]
+#[decorate(TRACING)]
+fn snapshot_testing_with_captured_input(pure_svg: bool) {
+    let mut config = TestConfig::new(());
+    if pure_svg {
+        config = config.with_template(Template::pure_svg(ValidTemplateOptions::default()));
+    }
+
+    let output = fs::read_to_string(rainbow_dir().join("rainbow.out")).unwrap();
+    let interaction = Interaction::new("rainbow", StyledString::from_ansi(&output).unwrap())
+        .with_exit_status(ExitStatus(0));
+    config.test_captured(main_snapshot_path(), Transcript::from_iter([interaction]));
 }
 
 #[cfg(feature = "portable-pty")]

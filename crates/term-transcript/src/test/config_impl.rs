@@ -12,10 +12,10 @@ use anstyle::{Ansi256Color, AnsiColor, Color, Style};
 use styled_str::{StyleDiff, TextDiff};
 
 use super::{
-    MatchKind, TestConfig, TestOutputConfig, TestStats,
+    MatchKind, TestCommand, TestConfig, TestOutputConfig, TestStats,
     utils::{ChoiceWriter, IndentingWriter, PrintlnWriter},
 };
-use crate::{Interaction, Transcript, UserInput, traits::SpawnShell};
+use crate::{Interaction, ShellOptions, Transcript, UserInput, traits::SpawnShell};
 
 const SUCCESS: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightGreen)));
 const ERROR: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightRed)));
@@ -100,56 +100,9 @@ pub fn compare_transcripts(
     Ok(stats)
 }
 
-impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
-    /// Tests a snapshot at the specified path with the provided inputs.
-    ///
-    /// If the path is relative, it is resolved relative to the current working dir,
-    /// which in the case of tests is the root directory of the including crate (i.e., the dir
-    /// where the crate manifest is located). You may specify an absolute path
-    /// using env vars that Cargo sets during build, such as [`env!("CARGO_MANIFEST_DIR")`].
-    ///
-    /// Similar to other kinds of snapshot testing, a new snapshot will be generated if
-    /// there is no existing snapshot or there are mismatches between inputs or outputs
-    /// in the original and reproduced transcripts. This new snapshot will have the same path
-    /// as the original snapshot, but with the `.new.svg` extension. As an example,
-    /// if the snapshot at `snapshots/help.svg` is tested, the new snapshot will be saved at
-    /// `snapshots/help.new.svg`.
-    ///
-    /// Generation of new snapshots will only happen if the `svg` crate feature is enabled
-    /// (which it is by default), and if the [update mode](Self::with_update_mode())
-    /// is not [`UpdateMode::Never`], either because it was set explicitly or
-    /// [inferred] from the execution environment.
-    ///
-    /// The snapshot template can be customized via [`Self::with_template()`].
-    ///
-    /// # Panics
-    ///
-    /// - Panics if there is no snapshot at the specified path, or if the path points
-    ///   to a directory.
-    /// - Panics if an error occurs during reproducing the transcript or processing
-    ///   its output.
-    /// - Panics if there are mismatches between inputs or outputs in the original and reproduced
-    ///   transcripts.
-    ///
-    /// [`env!("CARGO_MANIFEST_DIR")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
-    /// [`UpdateMode::Never`]: crate::test::UpdateMode::Never
-    /// [inferred]: crate::test::UpdateMode::from_env()
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(skip_all, fields(snapshot_path, inputs))
-    )]
-    pub fn test<I: Into<UserInput>>(
-        &mut self,
-        snapshot_path: impl AsRef<Path>,
-        inputs: impl IntoIterator<Item = I>,
-    ) {
-        let inputs: Vec<_> = inputs.into_iter().map(Into::into).collect();
-        let snapshot_path = snapshot_path.as_ref();
-        #[cfg(feature = "tracing")]
-        tracing::Span::current()
-            .record("snapshot_path", tracing::field::debug(snapshot_path))
-            .record("inputs", tracing::field::debug(&inputs));
-
+impl<Cmd: TestCommand, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
+    #[cfg_attr(feature = "tracing", tracing::instrument(name = "test", skip(self)))]
+    fn test_inner(&mut self, snapshot_path: &Path, input: Cmd::Inputs) {
         if snapshot_path.is_file() {
             #[cfg(feature = "tracing")]
             tracing::debug!(snapshot_path.is_file = true);
@@ -164,7 +117,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
                     snapshot_path.display()
                 );
             });
-            self.compare_and_test_transcript(snapshot_path, &transcript, &inputs);
+            self.compare_and_test_transcript(snapshot_path, &transcript, input);
         } else if snapshot_path.exists() {
             panic!(
                 "Snapshot path `{}` exists, but is not a file",
@@ -174,8 +127,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
             #[cfg(feature = "tracing")]
             tracing::debug!(snapshot_path.is_file = false);
 
-            let new_snapshot_message =
-                self.create_and_write_new_snapshot(snapshot_path, inputs.into_iter());
+            let new_snapshot_message = self.create_and_write_new_snapshot(snapshot_path, input);
             panic!(
                 "Snapshot `{}` is missing\n{new_snapshot_message}",
                 snapshot_path.display()
@@ -185,23 +137,24 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
 
     #[cfg_attr(
         feature = "tracing",
-        tracing::instrument(level = "debug", skip(self, transcript))
+        tracing::instrument(level = "debug", skip(self, parsed))
     )]
     fn compare_and_test_transcript(
         &mut self,
         snapshot_path: &Path,
-        transcript: &Transcript,
-        expected_inputs: &[UserInput],
+        parsed: &Transcript,
+        input: Cmd::Inputs,
     ) {
-        let actual_inputs: Vec<_> = transcript
+        let actual_inputs: Vec<_> = parsed
             .interactions()
             .iter()
             .map(Interaction::input)
             .collect();
+        let expected_inputs = Cmd::extract_inputs(&input);
 
-        if !actual_inputs.iter().copied().eq(expected_inputs) {
-            let new_snapshot_message =
-                self.create_and_write_new_snapshot(snapshot_path, expected_inputs.iter().cloned());
+        if !actual_inputs.iter().copied().eq(expected_inputs.as_ref()) {
+            let expected_inputs = expected_inputs.into_owned();
+            let new_snapshot_message = self.create_and_write_new_snapshot(snapshot_path, input);
             panic!(
                 "Unexpected user inputs in parsed snapshot: expected {expected_inputs:?}, \
                  got {actual_inputs:?}\n{new_snapshot_message}"
@@ -209,7 +162,7 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
         }
 
         let (stats, reproduced) = self
-            .test_transcript_for_stats(transcript)
+            .test_transcript_with_input(parsed, input)
             .unwrap_or_else(|err| panic!("{err}"));
         if stats.errors(self.match_kind) > 0 {
             let new_snapshot_message = self.write_new_snapshot(snapshot_path, &reproduced);
@@ -217,20 +170,51 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
         }
     }
 
-    #[cfg(feature = "svg")]
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(level = "debug", skip(self, inputs))
-    )]
-    fn create_and_write_new_snapshot(
+    fn test_transcript_with_input(
         &mut self,
-        path: &Path,
-        inputs: impl Iterator<Item = UserInput>,
-    ) -> String {
-        let mut reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)
-            .unwrap_or_else(|err| {
-                panic!("Cannot create a snapshot `{}`: {err}", path.display());
-            });
+        parsed: &Transcript,
+        input: Cmd::Inputs,
+    ) -> io::Result<(TestStats, Transcript)> {
+        if self.output == TestOutputConfig::Quiet {
+            self.test_transcript_inner(&mut io::sink(), parsed, input)
+        } else {
+            let choice = if self.color_choice == ColorChoice::Auto {
+                AutoStream::choice(&io::stdout())
+            } else {
+                self.color_choice
+            };
+            // We cannot create an `AutoStream` here because it would require `PrintlnWriter` to implement `anstream::RawStream`,
+            // which is a sealed trait.
+            let mut out = ChoiceWriter::new(PrintlnWriter::default(), choice);
+            self.test_transcript_inner(&mut out, parsed, input)
+        }
+    }
+
+    pub(super) fn test_transcript_inner(
+        &mut self,
+        out: &mut impl Write,
+        parsed: &Transcript,
+        input: Cmd::Inputs,
+    ) -> io::Result<(TestStats, Transcript)> {
+        let mut reproduced = self.command.reproduce(input)?;
+        (self.transform)(&mut reproduced);
+
+        let stats = compare_transcripts(
+            out,
+            parsed,
+            &reproduced,
+            self.match_kind,
+            self.output == TestOutputConfig::Verbose,
+        )?;
+        Ok((stats, reproduced))
+    }
+
+    #[cfg(feature = "svg")]
+    #[cfg_attr(feature = "tracing", tracing::instrument(level = "debug", skip(self)))]
+    fn create_and_write_new_snapshot(&mut self, path: &Path, inputs: Cmd::Inputs) -> String {
+        let mut reproduced = self.command.reproduce(inputs).unwrap_or_else(|err| {
+            panic!("Cannot create a snapshot `{}`: {err}", path.display());
+        });
         (self.transform)(&mut reproduced);
         self.write_new_snapshot(path, &reproduced)
     }
@@ -276,15 +260,66 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
 
     #[cfg(not(feature = "svg"))]
     #[allow(clippy::unused_self)] // necessary for uniformity
-    fn create_and_write_new_snapshot(
-        &mut self,
-        _: &Path,
-        _: impl Iterator<Item = UserInput>,
-    ) -> String {
+    fn create_and_write_new_snapshot(&mut self, _: &Path, _: Cmd::Inputs) -> String {
         format!(
             "Not writing a new snapshot since `{}/svg` feature is not enabled",
             env!("CARGO_PKG_NAME")
         )
+    }
+}
+
+impl<F: FnMut(&mut Transcript)> TestConfig<(), F> {
+    /// Tests a snapshot at the specified path against the provided captured snapshot.
+    ///
+    /// This method is similar to [`TestConfig::test()`], but it allows to fully customize to how the snapshot
+    /// is reproduced for the test.
+    pub fn test_captured(&mut self, snapshot_path: impl AsRef<Path>, captured: Transcript) {
+        self.test_inner(snapshot_path.as_ref(), captured);
+    }
+}
+
+impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<ShellOptions<Cmd>, F> {
+    /// Tests a snapshot at the specified path with the provided inputs.
+    ///
+    /// If the path is relative, it is resolved relative to the current working dir,
+    /// which in the case of tests is the root directory of the including crate (i.e., the dir
+    /// where the crate manifest is located). You may specify an absolute path
+    /// using env vars that Cargo sets during build, such as [`env!("CARGO_MANIFEST_DIR")`].
+    ///
+    /// Similar to other kinds of snapshot testing, a new snapshot will be generated if
+    /// there is no existing snapshot or there are mismatches between inputs or outputs
+    /// in the original and reproduced transcripts. This new snapshot will have the same path
+    /// as the original snapshot, but with the `.new.svg` extension. As an example,
+    /// if the snapshot at `snapshots/help.svg` is tested, the new snapshot will be saved at
+    /// `snapshots/help.new.svg`.
+    ///
+    /// Generation of new snapshots will only happen if the `svg` crate feature is enabled
+    /// (which it is by default), and if the [update mode](Self::with_update_mode())
+    /// is not [`UpdateMode::Never`], either because it was set explicitly or
+    /// [inferred] from the execution environment.
+    ///
+    /// The snapshot template can be customized via [`Self::with_template()`].
+    ///
+    /// # Panics
+    ///
+    /// - Panics if there is no snapshot at the specified path, or if the path points
+    ///   to a directory.
+    /// - Panics if an error occurs during reproducing the transcript or processing
+    ///   its output.
+    /// - Panics if there are mismatches between inputs or outputs in the original and reproduced
+    ///   transcripts.
+    ///
+    /// [`env!("CARGO_MANIFEST_DIR")`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
+    /// [`UpdateMode::Never`]: crate::test::UpdateMode::Never
+    /// [inferred]: crate::test::UpdateMode::from_env()
+    pub fn test<I: Into<UserInput>>(
+        &mut self,
+        snapshot_path: impl AsRef<Path>,
+        inputs: impl IntoIterator<Item = I>,
+    ) {
+        let input: Vec<_> = inputs.into_iter().map(Into::into).collect();
+        let snapshot_path = snapshot_path.as_ref();
+        self.test_inner(snapshot_path, input);
     }
 
     /// Tests the `transcript`. This is a lower-level alternative to [`Self::test()`].
@@ -314,40 +349,11 @@ impl<Cmd: SpawnShell + fmt::Debug, F: FnMut(&mut Transcript)> TestConfig<Cmd, F>
         &mut self,
         transcript: &Transcript,
     ) -> io::Result<(TestStats, Transcript)> {
-        if self.output == TestOutputConfig::Quiet {
-            self.test_transcript_inner(&mut io::sink(), transcript)
-        } else {
-            let choice = if self.color_choice == ColorChoice::Auto {
-                AutoStream::choice(&io::stdout())
-            } else {
-                self.color_choice
-            };
-            // We cannot create an `AutoStream` here because it would require `PrintlnWriter` to implement `anstream::RawStream`,
-            // which is a sealed trait.
-            let mut out = ChoiceWriter::new(PrintlnWriter::default(), choice);
-            self.test_transcript_inner(&mut out, transcript)
-        }
-    }
-
-    pub(super) fn test_transcript_inner(
-        &mut self,
-        out: &mut impl Write,
-        transcript: &Transcript,
-    ) -> io::Result<(TestStats, Transcript)> {
         let inputs = transcript
             .interactions()
             .iter()
-            .map(|interaction| interaction.input().clone());
-        let mut reproduced = Transcript::from_inputs(&mut self.shell_options, inputs)?;
-        (self.transform)(&mut reproduced);
-
-        let stats = compare_transcripts(
-            out,
-            transcript,
-            &reproduced,
-            self.match_kind,
-            self.output == TestOutputConfig::Verbose,
-        )?;
-        Ok((stats, reproduced))
+            .map(|interaction| interaction.input().clone())
+            .collect();
+        self.test_transcript_with_input(transcript, inputs)
     }
 }

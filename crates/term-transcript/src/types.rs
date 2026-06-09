@@ -85,6 +85,20 @@ impl Transcript {
     }
 }
 
+impl FromIterator<Interaction> for Transcript {
+    fn from_iter<I: IntoIterator<Item = Interaction>>(iter: I) -> Self {
+        Self {
+            interactions: iter.into_iter().collect(),
+        }
+    }
+}
+
+impl Extend<Interaction> for Transcript {
+    fn extend<I: IntoIterator<Item = Interaction>>(&mut self, iter: I) {
+        self.interactions.extend(iter);
+    }
+}
+
 /// Portable, platform-independent version of [`ExitStatus`] from the standard library.
 ///
 /// # Capturing `ExitStatus`
