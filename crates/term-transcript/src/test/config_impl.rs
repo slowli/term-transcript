@@ -260,11 +260,7 @@ impl<Cmd: TestCommand, F: FnMut(&mut Transcript)> TestConfig<Cmd, F> {
 
     #[cfg(not(feature = "svg"))]
     #[allow(clippy::unused_self)] // necessary for uniformity
-    fn create_and_write_new_snapshot(
-        &mut self,
-        _: &Path,
-        _: impl Iterator<Item = UserInput>,
-    ) -> String {
+    fn create_and_write_new_snapshot(&mut self, _: &Path, _: Cmd::Inputs) -> String {
         format!(
             "Not writing a new snapshot since `{}/svg` feature is not enabled",
             env!("CARGO_PKG_NAME")
