@@ -26,7 +26,7 @@ Add this to your `Crate.toml`:
 
 ```toml
 [dependencies]
-styled-str = "0.5.0-beta.1"
+styled-str = "0.5.0"
 ```
 
 Basic usage:

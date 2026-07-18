@@ -154,7 +154,7 @@
 //! [CSI]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 
 // Documentation settings
-#![doc(html_root_url = "https://docs.rs/styled-str/0.5.0-beta.1")]
+#![doc(html_root_url = "https://docs.rs/styled-str/0.5.0")]
 // Conditional compilation
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate core;

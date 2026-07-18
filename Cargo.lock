@@ -1217,7 +1217,7 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "styled-str"
-version = "0.5.0-beta.1"
+version = "0.5.0"
 dependencies = [
  "anstyle",
  "anyhow",
@@ -1267,7 +1267,7 @@ dependencies = [
 
 [[package]]
 name = "term-transcript"
-version = "0.5.0-beta.1"
+version = "0.5.0"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1295,7 +1295,7 @@ dependencies = [
 
 [[package]]
 name = "term-transcript-cli"
-version = "0.5.0-beta.1"
+version = "0.5.0"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1316,7 +1316,7 @@ dependencies = [
 
 [[package]]
 name = "term-transcript-rainbow"
-version = "0.5.0-beta.1"
+version = "0.5.0"
 dependencies = [
  "anstyle",
  "anyhow",
@@ -1349,9 +1349,9 @@ dependencies = [
 
 [[package]]
 name = "test-casing"
-version = "0.2.0-beta.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3daeaea95548ac27e70c4e55f6bd871d69ba6463af5d73b9b627b44f8b520adc"
+checksum = "d058c299f55101cd3a8abb6cec8eaf4f047fe36346668fffe1ed65b6572060ec"
 dependencies = [
  "test-casing-macro",
  "tracing",
@@ -1360,9 +1360,9 @@ dependencies = [
 
 [[package]]
 name = "test-casing-macro"
-version = "0.2.0-beta.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cff5b5423c2f88c9fc1c139eda0e1f13b88367e9b5eb53d03f5f640f7d23070e"
+checksum = "efd174360feb5ee2613457f9769030e89c4a2551ff8d91afea7932e90a9ad630"
 dependencies = [
  "proc-macro2",
  "quote",
