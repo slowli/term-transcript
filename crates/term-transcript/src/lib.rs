@@ -149,7 +149,7 @@
 //! ```
 
 // Documentation settings.
-#![doc(html_root_url = "https://docs.rs/term-transcript/0.5.0-beta.1")]
+#![doc(html_root_url = "https://docs.rs/term-transcript/0.5.0")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "portable-pty")]
