@@ -154,8 +154,8 @@ fn split_into_args(command: &str, env_vars: &HashMap<&'static str, String>) -> V
     }
 
     assert_eq!(state, ParsingState::Normal { is_escape: false });
-    assert!(current_arg.is_empty());
-    assert!(current_var.is_empty());
+    assert_eq!(current_arg, "");
+    assert_eq!(current_var, "");
 
     args
 }
@@ -279,7 +279,7 @@ fn parse_markdown_file(
                 let Some(shell_command) = shell_command.take() else {
                     continue;
                 };
-                assert!(!shell_command.is_empty());
+                assert_ne!(shell_command, "");
 
                 let img_path = img_path.take();
                 let Some(cli) = prepare_cli(&shell_command, img_path.as_deref()) else {

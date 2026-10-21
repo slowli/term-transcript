@@ -105,7 +105,7 @@ fn span_lengths(
 ) -> impl Strategy<Value = Vec<StyleAndLen>> {
     assert!(!span_count.is_empty());
     assert!(*span_count.start() > 0);
-    assert!(!text.is_empty());
+    assert_ne!(text, "");
 
     let item = (1..=text.len()).prop_map(|len| NonZeroUsize::new(len).unwrap());
     let lengths = proptest::collection::vec(item, span_count).prop_map(move |mut lengths| {

@@ -115,10 +115,10 @@ drwxrwxrwx 1 alex alex 4096 Apr 18 12:38 <span class="fg-blue bg-green">..</span
         transcript.interactions()[0].input().as_ref(),
         "ls > /dev/null"
     );
-    assert!(transcript.interactions()[0].output().text().is_empty());
+    assert_eq!(transcript.interactions()[0].output().text(), "");
 
     assert_eq!(transcript.interactions()[1].input().as_ref(), "ls");
-    assert!(!transcript.interactions()[1].output().text().is_empty());
+    assert_ne!(transcript.interactions()[1].output().text(), "");
 }
 
 #[test]
@@ -234,13 +234,13 @@ fn reading_user_input_with_manual_events() {
         let event = Event::Start(BytesStart::new("pre"));
         assert!(state.process(event, 0..1).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, None);
-        assert!(state.text.plaintext_buffer().is_empty());
+        assert_eq!(state.text.plaintext_buffer(), "");
     }
     {
         let event = Event::Start(BytesStart::from_content(r#"span class="prompt""#, 4));
         assert!(state.process(event, 1..2).unwrap().is_none());
         assert_eq!(state.prompt_open_tags, Some(2));
-        assert!(state.text.plaintext_buffer().is_empty());
+        assert_eq!(state.text.plaintext_buffer(), "");
     }
     {
         let event = Event::Text(BytesText::from_escaped("$"));
@@ -251,7 +251,7 @@ fn reading_user_input_with_manual_events() {
         let event = Event::End(BytesEnd::new("span"));
         assert!(state.process(event, 3..4).unwrap().is_none());
         assert_eq!(state.prompt.as_deref(), Some("$"));
-        assert!(state.text.plaintext_buffer().is_empty());
+        assert_eq!(state.text.plaintext_buffer(), "");
     }
     {
         let event = Event::Text(BytesText::from_escaped(" rainbow"));

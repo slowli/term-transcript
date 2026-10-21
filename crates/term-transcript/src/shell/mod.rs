@@ -281,17 +281,15 @@ impl<Cmd: ConfigureCommand> ShellOptions<Cmd> {
                 Some(name.strip_prefix("CARGO_BIN_EXE_")?.to_owned())
             })
             .collect();
-        if binaries.is_empty() {
-            panic!(
-                "`CARGO_BIN_EXE_{binary_name}` env variable is unset, and {binary_name} is not in the default cargo target dir.\n\
-                help: If this is run in a unit test, move it to an integration test to gain access to `CARGO_BIN_EXE_` vars (requires Rust 1.94+)"
-            );
-        } else {
-            panic!(
-                "`{binary_name}` does not look like a valid cargo binary in the workspace.\n\
-                help: Available binaries: {binaries:?}"
-            );
-        }
+        assert!(
+            !binaries.is_empty(),
+            "`CARGO_BIN_EXE_{binary_name}` env variable is unset, and {binary_name} is not in the default cargo target dir.\n\
+             help: If this is run in a unit test, move it to an integration test to gain access to `CARGO_BIN_EXE_` vars (requires Rust 1.94+)"
+        );
+        panic!(
+            "`{binary_name}` does not look like a valid cargo binary in the workspace.\n\
+            help: Available binaries: {binaries:?}"
+        );
     }
 
     /// Adds paths to a cargo binary to the `PATH` env variable for the shell described by these options.
