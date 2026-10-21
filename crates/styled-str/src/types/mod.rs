@@ -133,8 +133,7 @@ impl fmt::Debug for Diff<'_> {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Diff<'_> {}
+impl core::error::Error for Diff<'_> {}
 
 /// Stack-allocated version of [`Styled`] for use in compile-time parsing of rich styling strings.
 #[doc(hidden)]
