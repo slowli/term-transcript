@@ -17,8 +17,7 @@ anstyle.workspace = true
 
 # Private dependencies
 compile-fmt.workspace = true
-pretty_assertions.workspace = true # FIXME remove
-similar = { version = "3.2.0", default-features = false, features = ["text", "inline"] }
+similar = { workspace = true, features = ["inline"] }
 unicode-width.workspace = true
 
 [dev-dependencies]

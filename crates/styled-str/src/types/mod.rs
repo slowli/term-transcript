@@ -12,6 +12,7 @@ pub use self::{
 };
 use crate::{
     StyleDiff,
+    comparison::{highlight_diff, write_diff_header},
     utils::{Stack, StackStr},
 };
 
@@ -21,7 +22,7 @@ mod spans;
 mod str;
 mod string;
 
-/// Text difference between two strings. ANSI-styled when printed (powered by [`pretty_assertions::Comparison`]).
+/// Text difference between two strings. ANSI-styled when printed.
 ///
 /// # [`Display`](fmt::Display) representation
 ///
@@ -59,48 +60,13 @@ impl<'a> TextDiff<'a> {
 
 impl fmt::Display for TextDiff<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use pretty_assertions::Comparison;
-
-        // Since `Comparison` uses `fmt::Debug`, we define this simple wrapper
-        // to switch to `fmt::Display`.
-        struct DebugStr<'a> {
-            s: &'a str,
-            padding: usize,
-        }
-
-        impl<'a> DebugStr<'a> {
-            fn new(s: &'a str, padding: usize) -> Self {
-                Self { s, padding }
-            }
-        }
-
-        impl fmt::Debug for DebugStr<'_> {
-            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                if self.padding == 0 {
-                    formatter.write_str(self.s)
-                } else {
-                    for line in self.s.lines() {
-                        writeln!(formatter, "{:>padding$}{line}", "", padding = self.padding)?;
-                    }
-                    Ok(())
-                }
-            }
-        }
-
         let padding = if matches!(formatter.align(), Some(fmt::Alignment::Right) | None) {
             formatter.width().map_or(0, |width| width.saturating_sub(1))
         } else {
             0
         };
-
-        write!(
-            formatter,
-            "{}",
-            Comparison::new(
-                &DebugStr::new(self.lhs, padding),
-                &DebugStr::new(self.rhs, padding)
-            )
-        )
+        write_diff_header(formatter)?;
+        highlight_diff(formatter, self.lhs, self.rhs, padding)
     }
 }
 

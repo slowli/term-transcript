@@ -113,8 +113,7 @@ const STYLE_WIDTH: usize = 25;
 /// The `Display` implementation supports two output formats:
 ///
 /// - With the default / non-alternate format (e.g., `{}`), the diff will be output as the LHS line-by-line,
-///   highlighting differences in styles on each differing line. That is, this format is similar
-///   to [`pretty_assertions::Comparison`].
+///   highlighting differences in styles on each differing line.
 /// - With the alternate format (`{:#}`), the diff will be output as a table of all differing spans.
 ///
 /// # Examples

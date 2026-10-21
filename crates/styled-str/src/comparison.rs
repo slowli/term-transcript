@@ -1,3 +1,8 @@
+//! Comparison highlighting powered by the `similar` crate.
+//!
+//! Produces similar formatting to the `pretty_assertions` crate (the crate itself is not used because it would make `styled-str`
+//! `std`-dependent).
+
 use core::fmt;
 
 use similar::{ChangeTag, InlineChangeMode, InlineChangeOptions, TextDiff};
@@ -6,6 +11,7 @@ const RED_LIGHT: &str = "\u{1b}[31m";
 const GREEN_LIGHT: &str = "\u{1b}[32m";
 const RED_HEAVY: &str = "\u{1b}[1;48;5;52;31m";
 const GREEN_HEAVY: &str = "\u{1b}[1;48;5;22;32m";
+const BOLD: &str = "\u{1b}[1m";
 const ITALIC: &str = "\u{1b}[3m";
 const RESET: &str = "\u{1b}[0m";
 
@@ -51,6 +57,16 @@ impl<'a> NormalizedSegments<'a> {
     }
 }
 
+/// Writes a static diff header to the provided `writer`.
+pub(crate) fn write_diff_header(writer: &mut impl fmt::Write) -> fmt::Result {
+    writeln!(
+        writer,
+        "{BOLD}Diff{RESET} {RED_LIGHT}< left{RESET} / {GREEN_LIGHT}right >{RESET} :"
+    )
+}
+
+/// Writes a `pretty_assertions`-inspired text diff styled with ANSI escape sequences.
+/// The diff is two-level (lines + chars within lines).
 pub(crate) fn highlight_diff(
     writer: &mut impl fmt::Write,
     left: &str,
