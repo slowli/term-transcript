@@ -404,8 +404,8 @@ impl<'a> StyledStr<'a> {
 
     /// Converts this string to the owned variant.
     ///
-    /// Note that this shadows [`ToOwned::to_owned()`], but this shouldn't be an issue since `StyledStr`
-    /// implements [`Copy`].
+    /// Note that this shadows [`ToOwned::to_owned()`](alloc::borrow::ToOwned::to_owned()),
+    /// but this shouldn't be an issue since `StyledStr` implements [`Copy`].
     pub fn to_owned(self) -> StyledString {
         self.into()
     }
