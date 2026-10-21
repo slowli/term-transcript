@@ -146,7 +146,7 @@
 
 // Documentation settings
 #![doc(html_root_url = "https://docs.rs/styled-str/0.5.0")]
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
@@ -163,6 +163,7 @@ pub use crate::{
 #[macro_use]
 mod utils;
 mod ansi_parser;
+mod comparison;
 mod errors;
 mod rich_parser;
 mod style_diff;
