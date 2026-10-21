@@ -157,7 +157,6 @@
 #![doc(html_root_url = "https://docs.rs/styled-str/0.5.0")]
 // Conditional compilation
 #![cfg_attr(not(feature = "std"), no_std)]
-extern crate core;
 
 pub use crate::{
     ansi_parser::AnsiError,
