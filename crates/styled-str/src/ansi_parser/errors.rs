@@ -1,6 +1,5 @@
+use alloc::string::String;
 use core::{fmt, num::ParseIntError, str::Utf8Error};
-
-use crate::alloc::String;
 
 /// Errors that can occur when processing terminal output.
 #[derive(Debug)]

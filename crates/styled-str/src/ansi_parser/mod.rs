@@ -1,15 +1,13 @@
 //! Parser for terminal output that converts it to a sequence of instructions to
 //! a writer implementing `WriteColor`.
 
+use alloc::{string::String, vec::Vec};
 use core::str;
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 pub use self::errors::AnsiError;
-use crate::{
-    StyledString, StyledStringBuilder,
-    alloc::{String, Vec},
-};
+use crate::{StyledString, StyledStringBuilder};
 
 mod errors;
 #[cfg(test)]

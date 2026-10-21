@@ -41,6 +41,8 @@ impl<'a> Iterator for Lines<'a> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
+
     use crate::styled;
 
     #[test]

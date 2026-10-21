@@ -1,5 +1,6 @@
 //! Comparing `Styled` instances by styling.
 
+use alloc::{format, string::String, vec::Vec};
 use core::{
     cmp::{self, Ordering},
     fmt,
@@ -11,12 +12,7 @@ use core::{
 use anstyle::{AnsiColor, Color, Effects, Style};
 use unicode_width::UnicodeWidthStr;
 
-use crate::{
-    StyledStr,
-    alloc::{String, Vec, format},
-    rich_parser::RichStyle,
-    types::StyledSpan,
-};
+use crate::{StyledStr, rich_parser::RichStyle, types::StyledSpan};
 
 #[cfg(test)]
 mod tests;

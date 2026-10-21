@@ -1,5 +1,6 @@
 //! High-level tests.
 
+use alloc::{format, string::ToString, vec::Vec};
 use core::num::NonZeroUsize;
 
 use anstyle::{AnsiColor, Color, Style};

@@ -1,12 +1,12 @@
 //! Rich style parsing (incl. in compile time).
 
+use alloc::{borrow::Cow, string::String, vec::Vec};
 use core::{fmt, num::NonZeroUsize, ops, str::FromStr};
 
 use anstyle::{Ansi256Color, AnsiColor, Color, Effects, RgbColor, Style};
 
 use crate::{
     HexColorError, ParseError, ParseErrorKind, StackStyled, StyledString,
-    alloc::{Cow, String, Vec},
     types::{StyledSpan, StyledStr},
     utils::{Stack, StackStr, StrCursor, is_same_style, normalize_style},
 };

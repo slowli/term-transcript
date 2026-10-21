@@ -1,5 +1,7 @@
 //! Test for color diffs.
 
+use alloc::{string::ToString, vec};
+
 use anstyle::RgbColor;
 
 use super::*;
