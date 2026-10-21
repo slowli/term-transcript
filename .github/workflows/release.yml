@@ -129,6 +129,7 @@ jobs:
       - name: Build crate docs
         run: |
           cargo clean --doc
+          cargo rustdoc -p styled-str --all-features -- -D warnings --cfg docsrs
           cargo rustdoc -p term-transcript --all-features -- -D warnings --cfg docsrs
           mkdir -p docs/book/crates
           mv target/doc/* docs/book/crates
