@@ -74,7 +74,7 @@ impl DiffStyleSpan {
 
     /// Trims whitespace at the start and end of the string; we don't care about diffs there.
     fn new(diff_text: &str, start: usize, lhs_style: Style, rhs_style: Style) -> Option<Self> {
-        debug_assert!(!diff_text.is_empty());
+        debug_assert_ne!(diff_text, "");
 
         let affects_whitespace =
             Self::affects_whitespace(&lhs_style) || Self::affects_whitespace(&rhs_style);
