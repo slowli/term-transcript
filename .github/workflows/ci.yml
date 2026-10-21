@@ -157,12 +157,17 @@ jobs:
           key: ${{ runner.os }}-cargo-nightly-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-nightly
 
+      - name: Build styled-str library
+        run: |
+          cargo build -p styled-str --lib --target=thumbv7m-none-eabi
+
       - name: Build the Book
         working-directory: ./docs
         run: mdbook build
       - name: Build docs
         run: |
           cargo clean --doc && \
+          cargo rustdoc -p styled-str --all-features -- -D warnings --cfg docsrs && \
           cargo rustdoc -p term-transcript --all-features -- -D warnings --cfg docsrs
 
   build-docker:

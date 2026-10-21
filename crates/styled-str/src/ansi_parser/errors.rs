@@ -1,6 +1,5 @@
+use alloc::string::String;
 use core::{fmt, num::ParseIntError, str::Utf8Error};
-
-use crate::alloc::String;
 
 /// Errors that can occur when processing terminal output.
 #[derive(Debug)]
@@ -51,9 +50,8 @@ impl fmt::Display for AnsiError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for AnsiError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for AnsiError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::InvalidColorIndex(err) => Some(err),
             Self::Utf8(err) => Some(err),

@@ -1,3 +1,5 @@
+use alloc::string::ToString;
+
 use super::*;
 use crate::{styled, types::StyledStr};
 

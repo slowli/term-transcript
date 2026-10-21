@@ -17,7 +17,7 @@ anstyle.workspace = true
 
 # Private dependencies
 compile-fmt.workspace = true
-pretty_assertions.workspace = true
+similar = { workspace = true, features = ["inline"] }
 unicode-width.workspace = true
 
 [dev-dependencies]
@@ -29,10 +29,3 @@ version-sync.workspace = true
 
 [lints]
 workspace = true
-
-[features]
-default = ["std"]
-# Enables std-specific functionality, such as `Error` trait implementations.
-# Note that disabling this feature for now doesn't make this crate no-std compatible.
-# TODO: try to fix; caused by a `pretty_assertions` dependency (`diff`)
-std = []

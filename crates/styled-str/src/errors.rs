@@ -32,8 +32,7 @@ impl HexColorError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for HexColorError {}
+impl core::error::Error for HexColorError {}
 
 /// Kind of a [`ParseError`].
 #[derive(Debug)]
@@ -156,5 +155,4 @@ impl fmt::Display for ParseError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for ParseError {}
+impl core::error::Error for ParseError {}

@@ -1,5 +1,6 @@
 //! Comparing `Styled` instances by styling.
 
+use alloc::{format, string::String, vec::Vec};
 use core::{
     cmp::{self, Ordering},
     fmt,
@@ -11,12 +12,7 @@ use core::{
 use anstyle::{AnsiColor, Color, Effects, Style};
 use unicode_width::UnicodeWidthStr;
 
-use crate::{
-    StyledStr,
-    alloc::{String, Vec, format},
-    rich_parser::RichStyle,
-    types::StyledSpan,
-};
+use crate::{StyledStr, rich_parser::RichStyle, types::StyledSpan};
 
 #[cfg(test)]
 mod tests;
@@ -78,7 +74,7 @@ impl DiffStyleSpan {
 
     /// Trims whitespace at the start and end of the string; we don't care about diffs there.
     fn new(diff_text: &str, start: usize, lhs_style: Style, rhs_style: Style) -> Option<Self> {
-        debug_assert!(!diff_text.is_empty());
+        debug_assert_ne!(diff_text, "");
 
         let affects_whitespace =
             Self::affects_whitespace(&lhs_style) || Self::affects_whitespace(&rhs_style);
@@ -117,8 +113,7 @@ const STYLE_WIDTH: usize = 25;
 /// The `Display` implementation supports two output formats:
 ///
 /// - With the default / non-alternate format (e.g., `{}`), the diff will be output as the LHS line-by-line,
-///   highlighting differences in styles on each differing line. That is, this format is similar
-///   to [`pretty_assertions::Comparison`].
+///   highlighting differences in styles on each differing line.
 /// - With the alternate format (`{:#}`), the diff will be output as a table of all differing spans.
 ///
 /// # Examples

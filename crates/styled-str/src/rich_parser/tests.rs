@@ -1,3 +1,5 @@
+use alloc::string::ToString;
+
 use assert_matches::assert_matches;
 
 use super::*;
