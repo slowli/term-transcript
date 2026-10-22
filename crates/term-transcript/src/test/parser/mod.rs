@@ -8,12 +8,11 @@ use std::{
     mem,
     num::ParseIntError,
     ops,
-    str::{self, Utf8Error},
+    str::{self},
 };
 
 use quick_xml::{
     Reader as XmlReader,
-    encoding::EncodingError,
     events::{Event, attributes::Attributes},
 };
 use styled_str::StyledString;
@@ -24,10 +23,6 @@ use crate::{ExitStatus, Interaction, Transcript, UserInput};
 #[cfg(test)]
 mod tests;
 mod text;
-
-fn map_utf8_error(err: Utf8Error) -> quick_xml::Error {
-    quick_xml::Error::Encoding(EncodingError::Utf8(err))
-}
 
 /// Converts this parsed fragment into text for `UserInput`. This takes into account
 /// that while the first space after prompt is inserted automatically, the further whitespace
@@ -114,19 +109,19 @@ impl Transcript {
     }
 }
 
-fn parse_classes(attributes: Attributes<'_>) -> Result<Cow<'_, [u8]>, ParseError> {
+fn parse_classes(attributes: Attributes<'_>) -> Result<Cow<'_, str>, ParseError> {
     let mut class = None;
     for attr in attributes {
         let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
-        if attr.key.as_ref() == b"class" {
+        if attr.key.as_ref() == "class" {
             class = Some(attr.value);
         }
     }
-    Ok(class.unwrap_or(Cow::Borrowed(b"")))
+    Ok(class.unwrap_or(Cow::Borrowed("")))
 }
 
-fn extract_base_class(classes: &[u8]) -> &[u8] {
-    let space_idx = classes.iter().position(|&ch| ch == b' ');
+fn extract_base_class(classes: &str) -> &str {
+    let space_idx = classes.bytes().position(|ch| ch == b' ');
     space_idx.map_or(classes.as_ref(), |idx| &classes[..idx])
 }
 
@@ -134,9 +129,8 @@ fn parse_exit_status(attributes: Attributes<'_>) -> Result<Option<ExitStatus>, P
     let mut exit_status = None;
     for attr in attributes {
         let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
-        if attr.key.as_ref() == b"data-exit-status" {
-            let status =
-                str::from_utf8(&attr.value).map_err(|err| ParseError::Xml(map_utf8_error(err)))?;
+        if attr.key.as_ref() == "data-exit-status" {
+            let status = attr.value.as_ref();
             let status = status.parse().map_err(ParseError::InvalidExitStatus)?;
             exit_status = Some(ExitStatus(status));
         }
@@ -309,7 +303,7 @@ impl UserInputState {
     ) -> Result<Option<InteractionInput>, ParseError> {
         let mut is_prompt_end = false;
         if let Event::Start(tag) = &event {
-            if self.can_start_prompt() && parse_classes(tag.attributes())?.as_ref() == b"prompt" {
+            if self.can_start_prompt() && parse_classes(tag.attributes())?.as_ref() == "prompt" {
                 // Got prompt start.
                 self.prompt_open_tags = Some(self.text.open_tags());
             }
@@ -385,10 +379,10 @@ impl ParserState {
         match self {
             Self::Initialized => {
                 if let Event::Start(tag) = event {
-                    if tag.name().as_ref() == b"svg" {
+                    if tag.name().as_ref() == "svg" {
                         *self = Self::EncounteredSvgTag;
                     } else {
-                        let tag_name = String::from_utf8_lossy(tag.name().as_ref()).into_owned();
+                        let tag_name = tag.name().as_ref().to_owned();
                         return Err(ParseError::UnexpectedRoot(tag_name));
                     }
                 }
@@ -396,10 +390,10 @@ impl ParserState {
 
             Self::EncounteredSvgTag => {
                 if let Event::Start(tag) = event {
-                    if tag.name().as_ref() == b"div" {
+                    if tag.name().as_ref() == "div" {
                         Self::verify_viewport_attrs(tag.attributes())?;
                         self.set_state(Self::EncounteredContainer);
-                    } else if tag.name().as_ref() == b"g"
+                    } else if tag.name().as_ref() == "g"
                         && Self::is_svg_container(tag.attributes())?
                     {
                         self.set_state(Self::EncounteredContainer);
@@ -411,9 +405,7 @@ impl ParserState {
                 if let Event::Start(tag) = event {
                     let classes = parse_classes(tag.attributes())?;
                     if Self::is_input_class(extract_base_class(&classes)) {
-                        let is_hidden = classes
-                            .split(|byte| *byte == b' ')
-                            .any(|chunk| chunk == b"input-hidden");
+                        let is_hidden = classes.split(' ').any(|chunk| chunk == "input-hidden");
                         let exit_status = parse_exit_status(tag.attributes())?;
                         self.set_state(Self::ReadingUserInput(UserInputState::new(
                             exit_status,
@@ -443,9 +435,7 @@ impl ParserState {
                     } else if Self::is_input_class(base_class) {
                         let interaction = mem::take(interaction);
                         let exit_status = parse_exit_status(tag.attributes())?;
-                        let is_hidden = classes
-                            .split(|byte| *byte == b' ')
-                            .any(|chunk| chunk == b"input-hidden");
+                        let is_hidden = classes.split(' ').any(|chunk| chunk == "input-hidden");
                         self.set_state(Self::ReadingUserInput(UserInputState::new(
                             exit_status,
                             is_hidden,
@@ -466,12 +456,12 @@ impl ParserState {
         Ok(None)
     }
 
-    fn is_input_class(class_name: &[u8]) -> bool {
-        class_name == b"input" || class_name == b"user-input"
+    fn is_input_class(class_name: &str) -> bool {
+        class_name == "input" || class_name == "user-input"
     }
 
-    fn is_output_class(class_name: &[u8]) -> bool {
-        class_name == b"output" || class_name == b"term-output"
+    fn is_output_class(class_name: &str) -> bool {
+        class_name == "output" || class_name == "term-output"
     }
 
     #[cfg_attr(
@@ -479,7 +469,7 @@ impl ParserState {
         tracing::instrument(level = "debug", skip_all, err)
     )]
     fn verify_viewport_attrs(attributes: Attributes<'_>) -> Result<(), ParseError> {
-        const HTML_NS: &[u8] = b"http://www.w3.org/1999/xhtml";
+        const HTML_NS: &str = "http://www.w3.org/1999/xhtml";
 
         let mut has_ns_attribute = false;
         let mut has_class_attribute = false;
@@ -487,16 +477,16 @@ impl ParserState {
         for attr in attributes {
             let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
             match attr.key.as_ref() {
-                b"xmlns" => {
+                "xmlns" => {
                     if attr.value.as_ref() != HTML_NS {
                         return Err(ParseError::InvalidContainer);
                     }
                     has_ns_attribute = true;
                 }
-                b"class" => {
+                "class" => {
                     // Older versions had `div.container` as the top-level HTML element; now, it's wrapped
                     // in `div.viewport`.
-                    if ![b"viewport" as &[u8], b"container"].contains(&attr.value.as_ref()) {
+                    if !["viewport", "container"].contains(&attr.value.as_ref()) {
                         return Err(ParseError::InvalidContainer);
                     }
                     has_class_attribute = true;
@@ -514,6 +504,6 @@ impl ParserState {
 
     fn is_svg_container(attributes: Attributes<'_>) -> Result<bool, ParseError> {
         let classes = parse_classes(attributes)?;
-        Ok(extract_base_class(&classes) == b"container")
+        Ok(extract_base_class(&classes) == "container")
     }
 }
