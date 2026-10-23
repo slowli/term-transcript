@@ -9,7 +9,7 @@ use quick_xml::{
 };
 use styled_str::{StyledString, StyledStringBuilder, parse_hex_color};
 
-use super::{ParseError, extract_base_class, map_utf8_error, parse_classes};
+use super::{ParseError, extract_base_class, parse_classes};
 
 fn normalize_newlines(s: &str) -> Cow<'_, str> {
     if s.contains("\r\n") {
@@ -95,8 +95,7 @@ impl TextReadingState {
                     return Ok(None);
                 }
 
-                let unescaped_str = text.decode().map_err(quick_xml::Error::from)?;
-                let unescaped_str = normalize_newlines(&unescaped_str);
+                let unescaped_str = normalize_newlines(&text);
                 let unescaped_str = if after_hard_break && unescaped_str.starts_with('\n') {
                     &unescaped_str[1..] // gobble the starting '\n' as produced by a hard break
                 } else {
@@ -114,9 +113,9 @@ impl TextReadingState {
                 let decoded = if let Some(c) = maybe_char {
                     c.encode_utf8(&mut char_buffer)
                 } else {
-                    let decoded = reference.decode().map_err(quick_xml::Error::from)?;
-                    resolve_xml_entity(&decoded).ok_or_else(|| {
-                        let err = EscapeError::UnrecognizedEntity(position, decoded.into_owned());
+                    resolve_xml_entity(&reference).ok_or_else(|| {
+                        let err =
+                            EscapeError::UnrecognizedEntity(position, (*reference).to_owned());
                         quick_xml::Error::from(err)
                     })?
                 };
@@ -132,7 +131,7 @@ impl TextReadingState {
                 // Check for the hard line break <text> or <b>. We mustn't add its contents to the text,
                 // and instead gobble the following '\n'.
                 let classes = parse_classes(tag.attributes())?;
-                if extract_base_class(&classes) == b"hard-br" {
+                if extract_base_class(&classes) == "hard-br" {
                     self.hard_br = Some(HardBreak::Active);
                     return Ok(None);
                 }
@@ -168,8 +167,8 @@ impl TextReadingState {
         Ok(None)
     }
 
-    fn is_text_span(tag: &[u8]) -> bool {
-        matches!(tag, b"span" | b"tspan" | b"text")
+    fn is_text_span(tag: &str) -> bool {
+        matches!(tag, "span" | "tspan" | "text")
     }
 
     /// Parses a style from a `span`.
@@ -180,14 +179,14 @@ impl TextReadingState {
         let mut style = Style::new();
         Self::parse_color_from_classes(&mut style, &class_attr);
 
-        let mut style_attr = Cow::Borrowed(&[] as &[u8]);
+        let mut style_attr = Cow::Borrowed("");
         for attr in span_tag.attributes() {
             let attr = attr.map_err(quick_xml::Error::InvalidAttr)?;
-            if attr.key.as_ref() == b"style" {
+            if attr.key.as_ref() == "style" {
                 style_attr = attr.value;
             }
         }
-        Self::parse_color_from_style(&mut style, &style_attr)?;
+        Self::parse_color_from_style(&mut style, &style_attr);
 
         if style.get_effects().contains(Effects::INVERT) {
             // Swap fg and bg colors back; they are swapped when writing to SVG.
@@ -199,48 +198,49 @@ impl TextReadingState {
         Ok(style)
     }
 
-    fn parse_color_from_classes(style: &mut Style, class_attr: &[u8]) {
-        let classes = class_attr.split(u8::is_ascii_whitespace);
+    fn parse_color_from_classes(style: &mut Style, class_attr: &str) {
+        let classes = class_attr.split(|ch: char| ch.is_ascii_whitespace());
         for class in classes {
             // Note that `class` may be empty because of multiple sequential whitespace chars.
             // This is OK for us.
             match class {
-                b"bold" => {
+                "bold" => {
                     *style = style.bold();
                 }
-                b"dimmed" => {
+                "dimmed" => {
                     *style = style.dimmed();
                 }
-                b"italic" => {
+                "italic" => {
                     *style = style.italic();
                 }
-                b"underline" => {
+                "underline" => {
                     *style = style.underline();
                 }
-                b"strike" => {
+                "strike" => {
                     *style = style.strikethrough();
                 }
-                b"blink" => {
+                "blink" => {
                     *style = style.blink();
                 }
-                b"concealed" => {
+                "concealed" => {
                     *style = style.hidden();
                 }
-                b"inv" => {
+                "inv" => {
                     *style = style.invert();
                 }
 
                 // Indexed foreground color candidate.
-                fg if fg.starts_with(b"fg") => {
+                fg if fg.starts_with("fg") => {
                     if let Some(color) = Self::parse_indexed_color(&fg[2..]) {
                         *style = style.fg_color(Some(color));
                     }
                 }
                 // Indexed background color candidate.
-                bg if bg.starts_with(b"bg") => {
+                bg if bg.starts_with("bg") => {
                     if let Some(color) = Self::parse_indexed_color(&bg[2..]) {
                         *style = style.bg_color(Some(color));
-                    } else if let Ok(color_str) = str::from_utf8(&bg[2..]) {
+                    } else {
+                        let color_str = &bg[2..];
                         // Parse `bg#..` classes produced by the pure SVG template
                         if let Ok(color) = parse_hex_color(color_str.as_bytes()) {
                             *style = style.bg_color(Some(color.into()));
@@ -254,19 +254,14 @@ impl TextReadingState {
     }
 
     // **NB.** This parser is pretty rudimentary (e.g., does not understand comments).
-    fn parse_color_from_style(style: &mut Style, css_style: &[u8]) -> Result<(), ParseError> {
-        for style_property in css_style.split(|&ch| ch == b';') {
-            let name_and_value: Vec<_> = style_property.splitn(2, |&ch| ch == b':').collect();
-            let [property_name, property_value] = name_and_value.as_slice() else {
+    fn parse_color_from_style(style: &mut Style, css_style: &str) {
+        for style_property in css_style.split(';') {
+            let name_and_value: Vec<_> = style_property.splitn(2, ':').collect();
+            let &[property_name, property_value] = name_and_value.as_slice() else {
                 continue;
             };
-
-            let property_name = str::from_utf8(property_name)
-                .map_err(map_utf8_error)?
-                .trim();
-            let property_value = str::from_utf8(property_value)
-                .map_err(map_utf8_error)?
-                .trim();
+            let property_name = property_name.trim();
+            let property_value = property_value.trim();
 
             match property_name {
                 "color" | "fill" => {
@@ -282,28 +277,27 @@ impl TextReadingState {
                 _ => { /* Ignore other properties. */ }
             }
         }
-        Ok(())
     }
 
-    fn parse_indexed_color(class: &[u8]) -> Option<Color> {
+    fn parse_indexed_color(class: &str) -> Option<Color> {
         Some(match class {
-            b"0" => Color::Ansi(AnsiColor::Black),
-            b"1" => Color::Ansi(AnsiColor::Red),
-            b"2" => Color::Ansi(AnsiColor::Green),
-            b"3" => Color::Ansi(AnsiColor::Yellow),
-            b"4" => Color::Ansi(AnsiColor::Blue),
-            b"5" => Color::Ansi(AnsiColor::Magenta),
-            b"6" => Color::Ansi(AnsiColor::Cyan),
-            b"7" => Color::Ansi(AnsiColor::White),
+            "0" => Color::Ansi(AnsiColor::Black),
+            "1" => Color::Ansi(AnsiColor::Red),
+            "2" => Color::Ansi(AnsiColor::Green),
+            "3" => Color::Ansi(AnsiColor::Yellow),
+            "4" => Color::Ansi(AnsiColor::Blue),
+            "5" => Color::Ansi(AnsiColor::Magenta),
+            "6" => Color::Ansi(AnsiColor::Cyan),
+            "7" => Color::Ansi(AnsiColor::White),
 
-            b"8" => Color::Ansi(AnsiColor::BrightBlack),
-            b"9" => Color::Ansi(AnsiColor::BrightRed),
-            b"10" => Color::Ansi(AnsiColor::BrightGreen),
-            b"11" => Color::Ansi(AnsiColor::BrightYellow),
-            b"12" => Color::Ansi(AnsiColor::BrightBlue),
-            b"13" => Color::Ansi(AnsiColor::BrightMagenta),
-            b"14" => Color::Ansi(AnsiColor::BrightCyan),
-            b"15" => Color::Ansi(AnsiColor::BrightWhite),
+            "8" => Color::Ansi(AnsiColor::BrightBlack),
+            "9" => Color::Ansi(AnsiColor::BrightRed),
+            "10" => Color::Ansi(AnsiColor::BrightGreen),
+            "11" => Color::Ansi(AnsiColor::BrightYellow),
+            "12" => Color::Ansi(AnsiColor::BrightBlue),
+            "13" => Color::Ansi(AnsiColor::BrightMagenta),
+            "14" => Color::Ansi(AnsiColor::BrightCyan),
+            "15" => Color::Ansi(AnsiColor::BrightWhite),
 
             _ => return None,
         })
@@ -319,36 +313,36 @@ mod tests {
     #[test]
     fn parsing_color_index() {
         assert_eq!(
-            TextReadingState::parse_indexed_color(b"0"),
+            TextReadingState::parse_indexed_color("0"),
             Some(AnsiColor::Black.into())
         );
         assert_eq!(
-            TextReadingState::parse_indexed_color(b"3"),
+            TextReadingState::parse_indexed_color("3"),
             Some(AnsiColor::Yellow.into())
         );
         assert_eq!(
-            TextReadingState::parse_indexed_color(b"9"),
+            TextReadingState::parse_indexed_color("9"),
             Some(AnsiColor::BrightRed.into())
         );
         assert_eq!(
-            TextReadingState::parse_indexed_color(b"10"),
+            TextReadingState::parse_indexed_color("10"),
             Some(AnsiColor::BrightGreen.into())
         );
         assert_eq!(
-            TextReadingState::parse_indexed_color(b"15"),
+            TextReadingState::parse_indexed_color("15"),
             Some(AnsiColor::BrightWhite.into())
         );
 
-        assert_eq!(TextReadingState::parse_indexed_color(b""), None);
-        assert_eq!(TextReadingState::parse_indexed_color(b"17"), None);
-        assert_eq!(TextReadingState::parse_indexed_color(b"01"), None);
-        assert_eq!(TextReadingState::parse_indexed_color(b"333"), None);
+        assert_eq!(TextReadingState::parse_indexed_color(""), None);
+        assert_eq!(TextReadingState::parse_indexed_color("17"), None);
+        assert_eq!(TextReadingState::parse_indexed_color("01"), None);
+        assert_eq!(TextReadingState::parse_indexed_color("333"), None);
     }
 
     #[test]
     fn parsing_style_from_classes() {
         let mut style = Style::default();
-        TextReadingState::parse_color_from_classes(&mut style, b"bold fg3 underline bg11");
+        TextReadingState::parse_color_from_classes(&mut style, "bold fg3 underline bg11");
 
         assert_eq!(style.get_effects(), Effects::BOLD | Effects::UNDERLINE);
         assert_eq!(style.get_fg_color(), Some(AnsiColor::Yellow.into()));
@@ -383,8 +377,7 @@ mod tests {
     #[test]
     fn parsing_color_from_style() {
         let mut style = Style::default();
-        TextReadingState::parse_color_from_style(&mut style, b"color: #fed; background: #c0ffee")
-            .unwrap();
+        TextReadingState::parse_color_from_style(&mut style, "color: #fed; background: #c0ffee");
 
         assert_eq!(
             style.get_fg_color(),
@@ -399,8 +392,7 @@ mod tests {
     #[test]
     fn parsing_color_from_style_with_terminal_semicolon() {
         let mut style = Style::default();
-        TextReadingState::parse_color_from_style(&mut style, b"color: #fed; background: #c0ffee;")
-            .unwrap();
+        TextReadingState::parse_color_from_style(&mut style, "color: #fed; background: #c0ffee;");
 
         assert_eq!(
             style.get_fg_color(),
@@ -415,7 +407,7 @@ mod tests {
     #[test]
     fn parsing_fg_color_from_svg_style() {
         let mut style = Style::default();
-        TextReadingState::parse_color_from_style(&mut style, b"fill: #fed; stroke: #fed").unwrap();
+        TextReadingState::parse_color_from_style(&mut style, "fill: #fed; stroke: #fed");
 
         assert_eq!(
             style.get_fg_color(),
@@ -427,7 +419,7 @@ mod tests {
     #[test]
     fn parsing_bg_color_from_svg_style() {
         let mut style = Style::default();
-        TextReadingState::parse_color_from_classes(&mut style, b"bold fg3 bg#d7d75f");
+        TextReadingState::parse_color_from_classes(&mut style, "bold fg3 bg#d7d75f");
         assert_eq!(style.get_effects(), Effects::BOLD);
         assert_eq!(style.get_fg_color(), Some(AnsiColor::Yellow.into()));
         assert_eq!(
@@ -436,7 +428,7 @@ mod tests {
         );
 
         let mut style = Style::default();
-        TextReadingState::parse_color_from_classes(&mut style, b"underline strike italic dimmed");
+        TextReadingState::parse_color_from_classes(&mut style, "underline strike italic dimmed");
         assert_eq!(
             style.get_effects(),
             Effects::UNDERLINE | Effects::STRIKETHROUGH | Effects::ITALIC | Effects::DIMMED
